@@ -6,6 +6,15 @@ The goal is NPC-style behavior (patrol, react to obstacles, and so on) with the
 behavior logic kept separate from the drone connection, so the same logic can run
 against a mock drone, a simulator, or real hardware.
 
+## How this project is built
+
+The architecture and every design decision are mine. Each one is recorded,
+with the options I considered and my reasoning, as an Architecture Decision
+Record in [`docs/decisions/`](docs/decisions/). The implementation is
+AI-assisted (Claude Code), working to those decisions and to the shared
+vocabulary in [`docs/glossary.md`](docs/glossary.md). Real-world testing is
+documented session by session in [`docs/field-testing/`](docs/field-testing/README.md).
+
 ## Setup (Windows)
 
 Requires Python 3.12 (`py -3.12 --version` to check).
@@ -25,10 +34,12 @@ Existing → `.venv\Scripts\python.exe`.
 ## Running
 
 ```powershell
-.venv\Scripts\python src\first_flight.py
+.venv\Scripts\python tools\first_flight.py
 ```
 
-Without hardware it reports that no Crazyflie was found, which confirms the setup works.
+A hardware smoke test. Without hardware it reports that no Crazyflie was
+found, which confirms the setup works. In PyCharm, use the **first_flight**
+run configuration.
 
 ## Hardware (planned)
 
@@ -43,6 +54,12 @@ Bitcraze docs for the current steps.
 ## Layout
 
 ```
-src/
-  first_flight.py   # cflib smoke test: scan for a Crazyflie
+tools/
+  first_flight.py   # hardware smoke test: scan for a Crazyflie
+docs/
+  glossary.md       # the project's shared vocabulary
+  coding-style.md   # conventions the tools can't check
+  decisions/        # Architecture Decision Records (ADRs)
+  field-testing/    # real-world test process and session logs
+  cflib-primer.md   # how cflib works, checked against the installed version
 ```
