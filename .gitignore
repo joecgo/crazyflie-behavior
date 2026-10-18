@@ -38,6 +38,9 @@ htmlcov/
 # PyCharm (per-user IDE settings)
 .idea/
 
+# Personal Claude Code instructions (not published)
+CLAUDE.local.md
+
 # Flight data and logs
 logs/
 *.csv
