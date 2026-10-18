@@ -31,18 +31,17 @@ problem-solving, not a tutorial follow-along.
 
 ### Portability checkpoints
 
-Whenever a design choice would make the drone interface (or anything behaviors
-depend on) work mainly for Crazyflie hardware and not other drones, **stop and
-raise it as a portability decision** before implementing. Examples: exposing a
-Crazyflie-specific sensor, deck, unit, frame, arming flow or timing assumption.
+The drone interface is Crazyflie-focused, with generic vocabulary
+([ADR-0006](docs/decisions/0006-crazyflie-focused-interface.md)): don't design
+for platforms that aren't used yet or can't be tested.
 
-For each one:
-- Explain what ties it to the Crazyflie and which other platforms it would
-  exclude or complicate (e.g. PX4/MAVSDK, Tello, a simulator with different sensors).
-- Lay out the options, usually: Crazyflie-specific, generic, or generic core
-  with a Crazyflie-specific extension. Give the cost of each now and later.
-- Let the user decide, and record it as an ADR. This is the open question from
-  [ADR-0002](docs/decisions/0002-behavior-depends-only-on-drone-interface.md).
+- Use a generic name when most drones share the concept (range readings,
+  position estimate, arm, take off, land). Otherwise use the Crazyflie term.
+- Crazyflie-only concepts (decks, log blocks, TOC, CRTP, URIs, cflib units)
+  stay inside the Crazyflie adapter.
+- **Stop and raise it as a portability decision only when a Crazyflie-only
+  concept would reach behavior code.** Explain what it would tie behaviors to
+  and the cost of changing it later, then let the user decide.
 
 ## Focus areas
 
