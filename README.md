@@ -60,6 +60,7 @@ docs/
   glossary.md       # the project's shared vocabulary
   coding-style.md   # conventions the tools can't check
   decisions/        # Architecture Decision Records (ADRs)
+  decision-backlog.md  # open design questions, in order of need
   field-testing/    # real-world test process and session logs
   cflib-primer.md   # how cflib works, checked against the installed version
 ```
