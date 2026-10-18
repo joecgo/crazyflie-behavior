@@ -1,30 +1,33 @@
-"""First contact with cflib: scan for a Crazyflie over the Crazyradio.
+"""Hardware smoke test: scan for a Crazyflie over the Crazyradio.
+
+A diagnostic tool, so it talks to cflib directly and bypasses the drone
+interface (see the tools exemption in ADR-0002).
 
 No drone or radio yet? That's fine. The scan just finds nothing, which still
 proves Python, the virtual environment and cflib are set up correctly.
 
 Run from the repository root:
-    .venv\\Scripts\\python src\\first_flight.py
+    .venv\\Scripts\\python tools\\first_flight.py
 """
 
 import cflib.crtp
 
 
-def main():
+def main() -> None:
     # Load cflib's link drivers (radio, USB, ...). Must happen before any scan
     # or connection, like registering subsystems before the game loop starts.
     cflib.crtp.init_drivers()
 
     print("Scanning for Crazyflies...")
-    found = cflib.crtp.scan_interfaces()
+    # cflib is untyped, so state the type here: one [uri, description] pair per
+    # drone found. The URI is the drone's "address", e.g. radio://0/80/2M.
+    available_drones: list[list[str]] = cflib.crtp.scan_interfaces()
 
-    if not found:
+    if not available_drones:
         print("No Crazyflie found (expected until the hardware arrives).")
         return
 
-    # Each entry is a list like [uri, description]; the URI is the drone's
-    # "address", e.g. radio://0/80/2M/E7E7E7E7E7.
-    for uri, description in found:
+    for uri, description in available_drones:
         print(f"Found: {uri} {description}")
 
 
