@@ -82,11 +82,13 @@ this file in the same commit as the code or ADR that uses it.
 | **Simulator** | A physics-ish model of the drone and room, including noise and drift. | PIE with a simulated world. | Decided ([0002](decisions/0002-behavior-depends-only-on-drone-interface.md)) |
 | **Behavior** | Decision-making logic that turns sensed state into commands. Never imports cflib. | The AIController's Behavior Tree. | Decided ([0002](decisions/0002-behavior-depends-only-on-drone-interface.md)) |
 | **Tick** | One iteration of the behavior update loop. | `Tick(DeltaTime)`. | Decided ([0003](decisions/0003-tick-loop-timing-model.md)) |
-| **Blackboard** | Shared store of the latest known state and behavior memory. | UE Blackboard. | Decided ([0003](decisions/0003-tick-loop-timing-model.md)) |
+| **Telemetry buffer** | Thread-safe store of the latest value of each telemetry variable, written in the background as data arrives (by the Crazyflie adapter, or by the mock or simulator). | The net driver's incoming buffer of replicated values. | Decided ([0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md)) |
+| **Snapshot** | Read-only copy of the telemetry buffer, taken at the start of each tick. Every behavior in that tick sees the same snapshot. Each value carries its arrival time (PC clock) and the drone's timestamp. | A consistent frame of state that the game thread works from while packets keep arriving. | Decided ([0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md)) |
+| **Blackboard** | Behavior memory: what behaviors remember across ticks (next waypoint, where an obstacle was last seen). Written by behaviors, persists between ticks. | UE Blackboard (AI memory keys). | Decided ([0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md)) |
 | **Control mode** | How behaviors command motion at a given moment: either steering mode or fast mode. | Which movement driver is in charge: AI steering or a scripted move. | Decided ([0005](decisions/0005-control-modes-steering-and-fast.md)) |
 | **Steering mode** | The default control mode: velocity commands with obstacle-avoidance steering, slow and controlled. | `AddMovementInput` each Tick from steering behaviors. | Decided ([0005](decisions/0005-control-modes-steering-and-fast.md)) |
 | **Fast mode** | Control mode for moving quickly to a target using position commands (`go_to`), with obstacle-avoidance steering disabled. The safety layer stays active and can interrupt it. | A scripted `MoveTo` with steering off, but collision still on. | Decided ([0005](decisions/0005-control-modes-steering-and-fast.md)) |
 | **Speed envelope** | The maximum speed and acceleration allowed in a control mode. The safety layer may tighten it in the moment but never widen it. | `MaxWalkSpeed` and `MaxAcceleration` on the movement component, clamped by gameplay rules. | Decided ([0005](decisions/0005-control-modes-steering-and-fast.md)) |
 
-<!-- Terms still to define as decisions land: command, snapshot,
+<!-- Terms still to define as decisions land: command,
      geofence, failsafe, recording/replay, ... -->
