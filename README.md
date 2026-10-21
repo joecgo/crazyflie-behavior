@@ -9,7 +9,7 @@ always above a small child's reach; the child chases it and scores a catch by
 getting underneath, and the bird reacts and flies off, a little faster each
 time. Game-AI techniques (behavior trees, difficulty that adapts, character
 reactions) on a real robot, where sensors are noisy, positions drift, and the
-game is designed around safety.
+game is designed around safety. See [the rules](docs/catch-the-bird.md).
 
 The behavior logic is kept separate from the drone connection, so the same
 logic runs against a mock drone, a simulator, or real hardware.
@@ -91,6 +91,7 @@ tests/
 tools/
   first_flight.py   # hardware smoke test: scan for a Crazyflie
 docs/
+  catch-the-bird.md # the rules of the game
   glossary.md       # the project's shared vocabulary
   coding-style.md   # conventions the tools can't check
   decisions/        # Architecture Decision Records (ADRs)
