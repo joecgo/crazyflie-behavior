@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-20
+- **Origin:** AI recommendation accepted.
 
 ## Context
 

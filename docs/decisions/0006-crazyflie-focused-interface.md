@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-18
+- **Origin:** My idea: don't design for what isn't used yet or can't be tested.
 
 ## Context
 

@@ -4,6 +4,9 @@ Autonomous behavior for a Bitcraze Crazyflie 2.1+ nano drone, in Python on cflib
 The project should show deliberate architecture and real robotics
 problem-solving, not a tutorial follow-along.
 
+**Current goal:** a drone that plays hide-and-seek and peek-a-boo (see the
+decision backlog). Focus on that one goal; other ideas wait in the backlog.
+
 ## Roles: the user is the architect
 
 - **The user makes every design decision.** Claude presents options with
@@ -20,8 +23,11 @@ problem-solving, not a tutorial follow-along.
   (especially a robotics one: timing, drift, safety, testability), say so
   plainly and concretely before recording it. The user still decides, and the
   ADR records the risk they knowingly accepted. Don't just agree.
-- Each decision becomes an ADR in `docs/decisions/` (see the template there).
-  The ADR records the user's choice and reasoning in their terms.
+- Each decision becomes an ADR in `docs/decisions/` (see the template there),
+  written by Claude: brief (about one screen), recording the user's choice and
+  reasoning in their terms. Every ADR has an honest **origin** line (the
+  user's idea, an AI recommendation accepted, overridden, or mixed) and a row in
+  the index, `docs/decisions/README.md`.
 - Open questions live in `docs/decision-backlog.md`. When a new open question
   comes up (an ADR follow-up, a deferral, an idea for later), add it there.
   When one is decided, write the ADR and remove it from the backlog.

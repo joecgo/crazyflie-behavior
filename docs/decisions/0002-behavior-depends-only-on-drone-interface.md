@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-17
+- **Origin:** Carried over from the project's original plan (the handoff document); the tools exemption was an AI recommendation accepted.
 
 ## Context
 

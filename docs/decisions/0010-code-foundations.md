@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-20
+- **Origin:** Mixed. AI recommendations accepted, except writing the Crazyflie adapter now, which overrode the AI's recommendation.
 
 ## Context
 

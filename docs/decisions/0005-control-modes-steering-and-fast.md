@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-18
+- **Origin:** Mixed. Velocity by default, fast mode, the steering mode name, and request-and-approve: my ideas, refined with the AI. Speed envelopes and the go_to mapping: AI suggestions accepted. Dropping carrot chasing: my call.
 
 ## Context
 

@@ -1,0 +1,27 @@
+# Architecture decisions
+
+Every architecture decision in this project, one line each. Each record
+explains the context, the options considered and why this one was chosen.
+
+**Origin** says where the decision came from. I make every decision; the
+implementation is AI-assisted (Claude Code), and so are many of the options.
+This column is honest about which ideas were mine.
+
+| ADR | Decision | Origin |
+|---|---|---|
+| [0001](0001-record-architecture-decisions.md) | Record architecture decisions as ADRs | AI recommendation accepted |
+| [0002](0002-behavior-depends-only-on-drone-interface.md) | Behavior depends only on the drone interface; only the Crazyflie adapter (and `tools/`) imports cflib | From the original plan |
+| [0003](0003-tick-loop-timing-model.md) | Behaviors run in a fixed-rate tick loop | AI recommendation accepted |
+| [0004](0004-strict-typing-ruff-and-units-in-names.md) | Strict typing, ruff, SI units inside; suffix only non-SI values and all angles | Mixed: the units rule was mine |
+| [0005](0005-control-modes-steering-and-fast.md) | Two control modes: steering mode (velocity) and fast mode (`go_to`) | Mixed: fast mode and request-and-approve were mine |
+| [0006](0006-crazyflie-focused-interface.md) | The drone interface is Crazyflie-focused, with generic vocabulary | My idea |
+| [0007](0007-snapshot-blackboard-telemetry-buffer.md) | Telemetry buffer, per-tick snapshot, and a separate blackboard | AI recommendation accepted |
+| [0008](0008-drone-interface.md) | The drone interface: commands, range readings, safety queries | Mixed: overrode the AI on two points |
+| [0009](0009-clock-abstraction.md) | Injected clock; behaviors receive time in the snapshot | AI recommendation accepted |
+| [0010](0010-code-foundations.md) | Code foundations: layout, interfaces, tests, first adapters | Mixed: overrode the AI on writing the Crazyflie adapter now |
+| [0011](0011-mock-models-setpoint-timeout.md) | The mock adapter models the setpoint timeout | AI recommendation accepted |
+| [0012](0012-landing-confirms-touchdown.md) | Motors stop only on confirmed touchdown | AI recommendation accepted |
+| [0013](0013-operator-kill-switch.md) | The operator's kill switch bypasses the safety layer | Mixed: the need and the exception were mine |
+| [0014](0014-debug-visualization-with-rerun.md) | Debug visualization uses Rerun | Mixed: an off-the-shelf tool for now was mine; Rerun was the AI's pick |
+
+Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

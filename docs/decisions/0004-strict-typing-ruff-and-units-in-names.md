@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-18
+- **Origin:** Mixed. Strict typing and ruff: AI recommendations accepted. No unit suffix for SI values: my idea. Deferring frozen dataclasses: overrode the AI's recommendation.
 
 ## Context
 
