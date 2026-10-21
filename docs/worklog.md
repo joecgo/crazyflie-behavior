@@ -20,3 +20,16 @@ findings, key design turns. Added only with the architect's OK.
 ### YYYY-MM-DD: <short title>
 A few sentences: what happened, why it matters, links to ADRs, commits or session logs.
 -->
+
+### 2026-10-21: Hide-and-seek made safe by the game's structure
+
+Hide-and-seek was dropped the day before
+([ADR-0015](decisions/0015-first-game-catch-the-bird.md)) because a hiding drone
+can't see the player coming, so any escape could fly into a child. I redesigned
+the game so that danger can't arise: the drone flies only while the play area is
+empty (an adult starts each round, and a gate keeps the player out), and it
+lands and stops its motors before the search begins. A child only ever meets a
+drone with its motors off. The same rule later ruled out motor tones for hints,
+in favor of a Buzzer deck. Safety comes from when things happen in the game, not
+from sensing ([ADR-0016](decisions/0016-first-game-hide-and-seek-drone-lands.md),
+[ADR-0017](decisions/0017-hint-chirps-from-buzzer-deck.md), commit `f19f878`).
