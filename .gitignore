@@ -41,6 +41,9 @@ htmlcov/
 # Personal Claude Code instructions (not published)
 CLAUDE.local.md
 
+# cflib's cache of the drone's variable tables (TOC)
+cache/
+
 # Flight data and logs
 logs/
 *.csv

@@ -1,3 +1,0 @@
-# Direct dependencies only; pip pulls in their own dependencies automatically.
-# Install with:  .venv\Scripts\python -m pip install -r requirements.txt
-cflib==0.1.34

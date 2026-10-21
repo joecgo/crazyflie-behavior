@@ -1,3 +1,5 @@
+# pyright: basic
+# Basic mode because cflib has no type hints (ADR-0004: tools/ runs in basic mode).
 """Hardware smoke test: scan for a Crazyflie over the Crazyradio.
 
 A diagnostic tool, so it talks to cflib directly and bypasses the drone
