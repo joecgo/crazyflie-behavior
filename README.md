@@ -4,12 +4,14 @@
 
 Autonomous behavior experiments for the [Bitcraze Crazyflie 2.1+](https://www.bitcraze.io/products/crazyflie-2-1-plus/) nano drone, written in Python with [cflib](https://github.com/bitcraze/crazyflie-lib-python).
 
-**The goal: a drone that plays Catch the bird.** The drone flies like a bird,
-always above a small child's reach; the child chases it and scores a catch by
-getting underneath, and the bird reacts and flies off, a little faster each
-time. Game-AI techniques (behavior trees, difficulty that adapts, character
-reactions) on a real robot, where sensors are noisy, positions drift, and the
-game is designed around safety. See [the rules](docs/catch-the-bird.md).
+**The goal: a drone that plays hide-and-seek with a small child.** While the
+child waits behind a gate, the drone flies off, hides behind a wall, lands and
+turns its motors off. The child hunts for it, and when they pick it up, it
+lights up and the computer plays a fanfare. Game-AI techniques (a map of the
+room, choosing hiding spots, line-of-sight checks) on a real robot, where
+sensors are noisy and positions drift. The game is safe by design: the drone
+flies only when the play area is empty. See [the rules](docs/hide-and-seek.md).
+The second game is [Catch the bird](docs/catch-the-bird.md).
 
 The behavior logic is kept separate from the drone connection, so the same
 logic runs against a mock drone, a simulator, or real hardware.
@@ -69,10 +71,10 @@ setup works. In PyCharm, use the **first_flight** run configuration.
 
 - Crazyflie 2.1+ and Crazyradio USB dongle
 - Flow deck (needed for stable autonomous hover)
-- Multi-ranger deck (obstacle sensing, optional)
+- Multi-ranger deck (obstacle sensing and mapping)
+- Buzzer deck (hint chirps)
+- Long pins (19+2+4 mm) to stack three decks: two on top, the Flow deck underneath
 - Spare batteries and propellers (about 7 minutes of flight per battery)
-- A 1080p USB webcam mounted in the room: tracks the player, and gives an
-  outside view of the drone's true position
 
 On Windows the Crazyradio needs a USB driver installed with Zadig. Follow the
 Bitcraze docs for the current steps.
@@ -91,10 +93,12 @@ tests/
 tools/
   first_flight.py   # hardware smoke test: scan for a Crazyflie
 docs/
-  catch-the-bird.md # the rules of the game
+  hide-and-seek.md  # the rules of the first game
+  catch-the-bird.md # the rules of the second game
   glossary.md       # the project's shared vocabulary
   coding-style.md   # conventions the tools can't check
   decisions/        # Architecture Decision Records (ADRs)
   decision-backlog.md  # open design questions, in order of need
-  field-testing/    # real-world test process and session logs  cflib-primer.md   # how cflib works, checked against the installed version
+  field-testing/    # real-world test process and session logs
+  cflib-primer.md   # how cflib works, checked against the installed version
 ```
