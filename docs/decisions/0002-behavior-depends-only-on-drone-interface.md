@@ -57,7 +57,7 @@ Crazyflie adapter and `tools/`, and nothing in `src/` imports `tools/`.
 - The rule is **enforced by an automated architecture test** (a fitness
   function) that fails if any module outside the Crazyflie adapter or `tools/`
   imports `cflib`.
-  It's added with the first code and runs in CI.
+  It's added with the first code and runs in continuous integration.
 - **Open question:** how drone-agnostic should the interface be? Crazyflie-shaped
   (easy, honest) or generic across drones (more portable, more design work)?
   To be settled in a later ADR.

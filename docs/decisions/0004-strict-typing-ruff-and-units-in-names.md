@@ -10,7 +10,7 @@ returns (cflib's `scan_interfaces()` returns an undocumented `list[list[str]]`).
 Coming from C++, I want type mistakes caught before code runs, not in flight.
 Robotics code also mixes units constantly (cflib uses meters, millimeters,
 degrees and radians in different places), which is a classic source of bugs.
-Style should be enforced by tools in CI, not by memory.
+Style should be enforced by tools in continuous integration, not by memory.
 
 ## Options considered
 
@@ -55,7 +55,7 @@ Style should be enforced by tools in CI, not by memory.
   **Angles always carry a suffix**, `_rad` or `_deg`, because my UE5 habits
   read angles as degrees, and I'll often show degrees in logs and debug output.
 
-Typing and ruff are enforced in CI (focus area 6). The units convention is
+Typing and ruff are enforced in continuous integration (focus area 6). The units convention is
 checked in code review.
 
 ## Consequences

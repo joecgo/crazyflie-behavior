@@ -1,7 +1,7 @@
 # Coding style
 
 Only what tools can't check. Formatting and lint rules come from **ruff**, and
-types are checked by **pyright** in strict mode. Both run in CI
+types are checked by **pyright** in strict mode. Both run in continuous integration
 ([ADR-0004](decisions/0004-strict-typing-ruff-and-units-in-names.md)).
 
 ## Types

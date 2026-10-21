@@ -60,7 +60,7 @@ ignores one:
    sit beneath behaviors and can override them.
 5. **Testing without hardware.** A simulator with realistic noise, drift and
    latency, plus replaying recorded real flights in automated tests.
-6. **Automated tests and fitness functions in CI.** Unit tests, simulator
+6. **Automated tests and fitness functions in continuous integration.** Unit tests, simulator
    scenarios, flight-replay tests and architecture fitness functions (tests that
    enforce ADR rules, such as "no `cflib` outside the Crazyflie adapter") all run
    automatically on GitHub Actions on every push. A green pipeline is the
@@ -82,6 +82,7 @@ ignores one:
 
 ## Shared language
 
+- Write "continuous integration" in full in docs and conversation, not "CI".
 - `docs/glossary.md` is the project's **ubiquitous language**. Use its terms
   exactly in conversation, docs, code names and comments.
 - If a concept needs a term that isn't in the glossary, **propose** the term and
@@ -117,9 +118,9 @@ ignores one:
   session log from the template (goal, pass criteria, simulator prediction).
   After it, help analyze the data and turn findings into code, simulator or ADR
   changes.
-- **CI** (focus area 6). Set up GitHub Actions as soon as the repo is on GitHub
+- **Continuous integration** (focus area 6). Set up GitHub Actions as soon as the repo is on GitHub
   and the first test exists, rather than later. Keep everything runnable
-  headless and without hardware so it always runs in CI.
+  headless and without hardware so it always runs in continuous integration.
 
 ## Skills to use
 
