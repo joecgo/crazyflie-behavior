@@ -4,18 +4,24 @@
 
 Autonomous behavior experiments for the [Bitcraze Crazyflie 2.1+](https://www.bitcraze.io/products/crazyflie-2-1-plus/) nano drone, written in Python with [cflib](https://github.com/bitcraze/crazyflie-lib-python).
 
-The goal is NPC-style behavior (patrol, react to obstacles, and so on) with the
-behavior logic kept separate from the drone connection, so the same logic can run
-against a mock drone, a simulator, or real hardware.
+**The goal: a drone that plays hide-and-seek and peek-a-boo.** It finds a
+hiding spot, peeks out, and seeks, using game-AI techniques (behavior trees,
+EQS-style scoring of hiding spots, line-of-sight checks) on a real robot, where
+sensors are noisy, positions drift, and safety comes first.
+
+The behavior logic is kept separate from the drone connection, so the same
+logic runs against a mock drone, a simulator, or real hardware.
 
 ## How this project is built
 
-The architecture and every design decision are mine. Each one is recorded,
-with the options I considered and my reasoning, as an Architecture Decision
-Record in [`docs/decisions/`](docs/decisions/). The implementation is
-AI-assisted (Claude Code), working to those decisions and to the shared
-vocabulary in [`docs/glossary.md`](docs/glossary.md). Real-world testing is
-documented session by session in [`docs/field-testing/`](docs/field-testing/README.md).
+I set the goals, priorities and constraints, and I make every design decision,
+recorded as Architecture Decision Records with the options considered (see the
+[index](docs/decisions/README.md)). Most options, and all implementation and
+verification, are AI-assisted (Claude Code). Each record notes whether a
+decision was my own idea, an AI recommendation I accepted, or one I overrode.
+The code follows the shared vocabulary in [`docs/glossary.md`](docs/glossary.md).
+Real-world testing is documented session by session in
+[`docs/field-testing/`](docs/field-testing/README.md).
 
 ## Setup (Windows)
 
@@ -85,6 +91,5 @@ docs/
   coding-style.md   # conventions the tools can't check
   decisions/        # Architecture Decision Records (ADRs)
   decision-backlog.md  # open design questions, in order of need
-  field-testing/    # real-world test process and session logs
-  cflib-primer.md   # how cflib works, checked against the installed version
+  field-testing/    # real-world test process and session logs  cflib-primer.md   # how cflib works, checked against the installed version
 ```

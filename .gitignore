@@ -41,6 +41,9 @@ htmlcov/
 # Personal Claude Code instructions (not published)
 CLAUDE.local.md
 
+# Private drafts (e.g. retrospectives), never published
+drafts/
+
 # cflib's cache of the drone's variable tables (TOC)
 cache/
 
