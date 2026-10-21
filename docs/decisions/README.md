@@ -23,5 +23,6 @@ This column is honest about which ideas were mine.
 | [0012](0012-landing-confirms-touchdown.md) | Motors stop only on confirmed touchdown | AI recommendation accepted |
 | [0013](0013-operator-kill-switch.md) | The operator's kill switch bypasses the safety layer | Mixed: the need and the exception were mine |
 | [0014](0014-debug-visualization-with-rerun.md) | Debug visualization uses Rerun | Mixed: an off-the-shelf tool for now was mine; Rerun was the AI's pick |
+| [0015](0015-first-game-catch-the-bird.md) | The first game is Catch the bird (replaces hide-and-seek) | Mixed: the safety reasoning and flying above reach were mine; the game was the AI's suggestion |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

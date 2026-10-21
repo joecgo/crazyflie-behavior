@@ -4,10 +4,12 @@
 
 Autonomous behavior experiments for the [Bitcraze Crazyflie 2.1+](https://www.bitcraze.io/products/crazyflie-2-1-plus/) nano drone, written in Python with [cflib](https://github.com/bitcraze/crazyflie-lib-python).
 
-**The goal: a drone that plays hide-and-seek and peek-a-boo.** It finds a
-hiding spot, peeks out, and seeks, using game-AI techniques (behavior trees,
-EQS-style scoring of hiding spots, line-of-sight checks) on a real robot, where
-sensors are noisy, positions drift, and safety comes first.
+**The goal: a drone that plays Catch the bird.** The drone flies like a bird,
+always above a small child's reach; the child chases it and scores a catch by
+getting underneath, and the bird reacts and flies off, a little faster each
+time. Game-AI techniques (behavior trees, difficulty that adapts, character
+reactions) on a real robot, where sensors are noisy, positions drift, and the
+game is designed around safety.
 
 The behavior logic is kept separate from the drone connection, so the same
 logic runs against a mock drone, a simulator, or real hardware.
@@ -69,6 +71,8 @@ setup works. In PyCharm, use the **first_flight** run configuration.
 - Flow deck (needed for stable autonomous hover)
 - Multi-ranger deck (obstacle sensing, optional)
 - Spare batteries and propellers (about 7 minutes of flight per battery)
+- A 1080p USB webcam mounted in the room: tracks the player, and gives an
+  outside view of the drone's true position
 
 On Windows the Crazyradio needs a USB driver installed with Zadig. Follow the
 Bitcraze docs for the current steps.
