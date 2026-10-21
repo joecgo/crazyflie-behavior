@@ -1,4 +1,4 @@
-# Continuous integration (focus area 6): every push and pull request runs the
+# Continuous integration: every push and pull request runs the
 # same checks as a local run. Everything runs without hardware.
 name: checks
 
