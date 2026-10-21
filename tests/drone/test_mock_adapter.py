@@ -6,7 +6,7 @@ from crazyflie_behavior.snapshot import (
     DroneStatus,
     RangeDirection,
     RangeReading,
-    RangeReadingKind,
+    RangeStatus,
     Snapshot,
 )
 from crazyflie_behavior.timing.clock import SimClock
@@ -59,12 +59,62 @@ def test_set_velocity_moves_the_drone_by_velocity_times_dt() -> None:
     drone = flying_drone(clock, height=0.5)
 
     drone.set_velocity(Vector3(0.2, -0.1, 0.0))
-    clock.advance(0.5)
-    snapshot = snapshot_now(drone, clock, dt=0.5)
+    clock.advance(0.4)
+    snapshot = snapshot_now(drone, clock, dt=0.4)
 
-    assert position_of(snapshot).x == pytest.approx(0.1)
-    assert position_of(snapshot).y == pytest.approx(-0.05)
+    assert position_of(snapshot).x == pytest.approx(0.08)
+    assert position_of(snapshot).y == pytest.approx(-0.04)
     assert position_of(snapshot).z == pytest.approx(0.5)
+
+
+def test_streaming_a_velocity_every_tick_keeps_the_drone_moving() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock)
+
+    for _ in range(30):  # 3 seconds of 10 Hz ticks
+        drone.set_velocity(Vector3(0.1, 0.0, 0.0))
+        clock.advance(0.1)
+        snapshot_now(drone, clock, dt=0.1)
+    snapshot = snapshot_now(drone, clock)
+
+    assert status_of(snapshot).is_flying
+    assert position_of(snapshot).x == pytest.approx(0.3)
+
+
+def test_the_drone_stops_following_a_velocity_that_stops_arriving() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock)
+
+    drone.set_velocity(Vector3(0.2, 0.0, 0.0))
+    clock.advance(0.6)  # no new set_velocity for longer than the drone waits
+    snapshot = snapshot_now(drone, clock, dt=0.6)
+
+    assert snapshot.velocity_estimate is not None
+    assert snapshot.velocity_estimate.value == Vector3(0.0, 0.0, 0.0)
+    assert status_of(snapshot).is_flying
+
+
+def test_the_drone_drops_when_velocities_stop_arriving_for_too_long() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock)
+
+    drone.set_velocity(Vector3(0.2, 0.0, 0.0))
+    clock.advance(2.5)
+    snapshot = snapshot_now(drone, clock, dt=2.5)
+
+    assert not status_of(snapshot).is_flying
+    assert position_of(snapshot).z == 0.0
+
+
+def test_the_setpoint_timeout_only_applies_while_streaming() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock)
+    drone.set_velocity(Vector3(0.2, 0.0, 0.0))
+
+    drone.hover()  # hands control back to the drone, ending the stream
+    clock.advance(5.0)
+
+    assert status_of(snapshot_now(drone, clock, dt=5.0)).is_flying
 
 
 def test_hover_stops_the_drone_where_it_is() -> None:
@@ -126,7 +176,7 @@ def test_the_room_is_empty_unless_a_test_says_otherwise() -> None:
     assert readings.front is not None
     assert readings.front.value == RangeReading.at_distance(0.3)
     assert readings.back is not None
-    assert readings.back.value.kind is RangeReadingKind.OUT_OF_RANGE
+    assert readings.back.value.status is RangeStatus.OUT_OF_RANGE
 
 
 def fly_then_fail(drone: MockAdapter) -> None:

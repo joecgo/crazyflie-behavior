@@ -3,6 +3,7 @@ import math
 import pytest
 
 from crazyflie_behavior.drone.crazyflie.conversions import (
+    LOG_TIMESTAMP_RANGE_MS,
     drone_time_from_timestamp,
     move_duration,
     range_reading_from_mm,
@@ -22,7 +23,30 @@ def test_large_range_values_mean_nothing_in_range() -> None:
 
 
 def test_log_timestamps_become_seconds() -> None:
-    assert drone_time_from_timestamp(1500) == 1.5
+    assert drone_time_from_timestamp(1500, previous_drone_time=None) == 1.5
+    assert drone_time_from_timestamp(1550, previous_drone_time=1.5) == 1.55
+
+
+def test_drone_time_keeps_counting_up_across_the_24_bit_wrap() -> None:
+    just_before_wrap = (LOG_TIMESTAMP_RANGE_MS - 10) / 1000.0
+
+    drone_time = drone_time_from_timestamp(5, previous_drone_time=just_before_wrap)
+
+    assert drone_time == (LOG_TIMESTAMP_RANGE_MS + 5) / 1000.0
+
+
+def test_slightly_out_of_order_packets_are_not_mistaken_for_a_wrap() -> None:
+    assert drone_time_from_timestamp(9990, previous_drone_time=10.0) == 9.99
+
+
+def test_a_late_packet_from_before_the_wrap_stays_before_it() -> None:
+    just_after_wrap = (LOG_TIMESTAMP_RANGE_MS + 5) / 1000.0
+
+    drone_time = drone_time_from_timestamp(
+        LOG_TIMESTAMP_RANGE_MS - 3, previous_drone_time=just_after_wrap
+    )
+
+    assert drone_time == (LOG_TIMESTAMP_RANGE_MS - 3) / 1000.0
 
 
 def test_yaw_rate_radians_become_degrees_for_cflib() -> None:

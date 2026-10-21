@@ -26,9 +26,12 @@ from crazyflie_behavior.timing.clock import Clock
 class TelemetryBuffer:
     """Thread-safe store of the latest value of each telemetry variable."""
 
-    def __init__(self, clock: Clock) -> None:
+    # Quoted because in Python 3.12 threading.Lock is a factory function at
+    # run time, so `threading.Lock | None` only works as a type-checker hint.
+    def __init__(self, clock: Clock, *, lock: "threading.Lock | None" = None) -> None:
+        """`lock` lets a test hold the buffer's lock; adapters leave it out."""
         self._clock = clock
-        self._lock = threading.Lock()
+        self._lock = lock if lock is not None else threading.Lock()
         self._position_estimate: Stamped[Vector3] | None = None
         self._velocity_estimate: Stamped[Vector3] | None = None
         self._range_readings: dict[RangeDirection, Stamped[RangeReading]] = {}

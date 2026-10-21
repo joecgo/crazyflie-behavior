@@ -34,8 +34,8 @@ class Stamped[T]:
         return now - self.arrival_time
 
 
-class RangeReadingKind(Enum):
-    """The three kinds of range reading (glossary: Range reading)."""
+class RangeStatus(Enum):
+    """Whether a range reading is a distance, out of range or invalid (glossary: Range status)."""
 
     DISTANCE = "distance"
     """Something was detected at a known distance."""
@@ -49,28 +49,28 @@ class RangeReadingKind(Enum):
 class RangeReading:
     """The distance a range sensor measures in one direction."""
 
-    kind: RangeReadingKind
+    status: RangeStatus
     distance: float | None
-    """Meters to the detected surface. Set only when `kind` is DISTANCE."""
+    """Meters to the detected surface. Set only when `status` is DISTANCE."""
 
     def __post_init__(self) -> None:
         has_distance = self.distance is not None
-        if (self.kind is RangeReadingKind.DISTANCE) != has_distance:
-            raise ValueError(f"A {self.kind.value} reading can't have distance={self.distance}")
+        if (self.status is RangeStatus.DISTANCE) != has_distance:
+            raise ValueError(f"A {self.status.value} reading can't have distance={self.distance}")
         if self.distance is not None and self.distance < 0.0:
             raise ValueError(f"Distance can't be negative: {self.distance}")
 
     @classmethod
     def at_distance(cls, distance: float) -> "RangeReading":
-        return cls(RangeReadingKind.DISTANCE, distance)
+        return cls(RangeStatus.DISTANCE, distance)
 
     @classmethod
     def out_of_range(cls) -> "RangeReading":
-        return cls(RangeReadingKind.OUT_OF_RANGE, None)
+        return cls(RangeStatus.OUT_OF_RANGE, None)
 
     @classmethod
     def invalid(cls) -> "RangeReading":
-        return cls(RangeReadingKind.INVALID, None)
+        return cls(RangeStatus.INVALID, None)
 
 
 class RangeDirection(Enum):

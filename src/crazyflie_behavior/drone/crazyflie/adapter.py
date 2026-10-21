@@ -16,6 +16,7 @@ How the interface maps onto cflib:
   and flies trajectories on the drone.
 """
 
+import logging
 import threading
 from collections.abc import Callable
 
@@ -37,11 +38,14 @@ from crazyflie_behavior.drone.crazyflie.conversions import (
     range_reading_from_mm,
     yaw_rate_deg_per_s,
 )
+from crazyflie_behavior.drone.crazyflie.touchdown import touchdown_confirmed
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.telemetry_buffer import TelemetryBuffer
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading, Snapshot
 from crazyflie_behavior.timing.clock import Clock
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_URI = "radio://0/80/2M/E7E7E7E7E7"
 
@@ -66,6 +70,10 @@ MIN_MOVE_DURATION = 0.5
 """Seconds. The shortest move ever requested from the high-level commander."""
 HEIGHT_IF_UNKNOWN = 2.0
 """Meters assumed when landing without a position estimate: a slow, safe descent."""
+TOUCHDOWN_GRACE_PERIOD = 3.0
+"""Seconds past the planned landing time that shutdown waits for confirmed touchdown."""
+TOUCHDOWN_POLL_PERIOD = 0.05
+"""Seconds between touchdown checks while waiting at shutdown."""
 # ------------------------------------------------------------------------------
 
 _MULTIRANGER_VARIABLES = {
@@ -125,11 +133,14 @@ class CrazyflieAdapter(DroneInterface):
         self._is_streaming_velocity = False
         self._is_airborne = False
         self._landing_finishes_at: float | None = None
+        self._touchdown_warning_logged = False
+        self._last_drone_time: float | None = None
 
     # --- Connection ---------------------------------------------------------
 
     def connect(self) -> None:
         _init_drivers_once()
+        self._last_drone_time = None  # a new session: the drone may have rebooted
         sync_crazyflie = SyncCrazyflie(self._uri, cf=Crazyflie(rw_cache=self._cache_directory))
         sync_crazyflie.open_link()  # blocks until connected; raises if it can't connect
         self._sync_crazyflie = sync_crazyflie
@@ -148,23 +159,23 @@ class CrazyflieAdapter(DroneInterface):
         if self._sync_crazyflie is None:
             return
         # cflib's close_link() sends a zero-thrust setpoint, which would drop a
-        # flying drone. Land first and wait for it: blocking is fine at shutdown.
+        # flying drone. Land first and wait for touchdown: blocking is fine at
+        # shutdown.
+        touched_down = True
         try:
             if self._is_airborne:
-                self.land()
-                if self._landing_finishes_at is not None:
-                    self._clock.sleep_until(self._landing_finishes_at)
-                self._finish_landing_if_due()
+                touched_down = self._land_and_wait_for_touchdown()
         finally:
-            # Clean up even if landing failed (e.g. the link already dropped).
-            self._stop_status_polling.set()
-            if self._status_thread is not None:
-                self._status_thread.join(timeout=1.0)
-                self._status_thread = None
-            for log_config in self._log_configs:
-                log_config.stop()
-            self._log_configs.clear()
-            self._close_link()
+            # Clean up even if landing failed (e.g. the link already dropped),
+            # but never close the link while the drone may still be in the air.
+            if touched_down:
+                self._shut_down_link()
+        if not touched_down:
+            raise RuntimeError(
+                "Touchdown not confirmed at shutdown (ADR-0012). The link is left open "
+                "and the motors running at the landing target, because closing the "
+                "link would cut them. Check the drone."
+            )
 
     # --- Commands -----------------------------------------------------------
 
@@ -186,13 +197,7 @@ class CrazyflieAdapter(DroneInterface):
         self._is_airborne = True
 
     def land(self) -> None:
-        self._release_velocity_streaming()
-        current_height = self._latest_height(if_unknown=HEIGHT_IF_UNKNOWN)
-        duration = move_duration(current_height, VERTICAL_SPEED, MIN_MOVE_DURATION)
-        self._cf.high_level_commander.land(0.0, duration, yaw=FIXED_YAW_RAD)
-        # The high-level commander keeps the motors running after it lands;
-        # take_snapshot stops them once the landing has had time to finish.
-        self._landing_finishes_at = self._clock.now() + duration
+        self._start_landing()
 
     def set_velocity(self, velocity: Vector3, yaw_rate_rad_per_s: float = 0.0) -> None:
         self._landing_finishes_at = None
@@ -235,8 +240,9 @@ class CrazyflieAdapter(DroneInterface):
         self._landing_finishes_at = None
 
     def take_snapshot(self, time: float, dt: float) -> Snapshot:
-        self._finish_landing_if_due()
-        return self._telemetry.snapshot(time, dt)
+        snapshot = self._telemetry.snapshot(time, dt)
+        self._finish_landing(snapshot)
+        return snapshot
 
     # --- Internals ----------------------------------------------------------
 
@@ -280,10 +286,57 @@ class CrazyflieAdapter(DroneInterface):
         self._is_airborne = False
         self._landing_finishes_at = None
 
-    def _finish_landing_if_due(self) -> None:
-        # VERIFY: the landing trajectory has really touched down by now.
-        if self._landing_finishes_at is not None and self._clock.now() >= self._landing_finishes_at:
+    def _shut_down_link(self) -> None:
+        self._stop_status_polling.set()
+        if self._status_thread is not None:
+            self._status_thread.join(timeout=1.0)
+            self._status_thread = None
+        for log_config in self._log_configs:
+            log_config.stop()
+        self._log_configs.clear()
+        self._close_link()
+
+    # --- Landing (ADR-0012) -------------------------------------------------
+
+    def _start_landing(self) -> float:
+        """Start descending to the ground. Returns when the descent should be done."""
+        self._release_velocity_streaming()
+        current_height = self._latest_height(if_unknown=HEIGHT_IF_UNKNOWN)
+        duration = move_duration(current_height, VERTICAL_SPEED, MIN_MOVE_DURATION)
+        self._cf.high_level_commander.land(0.0, duration, yaw=FIXED_YAW_RAD)
+        # The high-level commander keeps the motors running after it lands;
+        # they're stopped once touchdown is confirmed.
+        self._landing_finishes_at = self._clock.now() + duration
+        self._touchdown_warning_logged = False
+        return self._landing_finishes_at
+
+    def _finish_landing(self, snapshot: Snapshot) -> None:
+        # Stop the motors only once touchdown is confirmed, never just because
+        # the planned landing time is up: the plan may have used a stale height.
+        if self._landing_finishes_at is None or self._clock.now() < self._landing_finishes_at:
+            return
+        if touchdown_confirmed(snapshot, self._clock.now()):
             self._stop_motors()
+        elif not self._touchdown_warning_logged:
+            logger.warning(
+                "Landing time is up but touchdown isn't confirmed; "
+                "motors stay on at the landing target."
+            )
+            self._touchdown_warning_logged = True
+
+    def _land_and_wait_for_touchdown(self) -> bool:
+        """Land and block until touchdown is confirmed. False if it never is."""
+        finishes_at = self._start_landing()
+        give_up_at = finishes_at + TOUCHDOWN_GRACE_PERIOD
+        self._clock.sleep_until(finishes_at)
+        while not touchdown_confirmed(
+            self._telemetry.snapshot(self._clock.now(), 0.0), self._clock.now()
+        ):
+            if self._clock.now() >= give_up_at:
+                return False
+            self._clock.sleep_until(self._clock.now() + TOUCHDOWN_POLL_PERIOD)
+        self._stop_motors()
+        return True
 
     # --- Telemetry ----------------------------------------------------------
 
@@ -330,25 +383,31 @@ class CrazyflieAdapter(DroneInterface):
     # Log callbacks run on cflib's receive thread. Keep them tiny: convert and
     # write to the telemetry buffer, nothing else.
 
+    def _drone_time(self, timestamp: int) -> float:
+        # Every log callback runs on cflib's single receive thread, so this
+        # state needs no lock.
+        self._last_drone_time = drone_time_from_timestamp(timestamp, self._last_drone_time)
+        return self._last_drone_time
+
     def _on_position(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
         position = Vector3(
             data["stateEstimate.x"], data["stateEstimate.y"], data["stateEstimate.z"]
         )
-        self._telemetry.write_position_estimate(position, drone_time_from_timestamp(timestamp))
+        self._telemetry.write_position_estimate(position, self._drone_time(timestamp))
 
     def _on_velocity(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
         velocity = Vector3(
             data["stateEstimate.vx"], data["stateEstimate.vy"], data["stateEstimate.vz"]
         )
-        self._telemetry.write_velocity_estimate(velocity, drone_time_from_timestamp(timestamp))
+        self._telemetry.write_velocity_estimate(velocity, self._drone_time(timestamp))
 
     def _on_battery(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
-        self._telemetry.write_battery_voltage(data["pm.vbat"], drone_time_from_timestamp(timestamp))
+        self._telemetry.write_battery_voltage(data["pm.vbat"], self._drone_time(timestamp))
 
     def _on_down_range(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
         reading = range_reading_from_mm(int(data[_DOWN_RANGE_VARIABLE]))
         self._telemetry.write_range_readings(
-            {RangeDirection.DOWN: reading}, drone_time_from_timestamp(timestamp)
+            {RangeDirection.DOWN: reading}, self._drone_time(timestamp)
         )
 
     def _on_multiranger(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
@@ -356,7 +415,7 @@ class CrazyflieAdapter(DroneInterface):
             direction: range_reading_from_mm(int(data[variable]))
             for direction, variable in _MULTIRANGER_VARIABLES.items()
         }
-        self._telemetry.write_range_readings(readings, drone_time_from_timestamp(timestamp))
+        self._telemetry.write_range_readings(readings, self._drone_time(timestamp))
 
     # --- Drone status -------------------------------------------------------
 

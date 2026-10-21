@@ -7,6 +7,10 @@ telemetry through the same `TelemetryBuffer` as every other adapter.
 Like real hardware, it ignores commands it can't carry out (e.g. taking off
 while disarmed) instead of raising; the outcome shows up in the snapshot.
 
+Also like real hardware, it stops following velocity setpoints that stop
+arriving (ADR-0011): a stream someone forgot to send every tick fails in tests
+the way it would in the air.
+
 The room is empty: every range reading is out of range (clear) unless a test
 sets it with `set_range_reading`.
 """
@@ -19,6 +23,14 @@ from crazyflie_behavior.timing.clock import Clock
 
 CHARGED_BATTERY_VOLTAGE = 4.0
 """Volts. A freshly charged Crazyflie battery reads a little above this."""
+
+# PLACEHOLDERS, to VERIFY at the bench (ADR-0011): as we understand the
+# firmware, a Crazyflie levels out about 0.5 s after velocity setpoints stop,
+# and cuts its motors after about 2 s.
+SETPOINT_STOP_FOLLOWING_AFTER = 0.5
+"""Seconds without a set_velocity before the drone stops following it."""
+SETPOINT_CUT_MOTORS_AFTER = 2.0
+"""Seconds without a set_velocity before the motors are cut and the drone drops."""
 
 _ZERO = Vector3(0.0, 0.0, 0.0)
 
@@ -36,6 +48,8 @@ class MockAdapter(DroneInterface):
         self._is_flying = False
         self._position = _ZERO
         self._velocity = _ZERO
+        # When the last set_velocity arrived; None when not in steering mode.
+        self._last_setpoint_time: float | None = None
 
     # --- Test hooks: set the telemetry a test needs -----------------------------
 
@@ -80,6 +94,7 @@ class MockAdapter(DroneInterface):
             self._is_flying = True
             self._position = Vector3(self._position.x, self._position.y, height)
             self._velocity = _ZERO
+            self._last_setpoint_time = None
 
     def land(self) -> None:
         self.command_log.append("land")
@@ -90,6 +105,7 @@ class MockAdapter(DroneInterface):
         # Yaw is held fixed (ADR-0008), so the mock ignores the yaw rate.
         if self._is_flying:
             self._velocity = velocity
+            self._last_setpoint_time = self._clock.now()
 
     def move_to(self, position: Vector3, duration: float) -> None:
         self.command_log.append("move_to")
@@ -98,10 +114,12 @@ class MockAdapter(DroneInterface):
         if self._is_flying:
             self._position = position
             self._velocity = _ZERO
+            self._last_setpoint_time = None
 
     def hover(self) -> None:
         self.command_log.append("hover")
         self._velocity = _ZERO
+        self._last_setpoint_time = None
 
     def emergency_stop(self) -> None:
         self.command_log.append("emergency_stop")
@@ -109,6 +127,7 @@ class MockAdapter(DroneInterface):
         self._drop_to_ground()
 
     def take_snapshot(self, time: float, dt: float) -> Snapshot:
+        self._apply_setpoint_timeout()
         if self._is_flying:
             self._position = self._position + self._velocity * dt
         self._publish_state()
@@ -116,10 +135,20 @@ class MockAdapter(DroneInterface):
 
     # --- Internals --------------------------------------------------------------
 
+    def _apply_setpoint_timeout(self) -> None:
+        if self._last_setpoint_time is None:
+            return
+        silence = self._clock.now() - self._last_setpoint_time
+        if silence > SETPOINT_CUT_MOTORS_AFTER:
+            self._drop_to_ground()
+        elif silence > SETPOINT_STOP_FOLLOWING_AFTER:
+            self._velocity = _ZERO
+
     def _drop_to_ground(self) -> None:
         self._is_flying = False
         self._position = Vector3(self._position.x, self._position.y, 0.0)
         self._velocity = _ZERO
+        self._last_setpoint_time = None
 
     def _publish_state(self) -> None:
         drone_time = self._clock.now()

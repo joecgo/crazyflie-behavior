@@ -4,8 +4,8 @@ import pytest
 
 from crazyflie_behavior.snapshot import (
     RangeReading,
-    RangeReadingKind,
     RangeReadings,
+    RangeStatus,
     Snapshot,
     Stamped,
 )
@@ -17,17 +17,17 @@ def test_a_stamped_value_knows_its_age() -> None:
     assert stamped.age(now=10.5) == pytest.approx(0.5)
 
 
-def test_range_readings_come_in_three_kinds() -> None:
-    assert RangeReading.at_distance(0.4) == RangeReading(RangeReadingKind.DISTANCE, 0.4)
-    assert RangeReading.out_of_range().kind is RangeReadingKind.OUT_OF_RANGE
-    assert RangeReading.invalid().kind is RangeReadingKind.INVALID
+def test_a_range_reading_has_one_of_three_statuses() -> None:
+    assert RangeReading.at_distance(0.4) == RangeReading(RangeStatus.DISTANCE, 0.4)
+    assert RangeReading.out_of_range().status is RangeStatus.OUT_OF_RANGE
+    assert RangeReading.invalid().status is RangeStatus.INVALID
 
 
 def test_only_distance_readings_carry_a_distance() -> None:
     with pytest.raises(ValueError, match="can't have distance"):
-        RangeReading(RangeReadingKind.DISTANCE, None)
+        RangeReading(RangeStatus.DISTANCE, None)
     with pytest.raises(ValueError, match="can't have distance"):
-        RangeReading(RangeReadingKind.OUT_OF_RANGE, 2.0)
+        RangeReading(RangeStatus.OUT_OF_RANGE, 2.0)
 
 
 def test_distances_cannot_be_negative() -> None:
