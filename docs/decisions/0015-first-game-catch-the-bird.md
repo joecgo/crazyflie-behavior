@@ -1,6 +1,6 @@
 # 0015: The first game is Catch the bird
 
-- **Status:** Accepted. Replaces hide-and-seek as the project's goal.
+- **Status:** Accepted. Replaces hide-and-seek as the project's goal. The first-game choice is superseded by [ADR-0016](0016-first-game-hide-and-seek-drone-lands.md): Catch the bird becomes the second game, and its design here still stands.
 - **Date:** 2026-10-20
 - **Origin:** Mixed. Dropping hide-and-seek for safety, and using a toddler's height so the drone always flies out of reach: my ideas. The Catch the bird game: an AI suggestion I chose.
 

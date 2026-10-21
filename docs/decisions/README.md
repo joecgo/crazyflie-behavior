@@ -23,6 +23,8 @@ This column is honest about which ideas were mine.
 | [0012](0012-landing-confirms-touchdown.md) | Motors stop only on confirmed touchdown | AI recommendation accepted |
 | [0013](0013-operator-kill-switch.md) | The operator's kill switch bypasses the safety layer | Mixed: the need and the exception were mine |
 | [0014](0014-debug-visualization-with-rerun.md) | Debug visualization uses Rerun | Mixed: an off-the-shelf tool for now was mine; Rerun was the AI's pick |
-| [0015](0015-first-game-catch-the-bird.md) | The first game is Catch the bird (replaces hide-and-seek) | Mixed: the safety reasoning and flying above reach were mine; the game was the AI's suggestion |
+| [0015](0015-first-game-catch-the-bird.md) | The first game is Catch the bird (replaces hide-and-seek); now the second game, see 0016 | Mixed: the safety reasoning and flying above reach were mine; the game was the AI's suggestion |
+| [0016](0016-first-game-hide-and-seek-drone-lands.md) | The first game is hide-and-seek, where the drone hides and lands | My idea |
+| [0017](0017-hint-chirps-from-buzzer-deck.md) | Hint chirps come from a Buzzer deck, not the motors | Mixed: the hints were mine; the Buzzer deck was the AI's recommendation |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

@@ -4,9 +4,10 @@ Autonomous behavior for a Bitcraze Crazyflie 2.1+ nano drone, in Python on cflib
 The project should show deliberate architecture and real robotics
 problem-solving, not a tutorial follow-along.
 
-**Current goal:** a drone that plays Catch the bird
-([ADR-0015](docs/decisions/0015-first-game-catch-the-bird.md)). Focus on that one
-goal; other ideas wait in the backlog.
+**Current goal:** a drone that plays hide-and-seek, where the drone hides and
+lands ([ADR-0016](docs/decisions/0016-first-game-hide-and-seek-drone-lands.md)).
+Focus on that one goal; Catch the bird is the second game, and other ideas wait
+in the backlog.
 
 ## Roles: the user is the architect
 

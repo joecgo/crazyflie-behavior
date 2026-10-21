@@ -5,7 +5,8 @@ means the same in conversation, docs and code. The UE5 column gives the
 nearest equivalent, with a note where the analogy breaks.
 
 Most terms describe how the drone and robotics world works. Terms in
-**Architecture** are project design and carry a status:
+**Architecture** and in the game sections (**Hide-and-seek**, **Catch the
+bird**) are project design and carry a status:
 - **Decided**: chosen by the architect. Links to its ADR.
 - **Proposed**: a candidate term waiting on a design decision. It may change or
   disappear.
@@ -24,6 +25,7 @@ this file in the same commit as the code or ADR that uses it.
 | **Deck** | Plug-in expansion board on the Crazyflie. | A component added to the Pawn. |
 | **Flow deck** | Deck with a downward optical-flow camera and height sensor. Needed to hold position. | Gives the Pawn a sense of its own movement. |
 | **Multi-ranger deck** | Deck with 5 laser distance sensors (front, back, left, right, up). Each sensor sees a cone about 27° wide and reports a single distance for the whole cone. | Like five line traces fired every sample, but each gives back a blurry distance reading from a sensor in the shape of a cone. |
+| **Buzzer deck** | Deck with a small piezo buzzer that plays tones and short melodies, so a sound comes from where the drone is. | A sound component on the Pawn: the sound plays at the Actor's location. |
 | **Firmware** | Code running on the drone itself: stabilization, estimation, motor control at about 1 kHz. | The engine's physics and movement component. You don't rewrite it, you give it inputs. |
 | **cflib** | Bitcraze's official Python library for talking to the Crazyflie. | An engine-provided API module. |
 | **URI** | Address of a specific drone, e.g. `radio://0/80/2M/E7E7E7E7E7`. | A server address to connect to. |
@@ -87,9 +89,6 @@ this file in the same commit as the code or ADR that uses it.
 | **Blackboard** | Behavior memory: what behaviors remember across ticks (next waypoint, where an obstacle was last seen). Written by behaviors, persists between ticks. | UE Blackboard (AI memory keys). | Decided ([0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md)) |
 | **Safety layer** | The layer between behaviors and the drone interface. It answers behaviors' safety queries and is the only code that sends commands to the drone, apart from the kill switch ([ADR-0013](decisions/0013-operator-kill-switch.md)): it approves, clamps to the speed envelope, or overrides command requests. | Server authority validating client movement requests. | Decided ([0008](decisions/0008-drone-interface.md), [0013](decisions/0013-operator-kill-switch.md)) |
 | **Kill switch** | The operator's command to cut the motors immediately, executed at any moment, like a cheat command. The one thing that bypasses the safety layer; everything else goes through it. | A console cheat command that bypasses the gameplay rules. | Decided ([0013](decisions/0013-operator-kill-switch.md)) |
-| **Sky layer** | The height band the drone plays in: above a child's reach, below the ceiling with a margin (about 1.5-2.0 m in a room with a 2.4 m ceiling). | A nav volume restricted to a height range, like flying units that keep to an air layer. | Decided ([0015](decisions/0015-first-game-catch-the-bird.md)) |
-| **Clearance rule** | The drone always keeps about 1 m of clearance below. If something rises toward it, it moves away sideways. | A keep-out radius enforced by the movement component, regardless of what the AI wants. | Decided ([0015](decisions/0015-first-game-catch-the-bird.md)) |
-| **Catch** | Scored when the child gets directly under the bird, as seen by the down sensor. The bird reacts and flies to a new spot. | An overlap trigger under the Pawn that scores a point. | Decided ([0015](decisions/0015-first-game-catch-the-bird.md)) |
 | **Command request** | What a behavior asks the drone to do this tick (e.g. a velocity, or fast mode to a point). It goes to the safety layer, never directly to the drone. | A client asking the server to move. | Decided ([0008](decisions/0008-drone-interface.md)) |
 | **Safety query** | A read-only question a behavior asks the safety layer during its decision, e.g. "can I enter fast mode?" It's answered immediately and has no side effects. | A BT decorator checking a condition. | Decided ([0008](decisions/0008-drone-interface.md)) |
 | **Stamped value** | A telemetry value together with its arrival time (PC clock) and the drone's timestamp (converted to seconds). Every value in a snapshot is stamped, so its age can always be checked. | A replicated property plus "when the server sent it" and "when we received it". | Decided ([0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md)) |
@@ -103,6 +102,30 @@ this file in the same commit as the code or ADR that uses it.
 | **Steering mode** | The default control mode: velocity commands with obstacle-avoidance steering, slow and controlled. | `AddMovementInput` each Tick from steering behaviors. | Decided ([0005](decisions/0005-control-modes-steering-and-fast.md)) |
 | **Fast mode** | Control mode for moving quickly to a target using position commands (`go_to`), with obstacle-avoidance steering disabled. The safety layer stays active and can interrupt it. | A scripted `MoveTo` with steering off, but collision still on. | Decided ([0005](decisions/0005-control-modes-steering-and-fast.md)) |
 | **Speed envelope** | The maximum speed and acceleration allowed in a control mode. The safety layer may tighten it in the moment but never widen it. | `MaxWalkSpeed` and `MaxAcceleration` on the movement component, clamped by gameplay rules. | Decided ([0005](decisions/0005-control-modes-steering-and-fast.md)) |
+
+## Hide-and-seek
+
+Terms for the first game ([ADR-0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)).
+
+| Term | Definition | UE5 analogy | Status |
+|---|---|---|---|
+| **Launch point** | The marked spot every round starts from. The drone takes off from it facing a fixed direction, the map is stored relative to it, and it stands in for the waiting area. | PlayerStart: every round spawns here. | Decided ([0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)) |
+| **Waiting area** | Where the player waits during a hiding flight: right behind the launch point, with a safety gate between it and the play area. | A pre-round lobby the player can't leave until the round starts. | Decided ([0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)) |
+| **Play area** | The space the drone flies and hides in. Nobody is in it while the drone flies. | The playable level, locked during the setup phase. | Decided ([0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)) |
+| **Mapping run** | A flight before play, with the play area clear, that builds the map the hiding flights use. Up to about 5 minutes. | Building the navmesh before play, except the drone has to fly the level to see it. | Decided ([0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)) |
+| **Hiding spot** | A place on the floor where the drone lands to hide, with at least one wall between it and the launch point. | An EQS result: a point that fails the line-of-sight test from the PlayerStart. | Decided ([0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)) |
+| **Found** | The player picks up the hidden drone, which shows as the down reading jumping and the motion sensors spiking. The drone lights its LEDs and the PC plays a fanfare. | An interact event on a hidden collectible. | Decided ([0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)) |
+| **Hint** | Every 15 s until the drone is found, it flashes its LEDs and chirps, so the player can find it. | A ping that reveals where an objective is. | Decided ([0017](decisions/0017-hint-chirps-from-buzzer-deck.md)) |
+
+## Catch the bird
+
+Terms for the second game ([ADR-0015](decisions/0015-first-game-catch-the-bird.md), [rules](catch-the-bird.md)).
+
+| Term | Definition | UE5 analogy | Status |
+|---|---|---|---|
+| **Sky layer** | The height band the drone plays in: above a child's reach, below the ceiling with a margin (about 1.5-2.0 m in a room with a 2.4 m ceiling). | A nav volume restricted to a height range, like flying units that keep to an air layer. | Decided ([0015](decisions/0015-first-game-catch-the-bird.md)) |
+| **Clearance rule** | The drone always keeps about 1 m of clearance below. If something rises toward it, it moves away sideways. | A keep-out radius enforced by the movement component, regardless of what the AI wants. | Decided ([0015](decisions/0015-first-game-catch-the-bird.md)) |
+| **Catch** | Scored when the child gets directly under the bird, as seen by the down sensor. The bird reacts and flies to a new spot. | An overlap trigger under the Pawn that scores a point. | Decided ([0015](decisions/0015-first-game-catch-the-bird.md)) |
 
 <!-- Terms still to define as decisions land: command,
      geofence, failsafe, recording/replay, ... -->
