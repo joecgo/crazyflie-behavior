@@ -61,4 +61,4 @@ Crazyflie adapter and `tools/`, and nothing in `src/` imports `tools/`.
 - **Open question:** how drone-agnostic should the interface be? Crazyflie-shaped
   (easy, honest) or generic across drones (more portable, more design work)?
   To be settled in a later ADR.
-- Glossary terms: *Drone interface*, *Adapter*, *Crazyflie adapter*, *Mock*.
+- Glossary terms: *Drone interface*, *Adapter*, *Crazyflie adapter*, *Mock adapter*.
