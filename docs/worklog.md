@@ -24,6 +24,20 @@ findings, key design turns. Added only with the architect's OK.
 A few sentences: what happened, why it matters, links to ADRs, commits or session logs.
 -->
 
+### 2026-10-24: A touchdown backup that failed with the sensor it backed up
+
+Reviewing `touchdown.py` line by line, I noticed that when the down range had
+nothing usable, the position estimate's height confirmed touchdown instead.
+On a Crazyflie that height comes mostly from the same down sensor, so the
+failure that triggers the backup also corrupts it, and the motors could be cut
+in mid-air. Removing the backup would have left the drone hovering until its
+battery died, so I pushed back on that fix: the drone must always land. The
+result separates "getting down" from "stopping the motors": only a steady down
+reading confirms touchdown; otherwise a slow final descent continues until a
+time limit says the drone must be on the floor. A second code review then
+hardened it against noisy readings and stalled ticks
+([ADR-0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md), commit `1187f8d`).
+
 ### 2026-10-21: Hide-and-seek made safe by the game's structure
 
 Hide-and-seek was dropped the day before
