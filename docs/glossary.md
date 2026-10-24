@@ -58,7 +58,7 @@ this file in the same commit as the code or ADR that uses it.
 
 | Term | Definition | UE5 analogy |
 |---|---|---|
-| **State estimate** | The drone's best guess of its own position, velocity and attitude, fused from sensors (`stateEstimate.*`). | The Pawn's transform, **except it is a guess, not ground truth**. |
+| **State estimate** | The drone's best guess of its own position, velocity and attitude, fused from sensors (`stateEstimate.*`). Not independent of those sensors: with a Flow deck, height comes mostly from the down range. | The Pawn's transform, **except it is a guess, not ground truth**. |
 | **Estimator** | Firmware algorithm (a Kalman filter) that produces the state estimate. | Client-side smoothing of replicated movement, but for real sensor data. |
 | **Drift** | Slow, growing error in the state estimate over a flight (flow deck has no absolute reference). | No equivalent: in a game, `GetActorLocation()` never lies. |
 | **Sensor noise** | Random error on each reading. | Like adding random jitter to every line trace hit distance. |

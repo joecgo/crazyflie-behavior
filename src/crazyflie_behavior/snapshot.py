@@ -120,7 +120,8 @@ class Snapshot:
     dt: float
     """Seconds since the previous tick."""
     position_estimate: Stamped[Vector3] | None
-    """The drone's estimated position: world frame, meters. It drifts."""
+    """The drone's estimated position: world frame, meters. It drifts. Its height comes
+    mostly from the down range sensor, so it isn't an independent check on that reading."""
     velocity_estimate: Stamped[Vector3] | None
     """The drone's estimated velocity: world frame, meters per second."""
     range_readings: RangeReadings
