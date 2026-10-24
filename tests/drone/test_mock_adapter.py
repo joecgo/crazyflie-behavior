@@ -90,7 +90,7 @@ def test_the_drone_stops_following_a_velocity_that_stops_arriving() -> None:
     snapshot = snapshot_now(drone, clock, dt=0.6)
 
     assert snapshot.velocity_estimate is not None
-    assert snapshot.velocity_estimate.value == Vector3(0.0, 0.0, 0.0)
+    assert snapshot.velocity_estimate.value == Vector3.ZERO
     assert status_of(snapshot).is_flying
 
 

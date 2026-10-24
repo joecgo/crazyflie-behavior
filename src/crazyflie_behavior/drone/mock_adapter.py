@@ -32,8 +32,6 @@ SETPOINT_STOP_FOLLOWING_AFTER = 0.5
 SETPOINT_CUT_MOTORS_AFTER = 2.0
 """Seconds without a set_velocity before the motors are cut and the drone drops."""
 
-_ZERO = Vector3(0.0, 0.0, 0.0)
-
 
 class MockAdapter(DroneInterface):
     """A fake drone that does exactly what it's told, instantly."""
@@ -46,8 +44,8 @@ class MockAdapter(DroneInterface):
         self._is_connected = False
         self._is_armed = False
         self._is_flying = False
-        self._position = _ZERO
-        self._velocity = _ZERO
+        self._position = Vector3.ZERO
+        self._velocity = Vector3.ZERO
         # When the last set_velocity arrived; None when not in steering mode.
         self._last_setpoint_time: float | None = None
 
@@ -93,7 +91,7 @@ class MockAdapter(DroneInterface):
         if self._is_armed and not self._is_flying:
             self._is_flying = True
             self._position = Vector3(self._position.x, self._position.y, height)
-            self._velocity = _ZERO
+            self._velocity = Vector3.ZERO
             self._last_setpoint_time = None
 
     def land(self) -> None:
@@ -113,12 +111,12 @@ class MockAdapter(DroneInterface):
             raise ValueError(f"Move duration must be positive: {duration}")
         if self._is_flying:
             self._position = position
-            self._velocity = _ZERO
+            self._velocity = Vector3.ZERO
             self._last_setpoint_time = None
 
     def hover(self) -> None:
         self.command_log.append("hover")
-        self._velocity = _ZERO
+        self._velocity = Vector3.ZERO
         self._last_setpoint_time = None
 
     def emergency_stop(self) -> None:
@@ -142,12 +140,12 @@ class MockAdapter(DroneInterface):
         if silence > SETPOINT_CUT_MOTORS_AFTER:
             self._drop_to_ground()
         elif silence > SETPOINT_STOP_FOLLOWING_AFTER:
-            self._velocity = _ZERO
+            self._velocity = Vector3.ZERO
 
     def _drop_to_ground(self) -> None:
         self._is_flying = False
         self._position = Vector3(self._position.x, self._position.y, 0.0)
-        self._velocity = _ZERO
+        self._velocity = Vector3.ZERO
         self._last_setpoint_time = None
 
     def _publish_state(self) -> None:

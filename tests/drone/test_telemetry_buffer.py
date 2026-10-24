@@ -14,7 +14,7 @@ from crazyflie_behavior.snapshot import (
 )
 from crazyflie_behavior.timing.clock import RealClock, SimClock
 
-ORIGIN = Vector3(0.0, 0.0, 0.0)
+ORIGIN = Vector3.ZERO
 LANDED = DroneStatus(is_armed=False, is_flying=False, is_crashed=False, is_tumbled=False)
 
 
