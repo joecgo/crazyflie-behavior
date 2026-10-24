@@ -20,12 +20,13 @@ This column is honest about which ideas were mine.
 | [0009](0009-clock-abstraction.md) | Injected clock; behaviors receive time in the snapshot | AI recommendation accepted |
 | [0010](0010-code-foundations.md) | Code foundations: layout, interfaces, tests, first adapters | Mixed: overrode the AI on writing the Crazyflie adapter now |
 | [0011](0011-mock-models-setpoint-timeout.md) | The mock adapter models the setpoint timeout | AI recommendation accepted |
-| [0012](0012-landing-confirms-touchdown.md) | Motors stop only on confirmed touchdown | AI recommendation accepted |
+| [0012](0012-landing-confirms-touchdown.md) | Motors stop only on confirmed touchdown; the fallback is superseded by 0019 | AI recommendation accepted |
 | [0013](0013-operator-kill-switch.md) | The operator's kill switch bypasses the safety layer | Mixed: the need and the exception were mine |
 | [0014](0014-debug-visualization-with-rerun.md) | Debug visualization uses Rerun | Mixed: an off-the-shelf tool for now was mine; Rerun was the AI's pick |
 | [0015](0015-first-game-catch-the-bird.md) | The first game is Catch the bird (replaces hide-and-seek); now the second game, see 0016 | Mixed: the safety reasoning and flying above reach were mine; the game was the AI's suggestion |
 | [0016](0016-first-game-hide-and-seek-drone-lands.md) | The first game is hide-and-seek, where the drone hides and lands | My idea |
 | [0017](0017-hint-chirps-from-buzzer-deck.md) | Hint chirps come from a Buzzer deck, not the motors | Mixed: the hints were mine; the Buzzer deck was the AI's recommendation |
 | [0018](0018-frozen-dataclasses-with-slots.md) | Data records are frozen dataclasses with slots | Mixed: the AI's earlier recommendation, accepted after my code review |
+| [0019](0019-final-descent-when-touchdown-unconfirmed.md) | Only the down range confirms touchdown; otherwise a bounded final descent | Mixed: the review finding and "always land" were mine; the final descent was the AI's |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

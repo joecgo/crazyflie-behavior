@@ -1,6 +1,6 @@
 # 0012: Motors stop only on confirmed touchdown
 
-- **Status:** Accepted
+- **Status:** Accepted. The height-estimate fallback and holding at the landing target are superseded by [ADR-0019](0019-final-descent-when-touchdown-unconfirmed.md).
 - **Date:** 2026-10-20
 - **Origin:** AI recommendation accepted (from code review).
 
