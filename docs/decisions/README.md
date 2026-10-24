@@ -26,5 +26,6 @@ This column is honest about which ideas were mine.
 | [0015](0015-first-game-catch-the-bird.md) | The first game is Catch the bird (replaces hide-and-seek); now the second game, see 0016 | Mixed: the safety reasoning and flying above reach were mine; the game was the AI's suggestion |
 | [0016](0016-first-game-hide-and-seek-drone-lands.md) | The first game is hide-and-seek, where the drone hides and lands | My idea |
 | [0017](0017-hint-chirps-from-buzzer-deck.md) | Hint chirps come from a Buzzer deck, not the motors | Mixed: the hints were mine; the Buzzer deck was the AI's recommendation |
+| [0018](0018-frozen-dataclasses-with-slots.md) | Data records are frozen dataclasses with slots | Mixed: the AI's earlier recommendation, accepted after my code review |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

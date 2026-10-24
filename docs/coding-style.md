@@ -14,9 +14,9 @@ types are checked by **pyright** in strict mode. Both run in continuous integrat
   `tuple[float, float, float]` or `dict[str, float]` to mean a structured
   thing. Name it:
   - `NamedTuple` for small immutable values (`FoundDrone(uri, description)`)
-  - `dataclass` for richer data (state snapshots, configs). Whether these
-    default to immutable (`frozen=True`) is **deferred** until real code shows
-    how it reads.
+  - `dataclass` for richer data (state snapshots, configs), always
+    `frozen=True, slots=True` ([ADR-0018](decisions/0018-frozen-dataclasses-with-slots.md)).
+    State that changes over time lives in ordinary classes.
 - **Modern syntax** (Python 3.12): `list[str]`, `int | None`, not `List[str]`
   or `Optional[int]`.
 

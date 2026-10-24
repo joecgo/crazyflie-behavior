@@ -4,8 +4,8 @@ The tick loop copies the telemetry buffer into a snapshot at the start of each
 tick; every behavior in that tick reads the same snapshot (ADR-0007). Every
 telemetry value is stamped, so its age can always be checked.
 
-The snapshot is a frozen dataclass, so nothing can modify it after it's taken.
-That choice is provisional (ADR-0010, backlog: frozen dataclasses).
+The snapshot is a frozen dataclass, so nothing can modify it after it's taken
+(ADR-0018).
 """
 
 from dataclasses import dataclass
@@ -74,11 +74,7 @@ class RangeReading:
 
 
 class RangeDirection(Enum):
-    """The six named directions a range reading can point (ADR-0008).
-
-    Directions are relative to the drone. Yaw is held fixed (ADR-0008), so they
-    line up with the world frame: FRONT is +x, LEFT is +y, UP is +z.
-    """
+    """The six named directions a range reading can point, relative to the drone (ADR-0008)."""
 
     FRONT = "front"
     BACK = "back"
