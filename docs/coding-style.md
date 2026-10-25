@@ -52,6 +52,10 @@ Unitless values (counts, ratios, flags) get no suffix.
   glossary term gets one proposed before it's named in code.
 - **Name things after what they hold**, not how they were obtained:
   `available_drones`, not `found` or `result`.
+- **Full words, not abbreviations:** `crazyflie`, not `cf`; `reading`, not
+  `rdg`. Standard abbreviations are fine: unit suffixes (`_ms`, `_mm`,
+  `_rad`), and well-known ones such as `dt`, `uri` and `id`. Names that
+  come from cflib's API (`SyncCrazyflie.cf`) stay as cflib spells them.
 - Python naming: `snake_case` for functions, variables and modules,
   `PascalCase` for classes, `UPPER_SNAKE_CASE` for constants. A leading `_`
   marks something private to its module or class.
