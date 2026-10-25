@@ -78,6 +78,21 @@ class TelemetryBuffer:
         with self._lock:
             self._drone_status = stamped
 
+    def write_estimates_and_status(
+        self,
+        position: Vector3,
+        velocity: Vector3,
+        status: DroneStatus,
+        drone_time: float | None,
+    ) -> None:
+        """Write a position estimate, velocity estimate and drone status that arrived
+        together. They always appear together, like `write_range_readings`."""
+        arrival_time = self._clock.now()
+        with self._lock:
+            self._position_estimate = Stamped(position, arrival_time, drone_time)
+            self._velocity_estimate = Stamped(velocity, arrival_time, drone_time)
+            self._drone_status = Stamped(status, arrival_time, drone_time)
+
     # --- Readers --------------------------------------------------------------
 
     def latest_position_estimate(self) -> Stamped[Vector3] | None:

@@ -47,6 +47,8 @@ select = [
     "SIM",  # simplifications
     "RUF",  # ruff-specific checks
     "PT",   # pytest style
+    "BLE",  # blind except: catching everything without re-raising or logging (ADR-0020)
+    "S110", # except-pass: swallowing an error silently (ADR-0020)
 ]
 
 # --- pyright: strict type checking (ADR-0004) ---

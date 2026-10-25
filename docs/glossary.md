@@ -39,6 +39,7 @@ this file in the same commit as the code or ADR that uses it.
 | **TOC** (table of contents) | List of every log variable and parameter the firmware exposes, by name, downloaded on connect. | Reflection data: the set of `UPROPERTY`s you can query by name. |
 | **Telemetry** | Data streamed from the drone to the PC. | Replicated properties arriving from the server. |
 | **Log block** | A cflib `LogConfig`: a named group of variables streamed at a fixed period (max 26 bytes per block). | A replicated struct with its own net update frequency. |
+| **State block** | The Crazyflie adapter's log block that carries the position estimate, velocity estimate and drone status together (6 floats and a 2-byte bitfield: the full 26 bytes), so all three come from the same moment ([ADR-0021](decisions/0021-drone-status-streams-with-the-state.md)). | One replicated struct holding the transform, velocity and state flags, so they always update together. |
 | **Parameter** | Named firmware setting you can read or write at run time, e.g. `kalman.resetEstimation`. | A console variable (CVar). |
 | **Callback** | Function cflib calls when an event or data arrives. Runs on cflib's background thread. | A bound multicast delegate, but fired **off the game thread**. |
 
@@ -71,6 +72,7 @@ this file in the same commit as the code or ADR that uses it.
 | **Arming** | Explicitly enabling the motors before flight (`supervisor.send_arming_request`). | No equivalent; closest is a "can move" gate on the Pawn. |
 | **Emergency stop** (e-stop) | Immediately cut all motors. The drone falls. | Destroying the Pawn's movement component mid-air. |
 | **Supervisor** | Firmware subsystem tracking safety state (armed, flying, tumbled, crashed). | A gameplay state machine guarding what the Pawn may do. |
+| **Failsafe** | The safety layer's automatic response to a failure that makes flying unsafe: hover, land or stop, depending on how serious it is ([ADR-0020](decisions/0020-failures-degrade-gracefully.md)). | A gameplay fallback that ends the match cleanly when a critical system fails, instead of crashing. |
 
 ## Architecture
 
@@ -90,6 +92,7 @@ this file in the same commit as the code or ADR that uses it.
 | **Safety layer** | The layer between behaviors and the drone interface. It answers behaviors' safety queries and is the only code that sends commands to the drone, apart from the kill switch ([ADR-0013](decisions/0013-operator-kill-switch.md)): it approves, clamps to the speed envelope, or overrides command requests. | Server authority validating client movement requests. | Decided ([0008](decisions/0008-drone-interface.md), [0013](decisions/0013-operator-kill-switch.md)) |
 | **Kill switch** | The operator's command to cut the motors immediately, executed at any moment, like a cheat command. The one thing that bypasses the safety layer; everything else goes through it. | A console cheat command that bypasses the gameplay rules. | Decided ([0013](decisions/0013-operator-kill-switch.md)) |
 | **Final descent** | After the planned landing, the slow descent that continues until the down range confirms touchdown, or until a time limit says the drone must be on the floor. Then the motors stop. | A fallback "settle to ground" state when the landing animation ended but the character isn't grounded. | Decided ([0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md)) |
+| **Landing phase** | Where a landing is: not landing, the planned landing (the high-level landing, planned from the height estimate), or the final descent. The Crazyflie adapter holds it. | The current state of a small landing state machine. | Decided ([0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md)) |
 | **Command request** | What a behavior asks the drone to do this tick (e.g. a velocity, or fast mode to a point). It goes to the safety layer, never directly to the drone. | A client asking the server to move. | Decided ([0008](decisions/0008-drone-interface.md)) |
 | **Safety query** | A read-only question a behavior asks the safety layer during its decision, e.g. "can I enter fast mode?" It's answered immediately and has no side effects. | A BT decorator checking a condition. | Decided ([0008](decisions/0008-drone-interface.md)) |
 | **Stamped value** | A telemetry value together with its arrival time (PC clock) and the drone's timestamp (converted to seconds). Every value in a snapshot is stamped, so its age can always be checked. | A replicated property plus "when the server sent it" and "when we received it". | Decided ([0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md)) |
@@ -129,4 +132,4 @@ Terms for the second game ([ADR-0015](decisions/0015-first-game-catch-the-bird.m
 | **Catch** | Scored when the child gets directly under the bird, as seen by the down sensor. The bird reacts and flies to a new spot. | An overlap trigger under the Pawn that scores a point. | Decided ([0015](decisions/0015-first-game-catch-the-bird.md)) |
 
 <!-- Terms still to define as decisions land: command,
-     geofence, failsafe, recording/replay, ... -->
+     geofence, recording/replay, ... -->

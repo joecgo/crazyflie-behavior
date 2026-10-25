@@ -28,5 +28,7 @@ This column is honest about which ideas were mine.
 | [0017](0017-hint-chirps-from-buzzer-deck.md) | Hint chirps come from a Buzzer deck, not the motors | Mixed: the hints were mine; the Buzzer deck was the AI's recommendation |
 | [0018](0018-frozen-dataclasses-with-slots.md) | Data records are frozen dataclasses with slots | Mixed: the AI's earlier recommendation, accepted after my code review |
 | [0019](0019-final-descent-when-touchdown-unconfirmed.md) | Only the down range confirms touchdown; otherwise a bounded final descent | Mixed: the review finding and "always land" were mine; the final descent was the AI's |
+| [0020](0020-failures-degrade-gracefully.md) | Failures degrade gracefully, and are always logged | Mixed: keeping it going and logging were mine; failing safe was the AI's pushback |
+| [0021](0021-drone-status-streams-with-the-state.md) | Drone status streams in one log block with position and velocity | Mixed: found in my review; streaming was the AI's; one full block was mine |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

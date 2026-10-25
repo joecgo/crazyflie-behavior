@@ -71,6 +71,9 @@ EVERY_OPERATION: dict[str, BufferOperation] = {
     ),
     "write_battery_voltage": lambda buffer: buffer.write_battery_voltage(4.0, None),
     "write_drone_status": lambda buffer: buffer.write_drone_status(LANDED, None),
+    "write_estimates_and_status": lambda buffer: buffer.write_estimates_and_status(
+        ORIGIN, ORIGIN, LANDED, None
+    ),
 }
 
 
@@ -128,3 +131,15 @@ def test_range_readings_written_together_never_appear_split() -> None:
     finally:
         stop_writing.set()
         writer.join()
+
+
+def test_estimates_and_status_written_together_share_one_arrival() -> None:
+    clock = SimClock(start=3.0)
+    buffer = TelemetryBuffer(clock)
+
+    buffer.write_estimates_and_status(ORIGIN, ORIGIN, LANDED, drone_time=1.25)
+    snapshot = buffer.snapshot(time=3.0, dt=0.0)
+
+    assert snapshot.position_estimate == Stamped(ORIGIN, 3.0, 1.25)
+    assert snapshot.velocity_estimate == Stamped(ORIGIN, 3.0, 1.25)
+    assert snapshot.drone_status == Stamped(LANDED, 3.0, 1.25)

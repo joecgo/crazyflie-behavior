@@ -88,7 +88,6 @@ def final_descent_moves(fake_link: MagicMock) -> list[object]:
 
 def land_and_wait_for_the_planned_landing(adapter: CrazyflieAdapter, clock: SimClock) -> None:
     adapter.land()
-    assert adapter._landing_finishes_at is not None
     clock.sleep_until(adapter._landing_finishes_at)
 
 
@@ -155,7 +154,6 @@ def test_a_short_outlier_does_not_shorten_the_time_limit(
     adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
 ) -> None:
     adapter.land()
-    assert adapter._landing_finishes_at is not None
     tick_for(
         adapter,
         clock,
