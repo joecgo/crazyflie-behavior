@@ -4,6 +4,7 @@ Newest first. One line per work session, readable at a glance.
 
 | Date | Hours | Worked on |
 |---|---|---|
+| 2026-10-26 | ~0.5 | Code review: tests, part 1 (geometry, snapshot, clock, conversions, adapter status); all float comparisons checked. Coding style: compare computed floats with `pytest.approx`. Learned `range` loops, context managers (`with`) and how `pytest.raises` fails a test |
 | 2026-10-24 | ~4.25 | Code review on my phone: clock and geometry. Reviewing touchdown, found that the height-estimate fallback could cut the motors in mid-air. ADR-0019: only a steady down reading confirms touchdown, otherwise a bounded final descent; code review fixes and landing tests against a fake cflib. Reviewed conversions and the Crazyflie adapter section by section: clearer names, explicit landing phases, a full-words naming rule. Found that cflib's status read returns old data on a timeout; ADR-0021 streams drone status with position and velocity in one log block. ADR-0020: failures degrade gracefully and are always logged. Updated Git and set up the GitHub CLI |
 | 2026-10-23 | ~1.75 | Code review: geometry (added `Vector3.ZERO`) and the snapshot. ADR-0018: data records are frozen dataclasses with slots, enforced by a new fitness function. Dropped the fixed-yaw wording from range directions. Learned pip, packages, egg-info and class methods |
 | 2026-10-22 | ~2.0 | Code review on my phone (GitHub app): drone interface, telemetry buffer, mock adapter. Started a review to-do list |

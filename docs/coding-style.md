@@ -81,3 +81,10 @@ Unitless values (counts, ratios, flags) get no suffix.
   records a non-obvious constraint ("cflib callbacks run on its receive
   thread, so only copy data here").
 - Reference ADRs where code exists *because of* a decision (`# See ADR-0003.`).
+
+## Tests
+
+- **Compare computed floats with `pytest.approx`**, never `==`: most decimals
+  (0.1, 0.3) aren't exact in binary, so `0.1 + 0.2 == 0.3` is false. `==` is
+  fine for a value passed through unchanged, or for exact values (whole
+  numbers, halves, quarters). Like UE's `FMath::IsNearlyEqual`.
