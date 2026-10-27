@@ -13,7 +13,7 @@ import pytest
 
 from crazyflie_behavior.drone.crazyflie.adapter import _STATE_VARIABLES, CrazyflieAdapter
 from crazyflie_behavior.geometry import Vector3
-from crazyflie_behavior.snapshot import DroneStatus, Snapshot
+from crazyflie_behavior.snapshot import DroneStatus, RangeReading, Snapshot
 from crazyflie_behavior.timing.clock import SimClock
 
 # Supervisor bit positions, from cflib.crazyflie.supervisor.
@@ -92,3 +92,41 @@ def test_the_state_block_fits_in_one_log_block() -> None:
     size = sum(VARIABLE_SIZES_BYTES[variable] for variable in _STATE_VARIABLES)
 
     assert size <= LOG_BLOCK_LIMIT_BYTES
+
+
+def test_the_down_range_arrives_in_meters(adapter: CrazyflieAdapter) -> None:
+    adapter._on_down_range(2000, {"range.zrange": 250.0}, MagicMock())
+
+    down = snapshot_of(adapter).range_readings.down
+
+    assert down is not None
+    assert down.value == RangeReading.at_distance(0.25)
+    assert down.drone_time == 2.0
+
+
+def test_each_multi_ranger_direction_reads_its_own_variable(adapter: CrazyflieAdapter) -> None:
+    sample = {
+        "range.front": 100.0,
+        "range.back": 200.0,
+        "range.left": 300.0,
+        "range.right": 400.0,
+        "range.up": 8000.0,
+    }
+
+    adapter._on_multiranger(2000, sample, MagicMock())
+    readings = snapshot_of(adapter).range_readings
+
+    distances = {
+        "front": readings.front,
+        "back": readings.back,
+        "left": readings.left,
+        "right": readings.right,
+        "up": readings.up,
+    }
+    assert {name: r.value if r else None for name, r in distances.items()} == {
+        "front": RangeReading.at_distance(0.1),
+        "back": RangeReading.at_distance(0.2),
+        "left": RangeReading.at_distance(0.3),
+        "right": RangeReading.at_distance(0.4),
+        "up": RangeReading.out_of_range(),
+    }
