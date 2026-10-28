@@ -31,5 +31,6 @@ This column is honest about which ideas were mine.
 | [0020](0020-failures-degrade-gracefully.md) | Failures degrade gracefully, and are always logged | Mixed: keeping it going and logging were mine; failing safe was the AI's pushback |
 | [0021](0021-drone-status-streams-with-the-state.md) | Drone status streams in one log block with position and velocity | Mixed: found in my review; streaming was the AI's; one full block was mine |
 | [0022](0022-multi-ranger-keeps-stock-firmware-rate.md) | The Multi-ranger keeps the stock firmware's 10 Hz | Mixed: keeping it was the AI's recommendation; no follow-up item was mine |
+| [0023](0023-tick-rate-20-hz.md) | The tick loop runs at 20 Hz, with telemetry periods matched to their sources | AI recommendation accepted, over my first preference for 30-60 Hz |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
