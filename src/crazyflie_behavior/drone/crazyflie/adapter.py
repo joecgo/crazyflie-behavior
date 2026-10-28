@@ -59,14 +59,19 @@ DEFAULT_YAW_RAD = 0.0
 """The heading commands use unless told otherwise: world +x is where the drone faced at
 take-off."""
 
+# Telemetry periods (ADR-0023). The state block and the down range stream faster
+# than the 20 Hz tick, so a snapshot's latest value is at most about 20 ms old.
+STATE_PERIOD_MS = 20
+"""Position, velocity and drone status. The estimate itself updates at 100 Hz."""
+DOWN_RANGE_PERIOD_MS = 20
+"""The Flow deck reads the down range every 25 ms."""
+MULTIRANGER_PERIOD_MS = 100
+"""The firmware reads the Multi-ranger every 100 ms (ADR-0022); faster only repeats."""
+BATTERY_PERIOD_MS = 1000
+
 # --- PLACEHOLDERS, NOT DECISIONS ---------------------------------------------
-# Telemetry periods belong to the backlog item "Tick rate, and telemetry
-# periods". Flight parameters wait on speed envelopes (ADR-0005) and the
-# safety layer. These values just let the adapter run.
-STATE_PERIOD_MS = 50
-"""Position, velocity and drone status."""
-RANGE_PERIOD_MS = 50
-BATTERY_PERIOD_MS = 500
+# Flight parameters wait on speed envelopes (ADR-0005) and the safety layer.
+# These values just let the adapter run.
 VERTICAL_SPEED = 0.3
 """Meters per second, for take-off and landing."""
 HOVER_SETTLE_DURATION = 1.0
@@ -382,11 +387,13 @@ class CrazyflieAdapter(DroneInterface):
     def _start_logging(self, has_multiranger: bool) -> None:
         self._add_log_block("state", STATE_PERIOD_MS, list(_STATE_VARIABLES), self._on_state)
         self._add_log_block("battery", BATTERY_PERIOD_MS, ["pm.vbat"], self._on_battery)
-        self._add_log_block("down", RANGE_PERIOD_MS, [_DOWN_RANGE_VARIABLE], self._on_down_range)
+        self._add_log_block(
+            "down", DOWN_RANGE_PERIOD_MS, [_DOWN_RANGE_VARIABLE], self._on_down_range
+        )
         if has_multiranger:
             self._add_log_block(
                 "multiranger",
-                RANGE_PERIOD_MS,
+                MULTIRANGER_PERIOD_MS,
                 list(_MULTIRANGER_VARIABLES.values()),
                 self._on_multiranger,
             )
