@@ -145,4 +145,5 @@ ignores one:
 - Windows, Python 3.12, virtual env in `.venv`. Run with `.venv\Scripts\python`.
 - IDE: PyCharm (shared run configs in `.run/`). Git client: GitHub Desktop.
 - No hardware yet. All work must run without a drone.
+- Dates in docs (work log, ADRs, backlog) use Pacific time.
 - Personal working preferences live in `CLAUDE.local.md` (not in the repo).
