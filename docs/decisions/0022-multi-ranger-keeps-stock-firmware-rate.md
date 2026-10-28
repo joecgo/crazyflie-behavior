@@ -1,7 +1,7 @@
 # 0022: The Multi-ranger keeps the stock firmware's 10 Hz
 
 - **Status:** Accepted
-- **Date:** 2026-10-28
+- **Date:** 2026-10-27
 - **Origin:** Mixed. Keeping the stock rate: AI recommendation accepted. No follow-up item to revisit it: my call.
 
 ## Context

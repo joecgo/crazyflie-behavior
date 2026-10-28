@@ -1,7 +1,7 @@
 # 0024: Tick timing: due times on a fixed beat, plain sleep, measured jitter
 
 - **Status:** Accepted
-- **Date:** 2026-10-28
+- **Date:** 2026-10-27
 - **Origin:** Mixed. Starting at once after an overrun, never catching up: my idea. Counting each due time from the previous due time: the AI's tweak, accepted after discussion. Plain sleep, the garbage collector left on, and the measurements: AI recommendations accepted.
 
 ## Context
@@ -9,7 +9,7 @@
 The tick loop runs at 20 Hz ([ADR-0023](0023-tick-rate-20-hz.md)) on Windows
 and Python. It needs a rule for when each tick starts, what happens when one
 runs long, how it waits, and how we know it's keeping time. Checked in the
-CPython 3.12 docs (2026-10-28): on Windows 8.1 and newer, `time.sleep` uses a
+CPython 3.12 docs (2026-10-27): on Windows 8.1 and newer, `time.sleep` uses a
 high-resolution timer (100 ns), so the old ~15.6 ms sleep granularity is gone.
 
 ## Options considered

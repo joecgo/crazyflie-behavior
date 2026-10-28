@@ -1,14 +1,14 @@
 # 0023: The tick loop runs at 20 Hz, with telemetry periods matched to their sources
 
 - **Status:** Accepted
-- **Date:** 2026-10-28
+- **Date:** 2026-10-27
 - **Origin:** AI recommendation accepted, over my first preference for 30-60 updates per second.
 
 ## Context
 
 The tick loop ([ADR-0003](0003-tick-loop-timing-model.md)) needs a rate, and
 each log block needs a period. My priority is responsiveness, especially to
-safety issues. Checked in the firmware source (2026-10-27/28): the position
+safety issues. Checked in the firmware source (2026-10-27): the position
 estimate is computed at 100 Hz, the down range is read every 25 ms (40 Hz),
 the Multi-ranger every 100 ms (10 Hz, kept by
 [ADR-0022](0022-multi-ranger-keeps-stock-firmware-rate.md)), and log periods
