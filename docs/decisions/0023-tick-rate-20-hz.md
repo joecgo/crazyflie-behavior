@@ -45,7 +45,8 @@ Multi-ranger matches its readings; anything faster only repeats them.
 - The tick loop implementation uses 20 Hz (backlog #3 decides how it keeps
   time). Behaviors still use the measured `dt`, never an assumed 50 ms.
 - Revisit the rate once the full reaction time (sensor to tick to command to
-  movement), radio load and tick jitter are measured on the real drone.
+  movement), radio load and tick jitter are measured on the real drone
+  (backlog #25).
 - A test checks every log period is one the firmware accepts, and that the
   Multi-ranger isn't logged faster than it reads.
 - No glossary change.
