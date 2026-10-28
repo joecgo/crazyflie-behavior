@@ -28,12 +28,14 @@ class FakeCflib:
         self.link.cf.param.get_value.side_effect = self.get_parameter
         self.reset_estimator = MagicMock()
         self.log_block_names: list[str] = []
+        self.log_block_periods_ms: dict[str, int] = {}
 
     def get_parameter(self, name: str) -> str:
         return self.parameters[name]
 
     def make_log_block(self, name: str, period_in_ms: int) -> MagicMock:
         self.log_block_names.append(name)
+        self.log_block_periods_ms[name] = period_in_ms
         return MagicMock()
 
 
@@ -71,6 +73,20 @@ def test_a_multi_ranger_adds_its_own_log_block(
     adapter.connect()
 
     assert "multiranger" in fake_cflib.log_block_names
+
+
+def test_log_periods_are_ones_the_firmware_accepts(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    fake_cflib.parameters["deck.bcMultiranger"] = "1"
+
+    adapter.connect()
+
+    for period_ms in fake_cflib.log_block_periods_ms.values():
+        assert 10 <= period_ms <= 2540  # the firmware counts periods in 10 ms steps
+        assert period_ms % 10 == 0
+    # The firmware reads the Multi-ranger every 100 ms (ADR-0022); faster only repeats.
+    assert fake_cflib.log_block_periods_ms["multiranger"] >= 100
 
 
 def test_without_a_multi_ranger_its_directions_read_invalid_never_clear(
