@@ -54,7 +54,7 @@ high-resolution timer (100 ns), so the old ~15.6 ms sleep granularity is gone.
   so it doesn't share the PC's failure). In steering mode it stops following
   after about 0.5 s and cuts the motors after about 2 s (placeholders,
   [ADR-0011](0011-mock-models-setpoint-timeout.md)), so a hang over 2 s
-  drops the drone.
+  drops the drone (backlog #26).
 - **Never:** a burst of catch-up ticks; an overrun that isn't logged.
 - **Always eventually:** the next tick starts, unless a tick hangs.
 
