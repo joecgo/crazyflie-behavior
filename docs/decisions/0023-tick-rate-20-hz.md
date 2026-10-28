@@ -42,8 +42,8 @@ Multi-ranger matches its readings; anything faster only repeats them.
 
 - About 130 packets a second: 50 state, 50 down range, 10 Multi-ranger,
   1 battery, and 20 setpoints. The radio's real capacity is unmeasured.
-- The tick loop implementation uses 20 Hz (backlog #3 decides how it keeps
-  time). Behaviors still use the measured `dt`, never an assumed 50 ms.
+- The tick loop implementation uses 20 Hz ([ADR-0024](0024-tick-timing-strategy.md)
+  decides how it keeps time). Behaviors still use the measured `dt`, never an assumed 50 ms.
 - Revisit the rate once the full reaction time (sensor to tick to command to
   movement), radio load and tick jitter are measured on the real drone
   (backlog #25).

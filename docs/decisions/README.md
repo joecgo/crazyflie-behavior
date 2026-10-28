@@ -32,5 +32,6 @@ This column is honest about which ideas were mine.
 | [0021](0021-drone-status-streams-with-the-state.md) | Drone status streams in one log block with position and velocity | Mixed: found in my review; streaming was the AI's; one full block was mine |
 | [0022](0022-multi-ranger-keeps-stock-firmware-rate.md) | The Multi-ranger keeps the stock firmware's 10 Hz | Mixed: keeping it was the AI's recommendation; no follow-up item was mine |
 | [0023](0023-tick-rate-20-hz.md) | The tick loop runs at 20 Hz, with telemetry periods matched to their sources | AI recommendation accepted, over my first preference for 30-60 Hz |
+| [0024](0024-tick-timing-strategy.md) | Tick timing: due times on a fixed beat, plain sleep, measured jitter | Mixed: starting at once after an overrun was mine; the fixed beat was the AI's tweak |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
