@@ -36,5 +36,6 @@ This column is honest about which ideas were mine.
 | [0025](0025-safety-pre-check-and-command-slots.md) | Safety pre-check, requests answered at once, one command per slot per tick | Mixed: the single request call, pre-check and slots were mine |
 | [0026](0026-tick-loop-calls-one-tick-step.md) | The tick loop keeps time and calls one tick step; hangs are detected; every tick is logged | Mixed: hang detection and logging every tick were mine; the split was the AI's |
 | [0027](0027-operator-controls.md) | Operator controls: Windows hotkeys, an optional PS5 controller, no dead-man mode | Mixed: the inputs and no dead-man mode were mine |
+| [0028](0028-programs-bench-first-plain-logging.md) | Programs: a bench program first, plain logging, the mock adapter by default | Mixed: plain logging was mine; the rest were AI recommendations |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
