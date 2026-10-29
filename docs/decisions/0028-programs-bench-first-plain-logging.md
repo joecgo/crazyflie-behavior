@@ -57,7 +57,9 @@ write from stalling a tick.
   Measuring write times joins backlog #25. A shipping mode with less logging
   is backlog #28.
 - Ctrl+C makes a stop request from the moment the drone is connected. While
-  connecting, nothing is flying, so Ctrl+C still stops the program at once.
+  connecting, nothing is flying, so Ctrl+C still stops the program. On
+  Windows it takes effect only when cflib's connect waits end: Python 3.12
+  can't interrupt a wait with no time limit (backlog #29).
 - Arming and the bench e-stop test wait for the minimal safety layer: only
   the safety layer may command the drone (ADR-0008).
 - With the mock adapter, the bench program is where to check what PyCharm's
