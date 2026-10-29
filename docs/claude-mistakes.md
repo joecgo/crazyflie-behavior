@@ -12,9 +12,21 @@ kind of work, and the takeaway.
 **Kinds of work** (to spot patterns later): *design* (how parts fit
 together), *safety design*, *recommendation* (which option Claude pushed and
 why), *environment* (assumptions about my machine, time zone or tools),
-*testing*, *process* (how decisions are recorded).
+*testing*, *process* (how decisions are recorded), *communication* (how
+Claude explains things).
 
 ---
+
+## 2026-10-29: Stretched UE analogies
+
+- **What happened:** Claude kept offering UE analogies even where none really
+  fit, such as a frozen console for the drone lock, or a "player is dead"
+  flag for the kill latch.
+- **Why it was wrong:** a stretched analogy can mislead more than it helps.
+- **Caught by:** me.
+- **Kind:** communication.
+- **Takeaway:** when no UE analogy fits, say so. The glossary now says "No UE
+  analogy" for those terms.
 
 ## 2026-10-29: A stop control designed for a terminal, not for PyCharm
 
