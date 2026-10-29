@@ -16,6 +16,18 @@ why), *environment* (assumptions about my machine, time zone or tools),
 
 ---
 
+## 2026-10-29: A stop control designed for a terminal, not for PyCharm
+
+- **What happened:** Claude designed stopping around Ctrl+C, the terminal
+  convention, without checking how I run programs. CLAUDE.md says PyCharm:
+  in its Run window, Ctrl+C copies text, and the Stop button may end the
+  program outright, skipping the landing.
+- **Caught by:** my question about Ctrl+C and copy-paste. Claude found the
+  PyCharm gap while answering it. Open in backlog #9.
+- **Kind:** environment.
+- **Takeaway:** for any control or failure path, ask how I actually run the
+  program: PyCharm, a terminal window, or the phone.
+
 ## 2026-10-29: Ctrl+C described two ways in one ADR
 
 - **What happened:** ADR-0026's decision calls Ctrl+C a stop request (finish
