@@ -22,21 +22,39 @@ decisions are recorded), *communication* (how Claude explains things).
 |---|---|---|
 | design | 2 | 1 |
 | safety design | 2 | 1 |
-| recommendation | 2 | 0 |
+| recommendation | 3 | 0 |
 | environment | 2 | 0 |
 | communication | 1 | 0 |
 | testing | 0 | 1 |
 | process | 0 | 1 |
-| **Total** | **9** | **4** |
+| **Total** | **10** | **4** |
 
-Of the 9 I pointed out, a later Claude review would probably have caught
-none, maybe 4, and probably not 5. So far, every recommendation, environment
+Of the 10 I pointed out, a later Claude review would probably have caught
+none, maybe 4, and probably not 6. So far, every recommendation, environment
 and communication mistake needed me; the ones Claude found itself were in
 code, tests and records.
 
 ---
 
 ## Mistakes I had to point out
+
+### 2026-10-29: Recommending background-thread logging before measuring
+
+- **What happened:** for backlog #27, Claude recommended writing log messages
+  on background threads: more code and moving parts, against a risk nobody
+  had measured. In PyCharm, the console freeze it guards against doesn't
+  happen at all.
+- **Why it was wrong:** for the garbage collector and spin-waiting, the
+  project measures first and adds complexity only if the measurements show a
+  need (ADR-0024). And background threads lose the last log lines when the
+  program is killed, which is the context I want after an error.
+- **How I caught it:** I asked why the simpler option wasn't recommended, on
+  a fast laptop with an SSD.
+- **Would a Claude review have caught it?** Probably not: it was a
+  recommendation.
+- **Kind:** recommendation.
+- **Takeaway:** when Claude recommends the more complex option, ask whether
+  the risk has been measured, and how the project handled similar risks.
 
 ### 2026-10-29: Stretched UE analogies
 
