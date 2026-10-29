@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-29
-- **Origin:** Mixed. Splitting the tick loop from the tick step, and stopping through the `with drone:` block: AI recommendations accepted after my questions. Detecting hangs (as UE does), logging every tick immediately, and a warning for every overrun: mine. The `faulthandler` watchdog and its 1 s limit: the AI's.
+- **Origin:** Mixed. Splitting the tick loop from the tick step, and stopping through the `with drone:` block: AI recommendations accepted after my questions. Detecting hangs (as UE does), logging every tick immediately, and a warning for every overrun: mine. The `faulthandler` watchdog and its 1 s limit, and Ctrl+C as a stop request with later presses ignored: the AI's (it found the first draft described Ctrl+C two ways).
 
 ## Context
 
@@ -31,8 +31,13 @@ happens on an error or a hang, and where the measurements go.
   optional; the snapshot and the safety layer always run while flying. A test
   pins the order.
 - **Stopping:** the tick step reports when it's done, or any thread makes a
-  **stop request** (Ctrl+C, an operator command). The loop finishes the
-  current tick and returns. Leaving the `with drone:` block lands.
+  **stop request** (an operator command, say). The loop finishes the current
+  tick and returns. Leaving the `with drone:` block lands.
+- **Ctrl+C is a stop request, never an error mid-tick.** Later presses are
+  ignored, so they can't cut the landing short. With Python's default, a
+  press during the landing would end it early, and closing the link then
+  sends zero thrust, which drops the drone. Emergencies use the kill switch
+  (ADR-0013).
 - **Errors aren't caught in the loop.** They rise to the `with drone:` block,
   which lands, and are logged with their stack trace before the program exits
   (ADR-0020).
@@ -50,13 +55,14 @@ happens on an error or a hang, and where the measurements go.
 
 ## Failure modes
 
-- **Inputs:** an exception or Ctrl+C anywhere in a tick reaches the `with`
-  block, which lands. A hung tick reaches nothing; the watchdog only reports it.
+- **Inputs:** an exception anywhere in a tick reaches the `with` block, which
+  lands. Ctrl+C only makes a stop request. A hung tick reaches nothing; the
+  watchdog only reports it.
 - **Backups:** landing on error goes over the same radio. If the link itself
   is what failed, only the firmware's setpoint timeout remains, and it cuts
   the motors. The kill switch runs on its own thread (ADR-0013).
 - **Never:** an error that skips landing (except a hang or a dead link); a
-  hang with no stack trace in the log.
+  hang with no stack trace in the log; a Ctrl+C that cuts a landing short.
 - **Always eventually:** leaving the loop, for any reason but a hang, lands.
 
 ## Consequences
@@ -69,5 +75,12 @@ happens on an error or a hang, and where the measurements go.
 - If ticks overrun constantly, nearly every tick logs a warning, on the
   console too. A constant overrun means the loop isn't keeping its rate, so
   the noise is the signal.
-- Glossary: *Tick step*, *Stop request* and *Hang watchdog* proposed; *Tick
-  loop* reworded.
+- The program's start-up code (not written yet) installs the Ctrl+C handler
+  around the whole `with drone:` block, so it covers the landing too. The
+  handler only makes the stop request and counts presses. It never logs:
+  writing to a log from a signal handler can fail halfway through a message
+  (Python raises a "reentrant call" error), which would be an error mid-tick.
+  The tick loop logs the stop request, and ignored presses are logged after
+  the landing.
+- Glossary: *Tick step*, *Stop request*, *Hang watchdog* and *Console* added;
+  *Tick loop* reworded.

@@ -24,7 +24,8 @@ why), *environment* (assumptions about my machine, time zone or tools),
   Neither said what a second press during the landing does: with Python's
   default, it cuts the landing short, and the Crazyflie adapter's link
   shutdown then sends zero thrust, which drops the drone.
-- **Caught by:** Claude, while writing the tick loop.
+- **Caught by:** Claude, while writing the tick loop. Fixed: Ctrl+C is a
+  stop request, and later presses are ignored (ADR-0026).
 - **Kind:** safety design. An ADR's words didn't match what the language
   does by default.
 - **Takeaway:** when an ADR names a mechanism (Ctrl+C, a timeout), ask what
