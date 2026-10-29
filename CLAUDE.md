@@ -98,7 +98,7 @@ ignores one:
 - If a concept needs a term that isn't in the glossary, **propose** the term and
   definition first. Don't introduce new vocabulary in code on your own.
 - **Every glossary change needs the user's OK first**: adding, rewording,
-  changing status or removing a term. Show the exact before and after. When a
+  deprecating or removing a term. Show the exact before and after. When a
   decision changes a term's meaning, propose the glossary update alongside the
   ADR.
 
