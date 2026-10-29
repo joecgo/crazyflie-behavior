@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-29
-- **Origin:** Mixed. Splitting the tick loop from the tick step, and stopping through the `with drone:` block: AI recommendations accepted after my questions. Detecting hangs (as UE does) and logging every tick immediately: mine. The `faulthandler` watchdog and its 1 s limit: the AI's.
+- **Origin:** Mixed. Splitting the tick loop from the tick step, and stopping through the `with drone:` block: AI recommendations accepted after my questions. Detecting hangs (as UE does), logging every tick immediately, and a warning for every overrun: mine. The `faulthandler` watchdog and its 1 s limit: the AI's.
 
 ## Context
 
@@ -43,9 +43,10 @@ happens on an error or a hang, and where the measurements go.
 - **Every tick is logged immediately** with Python's `logging`: lateness and
   work time at debug level, every overrun as a warning (ADR-0024), and a
   summary at the end of the flight (worst case and 99th percentile, overrun
-  count, garbage-collector pauses). Output goes to the console and to a log
-  file per run in `logs/` (git-ignored). Which recordings get committed is
-  still backlog #11.
+  count, garbage-collector pauses). Overruns in a row each get their own
+  warning: an exception to ADR-0020's once-per-streak rule (my call). Output
+  goes to the console and to a log file per run in `logs/` (git-ignored).
+  Which recordings get committed is still backlog #11.
 
 ## Failure modes
 
@@ -65,5 +66,8 @@ happens on an error or a hang, and where the measurements go.
   Tests drive the tick step with hand-built snapshots and no clock.
 - The 1 s limit is well below the firmware's ~2 s motor cut, so the stack
   trace is written before a drop.
+- If ticks overrun constantly, nearly every tick logs a warning, on the
+  console too. A constant overrun means the loop isn't keeping its rate, so
+  the noise is the signal.
 - Glossary: *Tick step*, *Stop request* and *Hang watchdog* proposed; *Tick
   loop* reworded.
