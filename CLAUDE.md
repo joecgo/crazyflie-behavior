@@ -87,6 +87,11 @@ ignores one:
 - **Honest attribution.** The README states that the architecture and decisions
   are the user's and the implementation is AI-assisted, with the ADRs as the
   record. Keep it accurate as the project grows.
+- **Log Claude's mistakes.** When the user catches a Claude mistake, or Claude
+  catches its own, add an entry to `docs/claude-mistakes.md`, in the section
+  for who caught it, and update its at-a-glance table. For a mistake the user
+  pointed out, say honestly whether a later Claude review would probably
+  have caught it.
 
 ## Shared language
 
@@ -96,14 +101,15 @@ ignores one:
 - If a concept needs a term that isn't in the glossary, **propose** the term and
   definition first. Don't introduce new vocabulary in code on your own.
 - **Every glossary change needs the user's OK first**: adding, rewording,
-  changing status or removing a term. Show the exact before and after. When a
+  deprecating or removing a term. Show the exact before and after. When a
   decision changes a term's meaning, propose the glossary update alongside the
   ADR.
 
 ## Engineering practices
 
 - **Definition of done.** A change is done only when: tests pass (including the
-  architecture tests), the glossary is updated for any new or changed term, the
+  architecture tests), new tests are proven by bug planting
+  (`docs/coding-style.md`), the glossary is updated for any new or changed term, the
   relevant ADR is linked, and the commit message names the ADR it implements
   (e.g. `Implements ADR-0004`).
 - Follow `docs/coding-style.md`: strict typing, units in names, the cflib

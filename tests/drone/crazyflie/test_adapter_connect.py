@@ -121,6 +121,40 @@ def test_without_a_flow_deck_it_refuses_to_fly_and_closes_the_link(
     fake_cflib.reset_estimator.assert_not_called()
 
 
+def test_ctrl_c_while_opening_the_link_stops_the_connection_under_way(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    fake_cflib.link.open_link.side_effect = KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        adapter.connect()
+
+    fake_cflib.link.cf.close_link.assert_called_once()
+
+
+def test_a_connect_that_fails_on_its_own_is_left_to_cflib_to_close(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    fake_cflib.link.open_link.side_effect = Exception("Couldn't find a Crazyflie")
+
+    with pytest.raises(Exception, match="Couldn't find a Crazyflie"):
+        adapter.connect()
+
+    # cflib's open_link closes the link itself before raising.
+    fake_cflib.link.cf.close_link.assert_not_called()
+
+
+def test_ctrl_c_just_after_the_link_opens_still_closes_it(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    fake_cflib.link.wait_for_params.side_effect = KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        adapter.connect()
+
+    fake_cflib.link.close_link.assert_called_once()
+
+
 def test_any_failing_setup_step_closes_the_link(
     adapter: CrazyflieAdapter, fake_cflib: FakeCflib
 ) -> None:

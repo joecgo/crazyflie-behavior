@@ -166,9 +166,15 @@ class CrazyflieAdapter(DroneInterface):
         _init_drivers_once()
         self._last_drone_time = None  # a new session: the drone may have rebooted
         sync_crazyflie = SyncCrazyflie(self._uri, cf=Crazyflie(rw_cache=self._cache_directory))
-        sync_crazyflie.open_link()  # blocks until connected; raises if it can't connect
-        self._sync_crazyflie = sync_crazyflie
+        self._sync_crazyflie = sync_crazyflie  # tracked from the start, so cleanup always finds it
         try:
+            try:
+                sync_crazyflie.open_link()  # blocks until connected; raises if it can't connect
+            except KeyboardInterrupt:
+                # Ctrl+C while connecting (ADR-0028): stop the connection still under
+                # way. (When connecting fails on its own, cflib closes the link itself.)
+                sync_crazyflie.cf.close_link()
+                raise
             sync_crazyflie.wait_for_params()
             if not self._deck_attached("deck.bcFlow2", "deck.bcFlow"):  # Flow deck v2 or v1
                 raise RuntimeError("Flow deck not detected: autonomous flight needs it.")

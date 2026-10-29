@@ -13,6 +13,7 @@ PACKAGE_ROOT = SOURCE_ROOT / "crazyflie_behavior"
 TOOLS_ROOT = REPO_ROOT / "tools"
 CRAZYFLIE_ADAPTER_ROOT = PACKAGE_ROOT / "drone" / "crazyflie"
 BEHAVIORS_ROOT = PACKAGE_ROOT / "behaviors"
+TICK_LOOP = PACKAGE_ROOT / "loop" / "tick_loop.py"
 
 CLOCK_MODULES = ["time", "datetime", "crazyflie_behavior.timing"]
 
@@ -47,12 +48,13 @@ def imported_modules(path: Path) -> set[str]:
     return modules
 
 
+def imports_any_of(imported: str, module_names: list[str]) -> bool:
+    """Whether one imported module is any of `module_names` or inside one of them."""
+    return any(imported == name or imported.startswith(name + ".") for name in module_names)
+
+
 def imports_any(path: Path, module_names: list[str]) -> bool:
-    return any(
-        imported == name or imported.startswith(name + ".")
-        for imported in imported_modules(path)
-        for name in module_names
-    )
+    return any(imports_any_of(imported, module_names) for imported in imported_modules(path))
 
 
 def relative_paths(paths: list[Path]) -> list[str]:
@@ -95,6 +97,18 @@ def test_behaviors_never_read_a_clock() -> None:
     assert relative_paths(offenders) == []
 
 
+def test_the_tick_loop_imports_only_the_clock_from_the_project() -> None:
+    """ADR-0026: the tick loop is only a timer; the tick step holds what a tick does."""
+    offenders = sorted(
+        name
+        for name in imported_modules(TICK_LOOP)
+        if imports_any_of(name, ["crazyflie_behavior"])
+        and not imports_any_of(name, ["crazyflie_behavior.timing"])
+    )
+
+    assert offenders == []
+
+
 def test_the_import_scanner_sees_real_imports() -> None:
     """Guards the fitness functions themselves: if the scanner silently found
     nothing, every rule above would pass for the wrong reason."""
@@ -102,3 +116,4 @@ def test_the_import_scanner_sees_real_imports() -> None:
     assert imports_any(CRAZYFLIE_ADAPTER_ROOT / "adapter.py", ["cflib"])
     assert imports_any(PACKAGE_ROOT / "timing" / "clock.py", ["time"])
     assert imports_any(PACKAGE_ROOT / "drone" / "mock_adapter.py", ["crazyflie_behavior.drone"])
+    assert imports_any(TICK_LOOP, ["crazyflie_behavior.timing"])

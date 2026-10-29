@@ -24,9 +24,9 @@ from crazyflie_behavior.timing.clock import Clock
 CHARGED_BATTERY_VOLTAGE = 4.0
 """Volts. A freshly charged Crazyflie battery reads a little above this."""
 
-# PLACEHOLDERS, to VERIFY at the bench (ADR-0011): as we understand the
-# firmware, a Crazyflie levels out about 0.5 s after velocity setpoints stop,
-# and cuts its motors after about 2 s.
+# From the firmware source (supervisor.c, checked 2026-10-29): a Crazyflie
+# levels out 0.5 s after velocity setpoints stop, and cuts its motors after
+# 2 s. VERIFY at the bench that the drone's firmware matches (ADR-0011).
 SETPOINT_STOP_FOLLOWING_AFTER = 0.5
 """Seconds without a set_velocity before the drone stops following it."""
 SETPOINT_CUT_MOTORS_AFTER = 2.0

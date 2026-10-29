@@ -67,14 +67,34 @@ In PyCharm, the **tests** run configuration runs the test suite.
 Without hardware it reports that no Crazyflie was found, which confirms the
 setup works. In PyCharm, use the **first_flight** run configuration.
 
+## Bench program
+
+```powershell
+.venv\Scripts\python -m crazyflie_behavior.programs.bench
+.venv\Scripts\python -m crazyflie_behavior.programs.bench --crazyflie
+```
+
+It connects, runs the tick loop and logs every snapshot, but never commands
+the drone: field-test stage 0, propellers off. Without `--crazyflie` it uses
+the mock adapter. The console shows a summary every second, with how old each
+value is, and everything goes to a log file in `logs/`. (The mock adapter sets
+the battery and range readings once, so their age keeps growing.) In PyCharm,
+use the **bench** or **bench (Crazyflie)** run configuration.
+
+Stop it with Ctrl+C in a terminal, or PyCharm's Stop button. To see what the
+Stop button does, check the end of the log: a "Tick loop summary" line means
+the program shut down cleanly; without it, Stop ended the program outright.
+
 ## Hardware (planned)
 
-- Crazyflie 2.1+ and Crazyradio USB dongle
+- Crazyflie 2.1+ (about 7 minutes of flight per battery) and Crazyradio USB dongle
 - Flow deck (needed for stable autonomous hover)
 - Multi-ranger deck (obstacle sensing and mapping)
 - Buzzer deck (hint chirps)
 - Long pins (19+2+4 mm) to stack three decks: two on top, the Flow deck underneath
-- Spare batteries and propellers (about 7 minutes of flight per battery)
+- PS5 controller (DualSense), optional, for the operator controls
+  ([ADR-0027](docs/decisions/0027-operator-controls.md)). A USB cable is safer
+  than Bluetooth for flights: an unplugged cable is noticed at once.
 
 On Windows the Crazyradio needs a USB driver installed with Zadig. Follow the
 Bitcraze docs for the current steps.
@@ -86,6 +106,8 @@ src/crazyflie_behavior/
   geometry.py       # Vector3
   snapshot.py       # the per-tick snapshot and the types inside it
   timing/           # clocks: real and simulated
+  loop/             # the tick loop: keeps time and calls the tick step
+  programs/         # runnable programs, such as the bench program, and their start-up code
   drone/            # drone interface, telemetry buffer, mock adapter
     crazyflie/      # Crazyflie adapter: the only code that imports cflib
 tests/
@@ -101,4 +123,5 @@ docs/
   decision-backlog.md  # open design questions, in order of need
   field-testing/    # real-world test process and session logs
   cflib-primer.md   # how cflib works, checked against the installed version
+  claude-mistakes.md  # mistakes Claude made, and what they say about its weak spots
 ```
