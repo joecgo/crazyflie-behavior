@@ -84,6 +84,11 @@ Unitless values (counts, ratios, flags) get no suffix.
 
 ## Tests
 
+- **Prove every new test by bug planting** (see the glossary): break the
+  behavior the test guards, one small change at a time, and check that the
+  test fails, fails on its own (an escaped Ctrl+C or crash stops the whole
+  run) and doesn't hang. Then restore the code. A test that no planted bug
+  can fail is a gap.
 - **Compare computed floats with `pytest.approx`**, never `==`: most decimals
   (0.1, 0.3) aren't exact in binary, so `0.1 + 0.2 == 0.3` is false. `==` is
   fine for a value passed through unchanged, or for exact values (whole

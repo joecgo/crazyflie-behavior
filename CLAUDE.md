@@ -108,7 +108,8 @@ ignores one:
 ## Engineering practices
 
 - **Definition of done.** A change is done only when: tests pass (including the
-  architecture tests), the glossary is updated for any new or changed term, the
+  architecture tests), new tests are proven by bug planting
+  (`docs/coding-style.md`), the glossary is updated for any new or changed term, the
   relevant ADR is linked, and the commit message names the ADR it implements
   (e.g. `Implements ADR-0004`).
 - Follow `docs/coding-style.md`: strict typing, units in names, the cflib
