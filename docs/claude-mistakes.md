@@ -73,3 +73,30 @@ why), *environment* (assumptions about my machine, time zone or tools).
 - **Kind:** recommendation.
 - **Takeaway:** check Claude's timing recommendations against how game loops
   already solve the problem.
+
+## 2026-10-24: Trusting a cflib read that returns old data on a timeout
+
+- **What happened:** the Crazyflie adapter Claude wrote polled drone status
+  with cflib's `read_bitfield()` and stamped every result as fresh. On a
+  timeout, that call doesn't raise: it returns the last value, or 0 if it
+  never had one. A stale status looked current, and a missing one read as
+  "all flags false".
+- **Caught by:** me, in code review. Fixed by streaming status instead
+  ([ADR-0021](decisions/0021-drone-status-streams-with-the-state.md)).
+- **Kind:** design. Assumed a library call fails loudly without checking its
+  source.
+- **Takeaway:** for every library call Claude relies on, ask what it does on a
+  timeout or error, and check the answer in the source.
+
+## 2026-10-24: A backup that fails together with what it backs up
+
+- **What happened:** Claude recommended letting the position estimate's
+  height confirm touchdown when the down range had nothing usable
+  ([ADR-0012](decisions/0012-landing-confirms-touchdown.md)). On a Crazyflie
+  that height comes mostly from the same down sensor, so when the sensor
+  fails, the backup fails too, and the motors could be cut in mid-air.
+- **Caught by:** me, in code review. Fixed by
+  [ADR-0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md).
+- **Kind:** safety design. A backup sharing the primary's failure.
+- **Takeaway:** for every backup, ask what it's computed from, and whether
+  that's the same thing that just failed.

@@ -87,6 +87,8 @@ ignores one:
 - **Honest attribution.** The README states that the architecture and decisions
   are the user's and the implementation is AI-assisted, with the ADRs as the
   record. Keep it accurate as the project grows.
+- **Log Claude's mistakes.** When the user catches a Claude mistake, or Claude
+  catches its own, add an entry to `docs/claude-mistakes.md`.
 
 ## Shared language
 
