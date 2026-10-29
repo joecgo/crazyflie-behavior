@@ -33,5 +33,6 @@ This column is honest about which ideas were mine.
 | [0022](0022-multi-ranger-keeps-stock-firmware-rate.md) | The Multi-ranger keeps the stock firmware's 10 Hz | Mixed: keeping it was the AI's recommendation; no follow-up item was mine |
 | [0023](0023-tick-rate-20-hz.md) | The tick loop runs at 20 Hz, with telemetry periods matched to their sources | AI recommendation accepted, over my first preference for 30-60 Hz |
 | [0024](0024-tick-timing-strategy.md) | Tick timing: due times on a fixed beat, plain sleep, measured jitter | Mixed: starting at once after an overrun was mine; the fixed beat was the AI's tweak |
+| [0025](0025-safety-pre-check-and-command-slots.md) | Safety pre-check, requests answered at once, one command per slot per tick | Mixed: the single request call, pre-check and slots were mine |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

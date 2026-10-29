@@ -1,6 +1,6 @@
 # 0008: The drone interface
 
-- **Status:** Accepted. Decision 1 amended by [ADR-0013](0013-operator-kill-switch.md): the operator's kill switch is an exception.
+- **Status:** Accepted. Decision 1 amended by [ADR-0013](0013-operator-kill-switch.md): the operator's kill switch is an exception. Decision 6 superseded by [ADR-0025](0025-safety-pre-check-and-command-slots.md): requests answered at once, after a safety pre-check.
 - **Date:** 2026-10-20
 - **Origin:** Mixed. Mostly AI recommendations accepted. Overrode the AI on reporting refusals (behavior trees need answers within the same tick) and on keeping the downward reading in range readings.
 
