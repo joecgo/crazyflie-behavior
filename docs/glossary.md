@@ -2,7 +2,8 @@
 
 The project's shared language. Every term here means exactly one thing, and it
 means the same in conversation, docs and code. The UE5 column gives the
-nearest equivalent, with a note where the analogy breaks.
+nearest equivalent, with a note where the analogy breaks, or says "No UE
+analogy" when none fits.
 
 Every term here is approved by the architect. Most describe how the drone
 and robotics world works. Terms in **Architecture** and in the game sections
@@ -102,6 +103,8 @@ this file in the same commit as the code or ADR that uses it.
 | **Blackboard** | Behavior memory: what behaviors remember across ticks (next waypoint, where an obstacle was last seen). Written by behaviors, persists between ticks. | UE Blackboard (AI memory keys). | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md) |
 | **Safety layer** | The layer between behaviors and the drone interface. It runs the safety pre-check on each snapshot, answers command requests at once, and is the only code that sends commands to the drone, apart from the kill switch ([ADR-0013](decisions/0013-operator-kill-switch.md)): it approves, clamps to the speed envelope, or overrides command requests. | Server authority validating client movement requests. | [0008](decisions/0008-drone-interface.md), [0013](decisions/0013-operator-kill-switch.md), [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
 | **Kill switch** | The operator's command to cut the motors immediately, executed at any moment, like a cheat command. The one thing that bypasses the safety layer; everything else goes through it. | A console cheat command that bypasses the gameplay rules. | [0013](decisions/0013-operator-kill-switch.md) |
+| **Kill latch** | The program's refusal to arm or take off after the kill switch, until the program is restarted. It backs up the drone lock and says why it refuses. | No UE analogy. | [0027](decisions/0027-operator-controls.md) |
+| **Drone lock** | The drone's own state after an emergency stop: its firmware refuses to fly until the drone is restarted (switched off and on). | No UE analogy. | [0027](decisions/0027-operator-controls.md) |
 | **Final descent** | After the planned landing, the slow descent that continues until the down range confirms touchdown, or until a time limit says the drone must be on the floor. Then the motors stop. | A fallback "settle to ground" state when the landing animation ended but the character isn't grounded. | [0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md) |
 | **Landing phase** | Where a landing is: not landing, the planned landing (the high-level landing, planned from the height estimate), or the final descent. The Crazyflie adapter holds it. | The current state of a small landing state machine. | [0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md) |
 | **Command request** | What a behavior asks the drone to do this tick (e.g. a velocity, or fast mode to a point). The safety layer answers at once (approved, clamped or refused, with the reason). At the end of the tick, each command slot's approved request is sent. Never goes directly to the drone. | A client asking the server to move. | [0008](decisions/0008-drone-interface.md), [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
