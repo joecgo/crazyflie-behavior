@@ -75,6 +75,9 @@ setup works. In PyCharm, use the **first_flight** run configuration.
 - Buzzer deck (hint chirps)
 - Long pins (19+2+4 mm) to stack three decks: two on top, the Flow deck underneath
 - Spare batteries and propellers (about 7 minutes of flight per battery)
+- PS5 controller (DualSense), optional, for the operator controls
+  ([ADR-0027](docs/decisions/0027-operator-controls.md)). A USB cable is safer
+  than Bluetooth for flights: an unplugged cable is noticed at once.
 
 On Windows the Crazyradio needs a USB driver installed with Zadig. Follow the
 Bitcraze docs for the current steps.
