@@ -20,19 +20,19 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 2 | 1 |
+| design | 2 | 3 |
 | safety design | 2 | 1 |
 | recommendation | 3 | 0 |
-| environment | 2 | 0 |
+| environment | 2 | 1 |
 | communication | 1 | 0 |
-| testing | 0 | 1 |
+| testing | 0 | 2 |
 | process | 0 | 1 |
-| **Total** | **10** | **4** |
+| **Total** | **10** | **8** |
 
 Of the 10 I pointed out, a later Claude review would probably have caught
-none, maybe 4, and probably not 6. So far, every recommendation, environment
-and communication mistake needed me; the ones Claude found itself were in
-code, tests and records.
+none, maybe 4, and probably not 6. So far, every recommendation and
+communication mistake needed me. Claude's own reviews and planted bugs find
+mistakes in code, tests and records, including Windows details.
 
 ---
 
@@ -187,6 +187,53 @@ code, tests and records.
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-10-29: Cleanup gaps around connecting
+
+- **What happened:** in the start-up code's first draft, a Ctrl+C in the
+  instant between connecting and installing the Ctrl+C handler would have
+  skipped the disconnect. Then a Ctrl+C during cflib's `open_link` left a
+  half-open link the adapter didn't track, and a second press could cut the
+  cleanup short.
+- **Caught at:** writing the code (the first), then Claude's code review.
+- **Kind:** design. Windows of time between two steps.
+- **Takeaway:** for every cleanup path, check what happens if the
+  interruption lands between two lines, and if it comes twice.
+
+### 2026-10-29: Windows details in the start-up code
+
+- **What happened:** the docs promised that Ctrl+C stops the program at once
+  while connecting, but on Windows, Python 3.12 can't interrupt cflib's waits,
+  which have no time limit (backlog #29). The QuickEdit code also restored the
+  console mode in a form Windows can ignore, and let ctypes cut a 64-bit
+  handle to 32 bits.
+- **Caught at:** Claude's code review.
+- **Kind:** environment. Code that was only run on Linux.
+- **Takeaway:** for Windows-only code, ask the review to check it against
+  Windows' documented behavior, since continuous integration runs on Linux.
+
+### 2026-10-29: Debug logging for every library, and a logger named `__main__`
+
+- **What happened:** the logging setup turned on debug level for every
+  logger, so cflib would log every radio packet. And run as a program, the
+  bench program's logger is called `__main__`, outside the project's loggers,
+  so its debug lines would have been dropped once that was fixed.
+- **Caught at:** Claude's code review (the first), then while fixing it.
+- **Kind:** design.
+- **Takeaway:** check logging setups with a real library attached and the
+  program started the way I start it.
+
+### 2026-10-29: Tests that couldn't fail cleanly
+
+- **What happened:** when a planted bug made Ctrl+C raise an error, it
+  escaped the test and stopped the whole pytest run instead of failing one
+  test. The QuickEdit test's example console mode already had the bit the
+  planted bug removed, so it couldn't fail at all. An end-to-end test relied
+  on a 0.5 s timer.
+- **Caught at:** planting bugs (the first two), then Claude's code review.
+- **Kind:** testing.
+- **Takeaway:** for each test, plant the bug it's meant to catch, and check
+  that it fails, fails alone, and doesn't depend on timing.
 
 ### 2026-10-29: Ctrl+C described two ways in one ADR
 
