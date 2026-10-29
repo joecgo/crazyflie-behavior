@@ -124,6 +124,13 @@ this file in the same commit as the code or ADR that uses it.
 | **Fast mode** | Control mode for moving quickly to a target using position commands (`go_to`), with obstacle-avoidance steering disabled. The safety layer stays active and can interrupt it. | A scripted `MoveTo` with steering off, but collision still on. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
 | **Speed envelope** | The maximum speed and acceleration allowed in a control mode. The safety layer may tighten it in the moment but never widen it. | `MaxWalkSpeed` and `MaxAcceleration` on the movement component, clamped by gameplay rules. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
 
+## Testing
+
+| Term | Definition | UE5 analogy |
+|---|---|---|
+| **Fitness function** | A test that enforces a structural rule from an ADR, such as "only the Crazyflie adapter imports cflib". It reads the code, for example its imports, instead of running it, and fails continuous integration when the rule is broken. Fitness functions live in `tests/architecture/`. | No UE analogy. |
+| **Bug planting** | Deliberately breaking the code a test guards, to check that the test fails. One small change at a time, always removed afterwards and never committed. A test that still passes has a gap. A hand-made form of mutation testing. | No UE analogy. |
+
 ## Hide-and-seek
 
 Terms for the first game ([ADR-0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)).
