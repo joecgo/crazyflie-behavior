@@ -86,6 +86,7 @@ src/crazyflie_behavior/
   geometry.py       # Vector3
   snapshot.py       # the per-tick snapshot and the types inside it
   timing/           # clocks: real and simulated
+  loop/             # the tick loop: keeps time and calls the tick step
   drone/            # drone interface, telemetry buffer, mock adapter
     crazyflie/      # Crazyflie adapter: the only code that imports cflib
 tests/
@@ -101,4 +102,5 @@ docs/
   decision-backlog.md  # open design questions, in order of need
   field-testing/    # real-world test process and session logs
   cflib-primer.md   # how cflib works, checked against the installed version
+  claude-mistakes.md  # mistakes Claude made, and what they say about its weak spots
 ```
