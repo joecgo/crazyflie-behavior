@@ -10,6 +10,9 @@ bird**) are project design and carry a status:
 - **Decided**: chosen by the architect. Links to its ADR.
 - **Proposed**: a candidate term waiting on a design decision. It may change or
   disappear.
+- **Superseded**: replaced by a later decision. These terms move to
+  **Deprecated terms** at the bottom, so old ADRs still make sense. Don't use
+  them in new docs or code.
 
 To add or change a term: propose it in conversation, agree on it, then edit
 this file in the same commit as the code or ADR that uses it.
@@ -102,7 +105,6 @@ this file in the same commit as the code or ADR that uses it.
 | **Command request** | What a behavior asks the drone to do this tick (e.g. a velocity, or fast mode to a point). The safety layer answers at once (approved, clamped or refused, with the reason). At the end of the tick, each command slot's approved request is sent. Never goes directly to the drone. | A client asking the server to move. | Decided ([0008](decisions/0008-drone-interface.md), [0025](decisions/0025-safety-pre-check-and-command-slots.md)) |
 | **Command slot** | A group of commands where only one can be active at a time: movement (take off, land, velocity, move to, hover), buzzer, LEDs. A later approved request in the same tick replaces the earlier one, and the replacement is logged as a warning. Each slot's request is sent at the end of the tick. | An animation montage slot. | Decided ([0025](decisions/0025-safety-pre-check-and-command-slots.md)) |
 | **Safety pre-check** | The safety layer's check of each snapshot at the start of the tick, before behaviors run (stale data, battery, geofence). If it passes, behaviors run and their requests are judged against it; if it fails, behaviors are skipped and the failsafe takes over. | A behavior tree root decorator that aborts the tree when its condition fails. | Decided ([0025](decisions/0025-safety-pre-check-and-command-slots.md)) |
-| **Safety query** | A read-only question a behavior asks the safety layer during its decision, e.g. "can I enter fast mode?" It's answered immediately and has no side effects. | A BT decorator checking a condition. | Superseded by [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
 | **Stamped value** | A telemetry value together with its arrival time (PC clock) and the drone's timestamp (converted to seconds). Every value in a snapshot is stamped, so its age can always be checked. | A replicated property plus "when the server sent it" and "when we received it". | Decided ([0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md)) |
 | **Range readings** | The set of six range readings in a snapshot, one per named direction (front, back, left, right, up, down). | The results of a fixed set of line traces fired every tick. | Decided ([0008](decisions/0008-drone-interface.md)) |
 | **Drone status** | Flags describing the drone's state as the drone reports it: armed, flying, crashed, tumbled. Part of the snapshot. | Replicated state flags on the Pawn (alive, ragdolled…). | Decided ([0008](decisions/0008-drone-interface.md)) |
@@ -138,6 +140,16 @@ Terms for the second game ([ADR-0015](decisions/0015-first-game-catch-the-bird.m
 | **Sky layer** | The height band the drone plays in: above a child's reach, below the ceiling with a margin (about 1.5-2.0 m in a room with a 2.4 m ceiling). | A nav volume restricted to a height range, like flying units that keep to an air layer. | Decided ([0015](decisions/0015-first-game-catch-the-bird.md)) |
 | **Clearance rule** | The drone always keeps about 1 m of clearance below. If something rises toward it, it moves away sideways. | A keep-out radius enforced by the movement component, regardless of what the AI wants. | Decided ([0015](decisions/0015-first-game-catch-the-bird.md)) |
 | **Catch** | Scored when the child gets directly under the bird, as seen by the down sensor. The bird reacts and flies to a new spot. | An overlap trigger under the Pawn that scores a point. | Decided ([0015](decisions/0015-first-game-catch-the-bird.md)) |
+
+## Deprecated terms
+
+> **Deprecated. Don't use these in new docs or code.** They're kept only so
+> older ADRs and commits still make sense. Each one links to the decision
+> that replaced it.
+
+| Term | Definition (as it was) | UE5 analogy | Status |
+|---|---|---|---|
+| **Safety query** | A read-only question a behavior asks the safety layer during its decision, e.g. "can I enter fast mode?" It's answered immediately and has no side effects. | A BT decorator checking a condition. | Superseded by [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
 
 <!-- Terms still to define as decisions land: command,
      geofence, recording/replay, ... -->
