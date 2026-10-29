@@ -88,7 +88,10 @@ ignores one:
   are the user's and the implementation is AI-assisted, with the ADRs as the
   record. Keep it accurate as the project grows.
 - **Log Claude's mistakes.** When the user catches a Claude mistake, or Claude
-  catches its own, add an entry to `docs/claude-mistakes.md`.
+  catches its own, add an entry to `docs/claude-mistakes.md`, in the section
+  for who caught it, and update its at-a-glance table. For a mistake the user
+  pointed out, say honestly whether a later Claude review would probably
+  have caught it.
 
 ## Shared language
 
