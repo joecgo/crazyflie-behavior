@@ -11,9 +11,55 @@ kind of work, and the takeaway.
 
 **Kinds of work** (to spot patterns later): *design* (how parts fit
 together), *safety design*, *recommendation* (which option Claude pushed and
-why), *environment* (assumptions about my machine, time zone or tools).
+why), *environment* (assumptions about my machine, time zone or tools),
+*testing*, *process* (how decisions are recorded).
 
 ---
+
+## 2026-10-29: Ctrl+C described two ways in one ADR
+
+- **What happened:** ADR-0026's decision calls Ctrl+C a stop request (finish
+  the tick, then land). Its failure modes say Ctrl+C anywhere in a tick rises
+  like an error. Python's default is the second; the first needs a handler.
+  Neither said what a second press during the landing does: with Python's
+  default, it cuts the landing short, and the Crazyflie adapter's link
+  shutdown then sends zero thrust, which drops the drone.
+- **Caught by:** Claude, while writing the tick loop.
+- **Kind:** safety design. An ADR's words didn't match what the language
+  does by default.
+- **Takeaway:** when an ADR names a mechanism (Ctrl+C, a timeout), ask what
+  happens by default, and what a second one does.
+
+## 2026-10-29: Gaps at the edges of the tick loop
+
+- **What happened:** in the tick loop's first draft, the last tick's overrun
+  went unlogged ("done" returned before the check); the hang watchdog stopped
+  before the tick's logging, so a blocked console wouldn't be reported; the
+  watchdog fell back to standard error, though ADR-0026 says the log file;
+  and a stop request waited up to one tick period.
+- **Caught by:** Claude's code review, at a high level.
+- **Kind:** design. Edge cases at the start, end and between ticks.
+- **Takeaway:** when reviewing a loop, check the first tick, the last tick
+  and the time between ticks, not just the middle.
+
+## 2026-10-29: Test fakes that hang instead of failing
+
+- **What happened:** two fake tick steps never reported done. When a planted
+  bug broke the stop request, their tests hung forever instead of failing.
+- **Caught by:** Claude, planting bugs to prove the tests.
+- **Kind:** testing.
+- **Takeaway:** a fake that can loop needs a limit. Plant a bug in each path
+  and check the test fails, not hangs.
+
+## 2026-10-29: An exception to an older ADR without marking it
+
+- **What happened:** Claude added "every overrun gets its own warning" to
+  ADR-0026, an exception to ADR-0020's once-per-streak rule, without marking
+  ADR-0020 as amended or updating ADR-0026's origin line.
+- **Caught by:** Claude's code review.
+- **Kind:** process.
+- **Takeaway:** when a decision makes an exception to an older one, mark the
+  older ADR's status line.
 
 ## 2026-10-29: Only one command request per tick
 
