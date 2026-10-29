@@ -38,18 +38,18 @@ code, tests and records.
 
 ## Mistakes I had to point out
 
-### 2026-10-29: Recommending background-thread logging before measuring
+### 2026-10-29: A logging recommendation that ignored what was already known
 
 - **What happened:** for backlog #27, Claude recommended writing log messages
-  on background threads: more code and moving parts, against a risk nobody
-  had measured. In PyCharm, the console freeze it guards against doesn't
-  happen at all.
-- **Why it was wrong:** for the garbage collector and spin-waiting, the
-  project measures first and adds complexity only if the measurements show a
-  need (ADR-0024). And background threads lose the last log lines when the
-  program is killed, which is the context I want after an error.
-- **How I caught it:** I asked why the simpler option wasn't recommended, on
-  a fast laptop with an SSD.
+  on background threads. Both options were on the table, but the
+  recommendation didn't weigh two things Claude already knew: I run programs
+  in PyCharm, where the console freeze doesn't happen (Claude had written
+  that into backlog #27 itself), and the project measures first before adding
+  complexity, as with the garbage collector and spin-waiting (ADR-0024).
+- **Why it was wrong:** it recommended more code and moving parts against an
+  unmeasured risk, and an option that loses the last log lines when the
+  program is killed. My SSD was new information; the rest wasn't.
+- **How I caught it:** I asked why the simpler option wasn't recommended.
 - **Would a Claude review have caught it?** Probably not: it was a
   recommendation.
 - **Kind:** recommendation.
