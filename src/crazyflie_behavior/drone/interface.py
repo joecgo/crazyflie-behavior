@@ -38,7 +38,11 @@ class DroneInterface(ABC):
 
     @abstractmethod
     def connect(self) -> None:
-        """Open the link and start telemetry. May block while connecting."""
+        """Open the link and start telemetry. May block while connecting.
+
+        When it returns, every telemetry value has arrived at least once, so
+        the first snapshot has nothing missing (ADR-0031).
+        """
 
     @abstractmethod
     def disconnect(self) -> None:

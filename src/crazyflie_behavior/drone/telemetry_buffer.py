@@ -100,6 +100,23 @@ class TelemetryBuffer:
         with self._lock:
             return self._position_estimate
 
+    def missing_values(self) -> list[str]:
+        """The telemetry values that haven't arrived yet, by name (ADR-0031).
+
+        A value counts as arrived once it has been written, even as an invalid
+        range reading.
+        """
+        with self._lock:
+            values: dict[str, object | None] = {
+                "position estimate": self._position_estimate,
+                "velocity estimate": self._velocity_estimate,
+                "battery voltage": self._battery_voltage,
+                "drone status": self._drone_status,
+            }
+            for direction in RangeDirection:
+                values[f"{direction.value} range"] = self._range_readings.get(direction)
+        return [name for name, value in values.items() if value is None]
+
     def snapshot(self, time: float, dt: float) -> Snapshot:
         """Copy everything into a read-only snapshot for one tick (ADR-0007).
 

@@ -64,6 +64,7 @@ type BufferOperation = Callable[[TelemetryBuffer], object]
 EVERY_OPERATION: dict[str, BufferOperation] = {
     "snapshot": lambda buffer: buffer.snapshot(time=0.0, dt=0.0),
     "latest_position_estimate": lambda buffer: buffer.latest_position_estimate(),
+    "missing_values": lambda buffer: buffer.missing_values(),
     "write_position_estimate": lambda buffer: buffer.write_position_estimate(ORIGIN, None),
     "write_velocity_estimate": lambda buffer: buffer.write_velocity_estimate(ORIGIN, None),
     "write_range_readings": lambda buffer: buffer.write_range_readings(
@@ -143,3 +144,33 @@ def test_estimates_and_status_written_together_share_one_arrival() -> None:
     assert snapshot.position_estimate == Stamped(ORIGIN, 3.0, 1.25)
     assert snapshot.velocity_estimate == Stamped(ORIGIN, 3.0, 1.25)
     assert snapshot.drone_status == Stamped(LANDED, 3.0, 1.25)
+
+
+def test_every_value_is_missing_until_it_arrives() -> None:
+    buffer = TelemetryBuffer(SimClock())
+
+    assert buffer.missing_values() == [
+        "position estimate",
+        "velocity estimate",
+        "battery voltage",
+        "drone status",
+        "front range",
+        "back range",
+        "left range",
+        "right range",
+        "up range",
+        "down range",
+    ]
+
+
+def test_missing_values_names_only_what_has_not_arrived() -> None:
+    buffer = TelemetryBuffer(SimClock())
+    buffer.write_estimates_and_status(ORIGIN, ORIGIN, LANDED, None)
+    buffer.write_range_readings(dict.fromkeys(RangeDirection, RangeReading.invalid()), None)
+
+    # An invalid range reading counts as arrived: it says "unknown", not "nothing yet".
+    assert buffer.missing_values() == ["battery voltage"]
+
+    buffer.write_battery_voltage(4.0, None)
+
+    assert buffer.missing_values() == []

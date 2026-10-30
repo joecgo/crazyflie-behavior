@@ -39,7 +39,7 @@ from crazyflie_behavior.drone.crazyflie.conversions import (
     range_reading_from_mm,
     yaw_rate_deg_per_s,
 )
-from crazyflie_behavior.drone.crazyflie.time_limit import run_with_time_limit
+from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE, run_with_time_limit
 from crazyflie_behavior.drone.crazyflie.touchdown import (
     FINAL_DESCENT_SPEED,
     HEIGHT_IF_UNKNOWN,
@@ -90,6 +90,9 @@ PARAMETERS_TIME_LIMIT = 10.0
 POSITION_ESTIMATE_TIME_LIMIT = 20.0
 """Seconds for the position estimate to settle. cflib waits for 10 steady readings
 500 ms apart, so it takes at least 5 s."""
+FIRST_TELEMETRY_TIME_LIMIT = 3.0
+"""Seconds for every telemetry value to arrive once (ADR-0031). The battery,
+streamed once a second, is the slowest."""
 # ------------------------------------------------------------------------------
 
 _MULTIRANGER_VARIABLES = {
@@ -175,6 +178,9 @@ class CrazyflieAdapter(DroneInterface):
     def connect(self) -> None:
         _init_drivers_once()
         self._last_drone_time = None  # a new session: the drone may have rebooted
+        # A new session starts with no values, so the wait for the first telemetry
+        # can't pass on values left from an earlier one (ADR-0031).
+        self._telemetry = TelemetryBuffer(self._clock)
         sync_crazyflie = SyncCrazyflie(self._uri, cf=Crazyflie(rw_cache=self._cache_directory))
         self._sync_crazyflie = sync_crazyflie  # tracked from the start, so cleanup always finds it
         try:
@@ -208,6 +214,7 @@ class CrazyflieAdapter(DroneInterface):
                 self._clock,
             )
             self._start_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
+            self._wait_for_first_telemetry()
         except BaseException:
             self._close_link()
             raise
@@ -437,6 +444,24 @@ class CrazyflieAdapter(DroneInterface):
             self._telemetry.write_range_readings(
                 dict.fromkeys(_MULTIRANGER_VARIABLES, RangeReading.invalid()), drone_time=None
             )
+
+    def _wait_for_first_telemetry(self) -> None:
+        """Return once every telemetry value has arrived once (ADR-0031).
+
+        Checks the telemetry buffer every wait slice. Unlike cflib's waits
+        (ADR-0029), a plain sleep is interrupted by Ctrl+C at once, so this
+        needs no helper thread.
+        """
+        deadline = self._clock.now() + FIRST_TELEMETRY_TIME_LIMIT
+        while missing := self._telemetry.missing_values():
+            now = self._clock.now()
+            if now >= deadline:
+                raise TimeoutError(
+                    f"Waiting for the first telemetry took longer than "
+                    f"{FIRST_TELEMETRY_TIME_LIMIT:g} s. Still missing: {', '.join(missing)}. "
+                    "Check the Crazyflie is in range, and that its firmware logs these values."
+                )
+            self._clock.sleep_until(min(deadline, now + WAIT_SLICE))
 
     def _add_log_block(
         self, name: str, period_ms: int, variables: list[str], on_data: _LogCallback

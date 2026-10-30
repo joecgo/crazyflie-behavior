@@ -8,7 +8,8 @@ then puts the real ones back.
 
 import signal
 import threading
-from collections.abc import Generator
+import time
+from collections.abc import Callable, Generator
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,9 +19,36 @@ from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
 from crazyflie_behavior.snapshot import RangeStatus
 from crazyflie_behavior.timing.clock import RealClock, SimClock
 
+FIRST_SAMPLES: dict[str, dict[str, float]] = {
+    "state": {
+        "stateEstimate.x": 0.0,
+        "stateEstimate.y": 0.0,
+        "stateEstimate.z": 0.0,
+        "stateEstimate.vx": 0.0,
+        "stateEstimate.vy": 0.0,
+        "stateEstimate.vz": 0.0,
+        "supervisor.info": 0.0,
+    },
+    "battery": {"pm.vbat": 4.0},
+    "down": {"range.zrange": 20.0},
+    "multiranger": {
+        "range.front": 8000.0,
+        "range.back": 8000.0,
+        "range.left": 8000.0,
+        "range.right": 8000.0,
+        "range.up": 8000.0,
+    },
+}
+"""Each log block's first sample, as cflib delivers it."""
+
 
 class FakeCflib:
-    """Stands in for cflib during connect(): records what the adapter asked for."""
+    """Stands in for cflib during connect(): records what the adapter asked for.
+
+    Each log block sends one sample when it starts, like a drone's first
+    packet: at once, after `first_sample_delay` seconds, or never for blocks
+    in `silent_blocks`.
+    """
 
     def __init__(self) -> None:
         self.link = MagicMock()
@@ -32,6 +60,9 @@ class FakeCflib:
         self.reset_estimator = MagicMock()
         self.log_block_names: list[str] = []
         self.log_block_periods_ms: dict[str, int] = {}
+        self.silent_blocks: set[str] = set()
+        self.first_sample_delay = 0.0
+        """Seconds; above zero, the first samples arrive on a timer thread."""
 
     def get_parameter(self, name: str) -> str:
         return self.parameters[name]
@@ -39,7 +70,31 @@ class FakeCflib:
     def make_log_block(self, name: str, period_in_ms: int) -> MagicMock:
         self.log_block_names.append(name)
         self.log_block_periods_ms[name] = period_in_ms
-        return MagicMock()
+        block = MagicMock()
+        callbacks: list[Callable[[int, dict[str, float], object], None]] = []
+        block.data_received_cb.add_callback.side_effect = callbacks.append
+        block.start.side_effect = lambda: self._send_first_sample(name, block, callbacks)
+        return block
+
+    def _send_first_sample(
+        self,
+        name: str,
+        block: MagicMock,
+        callbacks: list[Callable[[int, dict[str, float], object], None]],
+    ) -> None:
+        if name in self.silent_blocks:
+            return
+
+        def send() -> None:
+            for callback in callbacks:
+                callback(1000, FIRST_SAMPLES[name], block)
+
+        if self.first_sample_delay > 0.0:
+            timer = threading.Timer(self.first_sample_delay, send)
+            timer.daemon = True
+            timer.start()
+        else:
+            send()
 
 
 @pytest.fixture
@@ -255,3 +310,82 @@ def test_a_missing_log_variable_says_to_update_the_firmware(
         adapter.connect()
 
     fake_cflib.link.close_link.assert_called_once()
+
+
+def test_connect_returns_only_once_every_telemetry_value_has_arrived(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    adapter.connect()
+
+    assert adapter._telemetry.missing_values() == []
+
+
+def test_connect_waits_for_telemetry_that_arrives_late(fake_cflib: FakeCflib) -> None:
+    fake_cflib.first_sample_delay = 0.3
+    adapter = real_time_adapter()
+    started = time.perf_counter()
+
+    adapter.connect()
+
+    assert adapter._telemetry.missing_values() == []
+    # Noticed soon after arriving, not only when the 3 s limit ends the wait.
+    assert time.perf_counter() - started < 2.0
+
+
+class BoundedSimClock(SimClock):
+    """A sim clock that fails the test instead of letting a broken wait loop forever."""
+
+    MAX_SLEEPS = 1000
+
+    def __init__(self, start: float) -> None:
+        super().__init__(start)
+        self._sleeps = 0
+
+    def sleep_until(self, deadline: float) -> None:
+        self._sleeps += 1
+        if self._sleeps > self.MAX_SLEEPS:
+            raise AssertionError("still waiting after 1000 sleeps: the wait never ends")
+        super().sleep_until(deadline)
+
+
+def test_a_value_that_never_arrives_has_a_time_limit_then_closes_the_link(
+    fake_cflib: FakeCflib,
+) -> None:
+    fake_cflib.silent_blocks.add("battery")
+    adapter = CrazyflieAdapter(BoundedSimClock(start=10.0))
+
+    with pytest.raises(TimeoutError, match=r"Still missing: battery voltage\. Check"):
+        adapter.connect()
+
+    fake_cflib.link.close_link.assert_called_once()
+
+
+def test_ctrl_c_while_waiting_for_telemetry_gets_through_and_closes_the_link(
+    fake_cflib: FakeCflib,
+) -> None:
+    fake_cflib.silent_blocks.add("battery")
+    adapter = real_time_adapter()
+    press_ctrl_c = threading.Timer(0.2, signal.raise_signal, [signal.SIGINT])
+    press_ctrl_c.start()
+
+    started = time.perf_counter()
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            adapter.connect()  # waits up to 3 s for the battery
+        assert time.perf_counter() - started < 2.0  # at once, not when the 3 s limit ends it
+    finally:
+        # If connect() returned early, a later Ctrl+C would stop the whole run.
+        press_ctrl_c.cancel()
+        press_ctrl_c.join()
+    fake_cflib.link.close_link.assert_called_once()
+
+
+def test_connecting_again_waits_for_new_telemetry_not_the_last_session_s(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    adapter.connect()
+    adapter.disconnect()
+    fake_cflib.silent_blocks.add("battery")
+
+    with pytest.raises(TimeoutError, match="Still missing: battery voltage"):
+        adapter.connect()

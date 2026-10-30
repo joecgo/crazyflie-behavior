@@ -233,3 +233,27 @@ def test_leaving_the_with_block_lands_even_when_code_raises() -> None:
 
     assert drone.command_log[-2:] == ["disconnect", "land"]
     assert not status_of(snapshot_now(drone, clock)).is_flying
+
+
+def test_after_connect_every_telemetry_value_has_arrived() -> None:
+    # The drone interface's promise (ADR-0031): the first snapshot has nothing missing.
+    clock = SimClock()
+    drone = MockAdapter(clock)
+
+    drone.connect()
+    snapshot = snapshot_now(drone, clock)
+
+    ranges = snapshot.range_readings
+    values = [
+        snapshot.position_estimate,
+        snapshot.velocity_estimate,
+        snapshot.battery_voltage,
+        snapshot.drone_status,
+        ranges.front,
+        ranges.back,
+        ranges.left,
+        ranges.right,
+        ranges.up,
+        ranges.down,
+    ]
+    assert None not in values
