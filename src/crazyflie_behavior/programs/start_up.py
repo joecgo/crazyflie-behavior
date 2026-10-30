@@ -149,10 +149,10 @@ class _CtrlCHandler:
     """Ctrl+C during one run: an error while connecting, then a stop request (ADR-0026).
 
     While connecting, nothing is flying, so the first press raises
-    KeyboardInterrupt, as Python does by default, and the program stops. (On
-    Windows, Python 3.12 can't interrupt a wait with no time limit, and cflib's
-    connect has two, so a press may only take effect when connecting ends:
-    backlog #29.) Once connected, the first press makes a stop request instead.
+    KeyboardInterrupt, as Python does by default, and the program stops. (The
+    Crazyflie adapter waits in short slices while connecting, so this works on
+    Windows too: ADR-0029.) Once connected, the first press makes a stop
+    request instead.
     Every later press is ignored, so it can't cut the landing, or the cleanup
     after a failed connect, short. The handler never logs: a log write that a
     signal interrupts can fail with a "reentrant call" error. Python runs
@@ -214,8 +214,8 @@ def run_tick_loop(
     Disconnecting always happens, also after an error or a failed connect (it
     does nothing if nothing is connected), and it lands a flying drone. Once
     connected, Ctrl+C is a stop request, so it can't cut the landing short.
-    While connecting, nothing is flying, so Ctrl+C stops the program (ADR-0028),
-    though on Windows only once cflib's waits end (backlog #29).
+    While connecting, nothing is flying, so Ctrl+C stops the program (ADR-0028,
+    ADR-0029).
 
     This uses `try`/`finally` rather than `with drone:` so that the Ctrl+C
     handler is in place before connecting and stays until after the landing.

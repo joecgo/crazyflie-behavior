@@ -37,5 +37,6 @@ This column is honest about which ideas were mine.
 | [0026](0026-tick-loop-calls-one-tick-step.md) | The tick loop keeps time and calls one tick step; hangs are detected; every tick is logged | Mixed: hang detection and logging every tick were mine; the split was the AI's |
 | [0027](0027-operator-controls.md) | Operator controls: Windows hotkeys, an optional PS5 controller, no dead-man mode | Mixed: the inputs and no dead-man mode were mine |
 | [0028](0028-programs-bench-first-plain-logging.md) | Programs: a bench program first, plain logging, the mock adapter by default | Mixed: plain logging was mine; the rest were AI recommendations |
+| [0029](0029-connecting-has-time-limits.md) | Connecting has time limits: each step waits on a helper thread | AI recommendation accepted, after my question |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
