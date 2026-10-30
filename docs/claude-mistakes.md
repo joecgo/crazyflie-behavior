@@ -20,19 +20,21 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 2 | 3 |
+| design | 2 | 5 |
 | safety design | 2 | 1 |
 | recommendation | 3 | 0 |
 | environment | 2 | 1 |
 | communication | 1 | 0 |
 | testing | 0 | 2 |
 | process | 0 | 1 |
-| **Total** | **10** | **8** |
+| **Total** | **10** | **10** |
 
 Of the 10 I pointed out, a later Claude review would probably have caught
 none, maybe 4, and probably not 6. So far, every recommendation and
 communication mistake needed me. Claude's own reviews and planted bugs find
-mistakes in code, tests and records, including Windows details.
+mistakes in code, tests and records, including Windows details. A repeating
+pattern: an interruption landing between two lines of cleanup code (three
+times so far).
 
 ---
 
@@ -188,6 +190,32 @@ mistakes in code, tests and records, including Windows details.
 
 ## Mistakes Claude caught itself
 
+### 2026-10-30: The same gap between two lines, again
+
+- **What happened:** the time-limit helper started its thread one line
+  before the `try` that cleans up. A Ctrl+C at that moment skipped the
+  cleanup, so a connection under way wasn't stopped. It's the same pattern
+  as "Cleanup gaps around connecting", the day before.
+- **Caught at:** bug planting: the Ctrl+C tests failed in about one run in
+  two, and the failures led to the gap. A test now injects the Ctrl+C at
+  exactly that moment.
+- **Kind:** design. Windows of time between two steps.
+- **Takeaway:** start anything that needs cleaning up inside the `try` that
+  cleans it up. A test that fails only sometimes is a clue, not noise.
+
+### 2026-10-30: Edge cases in the connect time limits
+
+- **What happened:** in the first version, a step that finished in the last
+  wait slice still counted as a timeout; an error in the cleanup could hide
+  the time-limit message naming the step; a late error was logged without
+  its traceback; and ADR-0029 claimed Ctrl+C gets through within 0.1 s,
+  although closing the link takes a second or two more.
+- **Caught at:** Claude's code review.
+- **Kind:** design.
+- **Takeaway:** for a wait with a deadline, check both edges: just before
+  and just after the deadline, and what a failing cleanup does to the error
+  you meant to show.
+
 ### 2026-10-29: Cleanup gaps around connecting
 
 - **What happened:** in the start-up code's first draft, a Ctrl+C in the
@@ -204,7 +232,7 @@ mistakes in code, tests and records, including Windows details.
 
 - **What happened:** the docs promised that Ctrl+C stops the program at once
   while connecting, but on Windows, Python 3.12 can't interrupt cflib's waits,
-  which have no time limit (backlog #29). The QuickEdit code also restored the
+  which have no time limit (backlog #29, solved by ADR-0029). The QuickEdit code also restored the
   console mode in a form Windows can ignore, and let ctypes cut a 64-bit
   handle to 32 bits.
 - **Caught at:** Claude's code review.
