@@ -11,6 +11,9 @@ Two sections, newest first in each:
 - **Mistakes Claude caught itself**, at a later step (a code review, planting
   bugs to prove the tests, or while writing the code).
 
+Takeaways that apply to code reviews also become questions in the
+[review checklist](../REVIEW.md).
+
 **Kinds of work:** *design* (how parts fit together), *safety design*,
 *recommendation* (which option Claude pushed and why), *environment*
 (assumptions about my machine, time zone or tools), *testing*, *process* (how
@@ -20,19 +23,22 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 2 | 3 |
-| safety design | 2 | 1 |
+| design | 2 | 6 |
+| safety design | 2 | 2 |
 | recommendation | 3 | 0 |
 | environment | 2 | 1 |
 | communication | 1 | 0 |
-| testing | 0 | 2 |
+| testing | 0 | 3 |
 | process | 0 | 1 |
-| **Total** | **10** | **8** |
+| **Total** | **10** | **13** |
 
 Of the 10 I pointed out, a later Claude review would probably have caught
 none, maybe 4, and probably not 6. So far, every recommendation and
-communication mistake needed me. Claude's own reviews and planted bugs find
-mistakes in code, tests and records, including Windows details.
+communication mistake needed me. Claude's own reviews, planted bugs and
+source checks find mistakes in code, tests and records, including Windows
+details and a firmware claim that two ADRs rested on. A repeating
+pattern: an interruption landing between two lines of cleanup code (three
+times so far).
 
 ---
 
@@ -188,6 +194,84 @@ mistakes in code, tests and records, including Windows details.
 
 ## Mistakes Claude caught itself
 
+### 2026-10-30: A safety pre-check that only passed with the mock adapter
+
+- **What happened:** the safety pre-check counts a missing value as a
+  failure, and a failure ends the flight. The mock adapter writes every value
+  the moment it connects, so every test passed. The Crazyflie adapter returns
+  from `connect()` before any value has arrived, so on the real drone the
+  hover program would have ended at its first tick without flying. And in the
+  few ticks after a take-off is sent, before the drone status says flying,
+  the failsafe's log line claimed the drone "stays down".
+- **Caught at:** Claude's code review, at a high level. Not fixed yet:
+  backlog #32 and #31.
+- **Kind:** design. Tested against a fake that's kinder than the real thing.
+- **Takeaway:** for every fake, ask how the real adapter differs at start-up
+  and in the moments after each command, and test those moments too.
+
+### 2026-10-30: Rules stated in code that no fitness function checked
+
+- **What happened:** the command request module said "behaviors import this
+  module, never the safety layer itself", and ADR-0008 says only the safety
+  layer sends commands, but no fitness function checked either. The behavior
+  import rules had also been checking an empty folder: `behaviors/` didn't
+  exist until now, so they couldn't fail.
+- **Caught at:** Claude's code review (the first), then while writing the
+  hover test (the second). Both are fitness functions now, with a check that
+  they see real files.
+- **Kind:** testing.
+- **Takeaway:** when code says "never" or "only", write the fitness function
+  in the same commit, and make sure it reads at least one real file.
+
+### 2026-10-30: Two ADRs built on an unchecked firmware claim
+
+- **What happened:** ADR-0012 starts from "after the high-level commander
+  lands, the motors keep running until the adapter stops them". Claude wrote
+  that without checking the firmware, which does the opposite: when a landing
+  trajectory ends, the high-level commander goes idle and asks for the motors
+  off (the same in releases 2022.01, 2023.02 and 2025.02, and today's
+  source). So the motors stop when the planned landing time is up, whether
+  touchdown is confirmed or not. And the final descent (ADR-0019), sent
+  after an unconfirmed touchdown, would start the motors again, even with the
+  drone already on the floor. The Crazyflie adapter's landing code rests on
+  both ADRs. The same day, Claude's first guess at another firmware rule
+  (that a land command on the floor is ignored) was wrong too, but checking
+  the source first caught it before any code was written.
+- **Caught at:** checking the firmware source while building the safety
+  layer's failsafe (ADR-0030), 10 days after ADR-0012. Not fixed yet:
+  backlog #31.
+- **Kind:** safety design. A claim about the hardware from memory, not from
+  the source.
+- **Takeaway:** when an ADR says how the firmware or a library behaves, ask
+  which file it was checked in. The firmware source is public; a claim
+  without a file name is a guess.
+
+### 2026-10-30: The same gap between two lines, again
+
+- **What happened:** the time-limit helper started its thread one line
+  before the `try` that cleans up. A Ctrl+C at that moment skipped the
+  cleanup, so a connection under way wasn't stopped. It's the same pattern
+  as "Cleanup gaps around connecting", the day before.
+- **Caught at:** bug planting: the Ctrl+C tests failed in about one run in
+  two, and the failures led to the gap. A test now injects the Ctrl+C at
+  exactly that moment.
+- **Kind:** design. Windows of time between two steps.
+- **Takeaway:** start anything that needs cleaning up inside the `try` that
+  cleans it up. A test that fails only sometimes is a clue, not noise.
+
+### 2026-10-30: Edge cases in the connect time limits
+
+- **What happened:** in the first version, a step that finished in the last
+  wait slice still counted as a timeout; an error in the cleanup could hide
+  the time-limit message naming the step; a late error was logged without
+  its traceback; and ADR-0029 claimed Ctrl+C gets through within 0.1 s,
+  although closing the link takes a second or two more.
+- **Caught at:** Claude's code review.
+- **Kind:** design.
+- **Takeaway:** for a wait with a deadline, check both edges: just before
+  and just after the deadline, and what a failing cleanup does to the error
+  you meant to show.
+
 ### 2026-10-29: Cleanup gaps around connecting
 
 - **What happened:** in the start-up code's first draft, a Ctrl+C in the
@@ -204,7 +288,7 @@ mistakes in code, tests and records, including Windows details.
 
 - **What happened:** the docs promised that Ctrl+C stops the program at once
   while connecting, but on Windows, Python 3.12 can't interrupt cflib's waits,
-  which have no time limit (backlog #29). The QuickEdit code also restored the
+  which have no time limit (backlog #29, solved by ADR-0029). The QuickEdit code also restored the
   console mode in a form Windows can ignore, and let ctypes cut a 64-bit
   handle to 32 bits.
 - **Caught at:** Claude's code review.

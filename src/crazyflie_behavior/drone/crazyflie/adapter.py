@@ -39,6 +39,7 @@ from crazyflie_behavior.drone.crazyflie.conversions import (
     range_reading_from_mm,
     yaw_rate_deg_per_s,
 )
+from crazyflie_behavior.drone.crazyflie.time_limit import run_with_time_limit
 from crazyflie_behavior.drone.crazyflie.touchdown import (
     FINAL_DESCENT_SPEED,
     HEIGHT_IF_UNKNOWN,
@@ -80,6 +81,15 @@ MIN_MOVE_DURATION = 0.5
 """Seconds. The shortest move ever requested from the high-level commander."""
 TOUCHDOWN_POLL_PERIOD = 0.05
 """Seconds between touchdown checks while landing at shutdown."""
+# Time limits for connecting (ADR-0029). VERIFY at the bench, and measure (backlog #25).
+LINK_TIME_LIMIT = 15.0
+"""Seconds to open the link and get the drone's variable lists. A first connect,
+with nothing cached, downloads more."""
+PARAMETERS_TIME_LIMIT = 10.0
+"""Seconds to read the parameter values."""
+POSITION_ESTIMATE_TIME_LIMIT = 20.0
+"""Seconds for the position estimate to settle. cflib waits for 10 steady readings
+500 ms apart, so it takes at least 5 s."""
 # ------------------------------------------------------------------------------
 
 _MULTIRANGER_VARIABLES = {
@@ -168,17 +178,35 @@ class CrazyflieAdapter(DroneInterface):
         sync_crazyflie = SyncCrazyflie(self._uri, cf=Crazyflie(rw_cache=self._cache_directory))
         self._sync_crazyflie = sync_crazyflie  # tracked from the start, so cleanup always finds it
         try:
-            try:
-                sync_crazyflie.open_link()  # blocks until connected; raises if it can't connect
-            except KeyboardInterrupt:
-                # Ctrl+C while connecting (ADR-0028): stop the connection still under
-                # way. (When connecting fails on its own, cflib closes the link itself.)
-                sync_crazyflie.cf.close_link()
-                raise
-            sync_crazyflie.wait_for_params()
+            # cflib's blocking steps each get a time limit, waited for in short
+            # slices so Ctrl+C gets through, even on Windows (ADR-0029).
+            run_with_time_limit(
+                "Opening the link",
+                sync_crazyflie.open_link,  # raises if it can't connect
+                LINK_TIME_LIMIT,
+                "Check the Crazyflie is switched on, charged and in range.",
+                self._clock,
+                # Stop a connection still under way. When connecting fails on its
+                # own, cflib closes the link itself.
+                on_abandon=sync_crazyflie.cf.close_link,
+            )
+            run_with_time_limit(
+                "Reading the parameters",
+                sync_crazyflie.wait_for_params,
+                PARAMETERS_TIME_LIMIT,
+                "The link may have dropped: check the Crazyflie is still switched on.",
+                self._clock,
+            )
             if not self._deck_attached("deck.bcFlow2", "deck.bcFlow"):  # Flow deck v2 or v1
                 raise RuntimeError("Flow deck not detected: autonomous flight needs it.")
-            reset_estimator(sync_crazyflie)  # blocks until the position estimate settles
+            run_with_time_limit(
+                "Settling the position estimate",
+                lambda: reset_estimator(sync_crazyflie),
+                POSITION_ESTIMATE_TIME_LIMIT,
+                "Check the Flow deck can see the floor (enough light and texture) "
+                "and that the drone is sitting still.",
+                self._clock,
+            )
             self._start_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
         except BaseException:
             self._close_link()

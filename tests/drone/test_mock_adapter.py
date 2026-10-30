@@ -179,6 +179,44 @@ def test_the_room_is_empty_unless_a_test_says_otherwise() -> None:
     assert readings.back.value.status is RangeStatus.OUT_OF_RANGE
 
 
+def test_every_value_streams_again_with_each_snapshot_like_a_real_drone() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock)
+    drone.set_battery_voltage(3.7)
+    clock.advance(5.0)
+
+    snapshot = snapshot_now(drone, clock, dt=5.0)
+
+    assert snapshot.battery_voltage is not None
+    assert snapshot.battery_voltage.value == 3.7
+    assert snapshot.battery_voltage.age(clock.now()) == 0.0
+    assert snapshot.range_readings.down is not None
+    assert snapshot.range_readings.down.age(clock.now()) == 0.0
+
+
+def test_after_stop_telemetry_nothing_arrives_and_every_value_goes_stale() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock)
+    snapshot_now(drone, clock)
+
+    drone.stop_telemetry()
+    drone.set_battery_voltage(3.0)
+    clock.advance(1.0)
+    snapshot = snapshot_now(drone, clock, dt=1.0)
+
+    assert snapshot.battery_voltage is not None
+    assert snapshot.battery_voltage.value == 4.0
+    for stamped in [
+        snapshot.position_estimate,
+        snapshot.velocity_estimate,
+        snapshot.battery_voltage,
+        snapshot.drone_status,
+        snapshot.range_readings.down,
+    ]:
+        assert stamped is not None
+        assert stamped.age(clock.now()) == 1.0
+
+
 def fly_then_fail(drone: MockAdapter) -> None:
     with drone:
         drone.arm()

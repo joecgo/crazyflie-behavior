@@ -1,8 +1,8 @@
 """Start-up code every program shares (ADR-0026, ADR-0028).
 
-Logging to the console and a log file, QuickEdit off in an old Windows console
-window, and running the tick loop between connecting and disconnecting the
-drone, with Ctrl+C as a stop request.
+Choosing the drone, logging to the console and a log file, QuickEdit off in an
+old Windows console window, and running the tick loop between connecting and
+disconnecting the drone, with Ctrl+C as a stop request.
 """
 
 import ctypes
@@ -17,7 +17,9 @@ from pathlib import Path
 from types import FrameType, TracebackType
 from typing import Any, Self, TextIO
 
+from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
 from crazyflie_behavior.drone.interface import DroneInterface
+from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_loop import HangWatchdog, TickLoop, TickStep
 from crazyflie_behavior.timing.clock import Clock
 
@@ -25,6 +27,12 @@ logger = logging.getLogger(__name__)
 
 LOG_DIRECTORY = Path("logs")
 """Where each run's log file goes, relative to the working directory (git-ignored)."""
+
+EXIT_OK = 0
+EXIT_ERROR = 1
+EXIT_CTRL_C = 130
+"""Ctrl+C before the tick loop started: the usual exit code for a program it stopped.
+A Ctrl+C stop request during the run is the normal end, with exit code 0."""
 
 _PROJECT_LOGGER = "crazyflie_behavior"
 """The parent of every logger in this project, including the programs' own."""
@@ -39,6 +47,40 @@ _STANDARD_INPUT_HANDLE = 0xFFFFFFF6  # STD_INPUT_HANDLE, (DWORD)-10
 
 # What signal.signal accepts and returns (typeshed spells it the same way).
 _SignalHandler = Callable[[int, FrameType | None], Any] | int | signal.Handlers | None
+
+
+def make_drone(use_crazyflie: bool, clock: Clock) -> DroneInterface:
+    """The real Crazyflie only when asked for, otherwise the mock adapter (ADR-0028)."""
+    return CrazyflieAdapter(clock) if use_crazyflie else MockAdapter(clock)
+
+
+def run_program(
+    program_name: str, description: str, drone: DroneInterface, tick_step: TickStep, clock: Clock
+) -> int:
+    """Run a program: its log, then the tick loop between connecting and disconnecting.
+
+    Returns the exit code: 0 when the tick loop ran until done or stopped, 1
+    after an error, 130 when Ctrl+C stopped the program while connecting.
+    Every error goes to the log with its stack trace (ADR-0020).
+    """
+    with logging_for_run(program_name) as log_file, quick_edit_off():
+        logger.info("%s", description)
+        try:
+            run_tick_loop(drone, tick_step, clock, log_file)
+        except KeyboardInterrupt as interrupt:
+            if interrupt.__context__ is not None:
+                # Ctrl+C came while an error was being handled: log that error too (ADR-0020).
+                logger.error(
+                    "Ctrl+C while connecting; the exception being handled then is below",
+                    exc_info=True,
+                )
+            else:
+                logger.info("Ctrl+C while connecting: stopped before the tick loop started")
+            return EXIT_CTRL_C
+        except Exception:
+            logger.critical("The %s program stopped with an error", program_name, exc_info=True)
+            return EXIT_ERROR
+    return EXIT_OK
 
 
 @contextmanager
@@ -149,10 +191,10 @@ class _CtrlCHandler:
     """Ctrl+C during one run: an error while connecting, then a stop request (ADR-0026).
 
     While connecting, nothing is flying, so the first press raises
-    KeyboardInterrupt, as Python does by default, and the program stops. (On
-    Windows, Python 3.12 can't interrupt a wait with no time limit, and cflib's
-    connect has two, so a press may only take effect when connecting ends:
-    backlog #29.) Once connected, the first press makes a stop request instead.
+    KeyboardInterrupt, as Python does by default, and the program stops. (The
+    Crazyflie adapter waits in short slices while connecting, so this works on
+    Windows too: ADR-0029.) Once connected, the first press makes a stop
+    request instead.
     Every later press is ignored, so it can't cut the landing, or the cleanup
     after a failed connect, short. The handler never logs: a log write that a
     signal interrupts can fail with a "reentrant call" error. Python runs
@@ -214,8 +256,8 @@ def run_tick_loop(
     Disconnecting always happens, also after an error or a failed connect (it
     does nothing if nothing is connected), and it lands a flying drone. Once
     connected, Ctrl+C is a stop request, so it can't cut the landing short.
-    While connecting, nothing is flying, so Ctrl+C stops the program (ADR-0028),
-    though on Windows only once cflib's waits end (backlog #29).
+    While connecting, nothing is flying, so Ctrl+C stops the program (ADR-0028,
+    ADR-0029).
 
     This uses `try`/`finally` rather than `with drone:` so that the Ctrl+C
     handler is in place before connecting and stays until after the landing.

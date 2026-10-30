@@ -6,6 +6,9 @@ then puts the real ones back.
 
 # pyright: reportPrivateUsage=false
 
+import signal
+import threading
+from collections.abc import Generator
 from unittest.mock import MagicMock
 
 import pytest
@@ -13,7 +16,7 @@ import pytest
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
 from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
 from crazyflie_behavior.snapshot import RangeStatus
-from crazyflie_behavior.timing.clock import SimClock
+from crazyflie_behavior.timing.clock import RealClock, SimClock
 
 
 class FakeCflib:
@@ -121,15 +124,103 @@ def test_without_a_flow_deck_it_refuses_to_fly_and_closes_the_link(
     fake_cflib.reset_estimator.assert_not_called()
 
 
-def test_ctrl_c_while_opening_the_link_stops_the_connection_under_way(
-    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+class BlockingStep:
+    """A fake cflib call that blocks like a stuck wait, until the test releases it.
+
+    It can press Ctrl+C first: a real press arrives while cflib waits.
+    """
+
+    def __init__(self, press_ctrl_c: bool = False) -> None:
+        self.release = threading.Event()
+        self._press_ctrl_c = press_ctrl_c
+
+    def __call__(self, *_arguments: object) -> None:
+        if self._press_ctrl_c:
+            signal.raise_signal(signal.SIGINT)
+        self.release.wait(timeout=10.0)
+
+
+@pytest.fixture
+def blocking_step() -> Generator[BlockingStep]:
+    step = BlockingStep()
+    yield step
+    step.release.set()  # let the abandoned helper thread finish
+
+
+@pytest.fixture
+def ctrl_c_step() -> Generator[BlockingStep]:
+    step = BlockingStep(press_ctrl_c=True)
+    yield step
+    step.release.set()
+
+
+@pytest.fixture
+def short_time_limits(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("LINK_TIME_LIMIT", "PARAMETERS_TIME_LIMIT", "POSITION_ESTIMATE_TIME_LIMIT"):
+        monkeypatch.setattr(adapter_module, name, 0.2)
+
+
+def real_time_adapter() -> CrazyflieAdapter:
+    # Time limits count on the injected clock, and a stuck step needs real time to pass.
+    return CrazyflieAdapter(RealClock())
+
+
+@pytest.mark.usefixtures("short_time_limits")
+def test_opening_the_link_has_a_time_limit_then_stops_the_connection_under_way(
+    fake_cflib: FakeCflib, blocking_step: BlockingStep
 ) -> None:
-    fake_cflib.link.open_link.side_effect = KeyboardInterrupt
+    fake_cflib.link.open_link.side_effect = blocking_step
+
+    with pytest.raises(TimeoutError, match=r"Opening the link took longer than 0\.2 s\. Check the"):
+        real_time_adapter().connect()
+
+    fake_cflib.link.cf.close_link.assert_called_once()
+
+
+@pytest.mark.usefixtures("short_time_limits")
+def test_reading_the_parameters_has_a_time_limit_then_closes_the_link(
+    fake_cflib: FakeCflib, blocking_step: BlockingStep
+) -> None:
+    fake_cflib.link.wait_for_params.side_effect = blocking_step
+
+    with pytest.raises(TimeoutError, match=r"Reading the parameters took longer than 0\.2 s"):
+        real_time_adapter().connect()
+
+    fake_cflib.link.close_link.assert_called_once()
+
+
+@pytest.mark.usefixtures("short_time_limits")
+def test_settling_the_position_estimate_has_a_time_limit_then_closes_the_link(
+    fake_cflib: FakeCflib, blocking_step: BlockingStep
+) -> None:
+    fake_cflib.reset_estimator.side_effect = blocking_step
+
+    with pytest.raises(TimeoutError, match="Check the Flow deck can see the floor"):
+        real_time_adapter().connect()
+
+    fake_cflib.link.close_link.assert_called_once()
+
+
+def test_ctrl_c_while_the_link_opens_gets_through_and_stops_the_connection_under_way(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, ctrl_c_step: BlockingStep
+) -> None:
+    fake_cflib.link.open_link.side_effect = ctrl_c_step
 
     with pytest.raises(KeyboardInterrupt):
         adapter.connect()
 
     fake_cflib.link.cf.close_link.assert_called_once()
+
+
+def test_ctrl_c_while_reading_the_parameters_gets_through_and_closes_the_link(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, ctrl_c_step: BlockingStep
+) -> None:
+    fake_cflib.link.wait_for_params.side_effect = ctrl_c_step
+
+    with pytest.raises(KeyboardInterrupt):
+        adapter.connect()
+
+    fake_cflib.link.close_link.assert_called_once()
 
 
 def test_a_connect_that_fails_on_its_own_is_left_to_cflib_to_close(
@@ -142,17 +233,6 @@ def test_a_connect_that_fails_on_its_own_is_left_to_cflib_to_close(
 
     # cflib's open_link closes the link itself before raising.
     fake_cflib.link.cf.close_link.assert_not_called()
-
-
-def test_ctrl_c_just_after_the_link_opens_still_closes_it(
-    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
-) -> None:
-    fake_cflib.link.wait_for_params.side_effect = KeyboardInterrupt
-
-    with pytest.raises(KeyboardInterrupt):
-        adapter.connect()
-
-    fake_cflib.link.close_link.assert_called_once()
 
 
 def test_any_failing_setup_step_closes_the_link(
