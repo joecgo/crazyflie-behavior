@@ -23,14 +23,14 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 2 | 6 |
+| design | 2 | 7 |
 | safety design | 2 | 2 |
 | recommendation | 3 | 0 |
-| environment | 2 | 1 |
+| environment | 2 | 2 |
 | communication | 1 | 0 |
 | testing | 0 | 3 |
 | process | 0 | 1 |
-| **Total** | **10** | **13** |
+| **Total** | **10** | **15** |
 
 Of the 10 I pointed out, a later Claude review would probably have caught
 none, maybe 4, and probably not 6. So far, every recommendation and
@@ -193,6 +193,37 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-10-30: A wait that a previous connection could satisfy
+
+- **What happened:** the wait for the first telemetry (ADR-0031) checks that
+  every value is in the telemetry buffer. But the adapter kept one buffer for
+  its whole life, so connecting a second time found the previous session's
+  values already there: the wait passed at once, and the pre-check would have
+  ended the flight at its first tick on stale values, the very failure the
+  wait exists to prevent.
+- **Caught at:** Claude's code review, at a high level. Each connect now
+  starts a fresh buffer, and a test connects twice.
+- **Kind:** design. State that outlives the session it describes.
+- **Takeaway:** for a check like "has it arrived?" or "is it ready?", ask what
+  state an earlier run or connection could have left behind.
+
+### 2026-10-30: A reason copied from cflib's waits to a plain sleep
+
+- **What happened:** the new wait in `connect()` (ADR-0031) sleeps in 0.1 s
+  slices, and its comment and ADR said that was so Ctrl+C gets through, as
+  with the other connect steps. That reason belongs to cflib's waits
+  (ADR-0029), which Ctrl+C can't interrupt on Windows. A plain `time.sleep`
+  is interrupted by Ctrl+C at once. The Ctrl+C test also only checked that
+  Ctrl+C got through eventually, not promptly.
+- **Caught at:** planting bugs to prove the tests: one long sleep instead of
+  short ones still passed every test. The slices are really for noticing late
+  telemetry promptly; the comment and ADR now say so, and a test checks that
+  late values are noticed within a second.
+- **Kind:** environment. A reason reused without checking that it applies.
+- **Takeaway:** when reusing a reason from another part of the code, check
+  that the mechanism behind it is the same here; and a test of "it gets
+  through" should also check how quickly.
 
 ### 2026-10-30: A safety pre-check that only passed with the mock adapter
 

@@ -29,6 +29,8 @@ takeaway applies to reviews, it's added here as a question.
   handles it?
 - For each backup: what is it computed from, and is that the thing that just
   failed?
+- For a check like "has it arrived?" or "is it ready?": could state left by
+  an earlier run or connection satisfy it?
 - For each cleanup path: what if an interruption lands between two lines, or
   comes twice? Is everything that needs cleaning up started inside the `try`
   that cleans it up?
