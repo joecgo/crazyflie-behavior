@@ -91,7 +91,8 @@ ignores one:
   catches its own, add an entry to `docs/claude-mistakes.md`, in the section
   for who caught it, and update its at-a-glance table. For a mistake the user
   pointed out, say honestly whether a later Claude review would probably
-  have caught it.
+  have caught it. When the takeaway applies to code reviews, add it to
+  `REVIEW.md` as a question.
 
 ## Shared language
 
@@ -140,6 +141,8 @@ ignores one:
 
 - **`/code-review`** before committing changes to the safety layer, the
   Crazyflie adapter or the timing loop (use a high level for safety code).
+  Every review also works through `REVIEW.md`, the checklist built from the
+  mistakes log.
 - **`dataviz`** for field-test and simulator analysis charts (drift over time,
   sensor noise by surface, sim-vs-real overlays).
 - Later, once the workflows have repeated a few times, consider project skills

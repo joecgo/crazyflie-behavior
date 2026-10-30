@@ -11,6 +11,9 @@ Two sections, newest first in each:
 - **Mistakes Claude caught itself**, at a later step (a code review, planting
   bugs to prove the tests, or while writing the code).
 
+Takeaways that apply to code reviews also become questions in the
+[review checklist](../REVIEW.md).
+
 **Kinds of work:** *design* (how parts fit together), *safety design*,
 *recommendation* (which option Claude pushed and why), *environment*
 (assumptions about my machine, time zone or tools), *testing*, *process* (how
