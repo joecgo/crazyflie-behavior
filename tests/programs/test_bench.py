@@ -97,17 +97,19 @@ def test_the_console_gets_a_summary_once_a_second(caplog: pytest.LogCaptureFixtu
 def test_the_summary_shows_each_value_and_how_old_it_is() -> None:
     clock = SimClock(start=10.0)
     drone = connected_mock(clock)
+    clock.advance(0.125)
     drone.set_range_reading(RangeDirection.DOWN, RangeReading.at_distance(0.03))
-    clock.advance(0.25)
+    drone.stop_telemetry()  # nothing more arrives
+    clock.advance(0.125)
 
     summary = snapshot_summary(drone.take_snapshot(clock.now(), 0.25))
 
-    assert "position 0.00, 0.00, 0.00 m (0 ms old)" in summary
-    assert "velocity 0.00, 0.00, 0.00 m/s (0 ms old)" in summary
+    assert "position 0.00, 0.00, 0.00 m (250 ms old)" in summary
+    assert "velocity 0.00, 0.00, 0.00 m/s (250 ms old)" in summary
     assert "battery 4.00 V (250 ms old)" in summary
     assert "status armed no, flying no, crashed no, tumbled no" in summary
     assert "front out of range (250 ms old)" in summary
-    assert "down 0.03 m (250 ms old)" in summary
+    assert "down 0.03 m (125 ms old)" in summary
 
 
 def test_the_summary_says_when_a_value_has_not_arrived_yet() -> None:

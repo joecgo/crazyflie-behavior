@@ -12,7 +12,8 @@ arriving (ADR-0011): a stream someone forgot to send every tick fails in tests
 the way it would in the air.
 
 The room is empty: every range reading is out of range (clear) unless a test
-sets it with `set_range_reading`.
+sets it with `set_range_reading`. Like a real drone, it streams every value
+again with each snapshot, until a test makes it go quiet with `stop_telemetry`.
 """
 
 from crazyflie_behavior.drone.interface import DroneInterface
@@ -48,24 +49,31 @@ class MockAdapter(DroneInterface):
         self._velocity = Vector3.ZERO
         # When the last set_velocity arrived; None when not in steering mode.
         self._last_setpoint_time: float | None = None
+        self._range_readings = dict.fromkeys(RangeDirection, RangeReading.out_of_range())
+        self._battery_voltage = CHARGED_BATTERY_VOLTAGE
+        self._is_streaming = True
 
     # --- Test hooks: set the telemetry a test needs -----------------------------
 
     def set_range_reading(self, direction: RangeDirection, reading: RangeReading) -> None:
-        self._telemetry.write_range_readings({direction: reading}, self._clock.now())
+        self._range_readings[direction] = reading
+        if self._is_streaming:
+            self._telemetry.write_range_readings({direction: reading}, self._clock.now())
 
     def set_battery_voltage(self, voltage: float) -> None:
-        self._telemetry.write_battery_voltage(voltage, self._clock.now())
+        self._battery_voltage = voltage
+        if self._is_streaming:
+            self._telemetry.write_battery_voltage(voltage, self._clock.now())
+
+    def stop_telemetry(self) -> None:
+        """Stop streaming, as if the link went quiet: every value goes stale from now on."""
+        self._is_streaming = False
 
     # --- DroneInterface ---------------------------------------------------------
 
     def connect(self) -> None:
         self.command_log.append("connect")
         self._is_connected = True
-        self._telemetry.write_range_readings(
-            dict.fromkeys(RangeDirection, RangeReading.out_of_range()), self._clock.now()
-        )
-        self.set_battery_voltage(CHARGED_BATTERY_VOLTAGE)
         self._publish_state()
 
     def disconnect(self) -> None:
@@ -149,7 +157,11 @@ class MockAdapter(DroneInterface):
         self._last_setpoint_time = None
 
     def _publish_state(self) -> None:
+        if not self._is_streaming:
+            return
         drone_time = self._clock.now()
+        self._telemetry.write_range_readings(self._range_readings, drone_time)
+        self._telemetry.write_battery_voltage(self._battery_voltage, drone_time)
         self._telemetry.write_position_estimate(self._position, drone_time)
         self._telemetry.write_velocity_estimate(self._velocity, drone_time)
         self._telemetry.write_drone_status(

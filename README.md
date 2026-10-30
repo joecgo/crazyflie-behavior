@@ -77,9 +77,10 @@ setup works. In PyCharm, use the **first_flight** run configuration.
 It connects, runs the tick loop and logs every snapshot, but never commands
 the drone: field-test stage 0, propellers off. Without `--crazyflie` it uses
 the mock adapter. The console shows a summary every second, with how old each
-value is, and everything goes to a log file in `logs/`. (The mock adapter sets
-the battery and range readings once, so their age keeps growing.) In PyCharm,
-use the **bench** or **bench (Crazyflie)** run configuration.
+value is, and everything goes to a log file in `logs/`. (With the mock
+adapter every value is 0 ms old: it streams them all again with each
+snapshot.) In PyCharm, use the **bench** or **bench (Crazyflie)** run
+configuration.
 
 Stop it with Ctrl+C in a terminal, or PyCharm's Stop button. To see what the
 Stop button does, check the end of the log: a "Tick loop summary" line means
