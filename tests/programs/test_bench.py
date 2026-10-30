@@ -9,16 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.programs import bench as bench_module
-from crazyflie_behavior.programs.bench import (
-    BenchTickStep,
-    main,
-    make_drone,
-    snapshot_summary,
-)
+from crazyflie_behavior.programs.bench import BenchTickStep, main, snapshot_summary
 from crazyflie_behavior.snapshot import RangeDirection, RangeReading, RangeReadings, Snapshot
 from crazyflie_behavior.timing.clock import SimClock
 
@@ -153,13 +147,6 @@ def test_the_summary_marks_an_invalid_range_reading() -> None:
 # --- The program ------------------------------------------------------------------
 
 
-def test_the_mock_adapter_is_the_default_and_the_crazyflie_needs_the_flag() -> None:
-    clock = SimClock()
-
-    assert isinstance(make_drone(use_crazyflie=False, clock=clock), MockAdapter)
-    assert isinstance(make_drone(use_crazyflie=True, clock=clock), CrazyflieAdapter)
-
-
 class CtrlCOnThirdTick(BenchTickStep):
     """The bench tick step, with Ctrl+C pressed on its third tick."""
 
@@ -192,53 +179,6 @@ def test_the_bench_program_runs_with_the_mock_adapter_until_ctrl_c(
     assert "Snapshot: Snapshot(" in log_text  # the debug lines reach the file
     assert "Ctrl+C made the stop request" in log_text
     assert "Tick loop summary: ticks: 3" in log_text
-
-
-def test_ctrl_c_while_connecting_ends_the_bench_program_with_exit_code_130(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    def interrupted(*_arguments: object) -> None:
-        raise KeyboardInterrupt
-
-    monkeypatch.setattr(bench_module, "run_tick_loop", interrupted)
-
-    assert main([]) == 130
-    assert "stopped before the tick loop started" in the_log_file_text(tmp_path / "logs")
-
-
-def test_an_error_that_ctrl_c_interrupted_still_goes_to_the_log(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    def interrupted_while_failing(*_arguments: object) -> None:
-        try:
-            raise RuntimeError("Flow deck not detected")
-        except RuntimeError as error:
-            raise KeyboardInterrupt from error
-
-    monkeypatch.setattr(bench_module, "run_tick_loop", interrupted_while_failing)
-
-    assert main([]) == 130
-    assert "Flow deck not detected" in the_log_file_text(tmp_path / "logs")
-
-
-def test_an_error_ends_the_bench_program_with_exit_code_1_and_goes_to_the_log(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    def broken(*_arguments: object) -> None:
-        raise RuntimeError("the radio is gone")
-
-    monkeypatch.setattr(bench_module, "run_tick_loop", broken)
-
-    assert main([]) == 1
-    log_text = the_log_file_text(tmp_path / "logs")
-    assert "The bench program stopped with an error" in log_text
-    assert "the radio is gone" in log_text
 
 
 @pytest.mark.skipif(

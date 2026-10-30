@@ -96,6 +96,7 @@ this file in the same commit as the code or ADR that uses it.
 | **Program** | A runnable entry point, such as the bench program. It sets up logging, the drone and the tick loop, then runs until it's done or stopped. | Like UE's `Source/Programs`: standalone executables built from the same code. | [0028](decisions/0028-programs-bench-first-plain-logging.md) |
 | **Bench program** | The program for field-test stage 0. It connects to the drone, runs the tick loop and logs every snapshot, but never commands the drone. | No UE analogy. | [0028](decisions/0028-programs-bench-first-plain-logging.md) |
 | **Hover test** | The behavior for field-test stage 1: arm, take off to 0.5 m, hover, land, then report done. | No UE analogy. | [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
+| **Hover program** | The program that runs the hover test, like the bench program but flying. | No UE analogy. | [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
 | **Tick rate** | Ticks per second: 20 Hz. | `t.MaxFPS`. | [0023](decisions/0023-tick-rate-20-hz.md) |
 | **Due time** | When a tick should start: the previous due time plus one tick period, or, after an overrun, the moment the late tick ends. | When the next frame is due under a frame cap. | [0024](decisions/0024-tick-timing-strategy.md) |
 | **Overrun** | A tick still working at the next due time. The next tick starts at once; missed ticks are skipped, never caught up. Always logged. | A hitch: a frame that took too long. | [0024](decisions/0024-tick-timing-strategy.md) |

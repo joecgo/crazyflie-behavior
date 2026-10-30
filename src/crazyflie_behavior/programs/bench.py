@@ -14,13 +14,11 @@ import logging
 import sys
 from collections.abc import Callable
 
-from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
 from crazyflie_behavior.drone.interface import DroneInterface
-from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_loop import TickStep
-from crazyflie_behavior.programs.start_up import logging_for_run, quick_edit_off, run_tick_loop
+from crazyflie_behavior.programs.start_up import make_drone, run_program
 from crazyflie_behavior.snapshot import RangeReading, RangeStatus, Snapshot, Stamped
-from crazyflie_behavior.timing.clock import Clock, RealClock
+from crazyflie_behavior.timing.clock import RealClock
 
 # Not __name__: run as a program, this module is called __main__, which is
 # outside the project's loggers and would lose the debug lines.
@@ -28,12 +26,6 @@ logger = logging.getLogger("crazyflie_behavior.programs.bench")
 
 SUMMARY_PERIOD = 1.0
 """Seconds between snapshot summaries on the console."""
-
-_EXIT_OK = 0
-_EXIT_ERROR = 1
-_EXIT_CTRL_C = 130
-"""Ctrl+C before the tick loop started: the usual exit code for a program it stopped.
-A Ctrl+C stop request during the run is the normal end, with exit code 0."""
 
 
 class BenchTickStep(TickStep):
@@ -112,11 +104,6 @@ def _yes_no(flag: bool) -> str:
     return "yes" if flag else "no"
 
 
-def make_drone(use_crazyflie: bool, clock: Clock) -> DroneInterface:
-    """The real Crazyflie only when asked for, otherwise the mock adapter (ADR-0028)."""
-    return CrazyflieAdapter(clock) if use_crazyflie else MockAdapter(clock)
-
-
 def main(arguments: list[str] | None = None) -> int:
     """Run the bench program until Ctrl+C. Returns the program's exit code."""
     parser = argparse.ArgumentParser(
@@ -130,24 +117,10 @@ def main(arguments: list[str] | None = None) -> int:
     use_crazyflie: bool = parser.parse_args(arguments).crazyflie
     clock = RealClock()
     drone = make_drone(use_crazyflie, clock)
-    with logging_for_run("bench") as log_file, quick_edit_off():
-        logger.info("Bench program, %s", "the Crazyflie" if use_crazyflie else "the mock adapter")
-        try:
-            run_tick_loop(drone, BenchTickStep(drone), clock, log_file)
-        except KeyboardInterrupt as interrupt:
-            if interrupt.__context__ is not None:
-                # Ctrl+C came while an error was being handled: log that error too (ADR-0020).
-                logger.error(
-                    "Ctrl+C while connecting; the exception being handled then is below",
-                    exc_info=True,
-                )
-            else:
-                logger.info("Ctrl+C while connecting: stopped before the tick loop started")
-            return _EXIT_CTRL_C
-        except Exception:
-            logger.critical("The bench program stopped with an error", exc_info=True)
-            return _EXIT_ERROR
-    return _EXIT_OK
+    adapter_name = "the Crazyflie" if use_crazyflie else "the mock adapter"
+    return run_program(
+        "bench", f"Bench program, {adapter_name}", drone, BenchTickStep(drone), clock
+    )
 
 
 if __name__ == "__main__":

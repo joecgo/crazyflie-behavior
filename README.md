@@ -86,6 +86,27 @@ Stop it with Ctrl+C in a terminal, or PyCharm's Stop button. To see what the
 Stop button does, check the end of the log: a "Tick loop summary" line means
 the program shut down cleanly; without it, Stop ended the program outright.
 
+## Hover program
+
+```powershell
+.venv\Scripts\python -m crazyflie_behavior.programs.hover
+.venv\Scripts\python -m crazyflie_behavior.programs.hover --crazyflie
+.venv\Scripts\python -m crazyflie_behavior.programs.hover --crazyflie --hover-seconds 60
+```
+
+It runs the hover test once, for field-test stage 1: arm, take off to 0.5 m,
+hover (10 s unless `--hover-seconds` says otherwise), land. Without
+`--crazyflie` it flies the mock adapter. Every command goes through the
+safety layer, whose pre-check lands the drone on stale data, a low battery or
+a crash ([ADR-0030](docs/decisions/0030-minimal-safety-layer-for-first-flight.md)).
+The console shows each step and each command sent, and the log file gets
+every snapshot. Ctrl+C lands the drone. In PyCharm, use the **hover** or
+**hover (Crazyflie)** run configuration.
+
+**Not for the real drone yet:** the kill switch and the other operator
+controls come first ([ADR-0027](docs/decisions/0027-operator-controls.md)),
+and so does an open question about how the firmware lands (backlog #31).
+
 ## Hardware (planned)
 
 - Crazyflie 2.1+ (about 7 minutes of flight per battery) and Crazyradio USB dongle
@@ -107,8 +128,10 @@ src/crazyflie_behavior/
   geometry.py       # Vector3
   snapshot.py       # the per-tick snapshot and the types inside it
   timing/           # clocks: real and simulated
-  loop/             # the tick loop: keeps time and calls the tick step
-  programs/         # runnable programs, such as the bench program, and their start-up code
+  loop/             # the tick loop (keeps time) and the tick step (what a tick does)
+  safety/           # the safety layer: the only code that sends commands to the drone
+  behaviors/        # behaviors, such as the hover test: they make command requests
+  programs/         # runnable programs (bench, hover) and their start-up code
   drone/            # drone interface, telemetry buffer, mock adapter
     crazyflie/      # Crazyflie adapter: the only code that imports cflib
 tests/

@@ -15,13 +15,17 @@ from typing import TextIO
 
 import pytest
 
+from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_loop import TickStep
+from crazyflie_behavior.programs import start_up as start_up_module
 from crazyflie_behavior.programs.start_up import (
     logging_for_run,
+    make_drone,
     mode_without_quick_edit,
     quick_edit_off,
     restored_mode,
+    run_program,
     run_tick_loop,
 )
 from crazyflie_behavior.timing.clock import SimClock
@@ -302,3 +306,73 @@ def test_the_previous_ctrl_c_handler_is_back_after_a_run(log_file: TextIO) -> No
     run_tick_loop(MockAdapter(clock), CountingTickStep(1), clock, log_file)
 
     assert signal.getsignal(signal.SIGINT) is handler_before
+
+
+# --- Running a program (ADR-0028) -----------------------------------------------
+
+
+def test_the_mock_adapter_is_the_default_and_the_crazyflie_needs_the_flag() -> None:
+    clock = SimClock()
+
+    assert isinstance(make_drone(use_crazyflie=False, clock=clock), MockAdapter)
+    assert isinstance(make_drone(use_crazyflie=True, clock=clock), CrazyflieAdapter)
+
+
+def run_test_program(tick_step: TickStep) -> int:
+    clock = SimClock()
+    return run_program(
+        "test", "Test program, the mock adapter", MockAdapter(clock), tick_step, clock
+    )
+
+
+def test_a_program_that_runs_until_done_ends_with_exit_code_0(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    assert run_test_program(CountingTickStep(3)) == 0
+    log_text = the_log_file_text(tmp_path / "logs")
+    assert "Test program, the mock adapter" in log_text
+    assert "Tick loop summary: ticks: 3" in log_text
+
+
+def test_ctrl_c_while_connecting_ends_a_program_with_exit_code_130(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def interrupted(*_arguments: object) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(start_up_module, "run_tick_loop", interrupted)
+
+    assert run_test_program(CountingTickStep(1)) == 130
+    assert "stopped before the tick loop started" in the_log_file_text(tmp_path / "logs")
+
+
+def test_an_error_that_ctrl_c_interrupted_still_goes_to_the_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def interrupted_while_failing(*_arguments: object) -> None:
+        try:
+            raise RuntimeError("Flow deck not detected")
+        except RuntimeError as error:
+            raise KeyboardInterrupt from error
+
+    monkeypatch.setattr(start_up_module, "run_tick_loop", interrupted_while_failing)
+
+    assert run_test_program(CountingTickStep(1)) == 130
+    assert "Flow deck not detected" in the_log_file_text(tmp_path / "logs")
+
+
+def test_an_error_ends_a_program_with_exit_code_1_and_goes_to_the_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    assert run_test_program(FailingTickStep()) == 1
+    log_text = the_log_file_text(tmp_path / "logs")
+    assert "The test program stopped with an error" in log_text
+    assert "the tick step broke" in log_text
