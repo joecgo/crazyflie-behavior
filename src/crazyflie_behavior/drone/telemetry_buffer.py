@@ -100,6 +100,11 @@ class TelemetryBuffer:
         with self._lock:
             return self._position_estimate
 
+    def latest_drone_status(self) -> Stamped[DroneStatus] | None:
+        """For adapters that need the drone status to carry out a command."""
+        with self._lock:
+            return self._drone_status
+
     def missing_values(self) -> list[str]:
         """The telemetry values that haven't arrived yet, by name (ADR-0031).
 

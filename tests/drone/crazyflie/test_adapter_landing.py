@@ -1,4 +1,4 @@
-"""The Crazyflie adapter's landing (ADR-0012, ADR-0019), against a fake cflib.
+"""The Crazyflie adapter's landing (ADR-0012, ADR-0019, ADR-0032), against a fake cflib.
 
 The fake records every call the adapter makes, so these tests check what the
 adapter would send to a real drone, without one.
@@ -12,14 +12,20 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
+from crazyflie_behavior.drone.crazyflie.adapter import (
+    DEFAULT_YAW_RAD,
+    TAKE_OFF_STATUS_GRACE,
+    VERTICAL_SPEED,
+    CrazyflieAdapter,
+)
 from crazyflie_behavior.drone.crazyflie.touchdown import (
     FINAL_DESCENT_MARGIN,
     FINAL_DESCENT_SPEED,
     HEIGHT_IF_UNKNOWN,
     TOUCHDOWN_HOLD,
 )
-from crazyflie_behavior.snapshot import RangeDirection, RangeReading
+from crazyflie_behavior.geometry import Vector3
+from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
 from crazyflie_behavior.timing.clock import SimClock
 
 TICK = 0.05
@@ -47,12 +53,24 @@ def fake_link() -> MagicMock:
     return MagicMock()
 
 
+FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False)
+ON_THE_FLOOR = DroneStatus(is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False)
+
+
 @pytest.fixture
 def adapter(clock: SimClock, fake_link: MagicMock) -> CrazyflieAdapter:
+    """A connected adapter whose drone took off and is flying at 1.0 m."""
     adapter = CrazyflieAdapter(clock)
     adapter._sync_crazyflie = fake_link
     adapter.take_off(1.0)
+    adapter._telemetry.write_estimates_and_status(
+        Vector3(0.5, -0.25, 1.0), Vector3.ZERO, FLYING, None
+    )
     return adapter
+
+
+def report_status(adapter: CrazyflieAdapter, status: DroneStatus) -> None:
+    adapter._telemetry.write_drone_status(status, None)
 
 
 def motors_stopped(fake_link: MagicMock) -> bool:
@@ -79,10 +97,20 @@ def tick_for(
 
 
 def final_descent_moves(fake_link: MagicMock) -> list[object]:
+    """The final descent: a relative, constant-speed go_to."""
     return [
         call
         for call in fake_link.cf.high_level_commander.go_to.call_args_list
-        if call.kwargs.get("relative")
+        if call.kwargs.get("relative") and call.kwargs.get("linear")
+    ]
+
+
+def landing_moves(fake_link: MagicMock) -> list[object]:
+    """The planned landing: a smooth go_to down (not constant speed)."""
+    return [
+        call
+        for call in fake_link.cf.high_level_commander.go_to.call_args_list
+        if not call.kwargs.get("linear")
     ]
 
 
@@ -200,7 +228,7 @@ def test_shutdown_during_a_landing_does_not_restart_it(
 
     adapter.disconnect()
 
-    fake_link.cf.high_level_commander.land.assert_called_once()
+    assert len(landing_moves(fake_link)) == 1
     assert len(final_descent_moves(fake_link)) == 1
     assert motors_stopped(fake_link)
 
@@ -213,4 +241,115 @@ def test_a_new_command_cancels_the_landing(
 
     tick_for(adapter, clock, TOUCHDOWN_HOLD + TICK, RangeReading.at_distance(0.02))
 
+    assert not motors_stopped(fake_link)
+
+
+def test_landing_is_a_go_to_down_to_the_floor_not_the_firmware_landing(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    # The firmware's landing switches the motors off when it ends (ADR-0032).
+    adapter.land()
+
+    fake_link.cf.high_level_commander.land.assert_not_called()
+    fake_link.cf.high_level_commander.go_to.assert_called_once_with(
+        0.5, -0.25, 0.0, DEFAULT_YAW_RAD, pytest.approx(1.0 / VERTICAL_SPEED)
+    )
+
+
+def test_without_a_position_estimate_the_landing_goes_straight_down(
+    clock: SimClock, fake_link: MagicMock
+) -> None:
+    adapter = CrazyflieAdapter(clock)
+    adapter._sync_crazyflie = fake_link
+    adapter.take_off(1.0)
+
+    adapter.land()
+
+    fake_link.cf.high_level_commander.go_to.assert_called_once_with(
+        0.0,
+        0.0,
+        -HEIGHT_IF_UNKNOWN,
+        DEFAULT_YAW_RAD,
+        pytest.approx(HEIGHT_IF_UNKNOWN / VERTICAL_SPEED),
+        relative=True,
+    )
+
+
+def test_land_on_the_floor_just_stops_the_motors(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    # A take-off the drone never acted on: armed, but still on the floor.
+    clock.advance(TAKE_OFF_STATUS_GRACE + TICK)
+    report_status(adapter, ON_THE_FLOOR)
+
+    adapter.land()
+
+    fake_link.cf.high_level_commander.go_to.assert_not_called()
+    assert motors_stopped(fake_link)
+
+
+def test_land_right_after_a_take_off_lands_before_the_status_shows_flying(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    report_status(adapter, ON_THE_FLOOR)  # the status lags a few ticks behind
+
+    adapter.land()
+
+    assert len(landing_moves(fake_link)) == 1
+
+
+def test_shutdown_after_a_take_off_that_never_flew_stops_the_motors_without_landing(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    clock.advance(TAKE_OFF_STATUS_GRACE + TICK)
+    report_status(adapter, ON_THE_FLOOR)
+
+    adapter.disconnect()
+
+    fake_link.cf.high_level_commander.go_to.assert_not_called()
+    assert motors_stopped(fake_link)
+    fake_link.close_link.assert_called_once()
+
+
+def test_shutdown_after_our_own_stop_does_not_land_again(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    land_and_wait_for_the_planned_landing(adapter, clock)
+    tick_for(adapter, clock, TOUCHDOWN_HOLD + TICK, RangeReading.at_distance(0.02))
+    assert motors_stopped(fake_link)
+    # The supervisor keeps saying flying for 2 s after the motors stop.
+    report_status(adapter, FLYING)
+
+    adapter.disconnect()
+
+    assert len(landing_moves(fake_link)) == 1  # only the first landing
+    fake_link.close_link.assert_called_once()
+
+
+def test_land_after_our_own_stop_does_not_land_again(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    land_and_wait_for_the_planned_landing(adapter, clock)
+    tick_for(adapter, clock, TOUCHDOWN_HOLD + TICK, RangeReading.at_distance(0.02))
+    assert motors_stopped(fake_link)
+    # The supervisor keeps saying flying for 2 s after the motors stop, but a
+    # move down now would spin the motors up on the floor.
+    report_status(adapter, FLYING)
+
+    adapter.land()
+
+    assert len(landing_moves(fake_link)) == 1  # only the first landing
+
+
+def test_an_old_on_the_floor_status_counts_as_unknown_so_it_lands(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    # The status stream stalled before the take-off showed in it. The drone may
+    # be flying: landing is safe, stopping the motors could drop it.
+    report_status(adapter, ON_THE_FLOOR)
+    clock.advance(TAKE_OFF_STATUS_GRACE + TICK)
+
+    adapter.land()
+
+    assert len(landing_moves(fake_link)) == 1
     assert not motors_stopped(fake_link)

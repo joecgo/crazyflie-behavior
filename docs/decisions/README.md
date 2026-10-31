@@ -40,5 +40,6 @@ This column is honest about which ideas were mine.
 | [0029](0029-connecting-has-time-limits.md) | Connecting has time limits: each step waits on a helper thread | AI recommendation accepted, after my question |
 | [0030](0030-minimal-safety-layer-for-first-flight.md) | A minimal safety layer for First flight: a pre-check, one failsafe, the hover test's commands | Mixed: asking how small it could be, and one failsafe, were mine |
 | [0031](0031-connect-waits-for-first-telemetry.md) | connect() returns only once every telemetry value has arrived | AI recommendation accepted |
+| [0032](0032-landing-with-a-go-to.md) | Landing is a go_to down to the floor; our touchdown check stops the motors | My call, keeping in line with ADR-0012 and ADR-0019 (the AI recommended the firmware's landing) |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

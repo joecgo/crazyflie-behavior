@@ -66,7 +66,7 @@ class DroneInterface(ABC):
 
     @abstractmethod
     def land(self) -> None:
-        """Descend straight down, then stop the motors."""
+        """Descend straight down, then stop the motors. On the floor, just stop them."""
 
     @abstractmethod
     def set_velocity(self, velocity: Vector3, yaw_rate_rad_per_s: float = 0.0) -> None:

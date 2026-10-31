@@ -64,6 +64,7 @@ type BufferOperation = Callable[[TelemetryBuffer], object]
 EVERY_OPERATION: dict[str, BufferOperation] = {
     "snapshot": lambda buffer: buffer.snapshot(time=0.0, dt=0.0),
     "latest_position_estimate": lambda buffer: buffer.latest_position_estimate(),
+    "latest_drone_status": lambda buffer: buffer.latest_drone_status(),
     "missing_values": lambda buffer: buffer.missing_values(),
     "write_position_estimate": lambda buffer: buffer.write_position_estimate(ORIGIN, None),
     "write_velocity_estimate": lambda buffer: buffer.write_velocity_estimate(ORIGIN, None),

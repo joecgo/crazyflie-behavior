@@ -43,6 +43,7 @@ from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE, run_with_t
 from crazyflie_behavior.drone.crazyflie.touchdown import (
     FINAL_DESCENT_SPEED,
     HEIGHT_IF_UNKNOWN,
+    MAX_READING_AGE,
     TouchdownDetector,
     final_descent_deadline,
 )
@@ -81,6 +82,9 @@ MIN_MOVE_DURATION = 0.5
 """Seconds. The shortest move ever requested from the high-level commander."""
 TOUCHDOWN_POLL_PERIOD = 0.05
 """Seconds between touchdown checks while landing at shutdown."""
+TAKE_OFF_STATUS_GRACE = 1.0
+"""Seconds after a take-off is sent during which the drone may be flying before its
+status shows it (ADR-0032). VERIFY at the bench."""
 # Time limits for connecting (ADR-0029). VERIFY at the bench, and measure (backlog #25).
 LINK_TIME_LIMIT = 15.0
 """Seconds to open the link and get the drone's variable lists. A first connect,
@@ -165,6 +169,9 @@ class CrazyflieAdapter(DroneInterface):
         self._log_configs: list[LogConfig] = []
         self._is_streaming_velocity = False
         self._is_airborne = False
+        """A take-off was sent and the motors haven't been stopped since."""
+        self._take_off_sent_at = 0.0
+        """When the latest take-off was sent. Meaningful while airborne."""
         self._landing_phase = _LandingPhase.NOT_LANDING
         self._landing_finishes_at = 0.0
         """When the planned landing should be over. Meaningful while PLANNED."""
@@ -250,9 +257,15 @@ class CrazyflieAdapter(DroneInterface):
         duration = move_duration(height - current_height, VERTICAL_SPEED, MIN_MOVE_DURATION)
         self._crazyflie.high_level_commander.takeoff(height, duration, yaw=DEFAULT_YAW_RAD)
         self._is_airborne = True
+        self._take_off_sent_at = self._clock.now()
 
     def land(self) -> None:
-        self._start_landing()
+        if self._may_be_flying():
+            self._start_landing()
+        else:
+            # On the floor, a move down would spin an armed drone's motors up
+            # (ADR-0032), so just make sure they're stopped.
+            self._stop_motors()
 
     def set_velocity(self, velocity: Vector3, yaw_rate_rad_per_s: float = 0.0) -> None:
         self._cancel_landing()
@@ -349,14 +362,42 @@ class CrazyflieAdapter(DroneInterface):
 
     # --- Landing (ADR-0012, ADR-0019) ----------------------------------------
 
+    def _may_be_flying(self) -> bool:
+        """True if the drone may be in the air, so a landing is needed (ADR-0032).
+
+        Only after a take-off not followed by our own motor stop: the drone
+        status keeps saying flying for 2 s after the motors stop. Then the
+        drone may be flying unless a fresh status says it isn't and the
+        take-off was long enough ago to show in it. A missing or old status is
+        unknown: landing is safe, while stopping the motors on a guess could cut
+        them in mid-air.
+        """
+        if not self._is_airborne:
+            return False
+        now = self._clock.now()
+        status = self._telemetry.latest_drone_status()
+        if status is None or status.age(now) > MAX_READING_AGE or status.value.is_flying:
+            return True
+        return now - self._take_off_sent_at < TAKE_OFF_STATUS_GRACE
+
     def _start_landing(self) -> float:
-        """Start descending to the ground. Returns when the descent should be done."""
+        """Start descending to the floor. Returns when the descent should be done."""
         self._release_velocity_streaming()
-        current_height = self._latest_height(if_unknown=HEIGHT_IF_UNKNOWN)
+        latest = self._telemetry.latest_position_estimate()
+        current_height = HEIGHT_IF_UNKNOWN if latest is None else latest.value.z
         duration = move_duration(current_height, VERTICAL_SPEED, MIN_MOVE_DURATION)
-        self._crazyflie.high_level_commander.land(0.0, duration, yaw=DEFAULT_YAW_RAD)
-        # The high-level commander keeps the motors running after it lands;
-        # they're stopped once touchdown is confirmed.
+        # A go_to, not the firmware's landing: when a landing finishes, the
+        # firmware switches the motors off by itself, even above the floor. A
+        # go_to keeps holding its end point, so the motors stop only once
+        # touchdown is confirmed (ADR-0032). VERIFY at the bench how the drone
+        # settles at the floor while the go_to holds it there.
+        commander = self._crazyflie.high_level_commander
+        if latest is None:
+            # No estimate yet: straight down from the commander's own position.
+            commander.go_to(0.0, 0.0, -current_height, DEFAULT_YAW_RAD, duration, relative=True)
+        else:
+            here = latest.value
+            commander.go_to(here.x, here.y, 0.0, DEFAULT_YAW_RAD, duration)
         self._landing_finishes_at = self._clock.now() + duration
         self._landing_phase = _LandingPhase.PLANNED
         self._touchdown_detector = TouchdownDetector()
@@ -400,9 +441,9 @@ class CrazyflieAdapter(DroneInterface):
         self._landing_phase = _LandingPhase.FINAL_DESCENT
         logger.warning("Landing time is up but touchdown isn't confirmed; descending slowly.")
         # One high-level move straight down at FINAL_DESCENT_SPEED until the
-        # deadline, past the floor if need be. Unlike streamed setpoints, it
-        # keeps going if ticks stop (ADR-0011). VERIFY: a relative go_to is
-        # accepted after the high-level landing has finished.
+        # deadline, past the floor if need be, from where the landing's go_to
+        # ends. Unlike streamed setpoints, it keeps going if ticks stop
+        # (ADR-0011).
         duration = deadline - now
         self._crazyflie.high_level_commander.go_to(
             0.0,
@@ -417,6 +458,9 @@ class CrazyflieAdapter(DroneInterface):
     def _land_and_wait_for_touchdown(self) -> None:
         """Land, or finish a landing already under way, and block until the motors are stopped."""
         if self._landing_phase is _LandingPhase.NOT_LANDING:
+            if not self._may_be_flying():
+                self._stop_motors()  # a take-off was sent, but the drone never flew
+                return
             self._clock.sleep_until(self._start_landing())
         while self._landing_phase is not _LandingPhase.NOT_LANDING:
             self._finish_landing(self._telemetry.snapshot(self._clock.now(), 0.0))
