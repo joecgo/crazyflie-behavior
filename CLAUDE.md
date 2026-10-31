@@ -113,6 +113,15 @@ ignores one:
   (`docs/coding-style.md`), the glossary is updated for any new or changed term, the
   relevant ADR is linked, and the commit message names the ADR it implements
   (e.g. `Implements ADR-0004`).
+- **The user's code reviews.** The user reads the code too, at review points:
+  when a milestone's code is complete, before a field-test session, after
+  changes to the safety layer, the Crazyflie adapter or the tick loop settle,
+  or when a lot of unreviewed code has built up. Claude suggests a review at
+  those points. A review covers only what's new since the last one (the
+  review log in `REVIEW.md`): new files line by line, changed files as diffs
+  from the last reviewed commit, and tests as a spec, by their names. Before a
+  review, Claude commits and pushes everything, so the user can also review on
+  GitHub from their phone. Afterwards, Claude adds the review to the log.
 - Follow `docs/coding-style.md`: strict typing, units in names, the cflib
   boundary ([ADR-0004](docs/decisions/0004-strict-typing-ruff-and-units-in-names.md)).
 - Commit in small steps, especially when flight parameters or behavior change,

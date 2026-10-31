@@ -29,6 +29,8 @@ takeaway applies to reviews, it's added here as a question.
   handles it?
 - For each backup: what is it computed from, and is that the thing that just
   failed?
+- A decision made from telemetry: what does it do when the value is missing
+  or old? Is that the safe choice for that decision?
 - For a check like "has it arrived?" or "is it ready?": could state left by
   an earlier run or connection satisfy it?
 - For each cleanup path: what if an interruption lands between two lines, or
@@ -63,3 +65,14 @@ takeaway applies to reviews, it's added here as a question.
 
 Takeaways about recommendations and explanations stay in the mistakes log
 only: they're for me, when I weigh Claude's options.
+
+## My reviews
+
+Each review covers only what's new since the one before: new files line by
+line, changed files as diffs from the last reviewed commit, and tests as a
+spec, by their names.
+
+| Dates | Reviewed up to | What |
+|---|---|---|
+| 2026-10-22 to 2026-10-27 | `b3bc274` | All the source then (geometry, snapshot, clock, the drone interface, telemetry buffer, mock adapter, conversions, touchdown, the Crazyflie adapter) and the tests, as a spec. Led to ADR-0018 to ADR-0021 and 20 new adapter tests |
+| Next | | Everything after `b3bc274`: ADRs 0022 to 0032, the safety layer, the tick loop, behaviors, programs and the drone changes |
