@@ -24,16 +24,16 @@ decisions are recorded), *communication* (how Claude explains things).
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 2 | 7 |
-| safety design | 2 | 2 |
-| recommendation | 3 | 0 |
+| safety design | 2 | 3 |
+| recommendation | 5 | 0 |
 | environment | 2 | 2 |
 | communication | 1 | 0 |
 | testing | 0 | 3 |
 | process | 0 | 1 |
-| **Total** | **10** | **15** |
+| **Total** | **12** | **16** |
 
-Of the 10 I pointed out, a later Claude review would probably have caught
-none, maybe 4, and probably not 6. So far, every recommendation and
+Of the 12 I pointed out, a later Claude review would probably have caught
+none, maybe 4, and probably not 8. So far, every recommendation and
 communication mistake needed me. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
@@ -43,6 +43,39 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-10-31: Recommending against accepted ADRs for vague reasons
+
+- **What happened:** for backlog #31 (landing), Claude recommended trusting
+  the firmware's landing (option A), which gives up ADR-0012's guarantee and
+  retires ADR-0019's final descent, over landing with a `go_to` so the
+  touchdown check stops the motors (option B), which is what those ADRs
+  intended. Its reasons were vague or wrong: "B relies on behavior nobody has
+  tested", when nothing in the project has run on hardware yet and B's only
+  new physical moment is about 0.3 s more at the floor with the motors
+  running; and "more code", when B's landing code already exists. The cloud
+  session leaned towards A first, and Claude repeated it without checking.
+- **Would a later Claude review have caught it?** Probably not: reviews look
+  at code and records, not at the reasons behind a recommendation.
+- **Kind:** recommendation.
+- **Takeaway:** when accepted ADRs already answer a question, keeping them is
+  the default. Recommending a change needs a concrete reason, and "untested"
+  must say exactly what is untested and why it matters.
+
+### 2026-10-31: An option with no reason to choose it
+
+- **What happened:** for backlog #31, Claude listed option C (descend to
+  10 cm, confirm, then stop the motors), copied from the backlog's options to
+  explore, without saying why anyone would pick it. Its only conceivable
+  advantage, less time on the floor with the motors running, is none: the
+  firmware's own landing reaches the floor with the motors running too, and
+  B's extra time there is the 0.3 s touchdown hold. C also cuts the motors in
+  mid-air on purpose, which ADR-0019 exists to prevent.
+- **Would a later Claude review have caught it?** Probably not, for the same
+  reason.
+- **Kind:** recommendation.
+- **Takeaway:** give every option the reason someone would choose it. An
+  option with none is dropped, not listed.
 
 ### 2026-10-29: A logging recommendation that ignored what was already known
 
@@ -193,6 +226,20 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-10-31: A landing guard that trusted an old drone status
+
+- **What happened:** ADR-0032's `land()` stops the motors instead of landing
+  when the drone isn't flying, judged from the drone status. The first
+  version didn't check the status's age: if the status stream stalled before
+  a take-off showed in it, an old "not flying" would have made `land()` cut
+  the motors with the drone in the air.
+- **Caught at:** Claude's code review, at a high level. A missing or old
+  status now counts as unknown, so the drone lands; a test covers it.
+- **Kind:** safety design.
+- **Takeaway:** a guard that decides from telemetry must say what it does
+  when the value is missing or old, and the safe choice for a missing value
+  isn't always the same as for a "no".
 
 ### 2026-10-30: A wait that a previous connection could satisfy
 
