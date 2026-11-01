@@ -66,7 +66,8 @@ def safety_pre_check(snapshot: Snapshot) -> list[str]:
         if failure is not None
     ]
     battery = snapshot.battery_voltage
-    if battery is not None and battery.value < LOW_BATTERY_VOLTAGE:
+    # Written as `not >=` so a NaN voltage fails too: every comparison with NaN is false.
+    if battery is not None and not (battery.value >= LOW_BATTERY_VOLTAGE):
         failures.append(
             f"battery at {battery.value:.2f} V (land below {LOW_BATTERY_VOLTAGE:.2f} V)"
         )

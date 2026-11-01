@@ -1,6 +1,7 @@
 """The minimal safety layer for First flight (ADR-0030): pre-check, judging, sending."""
 
 import logging
+import math
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -154,6 +155,12 @@ def test_a_battery_below_the_landing_voltage_fails() -> None:
     assert safety_pre_check(snapshot(battery_voltage=LOW_BATTERY_VOLTAGE)) == []
     assert safety_pre_check(snapshot(battery_voltage=LOW_BATTERY_VOLTAGE - 0.01)) == [
         "battery at 3.39 V (land below 3.40 V)"
+    ]
+
+
+def test_a_battery_voltage_that_isnt_a_number_fails() -> None:
+    assert safety_pre_check(snapshot(battery_voltage=math.nan)) == [
+        "battery at nan V (land below 3.40 V)"
     ]
 
 
