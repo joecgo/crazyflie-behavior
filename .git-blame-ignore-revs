@@ -1,0 +1,5 @@
+# Formatting-only commits, skipped by blame (GitHub reads this file).
+# Locally: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Formatting: a line limit of 120
+4f09fe65c539f4aebd292ca371bdfacf43d43f40
