@@ -101,9 +101,9 @@ def judge(request: CommandRequest, snapshot: Snapshot) -> Verdict:
     is_flying = status.value.is_flying
     match request:
         case Arm():
-            return (
-                Verdict.refused("the drone is already flying") if is_flying else Verdict.approved()
-            )
+            if is_flying:
+                return Verdict.refused("the drone is already flying")
+            return Verdict.approved()
         case TakeOff():
             if not is_armed:
                 return Verdict.refused("the drone isn't armed")
@@ -113,7 +113,9 @@ def judge(request: CommandRequest, snapshot: Snapshot) -> Verdict:
         case Hover() | Land():
             # On the floor, the firmware would start the move anyway and spin the
             # motors of an armed drone (planner.c, checked 2026-10-30).
-            return Verdict.approved() if is_flying else Verdict.refused("the drone isn't flying")
+            if not is_flying:
+                return Verdict.refused("the drone isn't flying")
+            return Verdict.approved()
         case SetVelocity() | MoveTo():
             return Verdict.refused(
                 "steering mode and fast mode wait for the speed envelope (backlog #30)"
