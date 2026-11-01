@@ -27,9 +27,7 @@ def snapshot_with(
     return Snapshot(
         time=NOW,
         dt=0.05,
-        position_estimate=(
-            None if height is None else Stamped(Vector3(0.0, 0.0, height), height_arrived, None)
-        ),
+        position_estimate=(None if height is None else Stamped(Vector3(0.0, 0.0, height), height_arrived, None)),
         velocity_estimate=None,
         range_readings=RangeReadings(
             front=None,
@@ -110,9 +108,7 @@ def test_a_height_estimate_alone_never_confirms() -> None:
     detector = TouchdownDetector()
     for step in range(20):
         time = NOW + step * 0.05
-        detector.observe(
-            snapshot_with(down=RangeReading.invalid(), height=0.0, height_arrived=time), time
-        )
+        detector.observe(snapshot_with(down=RangeReading.invalid(), height=0.0, height_arrived=time), time)
 
     assert not detector.touchdown_confirmed(NOW + 1.0)
 
@@ -120,9 +116,7 @@ def test_a_height_estimate_alone_never_confirms() -> None:
 def test_the_highest_recent_distance_ignores_short_outliers() -> None:
     detector = TouchdownDetector()
     for time, distance in [(NOW, 0.9), (NOW + 0.05, 0.1), (NOW + 0.1, 0.85)]:
-        detector.observe(
-            snapshot_with(down=RangeReading.at_distance(distance), down_arrived=time), time
-        )
+        detector.observe(snapshot_with(down=RangeReading.at_distance(distance), down_arrived=time), time)
 
     assert detector.highest_recent_distance() == 0.9
 

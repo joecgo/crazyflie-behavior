@@ -85,9 +85,7 @@ def test_a_tick_runs_snapshot_pre_check_behavior_send_in_that_order() -> None:
     events: list[str] = []
     drone = RecordingDrone(clock, events)
     drone.connect()
-    tick_step = BehaviorTickStep(
-        drone, RecordingSafetyLayer(drone, events), RecordingBehavior(events)
-    )
+    tick_step = BehaviorTickStep(drone, RecordingSafetyLayer(drone, events), RecordingBehavior(events))
 
     tick_step.run(clock.now(), TICK_PERIOD)
 
@@ -100,9 +98,7 @@ def test_a_failed_pre_check_skips_the_behavior_and_ends_the_flight() -> None:
     drone = RecordingDrone(clock, events)
     drone.connect()
     drone.set_battery_voltage(3.0)
-    tick_step = BehaviorTickStep(
-        drone, RecordingSafetyLayer(drone, events), RecordingBehavior(events)
-    )
+    tick_step = BehaviorTickStep(drone, RecordingSafetyLayer(drone, events), RecordingBehavior(events))
 
     is_done = tick_step.run(clock.now(), TICK_PERIOD)
 
@@ -133,9 +129,7 @@ def test_the_hover_test_arms_takes_off_hovers_and_lands() -> None:
             heights.append(snapshot.position_estimate.value.z)
             return super().tick(snapshot, request)
 
-    tick_count = fly(
-        BehaviorTickStep(drone, SafetyLayer(drone), HeightRecorder(HOVER_DURATION)), clock
-    )
+    tick_count = fly(BehaviorTickStep(drone, SafetyLayer(drone), HeightRecorder(HOVER_DURATION)), clock)
 
     assert drone.command_log == ["connect", "arm", "take_off", "land"]
     # Arm, take off, then at the height for the hover duration, then landed.

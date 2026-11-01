@@ -181,9 +181,7 @@ def test_the_bench_program_runs_with_the_mock_adapter_until_ctrl_c(
     assert "Tick loop summary: ticks: 3" in log_text
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="sending Ctrl+C to another process works differently on Windows"
-)
+@pytest.mark.skipif(sys.platform == "win32", reason="sending Ctrl+C to another process works differently on Windows")
 def test_the_bench_program_runs_as_a_program_and_stops_on_ctrl_c(tmp_path: Path) -> None:
     program = subprocess.Popen(
         [sys.executable, "-m", "crazyflie_behavior.programs.bench"],

@@ -63,9 +63,7 @@ def adapter(clock: SimClock, fake_link: MagicMock) -> CrazyflieAdapter:
     adapter = CrazyflieAdapter(clock)
     adapter._sync_crazyflie = fake_link
     adapter.take_off(1.0)
-    adapter._telemetry.write_estimates_and_status(
-        Vector3(0.5, -0.25, 1.0), Vector3.ZERO, FLYING, None
-    )
+    adapter._telemetry.write_estimates_and_status(Vector3(0.5, -0.25, 1.0), Vector3.ZERO, FLYING, None)
     return adapter
 
 
@@ -89,9 +87,7 @@ def tick(adapter: CrazyflieAdapter, clock: SimClock, down: RangeReading | None =
     adapter.take_snapshot(clock.now(), TICK)
 
 
-def tick_for(
-    adapter: CrazyflieAdapter, clock: SimClock, seconds: float, down: RangeReading
-) -> None:
+def tick_for(adapter: CrazyflieAdapter, clock: SimClock, seconds: float, down: RangeReading) -> None:
     for _ in range(round(seconds / TICK)):
         tick(adapter, clock, down)
 
@@ -107,11 +103,7 @@ def final_descent_moves(fake_link: MagicMock) -> list[object]:
 
 def landing_moves(fake_link: MagicMock) -> list[object]:
     """The planned landing: a smooth go_to down (not constant speed)."""
-    return [
-        call
-        for call in fake_link.cf.high_level_commander.go_to.call_args_list
-        if not call.kwargs.get("linear")
-    ]
+    return [call for call in fake_link.cf.high_level_commander.go_to.call_args_list if not call.kwargs.get("linear")]
 
 
 def land_and_wait_for_the_planned_landing(adapter: CrazyflieAdapter, clock: SimClock) -> None:
@@ -233,9 +225,7 @@ def test_shutdown_during_a_landing_does_not_restart_it(
     assert motors_stopped(fake_link)
 
 
-def test_a_new_command_cancels_the_landing(
-    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
-) -> None:
+def test_a_new_command_cancels_the_landing(adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock) -> None:
     land_and_wait_for_the_planned_landing(adapter, clock)
     adapter.hover()
 
@@ -256,9 +246,7 @@ def test_landing_is_a_go_to_down_to_the_floor_not_the_firmware_landing(
     )
 
 
-def test_without_a_position_estimate_the_landing_goes_straight_down(
-    clock: SimClock, fake_link: MagicMock
-) -> None:
+def test_without_a_position_estimate_the_landing_goes_straight_down(clock: SimClock, fake_link: MagicMock) -> None:
     adapter = CrazyflieAdapter(clock)
     adapter._sync_crazyflie = fake_link
     adapter.take_off(1.0)

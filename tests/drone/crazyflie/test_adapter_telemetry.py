@@ -63,9 +63,7 @@ def test_the_state_block_writes_position_velocity_and_status(adapter: CrazyflieA
     assert snapshot.velocity_estimate is not None
     assert snapshot.velocity_estimate.value == Vector3(0.1, -0.2, 0.0)
     assert snapshot.drone_status is not None
-    assert snapshot.drone_status.value == DroneStatus(
-        is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False
-    )
+    assert snapshot.drone_status.value == DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False)
 
 
 def test_position_velocity_and_status_share_one_drone_time(adapter: CrazyflieAdapter) -> None:

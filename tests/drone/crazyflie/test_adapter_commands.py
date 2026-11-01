@@ -64,9 +64,7 @@ def test_move_to_never_asks_for_a_move_shorter_than_the_minimum(
 ) -> None:
     adapter.move_to(Vector3(1.0, 0.0, 0.5), duration=0.1)
 
-    fake_link.cf.high_level_commander.go_to.assert_called_once_with(
-        1.0, 0.0, 0.5, DEFAULT_YAW_RAD, MIN_MOVE_DURATION
-    )
+    fake_link.cf.high_level_commander.go_to.assert_called_once_with(1.0, 0.0, 0.5, DEFAULT_YAW_RAD, MIN_MOVE_DURATION)
 
 
 def test_move_to_rejects_a_non_positive_duration(adapter: CrazyflieAdapter) -> None:
@@ -74,9 +72,7 @@ def test_move_to_rejects_a_non_positive_duration(adapter: CrazyflieAdapter) -> N
         adapter.move_to(Vector3(1.0, 0.0, 0.5), duration=0.0)
 
 
-def test_hover_holds_the_latest_position_estimate(
-    adapter: CrazyflieAdapter, fake_link: MagicMock
-) -> None:
+def test_hover_holds_the_latest_position_estimate(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
     adapter._telemetry.write_position_estimate(Vector3(0.5, -0.25, 1.0), None)
 
     adapter.hover()
@@ -86,9 +82,7 @@ def test_hover_holds_the_latest_position_estimate(
     )
 
 
-def test_hover_without_an_estimate_holds_where_it_is(
-    adapter: CrazyflieAdapter, fake_link: MagicMock
-) -> None:
+def test_hover_without_an_estimate_holds_where_it_is(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
     adapter.hover()
 
     fake_link.cf.high_level_commander.go_to.assert_called_once_with(
@@ -96,14 +90,10 @@ def test_hover_without_an_estimate_holds_where_it_is(
     )
 
 
-def test_set_velocity_sends_the_yaw_rate_in_degrees(
-    adapter: CrazyflieAdapter, fake_link: MagicMock
-) -> None:
+def test_set_velocity_sends_the_yaw_rate_in_degrees(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
     adapter.set_velocity(Vector3(0.2, 0.0, -0.1), yaw_rate_rad_per_s=math.pi)
 
-    fake_link.cf.commander.send_velocity_world_setpoint.assert_called_once_with(
-        0.2, 0.0, -0.1, pytest.approx(180.0)
-    )
+    fake_link.cf.commander.send_velocity_world_setpoint.assert_called_once_with(0.2, 0.0, -0.1, pytest.approx(180.0))
 
 
 def test_after_steering_mode_a_high_level_command_first_hands_control_back(
@@ -114,20 +104,14 @@ def test_after_steering_mode_a_high_level_command_first_hands_control_back(
     adapter.hover()
 
     calls = call_names(fake_link)
-    assert calls.index("cf.commander.send_notify_setpoint_stop") < calls.index(
-        "cf.high_level_commander.go_to"
-    )
+    assert calls.index("cf.commander.send_notify_setpoint_stop") < calls.index("cf.high_level_commander.go_to")
 
 
-def test_disarm_stops_the_motors_before_disarming(
-    adapter: CrazyflieAdapter, fake_link: MagicMock
-) -> None:
+def test_disarm_stops_the_motors_before_disarming(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
     adapter.disarm()
 
     calls = call_names(fake_link)
-    assert calls.index("cf.high_level_commander.stop") < calls.index(
-        "cf.supervisor.send_arming_request"
-    )
+    assert calls.index("cf.high_level_commander.stop") < calls.index("cf.supervisor.send_arming_request")
     fake_link.cf.supervisor.send_arming_request.assert_called_once_with(False)
 
 
@@ -139,9 +123,7 @@ def test_emergency_stop_cuts_the_motors_and_cancels_a_landing(
 
     adapter.emergency_stop()
     clock.advance(30.0)
-    adapter._telemetry.write_range_readings(
-        {RangeDirection.DOWN: RangeReading.at_distance(0.02)}, None
-    )
+    adapter._telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(0.02)}, None)
     adapter.take_snapshot(clock.now(), 0.05)
 
     fake_link.cf.supervisor.send_emergency_stop.assert_called_once()

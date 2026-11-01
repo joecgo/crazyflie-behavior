@@ -128,9 +128,7 @@ def test_a_value_is_fresh_at_its_limit_and_stale_past_it(name: str, limit: float
     assert failures[0].startswith(f"{name} is ")
 
 
-@pytest.mark.parametrize(
-    "missing", ["position_estimate", "drone_status", "battery_voltage", "down_range"]
-)
+@pytest.mark.parametrize("missing", ["position_estimate", "drone_status", "battery_voltage", "down_range"])
 def test_a_value_that_has_not_arrived_fails(missing: str) -> None:
     fresh = snapshot()
     if missing == "down_range":
@@ -142,9 +140,7 @@ def test_a_value_that_has_not_arrived_fails(missing: str) -> None:
 
 
 def test_a_failure_says_what_and_by_how_much() -> None:
-    assert safety_pre_check(snapshot(position_age=0.5)) == [
-        "position estimate is 0.50 s old (stale after 0.25 s)"
-    ]
+    assert safety_pre_check(snapshot(position_age=0.5)) == ["position estimate is 0.50 s old (stale after 0.25 s)"]
 
 
 def test_a_value_that_arrived_just_after_the_tick_time_is_fresh() -> None:
@@ -159,21 +155,15 @@ def test_a_battery_below_the_landing_voltage_fails() -> None:
 
 
 def test_a_battery_voltage_that_isnt_a_number_fails() -> None:
-    assert safety_pre_check(snapshot(battery_voltage=math.nan)) == [
-        "battery at nan V (land below 3.40 V)"
-    ]
+    assert safety_pre_check(snapshot(battery_voltage=math.nan)) == ["battery at nan V (land below 3.40 V)"]
 
 
 def test_a_crashed_drone_fails() -> None:
-    assert safety_pre_check(snapshot(replace(FLYING, is_crashed=True))) == [
-        "the drone reports a crash"
-    ]
+    assert safety_pre_check(snapshot(replace(FLYING, is_crashed=True))) == ["the drone reports a crash"]
 
 
 def test_a_tumbled_drone_fails() -> None:
-    assert safety_pre_check(snapshot(replace(FLYING, is_tumbled=True))) == [
-        "the drone reports it has tumbled"
-    ]
+    assert safety_pre_check(snapshot(replace(FLYING, is_tumbled=True))) == ["the drone reports it has tumbled"]
 
 
 def test_every_failure_is_reported_not_just_the_first() -> None:
@@ -203,9 +193,7 @@ def test_hovering_and_landing_need_a_flying_drone(request_: CommandRequest) -> N
     assert judge(request_, snapshot(ARMED)).reason == "the drone isn't flying"
 
 
-@pytest.mark.parametrize(
-    "request_", [SetVelocity(Vector3(0.1, 0.0, 0.0)), MoveTo(Vector3(1.0, 0.0, 0.5), 2.0)]
-)
+@pytest.mark.parametrize("request_", [SetVelocity(Vector3(0.1, 0.0, 0.0)), MoveTo(Vector3(1.0, 0.0, 0.5), 2.0)])
 def test_velocity_and_fast_mode_are_refused_until_the_speed_envelope_exists(
     request_: CommandRequest,
 ) -> None:
@@ -345,9 +333,7 @@ def test_a_failed_pre_check_lands_a_flying_drone_and_skips_behaviors(
     assert not behaviors_may_run
     assert drone.command_log == ["land"]
     assert safety_layer.flight_is_over
-    assert warnings_in(caplog) == [
-        "Safety pre-check failed: battery at 3.30 V (land below 3.40 V). Landing."
-    ]
+    assert warnings_in(caplog) == ["Safety pre-check failed: battery at 3.30 V (land below 3.40 V). Landing."]
 
 
 def test_the_failsafe_lands_on_a_stale_drone_status_that_says_flying() -> None:

@@ -42,9 +42,7 @@ def test_slightly_out_of_order_packets_are_not_mistaken_for_a_wrap() -> None:
 def test_a_late_packet_from_before_the_wrap_stays_before_it() -> None:
     just_after_wrap = (LOG_TIMESTAMP_RANGE_MS + 5) / 1000.0
 
-    drone_time = drone_time_from_timestamp(
-        LOG_TIMESTAMP_RANGE_MS - 3, previous_drone_time=just_after_wrap
-    )
+    drone_time = drone_time_from_timestamp(LOG_TIMESTAMP_RANGE_MS - 3, previous_drone_time=just_after_wrap)
 
     assert drone_time == (LOG_TIMESTAMP_RANGE_MS - 3) / 1000.0
 

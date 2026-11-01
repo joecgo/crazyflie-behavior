@@ -158,9 +158,7 @@ def drone_status_from_bitfield(bitfield: int) -> DroneStatus:
 class CrazyflieAdapter(DroneInterface):
     """Drives a real Crazyflie over the Crazyradio."""
 
-    def __init__(
-        self, clock: Clock, uri: str = DEFAULT_URI, cache_directory: str = "./cache"
-    ) -> None:
+    def __init__(self, clock: Clock, uri: str = DEFAULT_URI, cache_directory: str = "./cache") -> None:
         self._clock = clock
         self._uri = uri
         self._cache_directory = cache_directory
@@ -216,8 +214,7 @@ class CrazyflieAdapter(DroneInterface):
                 "Settling the position estimate",
                 lambda: reset_estimator(sync_crazyflie),
                 POSITION_ESTIMATE_TIME_LIMIT,
-                "Check the Flow deck can see the floor (enough light and texture) "
-                "and that the drone is sitting still.",
+                "Check the Flow deck can see the floor (enough light and texture) and that the drone is sitting still.",
                 self._clock,
             )
             self._start_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
@@ -472,9 +469,7 @@ class CrazyflieAdapter(DroneInterface):
     def _start_logging(self, has_multiranger: bool) -> None:
         self._add_log_block("state", STATE_PERIOD_MS, list(_STATE_VARIABLES), self._on_state)
         self._add_log_block("battery", BATTERY_PERIOD_MS, ["pm.vbat"], self._on_battery)
-        self._add_log_block(
-            "down", DOWN_RANGE_PERIOD_MS, [_DOWN_RANGE_VARIABLE], self._on_down_range
-        )
+        self._add_log_block("down", DOWN_RANGE_PERIOD_MS, [_DOWN_RANGE_VARIABLE], self._on_down_range)
         if has_multiranger:
             self._add_log_block(
                 "multiranger",
@@ -507,9 +502,7 @@ class CrazyflieAdapter(DroneInterface):
                 )
             self._clock.sleep_until(min(deadline, now + WAIT_SLICE))
 
-    def _add_log_block(
-        self, name: str, period_ms: int, variables: list[str], on_data: _LogCallback
-    ) -> None:
+    def _add_log_block(self, name: str, period_ms: int, variables: list[str], on_data: _LogCallback) -> None:
         log_config = LogConfig(name=name, period_in_ms=period_ms)
         for variable in variables:
             log_config.add_variable(variable)  # fetched as the type the drone stores
@@ -517,8 +510,7 @@ class CrazyflieAdapter(DroneInterface):
             self._crazyflie.log.add_config(log_config)
         except KeyError as error:
             raise RuntimeError(
-                f"The drone's firmware doesn't log a variable this adapter needs ({error}). "
-                "Update the firmware."
+                f"The drone's firmware doesn't log a variable this adapter needs ({error}). Update the firmware."
             ) from error
         log_config.data_received_cb.add_callback(on_data)
         log_config.start()
@@ -545,9 +537,7 @@ class CrazyflieAdapter(DroneInterface):
 
     def _on_down_range(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
         reading = range_reading_from_mm(int(data[_DOWN_RANGE_VARIABLE]))
-        self._telemetry.write_range_readings(
-            {RangeDirection.DOWN: reading}, self._drone_time(timestamp)
-        )
+        self._telemetry.write_range_readings({RangeDirection.DOWN: reading}, self._drone_time(timestamp))
 
     def _on_multiranger(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
         readings = {

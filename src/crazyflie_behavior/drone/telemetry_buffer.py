@@ -62,8 +62,7 @@ class TelemetryBuffer:
         """
         arrival_time = self._clock.now()
         stamped = {
-            direction: Stamped(reading, arrival_time, drone_time)
-            for direction, reading in range_readings.items()
+            direction: Stamped(reading, arrival_time, drone_time) for direction, reading in range_readings.items()
         }
         with self._lock:
             self._range_readings.update(stamped)

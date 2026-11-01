@@ -82,9 +82,7 @@ class LateWakingClock(SimClock):
             super().sleep_until(deadline + self._wake_lateness)
 
 
-def make_loop(
-    clock: SimClock, tick_step: TickStep, hang_watchdog: HangWatchdog | None = None
-) -> TickLoop:
+def make_loop(clock: SimClock, tick_step: TickStep, hang_watchdog: HangWatchdog | None = None) -> TickLoop:
     return TickLoop(clock, tick_step, hang_watchdog or FakeHangWatchdog(), TEST_TICK_RATE)
 
 
@@ -311,9 +309,7 @@ def test_the_hang_watchdog_is_armed_for_each_tick_and_disarmed_after_it() -> Non
 
 def test_the_hang_watchdog_is_disarmed_even_when_the_tick_step_raises() -> None:
     events: list[str] = []
-    loop = make_loop(
-        SimClock(), FailingTickStep(fail_on_tick=0, events=events), FakeHangWatchdog(events)
-    )
+    loop = make_loop(SimClock(), FailingTickStep(fail_on_tick=0, events=events), FakeHangWatchdog(events))
 
     with pytest.raises(RuntimeError):
         loop.run()

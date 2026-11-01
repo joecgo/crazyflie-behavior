@@ -24,9 +24,7 @@ class BehaviorTickStep(TickStep):
     landing under way (ADR-0026).
     """
 
-    def __init__(
-        self, drone: DroneInterface, safety_layer: SafetyLayer, behavior: Behavior
-    ) -> None:
+    def __init__(self, drone: DroneInterface, safety_layer: SafetyLayer, behavior: Behavior) -> None:
         self._drone = drone
         self._safety_layer = safety_layer
         self._behavior = behavior

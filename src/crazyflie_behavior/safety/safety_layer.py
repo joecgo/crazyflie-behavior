@@ -68,9 +68,7 @@ def safety_pre_check(snapshot: Snapshot) -> list[str]:
     battery = snapshot.battery_voltage
     # Written as `not >=` so a NaN voltage fails too: every comparison with NaN is false.
     if battery is not None and not (battery.value >= LOW_BATTERY_VOLTAGE):
-        failures.append(
-            f"battery at {battery.value:.2f} V (land below {LOW_BATTERY_VOLTAGE:.2f} V)"
-        )
+        failures.append(f"battery at {battery.value:.2f} V (land below {LOW_BATTERY_VOLTAGE:.2f} V)")
     status = snapshot.drone_status
     if status is not None and status.value.is_crashed:
         failures.append("the drone reports a crash")
@@ -117,9 +115,7 @@ def judge(request: CommandRequest, snapshot: Snapshot) -> Verdict:
                 return Verdict.refused("the drone isn't flying")
             return Verdict.approved()
         case SetVelocity() | MoveTo():
-            return Verdict.refused(
-                "steering mode and fast mode wait for the speed envelope (backlog #30)"
-            )
+            return Verdict.refused("steering mode and fast mode wait for the speed envelope (backlog #30)")
 
 
 class SafetyLayer:

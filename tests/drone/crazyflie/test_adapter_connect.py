@@ -113,9 +113,7 @@ def adapter() -> CrazyflieAdapter:
     return CrazyflieAdapter(SimClock(start=10.0))
 
 
-def test_connecting_resets_the_estimate_and_starts_telemetry(
-    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
-) -> None:
+def test_connecting_resets_the_estimate_and_starts_telemetry(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
     adapter.connect()
 
     fake_cflib.reset_estimator.assert_called_once_with(fake_cflib.link)
@@ -123,9 +121,7 @@ def test_connecting_resets_the_estimate_and_starts_telemetry(
     fake_cflib.link.close_link.assert_not_called()
 
 
-def test_a_multi_ranger_adds_its_own_log_block(
-    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
-) -> None:
+def test_a_multi_ranger_adds_its_own_log_block(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
     fake_cflib.parameters["deck.bcMultiranger"] = "1"
 
     adapter.connect()
@@ -133,9 +129,7 @@ def test_a_multi_ranger_adds_its_own_log_block(
     assert "multiranger" in fake_cflib.log_block_names
 
 
-def test_log_periods_are_ones_the_firmware_accepts(
-    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
-) -> None:
+def test_log_periods_are_ones_the_firmware_accepts(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
     fake_cflib.parameters["deck.bcMultiranger"] = "1"
 
     adapter.connect()
@@ -290,9 +284,7 @@ def test_a_connect_that_fails_on_its_own_is_left_to_cflib_to_close(
     fake_cflib.link.cf.close_link.assert_not_called()
 
 
-def test_any_failing_setup_step_closes_the_link(
-    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
-) -> None:
+def test_any_failing_setup_step_closes_the_link(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
     fake_cflib.reset_estimator.side_effect = TimeoutError("estimate never settled")
 
     with pytest.raises(TimeoutError):
@@ -301,9 +293,7 @@ def test_any_failing_setup_step_closes_the_link(
     fake_cflib.link.close_link.assert_called_once()
 
 
-def test_a_missing_log_variable_says_to_update_the_firmware(
-    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
-) -> None:
+def test_a_missing_log_variable_says_to_update_the_firmware(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
     fake_cflib.link.cf.log.add_config.side_effect = KeyError("Variable supervisor.info not in TOC")
 
     with pytest.raises(RuntimeError, match="Update the firmware"):

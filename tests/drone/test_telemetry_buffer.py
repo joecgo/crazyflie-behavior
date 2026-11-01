@@ -73,9 +73,7 @@ EVERY_OPERATION: dict[str, BufferOperation] = {
     ),
     "write_battery_voltage": lambda buffer: buffer.write_battery_voltage(4.0, None),
     "write_drone_status": lambda buffer: buffer.write_drone_status(LANDED, None),
-    "write_estimates_and_status": lambda buffer: buffer.write_estimates_and_status(
-        ORIGIN, ORIGIN, LANDED, None
-    ),
+    "write_estimates_and_status": lambda buffer: buffer.write_estimates_and_status(ORIGIN, ORIGIN, LANDED, None),
 }
 
 

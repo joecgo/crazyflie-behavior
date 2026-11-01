@@ -68,18 +68,13 @@ class TouchdownDetector:
         if reading is None:
             self._low_since = None  # a missing, stale or invalid reading breaks the hold
         else:
-            if (
-                not self._recent_down_readings
-                or self._recent_down_readings[-1].arrival_time != reading.arrival_time
-            ):
+            if not self._recent_down_readings or self._recent_down_readings[-1].arrival_time != reading.arrival_time:
                 self._recent_down_readings.append(reading)
             if reading.value > TOUCHDOWN_DOWN_RANGE:
                 self._low_since = None
             elif self._low_since is None:
                 self._low_since = reading.arrival_time
-        self._recent_down_readings = [
-            r for r in self._recent_down_readings if now - r.arrival_time <= RECENT_WINDOW
-        ]
+        self._recent_down_readings = [r for r in self._recent_down_readings if now - r.arrival_time <= RECENT_WINDOW]
 
     def touchdown_confirmed(self, now: float) -> bool:
         """True once the down range has stayed low for TOUCHDOWN_HOLD."""

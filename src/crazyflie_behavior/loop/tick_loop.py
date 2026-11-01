@@ -54,9 +54,7 @@ class HangWatchdog:
         try:
             file.fileno()
         except (OSError, ValueError) as error:
-            raise ValueError(
-                f"The hang watchdog needs a real file, such as the run's log file: {file!r}"
-            ) from error
+            raise ValueError(f"The hang watchdog needs a real file, such as the run's log file: {file!r}") from error
         self._file = file
         self._timeout = timeout
 
@@ -242,10 +240,7 @@ class TickLoop:
         if logger.isEnabledFor(logging.DEBUG):
             message = f"Tick {tick_number}: lateness {_ms(lateness)}, work time {_ms(work_time)}"
             if pauses.count_this_tick > 0:
-                message += (
-                    f", garbage collector {_ms(pauses.total_this_tick)}"
-                    f" (pauses: {pauses.count_this_tick})"
-                )
+                message += f", garbage collector {_ms(pauses.total_this_tick)} (pauses: {pauses.count_this_tick})"
             logger.debug(message)
 
         next_due_time = due_time + self._tick_period

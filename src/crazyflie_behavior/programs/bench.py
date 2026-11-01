@@ -84,9 +84,7 @@ def snapshot_summary(snapshot: Snapshot) -> str:
     return " | ".join(parts)
 
 
-def _describe_stamped[T](
-    name: str, stamped: Stamped[T] | None, now: float, describe: Callable[[T], str]
-) -> str:
+def _describe_stamped[T](name: str, stamped: Stamped[T] | None, now: float, describe: Callable[[T], str]) -> str:
     if stamped is None:
         return f"{name} no reading yet"
     # A value can arrive a moment after the tick started; show that as 0 ms old.
@@ -118,9 +116,7 @@ def main(arguments: list[str] | None = None) -> int:
     clock = RealClock()
     drone = make_drone(use_crazyflie, clock)
     adapter_name = "the Crazyflie" if use_crazyflie else "the mock adapter"
-    return run_program(
-        "bench", f"Bench program, {adapter_name}", drone, BenchTickStep(drone), clock
-    )
+    return run_program("bench", f"Bench program, {adapter_name}", drone, BenchTickStep(drone), clock)
 
 
 if __name__ == "__main__":

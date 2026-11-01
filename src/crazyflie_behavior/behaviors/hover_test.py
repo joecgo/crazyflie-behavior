@@ -79,9 +79,7 @@ class HoverTest(Behavior):
                     self._go_to(_Step.DONE, now)
             case _Step.TAKING_OFF:
                 if abs(height - TAKE_OFF_HEIGHT) <= HEIGHT_TOLERANCE:
-                    logger.info(
-                        "Hover test: at %.2f m. Hovering for %g s", height, self._hover_duration
-                    )
+                    logger.info("Hover test: at %.2f m. Hovering for %g s", height, self._hover_duration)
                     self._go_to(_Step.HOVERING, now)
                 elif time_in_step > TAKE_OFF_TIME_LIMIT:
                     logger.warning(

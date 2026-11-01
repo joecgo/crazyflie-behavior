@@ -107,11 +107,7 @@ def test_project_code_never_imports_tools() -> None:
 
 def test_behaviors_never_import_the_drone_package() -> None:
     """ADR-0008: behaviors send command requests to the safety layer instead."""
-    offenders = [
-        path
-        for path in python_files(BEHAVIORS_ROOT)
-        if imports_any(path, ["crazyflie_behavior.drone"])
-    ]
+    offenders = [path for path in python_files(BEHAVIORS_ROOT) if imports_any(path, ["crazyflie_behavior.drone"])]
 
     assert relative_paths(offenders) == []
 
@@ -123,8 +119,7 @@ def test_behaviors_use_only_the_request_types_from_the_safety_package() -> None:
         path
         for path in python_files(BEHAVIORS_ROOT)
         if any(
-            imports_any_of(name, ["crazyflie_behavior.safety"])
-            and name != "crazyflie_behavior.safety.requests"
+            imports_any_of(name, ["crazyflie_behavior.safety"]) and name != "crazyflie_behavior.safety.requests"
             for name in imported_modules(path)
         )
     ]
@@ -137,8 +132,7 @@ def test_only_the_safety_layer_sends_commands_to_the_drone() -> None:
     offenders = [
         path
         for path in python_files(PACKAGE_ROOT)
-        if drone_commands_called(path)
-        and not (path.is_relative_to(SAFETY_ROOT) or path.is_relative_to(DRONE_ROOT))
+        if drone_commands_called(path) and not (path.is_relative_to(SAFETY_ROOT) or path.is_relative_to(DRONE_ROOT))
     ]
 
     assert relative_paths(offenders) == []
@@ -156,8 +150,7 @@ def test_the_tick_loop_imports_only_the_clock_from_the_project() -> None:
     offenders = sorted(
         name
         for name in imported_modules(TICK_LOOP)
-        if imports_any_of(name, ["crazyflie_behavior"])
-        and not imports_any_of(name, ["crazyflie_behavior.timing"])
+        if imports_any_of(name, ["crazyflie_behavior"]) and not imports_any_of(name, ["crazyflie_behavior.timing"])
     )
 
     assert offenders == []

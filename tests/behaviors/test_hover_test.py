@@ -48,9 +48,7 @@ def snapshot(time: float, status: DroneStatus, height: float = 0.0) -> Snapshot:
         dt=0.05,
         position_estimate=fresh(Vector3(0.0, 0.0, height)),
         velocity_estimate=fresh(Vector3.ZERO),
-        range_readings=RangeReadings(
-            None, None, None, None, None, fresh(RangeReading.at_distance(height))
-        ),
+        range_readings=RangeReadings(None, None, None, None, None, fresh(RangeReading.at_distance(height))),
         battery_voltage=fresh(4.0),
         drone_status=fresh(status),
     )
@@ -167,9 +165,7 @@ def test_a_refused_request_ends_the_hover_test(caplog: pytest.LogCaptureFixture)
     is_done = HoverTest().tick(snapshot(0.0, ON_THE_FLOOR), safety_layer)
 
     assert is_done
-    assert errors_in(caplog) == [
-        "Hover test failed: Arm() was refused: the drone is already flying"
-    ]
+    assert errors_in(caplog) == ["Hover test failed: Arm() was refused: the drone is already flying"]
 
 
 def test_it_makes_each_request_once() -> None:

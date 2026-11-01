@@ -28,9 +28,7 @@ def dataclass_options(decorator: ast.expr) -> set[str] | None:
     return {
         keyword.arg
         for keyword in call.keywords
-        if keyword.arg is not None
-        and isinstance(keyword.value, ast.Constant)
-        and keyword.value.value is True
+        if keyword.arg is not None and isinstance(keyword.value, ast.Constant) and keyword.value.value is True
     }
 
 

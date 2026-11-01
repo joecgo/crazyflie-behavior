@@ -36,9 +36,7 @@ GIVE_UP_AFTER_TICKS = 100
 a broken stop path fails its test instead of hanging it."""
 
 
-def run_without_keyboard_interrupt(
-    drone: MockAdapter, tick_step: TickStep, clock: SimClock, log_file: TextIO
-) -> None:
+def run_without_keyboard_interrupt(drone: MockAdapter, tick_step: TickStep, clock: SimClock, log_file: TextIO) -> None:
     """Run the tick loop; a KeyboardInterrupt fails the test instead of stopping pytest."""
     try:
         run_tick_loop(drone, tick_step, clock, log_file)
@@ -65,9 +63,7 @@ def test_the_log_file_gets_everything(tmp_path: Path) -> None:
     assert "an event" in log_text
 
 
-def test_the_console_shows_info_and_above(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_the_console_shows_info_and_above(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     with logging_for_run("test", tmp_path):
         logging.getLogger("crazyflie_behavior.test_program").debug("a detail")
         logging.getLogger("crazyflie_behavior.test_program").info("an event")
@@ -320,14 +316,10 @@ def test_the_mock_adapter_is_the_default_and_the_crazyflie_needs_the_flag() -> N
 
 def run_test_program(tick_step: TickStep) -> int:
     clock = SimClock()
-    return run_program(
-        "test", "Test program, the mock adapter", MockAdapter(clock), tick_step, clock
-    )
+    return run_program("test", "Test program, the mock adapter", MockAdapter(clock), tick_step, clock)
 
 
-def test_a_program_that_runs_until_done_ends_with_exit_code_0(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_program_that_runs_until_done_ends_with_exit_code_0(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
 
     assert run_test_program(CountingTickStep(3)) == 0

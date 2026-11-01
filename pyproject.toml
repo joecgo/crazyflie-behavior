@@ -29,7 +29,7 @@ addopts = ["--import-mode=importlib"]
 
 # --- ruff: formatting and linting (ADR-0004) ---
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py312"
 src = ["src", "tests", "tools"]
 # Docs quote cflib's own examples in cflib's style; don't reformat them.

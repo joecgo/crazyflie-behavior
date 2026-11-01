@@ -25,9 +25,7 @@ TIME_LIMIT_LOGGER = "crazyflie_behavior.drone.crazyflie.time_limit"
 class StuckStep:
     """A fake blocking call: waits until the test releases it, then may raise."""
 
-    def __init__(
-        self, error_when_released: BaseException | None = None, press_ctrl_c: bool = False
-    ) -> None:
+    def __init__(self, error_when_released: BaseException | None = None, press_ctrl_c: bool = False) -> None:
         self.release = threading.Event()
         self._error = error_when_released
         self._press_ctrl_c = press_ctrl_c
@@ -203,8 +201,6 @@ def test_a_step_that_finishes_just_after_a_wait_slice_still_counts_as_in_time() 
         let_step_finish.wait(timeout=10.0)
         results.append("done")
 
-    run_with_time_limit(
-        "A step", finishes_when_let, 1.0, "", FinishesBetweenWaitAndCheck(let_step_finish)
-    )
+    run_with_time_limit("A step", finishes_when_let, 1.0, "", FinishesBetweenWaitAndCheck(let_step_finish))
 
     assert results == ["done"]

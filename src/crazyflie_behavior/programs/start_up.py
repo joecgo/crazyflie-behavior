@@ -54,9 +54,7 @@ def make_drone(use_crazyflie: bool, clock: Clock) -> DroneInterface:
     return CrazyflieAdapter(clock) if use_crazyflie else MockAdapter(clock)
 
 
-def run_program(
-    program_name: str, description: str, drone: DroneInterface, tick_step: TickStep, clock: Clock
-) -> int:
+def run_program(program_name: str, description: str, drone: DroneInterface, tick_step: TickStep, clock: Clock) -> int:
     """Run a program: its log, then the tick loop between connecting and disconnecting.
 
     Returns the exit code: 0 when the tick loop ran until done or stopped, 1
@@ -221,15 +219,12 @@ class _CtrlCHandler:
     ) -> None:
         # None means the old handler wasn't set from Python; the default stands in.
         previous_handler = self._previous_handler
-        signal.signal(
-            signal.SIGINT, previous_handler if previous_handler is not None else signal.SIG_DFL
-        )
+        signal.signal(signal.SIGINT, previous_handler if previous_handler is not None else signal.SIG_DFL)
         if self._has_made_stop_request:
             logger.info("Ctrl+C made the stop request")
         if self._ignored_press_count > 0:
             logger.warning(
-                "Ctrl+C pressed again while stopping (ignored presses: %d), "
-                "so stopping wasn't cut short",
+                "Ctrl+C pressed again while stopping (ignored presses: %d), so stopping wasn't cut short",
                 self._ignored_press_count,
             )
 
@@ -248,9 +243,7 @@ class _CtrlCHandler:
             raise KeyboardInterrupt
 
 
-def run_tick_loop(
-    drone: DroneInterface, tick_step: TickStep, clock: Clock, log_file: TextIO
-) -> None:
+def run_tick_loop(drone: DroneInterface, tick_step: TickStep, clock: Clock, log_file: TextIO) -> None:
     """Connect, run the tick loop until it's done or stopped, then disconnect (ADR-0026).
 
     Disconnecting always happens, also after an error or a failed connect (it
