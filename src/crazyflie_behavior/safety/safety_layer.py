@@ -9,8 +9,13 @@ Each tick, the tick step calls it in this order (ADR-0025):
 3. `send`: the movement slot's command goes to the drone.
 
 The pre-check and the judging are plain functions of the snapshot. Only the
-SafetyLayer, which sends, holds state. The operator's "land now" and "hover"
-(ADR-0027) join the pre-check with the operator controls, not built yet.
+SafetyLayer, which sends, holds state.
+
+Not built yet: the operator's "land now" and "hover" commands (ADR-0027).
+Both will fail the pre-check, so behaviors are skipped and no behavior can
+override the operator. "Land now" lands like any failed check; "hover" holds
+the drone instead, so it needs a failed pre-check that doesn't end the flight
+(backlog #8).
 """
 
 import logging

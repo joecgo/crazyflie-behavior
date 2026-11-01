@@ -4,9 +4,9 @@ A behavior makes a command request; the safety layer answers it at once with
 a verdict (ADR-0025) and is the only code that sends commands (ADR-0008).
 Behaviors import this module, never the safety layer itself.
 
-First flight approves arm, take off, hover and land (ADR-0030). Velocity and
-fast-mode requests are always refused until the speed envelope exists
-(backlog #30).
+The safety layer approves only arm, take off, hover and land: the requests
+the First flight milestone needs (ADR-0030). It refuses velocity and
+fast-mode requests until the speed envelope exists (backlog #30).
 """
 
 import math
