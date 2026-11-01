@@ -24,16 +24,16 @@ decisions are recorded), *communication* (how Claude explains things).
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 2 | 7 |
-| safety design | 2 | 3 |
+| safety design | 2 | 4 |
 | recommendation | 5 | 0 |
 | environment | 2 | 2 |
-| communication | 1 | 0 |
+| communication | 3 | 0 |
 | testing | 0 | 3 |
-| process | 0 | 1 |
-| **Total** | **12** | **16** |
+| process | 0 | 2 |
+| **Total** | **14** | **18** |
 
-Of the 12 I pointed out, a later Claude review would probably have caught
-none, maybe 4, and probably not 8. So far, every recommendation and
+Of the 14 I pointed out, a later Claude review would probably have caught
+none, maybe 4, and probably not 10. So far, every recommendation and
 communication mistake needed me. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
@@ -43,6 +43,53 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-10-31: A quiz instead of an answer
+
+- **What happened:** I asked Claude where a backlog #8 decision from my other
+  session overlapped the review. Claude saw that one of its claims (a failed
+  pre-check right after take-off lets the take-off continue to 0.5 m) doesn't
+  match the code. Instead of saying why, it treated the claim as if it were
+  my explain-back answer, gave me a hint, and asked a second question in the
+  same reply. I couldn't tell what it was asking.
+- **Why it was wrong:** I had asked for the overlaps, to pass them on, and an
+  ADR was about to record the wrong reason. Explain-back questions check my
+  understanding after an explanation; they aren't a reason to hold back an
+  answer I asked for. Two questions in one reply also left it unclear which
+  to answer.
+- **How I caught it:** I said I didn't understand what Claude was asking.
+- **Would a Claude review have caught it?** Probably not: reviews check code
+  and records, not conversations.
+- **Kind:** communication.
+- **Takeaway:** when I ask for information, give it directly. Ask
+  explain-back questions only about what Claude explained, and one question
+  at a time.
+
+### 2026-10-31: Unclear docstrings that lean on terms not in the glossary
+
+- **What happened:** two docstrings in the safety package confused me in one
+  review. `safety/requests.py` said "First flight approves arm, take off,
+  hover and land", as if the milestone approved requests, when the safety
+  layer does. `safety/safety_layer.py` said the operator's "land now" and
+  "hover" "join the pre-check with the operator controls, not built yet",
+  which doesn't say what joins what, or when. None of the terms had a
+  glossary entry: *First flight* was defined only in the work log, *operator
+  controls* only in ADR-0027, and *operator* is used in the glossary but
+  never defined.
+- **Why it was wrong:** a code comment should make sense to someone who
+  knows only the code and the glossary, and CLAUDE.md says names and
+  comments use glossary terms.
+- **How I caught it:** in my second code review, I asked what each sentence
+  meant.
+- **Would a Claude review have caught it?** Probably not: Claude's own
+  high-level `/code-review` had already passed both files, and the review
+  checklist had no question about terms outside the glossary.
+- **Kind:** communication.
+- **Takeaway:** a term used in code needs a glossary entry, even one the docs
+  already use, and a note about unbuilt work says plainly what will change.
+  The glossary now has *First flight* (in a new Milestones section),
+  *operator* and *operator controls*, and the review checklist asks about
+  glossary terms.
 
 ### 2026-10-31: Recommending against accepted ADRs for vague reasons
 
@@ -226,6 +273,31 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-10-31: A battery check that a NaN voltage would pass
+
+- **What happened:** the safety pre-check landed the drone when
+  `battery.value < LOW_BATTERY_VOLTAGE`. Every comparison with NaN is false,
+  so a NaN voltage would have passed the check. `requests.py`, written at the
+  same time, already wrote its check so NaN fails.
+- **Caught at:** walking me through `safety_layer.py` in my second code
+  review. The check is now `not (battery.value >= LOW_BATTERY_VOLTAGE)`, with
+  a test proven by bug planting. The firmware is very unlikely to send a NaN
+  voltage.
+- **Kind:** safety design.
+- **Takeaway:** write a threshold check so a value that isn't a number fails
+  it: test for the safe side and negate, as `requests.py` does.
+
+### 2026-10-31: A glossary definition the code outgrew
+
+- **What happened:** the minimal safety layer (ADR-0030) puts an approved
+  arm request into the movement slot, its only slot, but the glossary's
+  *Command slot* still listed the movement slot's commands without arm.
+- **Caught at:** walking me through `safety_layer.py` in my second code
+  review. The glossary now lists arm.
+- **Kind:** process.
+- **Takeaway:** when code adds to something the glossary lists, update the
+  list in the same commit.
 
 ### 2026-10-31: A landing guard that trusted an old drone status
 

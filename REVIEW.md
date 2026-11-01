@@ -29,8 +29,8 @@ takeaway applies to reviews, it's added here as a question.
   handles it?
 - For each backup: what is it computed from, and is that the thing that just
   failed?
-- A decision made from telemetry: what does it do when the value is missing
-  or old? Is that the safe choice for that decision?
+- A decision made from telemetry: what does it do when the value is missing,
+  old or not a number? Is that the safe choice for that decision?
 - For a check like "has it arrived?" or "is it ready?": could state left by
   an earlier run or connection satisfy it?
 - For each cleanup path: what if an interruption lands between two lines, or
@@ -60,6 +60,8 @@ takeaway applies to reviews, it's added here as a question.
   real file?
 - A decision that makes an exception to an older ADR: is the older ADR's
   status line marked?
+- Does every term in a new name or comment appear in the glossary, even one
+  that other docs already use? Does its definition still match the code?
 - New tests: are they proven by bug planting
   ([coding style](docs/coding-style.md))?
 
