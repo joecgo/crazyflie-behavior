@@ -46,5 +46,6 @@ This column is honest about which ideas were mine.
 | [0035](0035-console-output-on-a-background-thread.md) | Console output runs on a background thread; log-file writes stay on the tick's thread | Mixed: measuring before deciding was mine; the console-only thread was the AI's |
 | [0036](0036-game-logic-is-a-state-machine.md) | Game logic is a state machine per game; a behavior's tick reports an outcome | Mixed: a state machine now, a behavior tree later, was mine |
 | [0037](0037-disconnect-does-not-disarm.md) | Disconnecting doesn't disarm; the Crazyflie adapter logs whether the drone arms itself | AI recommendation accepted; turning off auto-arming was mine, deferred |
+| [0038](0038-connecting-to-a-flying-drone.md) | Connecting refuses a flying drone; a rescue landing takes over the flight | Mixed: AI recommendations accepted; the full version now and the manual emergency stop were mine |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

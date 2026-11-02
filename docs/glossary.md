@@ -131,6 +131,7 @@ this file in the same commit as the code or ADR that uses it.
 | **Steering mode** | The default control mode: velocity commands with obstacle-avoidance steering, slow and controlled. | `AddMovementInput` each Tick from steering behaviors. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
 | **Fast mode** | Control mode for moving quickly to a target using position commands (`go_to`), with obstacle-avoidance steering disabled. The safety layer stays active and can interrupt it. | A scripted `MoveTo` with steering off, but collision still on. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
 | **Speed envelope** | The maximum speed and acceleration allowed in a control mode. The safety layer may tighten it in the moment but never widen it. | `MaxWalkSpeed` and `MaxAcceleration` on the movement component, clamped by gameplay rules. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
+| **Rescue landing** | Landing a drone a program lost. A new program connects, takes over the flight without resetting the position estimate, and lands it with the normal landing. | Re-possessing a Pawn left hovering after its controller was destroyed, only to bring it down. | [0038](decisions/0038-connecting-to-a-flying-drone.md) |
 
 ## Testing
 
