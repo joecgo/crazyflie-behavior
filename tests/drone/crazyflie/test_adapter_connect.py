@@ -176,15 +176,15 @@ def test_without_a_flow_deck_it_refuses_to_fly_and_closes_the_link(
 class BlockingStep:
     """A fake cflib call that blocks like a stuck wait, until the test releases it.
 
-    It can press Ctrl+C first: a real press arrives while cflib waits.
+    It can send the interrupt signal first: a real one arrives while cflib waits.
     """
 
-    def __init__(self, press_ctrl_c: bool = False) -> None:
+    def __init__(self, send_interrupt_signal: bool = False) -> None:
         self.release = threading.Event()
-        self._press_ctrl_c = press_ctrl_c
+        self._send_interrupt_signal = send_interrupt_signal
 
     def __call__(self, *_arguments: object) -> None:
-        if self._press_ctrl_c:
+        if self._send_interrupt_signal:
             signal.raise_signal(signal.SIGINT)
         self.release.wait(timeout=10.0)
 
@@ -197,8 +197,8 @@ def blocking_step() -> Generator[BlockingStep]:
 
 
 @pytest.fixture
-def ctrl_c_step() -> Generator[BlockingStep]:
-    step = BlockingStep(press_ctrl_c=True)
+def interrupt_signal_step() -> Generator[BlockingStep]:
+    step = BlockingStep(send_interrupt_signal=True)
     yield step
     step.release.set()
 
@@ -250,10 +250,10 @@ def test_settling_the_position_estimate_has_a_time_limit_then_closes_the_link(
     fake_cflib.link.close_link.assert_called_once()
 
 
-def test_ctrl_c_while_the_link_opens_gets_through_and_stops_the_connection_under_way(
-    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, ctrl_c_step: BlockingStep
+def test_the_interrupt_signal_while_the_link_opens_gets_through_and_stops_the_connection_under_way(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, interrupt_signal_step: BlockingStep
 ) -> None:
-    fake_cflib.link.open_link.side_effect = ctrl_c_step
+    fake_cflib.link.open_link.side_effect = interrupt_signal_step
 
     with pytest.raises(KeyboardInterrupt):
         adapter.connect()
@@ -261,10 +261,10 @@ def test_ctrl_c_while_the_link_opens_gets_through_and_stops_the_connection_under
     fake_cflib.link.cf.close_link.assert_called_once()
 
 
-def test_ctrl_c_while_reading_the_parameters_gets_through_and_closes_the_link(
-    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, ctrl_c_step: BlockingStep
+def test_the_interrupt_signal_while_reading_the_parameters_gets_through_and_closes_the_link(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, interrupt_signal_step: BlockingStep
 ) -> None:
-    fake_cflib.link.wait_for_params.side_effect = ctrl_c_step
+    fake_cflib.link.wait_for_params.side_effect = interrupt_signal_step
 
     with pytest.raises(KeyboardInterrupt):
         adapter.connect()
@@ -350,13 +350,13 @@ def test_a_value_that_never_arrives_has_a_time_limit_then_closes_the_link(
     fake_cflib.link.close_link.assert_called_once()
 
 
-def test_ctrl_c_while_waiting_for_telemetry_gets_through_and_closes_the_link(
+def test_the_interrupt_signal_while_waiting_for_telemetry_gets_through_and_closes_the_link(
     fake_cflib: FakeCflib,
 ) -> None:
     fake_cflib.silent_blocks.add("battery")
     adapter = real_time_adapter()
-    press_ctrl_c = threading.Timer(0.2, signal.raise_signal, [signal.SIGINT])
-    press_ctrl_c.start()
+    send_interrupt_signal = threading.Timer(0.2, signal.raise_signal, [signal.SIGINT])
+    send_interrupt_signal.start()
 
     started = time.perf_counter()
     try:
@@ -364,9 +364,9 @@ def test_ctrl_c_while_waiting_for_telemetry_gets_through_and_closes_the_link(
             adapter.connect()  # waits up to 3 s for the battery
         assert time.perf_counter() - started < 2.0  # at once, not when the 3 s limit ends it
     finally:
-        # If connect() returned early, a later Ctrl+C would stop the whole run.
-        press_ctrl_c.cancel()
-        press_ctrl_c.join()
+        # If connect() returned early, a later interrupt signal would stop the whole run.
+        send_interrupt_signal.cancel()
+        send_interrupt_signal.join()
     fake_cflib.link.close_link.assert_called_once()
 
 

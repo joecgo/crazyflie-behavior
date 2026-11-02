@@ -8,6 +8,7 @@ adapter would send to a real drone, without one.
 # fields directly.
 # pyright: reportPrivateUsage=false
 
+import math
 from unittest.mock import MagicMock
 
 import pytest
@@ -241,6 +242,27 @@ def test_landing_is_a_go_to_down_to_the_floor_not_the_firmware_landing(
     adapter.land()
 
     fake_link.cf.high_level_commander.land.assert_not_called()
+    fake_link.cf.high_level_commander.go_to.assert_called_once_with(
+        0.5, -0.25, 0.0, DEFAULT_YAW_RAD, pytest.approx(1.0 / VERTICAL_SPEED)
+    )
+
+
+def test_after_an_estimate_that_isnt_finite_the_landing_goes_to_the_last_finite_one(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    nan_state = {
+        "stateEstimate.x": math.nan,
+        "stateEstimate.y": 0.0,
+        "stateEstimate.z": 1.0,
+        "stateEstimate.vx": 0.0,
+        "stateEstimate.vy": 0.0,
+        "stateEstimate.vz": 0.0,
+        "supervisor.info": float(1 << 4),  # flying
+    }
+    adapter._on_state(1500, nan_state, MagicMock())
+
+    adapter.land()
+
     fake_link.cf.high_level_commander.go_to.assert_called_once_with(
         0.5, -0.25, 0.0, DEFAULT_YAW_RAD, pytest.approx(1.0 / VERTICAL_SPEED)
     )

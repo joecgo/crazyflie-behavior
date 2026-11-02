@@ -1,6 +1,6 @@
 # 0020: Failures degrade gracefully, and are always logged
 
-- **Status:** Accepted. Amended by [ADR-0026](0026-tick-loop-calls-one-tick-step.md): every overrun gets its own warning, even several in a row.
+- **Status:** Accepted. Amended by [ADR-0026](0026-tick-loop-calls-one-tick-step.md): every overrun gets its own warning, even several in a row. Amended by [ADR-0033](0033-field-tests-choose-their-failure-rule.md): a behavior written for a field test chooses whether a refused request stops it or is retried.
 - **Date:** 2026-10-24
 - **Origin:** Mixed. Keeping the experience going and logging failures for examination afterward: my idea, from games. Failing safe when a failure makes flying unsafe: AI pushback I accepted.
 

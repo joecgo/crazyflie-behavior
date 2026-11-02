@@ -1,16 +1,20 @@
-"""The programs' shared start-up code (ADR-0026, ADR-0028): logging, QuickEdit and Ctrl+C.
+"""The programs' shared start-up code (ADR-0026, ADR-0028): logging, QuickEdit and the interrupt signal.
 
-The Ctrl+C tests press it with `signal.raise_signal`, which runs the handler on
-the main thread just as a real key press would.
+The interrupt signal tests send it with `signal.raise_signal`, which runs the
+handler on the main thread just as Ctrl+C in the console would.
 """
 
+import ctypes
 import logging
 import re
 import signal
+import sys
 import threading
 import warnings
 from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TextIO
 
 import pytest
@@ -41,13 +45,37 @@ def run_without_keyboard_interrupt(drone: MockAdapter, tick_step: TickStep, cloc
     try:
         run_tick_loop(drone, tick_step, clock, log_file)
     except KeyboardInterrupt:
-        pytest.fail("Ctrl+C raised KeyboardInterrupt instead of making a stop request")
+        pytest.fail("The interrupt signal raised KeyboardInterrupt instead of making a stop request")
 
 
 def the_log_file_text(log_directory: Path) -> str:
     log_files = list(log_directory.glob("*.log"))
     assert len(log_files) == 1
     return log_files[0].read_text(encoding="utf-8")
+
+
+class InterruptSignalOnMessage(logging.Handler):
+    """Sends the interrupt signal while a log message containing `text` is written."""
+
+    def __init__(self, text: str) -> None:
+        super().__init__()
+        self._text = text
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if self._text in record.getMessage():
+            signal.raise_signal(signal.SIGINT)
+
+
+@contextmanager
+def interrupt_signal_when_logged(text: str) -> Generator[None]:
+    """While active, the start-up code's log message containing `text` brings the interrupt signal."""
+    handler = InterruptSignalOnMessage(text)
+    start_up_logger = logging.getLogger(START_UP_LOGGER)
+    start_up_logger.addHandler(handler)
+    try:
+        yield
+    finally:
+        start_up_logger.removeHandler(handler)
 
 
 # --- Logging (ADR-0028) ---------------------------------------------------------
@@ -163,7 +191,55 @@ def test_quick_edit_off_is_safe_anywhere() -> None:
         pass
 
 
-# --- Running the tick loop, and Ctrl+C (ADR-0026, ADR-0028) ---------------------
+def a_console_window(monkeypatch: pytest.MonkeyPatch, set_console_mode_results: list[bool]) -> None:
+    """Stand in a fake kernel32: a console window whose mode changes succeed or fail in turn."""
+    results = iter(set_console_mode_results)
+
+    def get_std_handle(_which: int) -> int:
+        return 1
+
+    def get_console_mode(_handle: int, _mode: object) -> bool:
+        return True
+
+    def set_console_mode(_handle: int, _mode: int) -> bool:
+        return next(results)
+
+    def load_library(*_arguments: object, **_keywords: object) -> SimpleNamespace:
+        return SimpleNamespace(
+            GetStdHandle=get_std_handle, GetConsoleMode=get_console_mode, SetConsoleMode=set_console_mode
+        )
+
+    monkeypatch.setattr(ctypes, "WinDLL", load_library)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="the console mode exists only on Windows")
+def test_quick_edit_that_cant_be_turned_off_is_a_warning(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG, logger=START_UP_LOGGER)
+    a_console_window(monkeypatch, set_console_mode_results=[False])
+
+    with quick_edit_off():
+        pass
+
+    assert [record.levelno for record in caplog.records] == [logging.WARNING]
+    assert caplog.messages[0].startswith("Couldn't turn QuickEdit off")
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="the console mode exists only on Windows")
+def test_quick_edit_that_cant_be_turned_back_on_is_a_warning(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG, logger=START_UP_LOGGER)
+    a_console_window(monkeypatch, set_console_mode_results=[True, False])
+
+    with quick_edit_off():
+        pass
+
+    assert caplog.messages[-1].startswith("Couldn't turn QuickEdit back on")
+
+
+# --- Running the tick loop, and the interrupt signal (ADR-0026, ADR-0028) -------
 
 
 @pytest.fixture
@@ -173,17 +249,17 @@ def log_file(tmp_path: Path) -> Generator[TextIO]:
 
 
 class CountingTickStep(TickStep):
-    """A fake tick step that runs a set number of ticks, pressing Ctrl+C on some."""
+    """A fake tick step that runs a set number of ticks, sending the interrupt signal on some."""
 
-    def __init__(self, tick_count: int, ctrl_c_on_ticks: tuple[int, ...] = ()) -> None:
+    def __init__(self, tick_count: int, interrupt_signal_on_ticks: tuple[int, ...] = ()) -> None:
         self._tick_count = tick_count
-        self._ctrl_c_on_ticks = ctrl_c_on_ticks
+        self._interrupt_signal_on_ticks = interrupt_signal_on_ticks
         self.ticks_run = 0
 
     def run(self, time: float, dt: float) -> bool:
         tick_number = self.ticks_run
         self.ticks_run += 1
-        if tick_number in self._ctrl_c_on_ticks:
+        if tick_number in self._interrupt_signal_on_ticks:
             signal.raise_signal(signal.SIGINT)
         return self.ticks_run >= self._tick_count
 
@@ -193,16 +269,16 @@ class FailingTickStep(TickStep):
         raise RuntimeError("the tick step broke")
 
 
-class CtrlCWhileConnectingDrone(MockAdapter):
-    """A mock drone that gets Ctrl+C pressed while it connects."""
+class InterruptSignalWhileConnectingDrone(MockAdapter):
+    """A mock drone that gets the interrupt signal while it connects."""
 
     def connect(self) -> None:
         super().connect()
         signal.raise_signal(signal.SIGINT)
 
 
-class CtrlCTwiceWhileConnectingDrone(MockAdapter):
-    """A mock drone that gets Ctrl+C pressed while it connects, and again during the cleanup."""
+class InterruptSignalTwiceWhileConnectingDrone(MockAdapter):
+    """A mock drone that gets the interrupt signal while it connects, and again during the cleanup."""
 
     def connect(self) -> None:
         super().connect()
@@ -214,8 +290,8 @@ class CtrlCTwiceWhileConnectingDrone(MockAdapter):
         self.command_log.append("cleanup finished")
 
 
-class CtrlCDuringLandingDrone(MockAdapter):
-    """A mock drone that gets Ctrl+C pressed while it lands."""
+class InterruptSignalDuringLandingDrone(MockAdapter):
+    """A mock drone that gets the interrupt signal while it lands."""
 
     def disconnect(self) -> None:
         signal.raise_signal(signal.SIGINT)
@@ -244,38 +320,51 @@ def test_the_drone_is_disconnected_even_when_a_tick_raises(log_file: TextIO) -> 
     assert drone.command_log == ["connect", "disconnect"]
 
 
-def test_ctrl_c_once_connected_lets_the_tick_finish_and_starts_no_more(
+def test_the_interrupt_signal_once_connected_lets_the_tick_finish_and_starts_no_more(
     log_file: TextIO,
 ) -> None:
     clock = SimClock()
-    tick_step = CountingTickStep(GIVE_UP_AFTER_TICKS, ctrl_c_on_ticks=(1,))
+    tick_step = CountingTickStep(GIVE_UP_AFTER_TICKS, interrupt_signal_on_ticks=(1,))
 
     run_without_keyboard_interrupt(MockAdapter(clock), tick_step, clock, log_file)
 
     assert tick_step.ticks_run == 2
 
 
-def test_ctrl_c_during_the_landing_is_ignored_so_the_landing_finishes(
+def test_the_interrupt_signal_during_the_landing_is_ignored_so_the_landing_finishes(
     log_file: TextIO, caplog: pytest.LogCaptureFixture
 ) -> None:
     caplog.set_level(logging.INFO, logger=START_UP_LOGGER)
     clock = SimClock()
-    drone = CtrlCDuringLandingDrone(clock)
-    tick_step = CountingTickStep(GIVE_UP_AFTER_TICKS, ctrl_c_on_ticks=(0,))
+    drone = InterruptSignalDuringLandingDrone(clock)
+    tick_step = CountingTickStep(GIVE_UP_AFTER_TICKS, interrupt_signal_on_ticks=(0,))
 
     run_without_keyboard_interrupt(drone, tick_step, clock, log_file)
 
     assert drone.command_log[-1] == "landing finished"
-    assert "Ctrl+C made the stop request" in caplog.messages
-    assert any("ignored presses: 1" in message for message in caplog.messages)
+    assert "The interrupt signal made the stop request" in caplog.messages
+    assert any("ignored (times: 1)" in message for message in caplog.messages)
 
 
-def test_ctrl_c_while_connecting_stops_at_once_and_still_disconnects(log_file: TextIO) -> None:
+def test_the_interrupt_signal_while_the_end_of_a_run_is_logged_is_ignored(
+    log_file: TextIO, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO, logger=START_UP_LOGGER)
     clock = SimClock()
-    drone = CtrlCWhileConnectingDrone(clock)
+    tick_step = CountingTickStep(GIVE_UP_AFTER_TICKS, interrupt_signal_on_ticks=(0,))
+
+    with interrupt_signal_when_logged("made the stop request"):
+        run_without_keyboard_interrupt(MockAdapter(clock), tick_step, clock, log_file)
+
+    assert any("ignored (times: 1)" in message for message in caplog.messages)
+
+
+def test_the_interrupt_signal_while_connecting_stops_at_once_and_still_disconnects(log_file: TextIO) -> None:
+    clock = SimClock()
+    drone = InterruptSignalWhileConnectingDrone(clock)
     tick_step = CountingTickStep(GIVE_UP_AFTER_TICKS)
 
-    # Nothing is flying yet, so Ctrl+C stops the program as Python normally does.
+    # Nothing is flying yet, so the interrupt signal stops the program as Python normally does.
     with pytest.raises(KeyboardInterrupt):
         run_tick_loop(drone, tick_step, clock, log_file)
 
@@ -283,11 +372,11 @@ def test_ctrl_c_while_connecting_stops_at_once_and_still_disconnects(log_file: T
     assert drone.command_log == ["connect", "disconnect"]
 
 
-def test_a_second_ctrl_c_while_connecting_doesnt_cut_the_cleanup_short(
+def test_a_second_interrupt_signal_while_connecting_doesnt_cut_the_cleanup_short(
     log_file: TextIO,
 ) -> None:
     clock = SimClock()
-    drone = CtrlCTwiceWhileConnectingDrone(clock)
+    drone = InterruptSignalTwiceWhileConnectingDrone(clock)
 
     with pytest.raises(KeyboardInterrupt):
         run_tick_loop(drone, CountingTickStep(GIVE_UP_AFTER_TICKS), clock, log_file)
@@ -295,7 +384,7 @@ def test_a_second_ctrl_c_while_connecting_doesnt_cut_the_cleanup_short(
     assert drone.command_log[-1] == "cleanup finished"
 
 
-def test_the_previous_ctrl_c_handler_is_back_after_a_run(log_file: TextIO) -> None:
+def test_the_previous_interrupt_signal_handler_is_back_after_a_run(log_file: TextIO) -> None:
     handler_before = signal.getsignal(signal.SIGINT)
     clock = SimClock()
 
@@ -328,7 +417,7 @@ def test_a_program_that_runs_until_done_ends_with_exit_code_0(tmp_path: Path, mo
     assert "Tick loop summary: ticks: 3" in log_text
 
 
-def test_ctrl_c_while_connecting_ends_a_program_with_exit_code_130(
+def test_the_interrupt_signal_while_connecting_ends_a_program_with_exit_code_130(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
@@ -342,7 +431,21 @@ def test_ctrl_c_while_connecting_ends_a_program_with_exit_code_130(
     assert "stopped before the tick loop started" in the_log_file_text(tmp_path / "logs")
 
 
-def test_an_error_that_ctrl_c_interrupted_still_goes_to_the_log(
+def test_the_interrupt_signal_while_a_program_logs_its_description_ends_it_with_exit_code_130(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    with interrupt_signal_when_logged("Test program, the mock adapter"):
+        try:
+            exit_code = run_test_program(CountingTickStep(1))
+        except KeyboardInterrupt:
+            pytest.fail("The interrupt signal escaped the program as KeyboardInterrupt")
+
+    assert exit_code == 130
+
+
+def test_an_error_cut_short_by_the_interrupt_signal_still_goes_to_the_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)

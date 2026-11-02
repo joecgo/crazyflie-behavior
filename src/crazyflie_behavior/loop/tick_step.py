@@ -15,9 +15,9 @@ class BehaviorTickStep(TickStep):
 
     1. Snapshot.
     2. Safety pre-check. If it fails, the behavior is skipped and the
-       failsafe takes the movement slot.
+       failsafe takes over.
     3. The behavior makes command requests, each answered at once.
-    4. Send: the movement slot's command goes to the drone.
+    4. Send: the safety layer sends this tick's commands.
 
     Done when the behavior is, or when the safety pre-check has failed, which
     ends the flight. Leaving the tick loop then disconnects, which finishes a
@@ -36,4 +36,4 @@ class BehaviorTickStep(TickStep):
         if self._safety_layer.pre_check(snapshot):
             behavior_is_done = self._behavior.tick(snapshot, self._safety_layer.request)
         self._safety_layer.send()
-        return behavior_is_done or self._safety_layer.flight_is_over
+        return behavior_is_done or self._safety_layer.pre_check_has_failed

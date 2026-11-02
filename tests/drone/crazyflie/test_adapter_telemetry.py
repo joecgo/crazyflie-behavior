@@ -7,6 +7,8 @@ called directly with the data cflib would deliver.
 # The callbacks are private; the tests call them as cflib would.
 # pyright: reportPrivateUsage=false
 
+import logging
+import math
 from unittest.mock import MagicMock
 
 import pytest
@@ -44,9 +46,17 @@ STATE_SAMPLE = {
 }
 
 
+ADAPTER_LOGGER = "crazyflie_behavior.drone.crazyflie.adapter"
+
+
 @pytest.fixture
-def adapter() -> CrazyflieAdapter:
-    return CrazyflieAdapter(SimClock(start=10.0))
+def clock() -> SimClock:
+    return SimClock(start=10.0)
+
+
+@pytest.fixture
+def adapter(clock: SimClock) -> CrazyflieAdapter:
+    return CrazyflieAdapter(clock)
 
 
 def snapshot_of(adapter: CrazyflieAdapter) -> Snapshot:
@@ -77,6 +87,45 @@ def test_position_velocity_and_status_share_one_drone_time(adapter: CrazyflieAda
     assert snapshot.position_estimate.drone_time == 1.5
     assert snapshot.velocity_estimate.drone_time == 1.5
     assert snapshot.drone_status.drone_time == 1.5
+
+
+@pytest.mark.parametrize(
+    ("variable", "value"),
+    [("stateEstimate.z", math.nan), ("stateEstimate.x", math.inf), ("stateEstimate.vy", -math.inf)],
+)
+def test_an_estimate_that_isnt_finite_is_dropped_and_the_last_finite_one_goes_stale(
+    adapter: CrazyflieAdapter, clock: SimClock, variable: str, value: float
+) -> None:
+    adapter._on_state(1500, STATE_SAMPLE, MagicMock())
+    clock.advance(1.0)
+
+    adapter._on_state(2500, {**STATE_SAMPLE, variable: value, "supervisor.info": float(ARMED)}, MagicMock())
+
+    snapshot = adapter._telemetry.snapshot(clock.now(), 0.05)
+    assert snapshot.position_estimate is not None
+    assert snapshot.velocity_estimate is not None
+    assert snapshot.drone_status is not None
+    is_velocity = variable.startswith("stateEstimate.v")
+    estimate = snapshot.velocity_estimate if is_velocity else snapshot.position_estimate
+    assert estimate.value.is_finite()
+    assert estimate.age(clock.now()) == 1.0  # still the earlier one
+    assert not snapshot.drone_status.value.is_flying  # the status in the same packet still arrives
+
+
+def test_dropped_estimates_are_warned_once_per_streak(
+    adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO, logger=ADAPTER_LOGGER)
+    nan_sample = {**STATE_SAMPLE, "stateEstimate.z": math.nan}
+
+    for timestamp in (1500, 1520, 1540):
+        adapter._on_state(timestamp, nan_sample, MagicMock())
+    adapter._on_state(1560, STATE_SAMPLE, MagicMock())
+    adapter._on_state(1580, nan_sample, MagicMock())  # a new streak
+
+    assert [record.levelno for record in caplog.records] == [logging.WARNING, logging.INFO, logging.WARNING]
+    assert "isn't finite" in caplog.messages[0]
+    assert caplog.messages[1] == "Finite estimates are back after 3 dropped state packets"
 
 
 def test_drone_status_is_unknown_until_the_first_state_arrives(adapter: CrazyflieAdapter) -> None:

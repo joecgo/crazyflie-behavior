@@ -2,7 +2,7 @@
 
 Choosing the drone, logging to the console and a log file, QuickEdit off in an
 old Windows console window, and running the tick loop between connecting and
-disconnecting the drone, with Ctrl+C as a stop request.
+disconnecting the drone, with the interrupt signal as a stop request.
 """
 
 import ctypes
@@ -30,9 +30,9 @@ LOG_DIRECTORY = Path("logs")
 
 EXIT_OK = 0
 EXIT_ERROR = 1
-EXIT_CTRL_C = 130
-"""Ctrl+C before the tick loop started: the usual exit code for a program it stopped.
-A Ctrl+C stop request during the run is the normal end, with exit code 0."""
+EXIT_INTERRUPT_SIGNAL = 130
+"""The interrupt signal before the tick loop started: the usual exit code for a program it stopped.
+A stop request from the interrupt signal during the run is the normal end, with exit code 0."""
 
 _PROJECT_LOGGER = "crazyflie_behavior"
 """The parent of every logger in this project, including the programs' own."""
@@ -58,23 +58,23 @@ def run_program(program_name: str, description: str, drone: DroneInterface, tick
     """Run a program: its log, then the tick loop between connecting and disconnecting.
 
     Returns the exit code: 0 when the tick loop ran until done or stopped, 1
-    after an error, 130 when Ctrl+C stopped the program while connecting.
+    after an error, 130 when the interrupt signal stopped the program while connecting.
     Every error goes to the log with its stack trace (ADR-0020).
     """
     with logging_for_run(program_name) as log_file, quick_edit_off():
-        logger.info("%s", description)
         try:
+            logger.info("%s", description)
             run_tick_loop(drone, tick_step, clock, log_file)
         except KeyboardInterrupt as interrupt:
             if interrupt.__context__ is not None:
-                # Ctrl+C came while an error was being handled: log that error too (ADR-0020).
+                # The interrupt signal came while an error was being handled: log that error too (ADR-0020).
                 logger.error(
-                    "Ctrl+C while connecting; the exception being handled then is below",
+                    "Interrupt signal while connecting; the exception being handled then is below",
                     exc_info=True,
                 )
             else:
-                logger.info("Ctrl+C while connecting: stopped before the tick loop started")
-            return EXIT_CTRL_C
+                logger.info("Interrupt signal while connecting: stopped before the tick loop started")
+            return EXIT_INTERRUPT_SIGNAL
         except Exception:
             logger.critical("The %s program stopped with an error", program_name, exc_info=True)
             return EXIT_ERROR
@@ -177,23 +177,31 @@ def quick_edit_off() -> Generator[None]:
     if not kernel32.GetConsoleMode(handle, ctypes.byref(original_mode)):
         yield  # not a console window
         return
-    kernel32.SetConsoleMode(handle, mode_without_quick_edit(original_mode.value))
+    if not kernel32.SetConsoleMode(handle, mode_without_quick_edit(original_mode.value)):
+        logger.warning(
+            "Couldn't turn QuickEdit off (Windows error %d): "
+            "selecting text in this console window can pause the program",
+            ctypes.get_last_error(),
+        )
+        yield
+        return
     logger.debug("QuickEdit is off in this console window until the program exits")
     try:
         yield
     finally:
-        kernel32.SetConsoleMode(handle, restored_mode(original_mode.value))
+        if not kernel32.SetConsoleMode(handle, restored_mode(original_mode.value)):
+            logger.warning("Couldn't turn QuickEdit back on (Windows error %d)", ctypes.get_last_error())
 
 
-class _CtrlCHandler:
-    """Ctrl+C during one run: an error while connecting, then a stop request (ADR-0026).
+class _InterruptSignalHandler:
+    """The interrupt signal during one run: an error while connecting, then a stop request (ADR-0026).
 
-    While connecting, nothing is flying, so the first press raises
+    While connecting, nothing is flying, so the first signal raises
     KeyboardInterrupt, as Python does by default, and the program stops. (The
     Crazyflie adapter waits in short slices while connecting, so this works on
-    Windows too: ADR-0029.) Once connected, the first press makes a stop
+    Windows too: ADR-0029.) Once connected, the first signal makes a stop
     request instead.
-    Every later press is ignored, so it can't cut the landing, or the cleanup
+    Every later signal is ignored, so it can't cut the landing, or the cleanup
     after a failed connect, short. The handler never logs: a log write that a
     signal interrupts can fail with a "reentrant call" error. Python runs
     signal handlers on the main thread, so this must be used there.
@@ -204,11 +212,11 @@ class _CtrlCHandler:
         self._makes_stop_requests = False
         self._has_interrupted = False
         self._has_made_stop_request = False
-        self._ignored_press_count = 0
+        self._ignored_signal_count = 0
         self._previous_handler: _SignalHandler = None
 
     def __enter__(self) -> Self:
-        self._previous_handler = signal.signal(signal.SIGINT, self._on_ctrl_c)
+        self._previous_handler = signal.signal(signal.SIGINT, self._on_interrupt_signal)
         return self
 
     def __exit__(
@@ -217,24 +225,26 @@ class _CtrlCHandler:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        # Logged before the old handler is back, so a signal during these lines is still ignored.
+        if self._has_made_stop_request:
+            logger.info("The interrupt signal made the stop request")
+        if self._ignored_signal_count > 0:
+            logger.warning(
+                "The interrupt signal came again while stopping and was ignored (times: %d), "
+                "so stopping wasn't cut short",
+                self._ignored_signal_count,
+            )
         # None means the old handler wasn't set from Python; the default stands in.
         previous_handler = self._previous_handler
         signal.signal(signal.SIGINT, previous_handler if previous_handler is not None else signal.SIG_DFL)
-        if self._has_made_stop_request:
-            logger.info("Ctrl+C made the stop request")
-        if self._ignored_press_count > 0:
-            logger.warning(
-                "Ctrl+C pressed again while stopping (ignored presses: %d), so stopping wasn't cut short",
-                self._ignored_press_count,
-            )
 
     def make_stop_requests(self) -> None:
-        """From now on, Ctrl+C makes a stop request instead of raising KeyboardInterrupt."""
+        """From now on, the interrupt signal makes a stop request instead of raising KeyboardInterrupt."""
         self._makes_stop_requests = True
 
-    def _on_ctrl_c(self, _signal_number: int, _frame: FrameType | None) -> None:
+    def _on_interrupt_signal(self, _signal_number: int, _frame: FrameType | None) -> None:
         if self._has_interrupted or self._has_made_stop_request:
-            self._ignored_press_count += 1
+            self._ignored_signal_count += 1
         elif self._makes_stop_requests:
             self._has_made_stop_request = True
             self._tick_loop.request_stop()
@@ -248,18 +258,19 @@ def run_tick_loop(drone: DroneInterface, tick_step: TickStep, clock: Clock, log_
 
     Disconnecting always happens, also after an error or a failed connect (it
     does nothing if nothing is connected), and it lands a flying drone. Once
-    connected, Ctrl+C is a stop request, so it can't cut the landing short.
-    While connecting, nothing is flying, so Ctrl+C stops the program (ADR-0028,
-    ADR-0029).
+    connected, the interrupt signal is a stop request, so it can't cut the
+    landing short. While connecting, nothing is flying, so the interrupt signal
+    stops the program (ADR-0028, ADR-0029).
 
-    This uses `try`/`finally` rather than `with drone:` so that the Ctrl+C
-    handler is in place before connecting and stays until after the landing.
+    This uses `try`/`finally` rather than `with drone:` so that the interrupt
+    signal's handler is in place before connecting and stays until after the
+    landing.
     """
     tick_loop = TickLoop(clock, tick_step, HangWatchdog(log_file))
-    with _CtrlCHandler(tick_loop) as ctrl_c:
+    with _InterruptSignalHandler(tick_loop) as interrupt_signal_handler:
         try:
             drone.connect()
-            ctrl_c.make_stop_requests()
+            interrupt_signal_handler.make_stop_requests()
             tick_loop.run()
         finally:
             drone.disconnect()

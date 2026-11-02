@@ -37,6 +37,7 @@ exactly the kind of bug that's easy to write and dangerous to fly.
 
 - Placeholder timings: stops following after 0.5 s, drops after 2 s. They're
   based on our understanding of the firmware; VERIFY in field testing.
+  Checked in the firmware source (supervisor.c) on 2026-10-29: they match.
 - The timeout only applies while streaming: take-off, `move_to`, `hover` and
   landing hand control to the drone and end the stream.
 - The mock measures the gap on its own clock, so tests with a simulated clock

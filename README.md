@@ -100,12 +100,11 @@ hover (10 s unless `--hover-seconds` says otherwise), land. Without
 safety layer, whose pre-check lands the drone on stale data, a low battery or
 a crash ([ADR-0030](docs/decisions/0030-minimal-safety-layer-for-first-flight.md)).
 The console shows each step and each command sent, and the log file gets
-every snapshot. Ctrl+C lands the drone. In PyCharm, use the **hover** or
+every snapshot. In a terminal, Ctrl+C lands the drone. In PyCharm, use the **hover** or
 **hover (Crazyflie)** run configuration.
 
 **Not for the real drone yet:** the kill switch and the other operator
-controls come first ([ADR-0027](docs/decisions/0027-operator-controls.md)),
-and so does an open question about how the firmware lands (backlog #31).
+controls come first ([ADR-0027](docs/decisions/0027-operator-controls.md)).
 
 ## Hardware (planned)
 

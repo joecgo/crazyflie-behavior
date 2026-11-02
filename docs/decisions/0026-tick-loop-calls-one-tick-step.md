@@ -45,6 +45,9 @@ happens on an error or a hang, and where the measurements go.
   start of each tick and cancelled at its end. A tick still running after
   **1 s** writes every thread's stack trace to the log file. It runs in C, so
   it works even when Python is stuck. Acting on a hang stays in backlog #26.
+  Arming and cancelling it measured 0.09 ms at the median and 0.8 ms at worst
+  (2,000 tries, Windows, Python 3.12.10, 2026-11-01): cheap enough for every
+  tick.
 - **Every tick is logged immediately** with Python's `logging`: lateness and
   work time at debug level, every overrun as a warning (ADR-0024), and a
   summary at the end of the flight (worst case and 99th percentile, overrun

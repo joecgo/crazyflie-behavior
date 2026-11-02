@@ -64,9 +64,9 @@ take-off."""
 # Telemetry periods (ADR-0023). The state block and the down range stream faster
 # than the 20 Hz tick, so a snapshot's latest value is at most about 20 ms old.
 STATE_PERIOD_MS = 20
-"""Position, velocity and drone status. The estimate itself updates at 100 Hz."""
+"""Position, velocity and drone status. The estimate itself updates at 100 Hz (ADR-0023)."""
 DOWN_RANGE_PERIOD_MS = 20
-"""The Flow deck reads the down range every 25 ms."""
+"""The Flow deck reads the down range every 25 ms (ADR-0023)."""
 MULTIRANGER_PERIOD_MS = 100
 """The firmware reads the Multi-ranger every 100 ms (ADR-0022); faster only repeats."""
 BATTERY_PERIOD_MS = 1000
@@ -92,8 +92,7 @@ with nothing cached, downloads more."""
 PARAMETERS_TIME_LIMIT = 10.0
 """Seconds to read the parameter values."""
 POSITION_ESTIMATE_TIME_LIMIT = 20.0
-"""Seconds for the position estimate to settle. cflib waits for 10 steady readings
-500 ms apart, so it takes at least 5 s."""
+"""Seconds for the position estimate to settle. cflib needs at least 5 s (ADR-0029)."""
 FIRST_TELEMETRY_TIME_LIMIT = 3.0
 """Seconds for every telemetry value to arrive once (ADR-0031). The battery,
 streamed once a second, is the slowest."""
@@ -177,12 +176,15 @@ class CrazyflieAdapter(DroneInterface):
         """When the final descent must be over. Meaningful while FINAL_DESCENT."""
         self._touchdown_detector = TouchdownDetector()
         self._last_drone_time: float | None = None
+        self._dropped_state_count = 0
+        """State packets in a row with an estimate that isn't finite."""
 
     # --- Connection ---------------------------------------------------------
 
     def connect(self) -> None:
         _init_drivers_once()
         self._last_drone_time = None  # a new session: the drone may have rebooted
+        self._dropped_state_count = 0
         # A new session starts with no values, so the wait for the first telemetry
         # can't pass on values left from an earlier one (ADR-0031).
         self._telemetry = TelemetryBuffer(self._clock)
@@ -190,13 +192,13 @@ class CrazyflieAdapter(DroneInterface):
         self._sync_crazyflie = sync_crazyflie  # tracked from the start, so cleanup always finds it
         try:
             # cflib's blocking steps each get a time limit, waited for in short
-            # slices so Ctrl+C gets through, even on Windows (ADR-0029).
+            # slices so the interrupt signal gets through, even on Windows (ADR-0029).
             run_with_time_limit(
                 "Opening the link",
                 sync_crazyflie.open_link,  # raises if it can't connect
                 LINK_TIME_LIMIT,
-                "Check the Crazyflie is switched on, charged and in range.",
-                self._clock,
+                what_to_check="Check the Crazyflie is switched on, charged and in range.",
+                clock=self._clock,
                 # Stop a connection still under way. When connecting fails on its
                 # own, cflib closes the link itself.
                 on_abandon=sync_crazyflie.cf.close_link,
@@ -205,8 +207,8 @@ class CrazyflieAdapter(DroneInterface):
                 "Reading the parameters",
                 sync_crazyflie.wait_for_params,
                 PARAMETERS_TIME_LIMIT,
-                "The link may have dropped: check the Crazyflie is still switched on.",
-                self._clock,
+                what_to_check="The link may have dropped: check the Crazyflie is still switched on.",
+                clock=self._clock,
             )
             if not self._deck_attached("deck.bcFlow2", "deck.bcFlow"):  # Flow deck v2 or v1
                 raise RuntimeError("Flow deck not detected: autonomous flight needs it.")
@@ -214,8 +216,11 @@ class CrazyflieAdapter(DroneInterface):
                 "Settling the position estimate",
                 lambda: reset_estimator(sync_crazyflie),
                 POSITION_ESTIMATE_TIME_LIMIT,
-                "Check the Flow deck can see the floor (enough light and texture) and that the drone is sitting still.",
-                self._clock,
+                what_to_check=(
+                    "Check the Flow deck can see the floor (enough light and texture) "
+                    "and that the drone is sitting still."
+                ),
+                clock=self._clock,
             )
             self._start_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
             self._wait_for_first_telemetry()
@@ -288,14 +293,14 @@ class CrazyflieAdapter(DroneInterface):
         self._cancel_landing()
         self._release_velocity_streaming()
         commander = self._crazyflie.high_level_commander
-        latest = self._telemetry.latest_position_estimate()
-        if latest is None:
+        position_estimate = self._telemetry.latest_position_estimate()
+        if position_estimate is None:
             # No estimate yet: hold relative to the commander's own position.
             commander.go_to(0.0, 0.0, 0.0, DEFAULT_YAW_RAD, HOVER_SETTLE_DURATION, relative=True)
         else:
             # VERIFY: after velocity streaming, the high-level commander starts
             # this trajectory from the drone's current state, not a stale one.
-            here = latest.value
+            here = position_estimate.value
             commander.go_to(here.x, here.y, here.z, DEFAULT_YAW_RAD, HOVER_SETTLE_DURATION)
 
     def emergency_stop(self) -> None:
@@ -334,8 +339,8 @@ class CrazyflieAdapter(DroneInterface):
         return False
 
     def _latest_height(self, if_unknown: float) -> float:
-        latest = self._telemetry.latest_position_estimate()
-        return if_unknown if latest is None else latest.value.z
+        position_estimate = self._telemetry.latest_position_estimate()
+        return if_unknown if position_estimate is None else position_estimate.value.z
 
     def _release_velocity_streaming(self) -> None:
         # Hand control from low-level setpoints back to the high-level
@@ -360,14 +365,18 @@ class CrazyflieAdapter(DroneInterface):
     # --- Landing (ADR-0012, ADR-0019) ----------------------------------------
 
     def _may_be_flying(self) -> bool:
-        """True if the drone may be in the air, so a landing is needed (ADR-0032).
+        """Whether the drone may be in the air, so stopping it needs a landing (ADR-0032).
 
-        Only after a take-off not followed by our own motor stop: the drone
-        status keeps saying flying for 2 s after the motors stop. Then the
-        drone may be flying unless a fresh status says it isn't and the
-        take-off was long enough ago to show in it. A missing or old status is
-        unknown: landing is safe, while stopping the motors on a guess could cut
-        them in mid-air.
+        - No take-off sent since our last motor stop: not flying. The drone
+          status can't be trusted here, because after the motors stop it keeps
+          saying flying for 2 s.
+        - Otherwise, flying if the status is missing, older than
+          `MAX_READING_AGE`, or says flying. When unsure, say flying: a landing
+          sent to a drone already down only runs the motors until touchdown is
+          confirmed, while stopping the motors of a flying drone drops it.
+        - Otherwise (a fresh status says not flying), still flying for
+          `TAKE_OFF_STATUS_GRACE` after the take-off was sent, because the
+          status shows a take-off only after a short delay.
         """
         if not self._is_airborne:
             return False
@@ -380,8 +389,8 @@ class CrazyflieAdapter(DroneInterface):
     def _start_landing(self) -> float:
         """Start descending to the floor. Returns when the descent should be done."""
         self._release_velocity_streaming()
-        latest = self._telemetry.latest_position_estimate()
-        current_height = HEIGHT_IF_UNKNOWN if latest is None else latest.value.z
+        position_estimate = self._telemetry.latest_position_estimate()
+        current_height = HEIGHT_IF_UNKNOWN if position_estimate is None else position_estimate.value.z
         duration = move_duration(current_height, VERTICAL_SPEED, MIN_MOVE_DURATION)
         # A go_to, not the firmware's landing: when a landing finishes, the
         # firmware switches the motors off by itself, even above the floor. A
@@ -389,11 +398,11 @@ class CrazyflieAdapter(DroneInterface):
         # touchdown is confirmed (ADR-0032). VERIFY at the bench how the drone
         # settles at the floor while the go_to holds it there.
         commander = self._crazyflie.high_level_commander
-        if latest is None:
+        if position_estimate is None:
             # No estimate yet: straight down from the commander's own position.
-            commander.go_to(0.0, 0.0, -current_height, DEFAULT_YAW_RAD, duration, relative=True)
+            commander.go_to(0.0, 0.0, -HEIGHT_IF_UNKNOWN, DEFAULT_YAW_RAD, duration, relative=True)
         else:
-            here = latest.value
+            here = position_estimate.value
             commander.go_to(here.x, here.y, 0.0, DEFAULT_YAW_RAD, duration)
         self._landing_finishes_at = self._clock.now() + duration
         self._landing_phase = _LandingPhase.PLANNED
@@ -488,7 +497,7 @@ class CrazyflieAdapter(DroneInterface):
         """Return once every telemetry value has arrived once (ADR-0031).
 
         Checks the telemetry buffer every wait slice. Unlike cflib's waits
-        (ADR-0029), a plain sleep is interrupted by Ctrl+C at once, so this
+        (ADR-0029), a plain sleep ends at once on the interrupt signal, so this
         needs no helper thread.
         """
         deadline = self._clock.now() + FIRST_TELEMETRY_TIME_LIMIT
@@ -530,7 +539,28 @@ class CrazyflieAdapter(DroneInterface):
         position = Vector3(*(data[variable] for variable in _POSITION_VARIABLES))
         velocity = Vector3(*(data[variable] for variable in _VELOCITY_VARIABLES))
         status = drone_status_from_bitfield(int(data[_STATUS_VARIABLE]))
-        self._telemetry.write_estimates_and_status(position, velocity, status, drone_time)
+        if position.is_finite() and velocity.is_finite():
+            self._telemetry.write_estimates_and_status(position, velocity, status, drone_time)
+            if self._dropped_state_count > 0:
+                logger.info("Finite estimates are back after %d dropped state packets", self._dropped_state_count)
+                self._dropped_state_count = 0
+            return
+        # An estimate that isn't finite is dropped, so the last finite one stays
+        # and goes stale: the safety pre-check then lands the drone, and the
+        # landing has a real position to go to (ADR-0030).
+        if position.is_finite():
+            self._telemetry.write_position_estimate(position, drone_time)
+        if velocity.is_finite():
+            self._telemetry.write_velocity_estimate(velocity, drone_time)
+        self._telemetry.write_drone_status(status, drone_time)
+        if self._dropped_state_count == 0:
+            logger.warning(
+                "The drone sent an estimate that isn't finite (position %s, velocity %s): dropped, "
+                "so the last finite one stays and goes stale. Warned once per streak.",
+                position,
+                velocity,
+            )
+        self._dropped_state_count += 1
 
     def _on_battery(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
         self._telemetry.write_battery_voltage(data["pm.vbat"], self._drone_time(timestamp))

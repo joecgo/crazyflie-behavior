@@ -147,8 +147,8 @@ def test_the_summary_marks_an_invalid_range_reading() -> None:
 # --- The program ------------------------------------------------------------------
 
 
-class CtrlCOnThirdTick(BenchTickStep):
-    """The bench tick step, with Ctrl+C pressed on its third tick."""
+class InterruptSignalOnThirdTick(BenchTickStep):
+    """The bench tick step, with the interrupt signal sent on its third tick."""
 
     def __init__(self, drone: DroneInterface) -> None:
         super().__init__(drone)
@@ -162,27 +162,29 @@ class CtrlCOnThirdTick(BenchTickStep):
         return done or self._ticks_run >= GIVE_UP_AFTER_TICKS
 
 
-def test_the_bench_program_runs_with_the_mock_adapter_until_ctrl_c(
+def test_the_bench_program_runs_with_the_mock_adapter_until_the_interrupt_signal(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(bench_module, "BenchTickStep", CtrlCOnThirdTick)
+    monkeypatch.setattr(bench_module, "BenchTickStep", InterruptSignalOnThirdTick)
 
     try:
         exit_code = main([])
     except KeyboardInterrupt:
-        pytest.fail("Ctrl+C raised KeyboardInterrupt instead of making a stop request")
+        pytest.fail("The interrupt signal raised KeyboardInterrupt instead of making a stop request")
 
     assert exit_code == 0
     log_text = the_log_file_text(tmp_path / "logs")
     assert "Bench program, the mock adapter" in log_text
     assert "Snapshot: Snapshot(" in log_text  # the debug lines reach the file
-    assert "Ctrl+C made the stop request" in log_text
+    assert "The interrupt signal made the stop request" in log_text
     assert "Tick loop summary: ticks: 3" in log_text
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="sending Ctrl+C to another process works differently on Windows")
-def test_the_bench_program_runs_as_a_program_and_stops_on_ctrl_c(tmp_path: Path) -> None:
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="sending the interrupt signal to another process works differently on Windows"
+)
+def test_the_bench_program_runs_as_a_program_and_stops_on_the_interrupt_signal(tmp_path: Path) -> None:
     program = subprocess.Popen(
         [sys.executable, "-m", "crazyflie_behavior.programs.bench"],
         cwd=tmp_path,
@@ -200,5 +202,5 @@ def test_the_bench_program_runs_as_a_program_and_stops_on_ctrl_c(tmp_path: Path)
     assert exit_code == 0
     log_text = the_log_file_text(tmp_path / "logs")
     assert "Snapshot: Snapshot(" in log_text  # debug lines reach the file when run as a program
-    assert "Ctrl+C made the stop request" in log_text
+    assert "The interrupt signal made the stop request" in log_text
     assert "Tick loop summary" in log_text

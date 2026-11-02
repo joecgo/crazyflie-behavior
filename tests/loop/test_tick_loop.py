@@ -487,7 +487,34 @@ def test_the_summary_is_logged_even_when_the_tick_step_raises(
 
     summaries = [m for m in messages(caplog, logging.INFO) if m.startswith("Tick loop summary")]
     assert len(summaries) == 1
-    assert "ticks: 1, overruns: 0" in summaries[0]
+    assert "ticks: 2, overruns: 0" in summaries[0]
+
+
+class SlowFailingTickStep(TickStep):
+    """A fake tick step whose only tick takes `work_time` seconds, then raises."""
+
+    def __init__(self, clock: SimClock, work_time: float) -> None:
+        self._clock = clock
+        self._work_time = work_time
+
+    def run(self, time: float, dt: float) -> bool:
+        self._clock.advance(self._work_time)
+        raise RuntimeError("the tick step broke")
+
+
+def test_a_tick_that_raises_is_still_timed_and_logged(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger=LOGGER_NAME)
+    clock = SimClock()
+
+    with pytest.raises(RuntimeError, match="the tick step broke"):
+        make_loop(clock, SlowFailingTickStep(clock, work_time=0.375)).run()
+
+    assert "Tick 0: lateness 0.00 ms, work time 375.00 ms" in messages(caplog, logging.DEBUG)
+    assert messages(caplog, logging.WARNING) == [
+        "Overrun on tick 0: work time 375.00 ms, 125.00 ms past the next due time",
+    ]
+    summaries = [m for m in messages(caplog, logging.INFO) if m.startswith("Tick loop summary")]
+    assert "ticks: 1, overruns: 1" in summaries[0]
 
 
 # --- Garbage-collector pauses (ADR-0024) -----------------------------------------

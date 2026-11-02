@@ -1,8 +1,8 @@
 """Running a blocking step with a time limit (ADR-0029).
 
 The stuck steps wait in real time, because a stuck library call doesn't care
-about a sim clock. On Linux any wait can be interrupted by Ctrl+C; on Windows
-only the waiting in short slices makes the Ctrl+C test pass.
+about a sim clock. On Linux the interrupt signal gets through any wait; on
+Windows only the waiting in short slices makes the interrupt signal test pass.
 """
 
 # pyright: reportPrivateUsage=false
@@ -25,13 +25,13 @@ TIME_LIMIT_LOGGER = "crazyflie_behavior.drone.crazyflie.time_limit"
 class StuckStep:
     """A fake blocking call: waits until the test releases it, then may raise."""
 
-    def __init__(self, error_when_released: BaseException | None = None, press_ctrl_c: bool = False) -> None:
+    def __init__(self, error_when_released: BaseException | None = None, send_interrupt_signal: bool = False) -> None:
         self.release = threading.Event()
         self._error = error_when_released
-        self._press_ctrl_c = press_ctrl_c
+        self._send_interrupt_signal = send_interrupt_signal
 
     def __call__(self) -> None:
-        if self._press_ctrl_c:
+        if self._send_interrupt_signal:
             signal.raise_signal(signal.SIGINT)
         self.release.wait(timeout=10.0)
         if self._error is not None:
@@ -49,7 +49,7 @@ def stuck_steps() -> Generator[list[StuckStep]]:
 def test_a_step_that_finishes_in_time_returns_normally() -> None:
     results: list[str] = []
 
-    run_with_time_limit("A quick step", lambda: results.append("done"), 1.0, "", SimClock())
+    run_with_time_limit("A quick step", lambda: results.append("done"), 1.0, what_to_check="", clock=RealClock())
 
     assert results == ["done"]
 
@@ -59,7 +59,7 @@ def test_a_steps_own_error_rises_as_if_it_ran_on_this_thread() -> None:
         raise RuntimeError("the drone said no")
 
     with pytest.raises(RuntimeError, match="the drone said no"):
-        run_with_time_limit("A failing step", fail, 1.0, "", SimClock())
+        run_with_time_limit("A failing step", fail, 1.0, what_to_check="", clock=RealClock())
 
 
 def test_a_step_past_its_time_limit_raises_naming_the_step_and_what_to_check(
@@ -69,7 +69,7 @@ def test_a_step_past_its_time_limit_raises_naming_the_step_and_what_to_check(
     stuck_steps.append(step)
 
     with pytest.raises(TimeoutError, match=r"^A stuck step took longer than 0\.2 s\. Check it\.$"):
-        run_with_time_limit("A stuck step", step, 0.2, "Check it.", RealClock())
+        run_with_time_limit("A stuck step", step, 0.2, what_to_check="Check it.", clock=RealClock())
 
 
 def test_on_abandon_runs_before_the_timeout_rises(stuck_steps: list[StuckStep]) -> None:
@@ -82,16 +82,16 @@ def test_on_abandon_runs_before_the_timeout_rises(stuck_steps: list[StuckStep]) 
             "A stuck step",
             step,
             0.2,
-            "",
-            RealClock(),
+            what_to_check="",
+            clock=RealClock(),
             on_abandon=lambda: events.append("abandoned"),
         )
 
     assert events == ["abandoned"]
 
 
-def test_ctrl_c_gets_through_while_a_step_is_stuck(stuck_steps: list[StuckStep]) -> None:
-    step = StuckStep(press_ctrl_c=True)
+def test_the_interrupt_signal_gets_through_while_a_step_is_stuck(stuck_steps: list[StuckStep]) -> None:
+    step = StuckStep(send_interrupt_signal=True)
     stuck_steps.append(step)
     events: list[str] = []
     started = time.monotonic()
@@ -101,8 +101,8 @@ def test_ctrl_c_gets_through_while_a_step_is_stuck(stuck_steps: list[StuckStep])
             "A stuck step",
             step,
             30.0,
-            "",
-            RealClock(),
+            what_to_check="",
+            clock=RealClock(),
             on_abandon=lambda: events.append("abandoned"),
         )
 
@@ -110,16 +110,16 @@ def test_ctrl_c_gets_through_while_a_step_is_stuck(stuck_steps: list[StuckStep])
     assert events == ["abandoned"]
 
 
-def test_ctrl_c_the_moment_the_step_starts_still_cleans_up(
+def test_the_interrupt_signal_the_moment_the_step_starts_still_cleans_up(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     start = time_limit_module._HelperStep.start
 
-    def start_then_ctrl_c(step: time_limit_module._HelperStep) -> None:
+    def start_then_interrupt(step: time_limit_module._HelperStep) -> None:
         start(step)
-        raise KeyboardInterrupt  # as if Ctrl+C landed right as the helper started
+        raise KeyboardInterrupt  # as if the interrupt signal came right as the helper started
 
-    monkeypatch.setattr(time_limit_module._HelperStep, "start", start_then_ctrl_c)
+    monkeypatch.setattr(time_limit_module._HelperStep, "start", start_then_interrupt)
     events: list[str] = []
 
     with pytest.raises(KeyboardInterrupt):
@@ -127,8 +127,8 @@ def test_ctrl_c_the_moment_the_step_starts_still_cleans_up(
             "A step",
             lambda: None,
             1.0,
-            "",
-            SimClock(),
+            what_to_check="",
+            clock=SimClock(),
             on_abandon=lambda: events.append("abandoned"),
         )
 
@@ -143,13 +143,13 @@ def test_an_error_after_a_step_was_abandoned_is_still_logged(
     stuck_steps.append(step)
 
     with pytest.raises(TimeoutError):
-        run_with_time_limit("A stuck step", step, 0.2, "", RealClock())
+        run_with_time_limit("A stuck step", step, 0.2, what_to_check="", clock=RealClock())
     step.release.set()
 
     deadline = time.monotonic() + 5.0
     while not caplog.records and time.monotonic() < deadline:
         time.sleep(0.01)
-    assert caplog.messages == ["A stuck step ended with an error after its time limit"]
+    assert caplog.messages == ["A stuck step ended with an error after it was abandoned"]
     exc_info = caplog.records[0].exc_info
     assert exc_info is not None
     assert exc_info[2] is not None  # the traceback shows where it failed
@@ -166,7 +166,7 @@ def test_a_failing_cleanup_keeps_the_time_limit_message(
         raise RuntimeError("the link was half open")
 
     with pytest.raises(TimeoutError, match="A stuck step took longer"):
-        run_with_time_limit("A stuck step", step, 0.2, "", RealClock(), on_abandon=broken_cleanup)
+        run_with_time_limit("A stuck step", step, 0.2, what_to_check="", clock=RealClock(), on_abandon=broken_cleanup)
 
     assert "Cleaning up after A stuck step failed" in caplog.messages
 
@@ -201,6 +201,8 @@ def test_a_step_that_finishes_just_after_a_wait_slice_still_counts_as_in_time() 
         let_step_finish.wait(timeout=10.0)
         results.append("done")
 
-    run_with_time_limit("A step", finishes_when_let, 1.0, "", FinishesBetweenWaitAndCheck(let_step_finish))
+    run_with_time_limit(
+        "A step", finishes_when_let, 1.0, what_to_check="", clock=FinishesBetweenWaitAndCheck(let_step_finish)
+    )
 
     assert results == ["done"]

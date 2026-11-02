@@ -8,7 +8,8 @@ with --crazyflie:
     .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie --hover-seconds 60
 
 Each snapshot goes to the log file; the console shows the hover test's steps
-and each command sent. Ctrl+C is a stop request: the drone lands.
+and each command sent. In a terminal, Ctrl+C sends the interrupt signal, which
+makes a stop request: the drone lands.
 """
 
 import argparse

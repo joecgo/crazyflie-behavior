@@ -103,7 +103,7 @@ def _yes_no(flag: bool) -> str:
 
 
 def main(arguments: list[str] | None = None) -> int:
-    """Run the bench program until Ctrl+C. Returns the program's exit code."""
+    """Run the bench program until a stop request. Returns the program's exit code."""
     parser = argparse.ArgumentParser(
         prog="bench", description="Connect, tick and log every snapshot (field-test stage 0)."
     )

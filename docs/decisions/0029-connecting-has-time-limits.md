@@ -7,11 +7,12 @@
 ## Context
 
 Connecting to the Crazyflie has three cflib waits with no time limit
-(backlog #29): opening the link, reading the parameters, and waiting for the
-position estimate to settle. Each can wait forever: the link if it drops while
-the drone's variable lists download, the estimate if it never settles. On
-Windows, Python 3.12 can't interrupt such a wait, so Ctrl+C doesn't get
-through either.
+(backlog #29; syncCrazyflie.py:89 and :117, syncLogger.py:97): opening the
+link, reading the parameters, and waiting for the position estimate to
+settle. Each can wait forever: the link if it drops while the drone's
+variable lists download, the estimate if it never settles. On Windows,
+Python 3.12 can't interrupt such a wait (Python's `_thread` docs, Caveats),
+so Ctrl+C doesn't get through either.
 
 ## Options considered
 
@@ -32,8 +33,8 @@ Option A.
   even on Windows. Closing the link afterwards can take a second or two more.
 - **Time limits**, placeholders to measure at the bench (backlog #25): 15 s
   to open the link (a first connect, with nothing cached, downloads more),
-  10 s for the parameters, 20 s for the position estimate (cflib needs at
-  least 5 s).
+  10 s for the parameters, 20 s for the position estimate (cflib waits for
+  10 steady readings 500 ms apart, so at least 5 s: `cflib/utils/reset_estimator.py`).
 - A step past its limit makes `connect()` close the link and raise
   `TimeoutError`, naming the step and what to check. The program refuses to
   start with that message (ADR-0020).

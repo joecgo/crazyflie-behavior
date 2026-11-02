@@ -1,8 +1,7 @@
 """The tick loop: calls the tick step at the tick rate and keeps time (ADR-0024, ADR-0026).
 
-The loop is only a timer. It doesn't know what a tick does: the tick step holds
-the order (snapshot, safety pre-check, behaviors, send). A fitness function
-keeps this module from importing anything that does a tick's work.
+The loop is only a timer. It doesn't know what a tick does; the tick step does.
+A fitness function keeps this module from importing anything that does a tick's work.
 """
 
 import faulthandler
@@ -60,7 +59,7 @@ class HangWatchdog:
 
     def arm(self) -> None:
         """Start counting down for one tick."""
-        # Each call starts a small native thread, about 0.1 ms on Linux.
+        # Cheap enough for every tick: arm plus disarm measured under 1 ms on Windows (ADR-0026).
         faulthandler.dump_traceback_later(self._timeout, file=self._file)
 
     def disarm(self) -> None:
@@ -158,8 +157,8 @@ class TickLoop:
     an overrun the next tick starts at once and the beat restarts from there;
     missed ticks are skipped, never caught up.
 
-    Errors from the tick step aren't caught here. They rise to the caller's
-    `with drone:` block, which lands (ADR-0026).
+    Errors from the tick step aren't caught here. They rise to the program,
+    which disconnects and lands (ADR-0026).
     """
 
     def __init__(
@@ -186,13 +185,15 @@ class TickLoop:
         """Run ticks until the tick step reports it's done or a stop request arrives."""
         record = _TimingRecord()
         pauses = _GarbageCollectorPauses(self._clock)
-        gc.callbacks.append(pauses.on_collection)
         logger.info("Tick loop starting at %g Hz", self._tick_rate)
         try:
+            # Added inside the try that removes it, so no interruption can leave it behind.
+            gc.callbacks.append(pauses.on_collection)
             self._run_ticks(record, pauses)
         finally:
             # Also on an error, so the log shows how the loop was keeping time.
-            gc.callbacks.remove(pauses.on_collection)
+            if pauses.on_collection in gc.callbacks:
+                gc.callbacks.remove(pauses.on_collection)
             logger.info("Tick loop summary: %s", record.summary(pauses))
 
     def _run_ticks(self, record: _TimingRecord, pauses: _GarbageCollectorPauses) -> None:
@@ -212,8 +213,11 @@ class TickLoop:
                 # Watched until the tick's logging is done too, so a hang there
                 # (a blocked console, say) is also reported.
                 self._hang_watchdog.arm()
-                done = self._tick_step.run(start, dt)
-                due_time = self._finish_tick(record, pauses, due_time, start)
+                try:
+                    done = self._tick_step.run(start, dt)
+                finally:
+                    # Also when the tick step raises, so that tick's timing is logged too.
+                    due_time = self._finish_tick(record, pauses, due_time, start)
             finally:
                 self._hang_watchdog.disarm()
 

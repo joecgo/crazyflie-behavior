@@ -51,9 +51,9 @@ class RecordingBehavior(Behavior):
     def __init__(self, events: list[str]) -> None:
         self._events = events
 
-    def tick(self, snapshot: Snapshot, request: Callable[[CommandRequest], Verdict]) -> bool:
+    def tick(self, snapshot: Snapshot, ask_safety_layer: Callable[[CommandRequest], Verdict]) -> bool:
         self._events.append("behavior")
-        request(Hover())
+        ask_safety_layer(Hover())
         return False
 
 
@@ -124,10 +124,10 @@ def test_the_hover_test_arms_takes_off_hovers_and_lands() -> None:
     heights: list[float] = []
 
     class HeightRecorder(HoverTest):
-        def tick(self, snapshot: Snapshot, request: Callable[[CommandRequest], Verdict]) -> bool:
+        def tick(self, snapshot: Snapshot, ask_safety_layer: Callable[[CommandRequest], Verdict]) -> bool:
             assert snapshot.position_estimate is not None
             heights.append(snapshot.position_estimate.value.z)
-            return super().tick(snapshot, request)
+            return super().tick(snapshot, ask_safety_layer)
 
     tick_count = fly(BehaviorTickStep(drone, SafetyLayer(drone), HeightRecorder(HOVER_DURATION)), clock)
 

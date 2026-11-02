@@ -1,9 +1,9 @@
-"""Running a blocking step with a time limit, so Ctrl+C still gets through (ADR-0029).
+"""Running a blocking step with a time limit, so the interrupt signal still gets through (ADR-0029).
 
 cflib's connect waits with no time limit, and on Windows Python 3.12 can't
 interrupt such a wait. So each step runs on a helper thread, and the calling
-thread waits for it in short slices: between slices, Python handles Ctrl+C and
-the time limit is checked.
+thread waits for it in short slices: between slices, Python handles the
+interrupt signal and the time limit is checked.
 """
 
 import logging
@@ -15,13 +15,15 @@ from crazyflie_behavior.timing.clock import Clock
 logger = logging.getLogger(__name__)
 
 WAIT_SLICE = 0.1
-"""Seconds per wait, so Ctrl+C gets through within this long, even on Windows."""
+"""Seconds per wait, so the interrupt signal gets through within this long, even on Windows."""
 
 
 class _HelperStep:
     """One step on a helper thread.
 
-    A step stuck inside a library can't be stopped, only abandoned.
+    Python can't end a thread from outside: a thread ends only when its own code
+    returns or raises. A step stuck in a wait inside cflib never does, so it can't be
+    stopped, only abandoned: no longer waited for.
     """
 
     def __init__(self, name: str, action: Callable[[], object]) -> None:
@@ -64,41 +66,43 @@ class _HelperStep:
 
 
 def _log_abandoned_error(name: str, error: BaseException) -> None:
-    logger.warning("%s ended with an error after its time limit", name, exc_info=error)
+    logger.warning("%s ended with an error after it was abandoned", name, exc_info=error)
 
 
 def run_with_time_limit(
     name: str,
     action: Callable[[], object],
     time_limit: float,
-    hint: str,
+    *,
+    what_to_check: str,
     clock: Clock,
     on_abandon: Callable[[], object] | None = None,
 ) -> None:
     """Run `action` on a helper thread and wait for it, at most `time_limit` seconds.
 
-    Past the limit, raises TimeoutError naming the step and the `hint` (what
-    to check). The action's own error rises here, as if it had run on this
-    thread. On a timeout or Ctrl+C, `on_abandon` runs before the error rises,
-    for example to stop a connection still under way. Ctrl+C is noticed within
-    one wait slice; `on_abandon` may take longer.
+    Past the limit, raises TimeoutError naming the step and `what_to_check`.
+    The action's own error rises here, as if it had run on this thread. On a
+    timeout or KeyboardInterrupt (the interrupt signal), `on_abandon` runs
+    before the error rises, for example to stop a connection still under way.
+    The interrupt signal is noticed within one wait slice; `on_abandon` may
+    take longer.
     """
     step = _HelperStep(name, action)
     deadline = clock.now() + time_limit
     try:
-        # Started inside the try: a Ctrl+C can arrive the moment the step starts.
+        # Started inside the try: the interrupt signal can arrive the moment the step starts.
         step.start()
         while not step.finished.wait(WAIT_SLICE):
             # A step that finished just after the wait gave up still counts as in time.
             if clock.now() >= deadline and not step.finished.is_set():
-                raise TimeoutError(f"{name} took longer than {time_limit:g} s. {hint}")
+                raise TimeoutError(f"{name} took longer than {time_limit:g} s. {what_to_check}")
     except BaseException:
         step.abandon()
         if on_abandon is not None:
             try:
                 on_abandon()
             except Exception:
-                # Keep the time limit's or Ctrl+C's error: it names the step and the fix.
+                # Keep the timeout (it names the step and what to check) or KeyboardInterrupt, not this error.
                 logger.warning("Cleaning up after %s failed", name, exc_info=True)
         raise
     step.raise_error()
