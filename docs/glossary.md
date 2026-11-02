@@ -70,7 +70,7 @@ this file in the same commit as the code or ADR that uses it.
 
 | Term | Definition | UE5 analogy |
 |---|---|---|
-| **Arming** | Explicitly enabling the motors before flight (`supervisor.send_arming_request`). | No equivalent; closest is a "can move" gate on the Pawn. |
+| **Arming** | Enabling the motors before flight: the drone ignores flight commands until it's armed. Armed alone doesn't spin the motors. Stock Crazyflie 2.1+ firmware arms itself once its pre-flight checks pass (auto-arming); otherwise an arm request does it (`supervisor.send_arming_request`). | No equivalent; closest is a "can move" gate on the Pawn. |
 | **Emergency stop** (e-stop) | Immediately cut all motors. The drone falls. | Destroying the Pawn's movement component mid-air. |
 | **Supervisor** | Firmware subsystem tracking safety state (armed, flying, tumbled, crashed). | A gameplay state machine guarding what the Pawn may do. |
 | **Failsafe** | The safety layer's automatic response to a failure that makes flying unsafe: hover, land or stop, depending on how serious it is ([ADR-0020](decisions/0020-failures-degrade-gracefully.md)). | A gameplay fallback that ends the match cleanly when a critical system fails, instead of crashing. |
@@ -85,7 +85,8 @@ this file in the same commit as the code or ADR that uses it.
 | **Tool** | A standalone diagnostic script in `tools/` (e.g. `first_flight.py`) that may use cflib directly, bypassing the drone interface. Never imported by project code. | A commandlet or editor utility: useful for debugging, never part of gameplay code. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
 | **Mock adapter** | Adapter that is itself a simple fake drone: it answers commands and makes up telemetry in-process, with no physics, for tests and development. | A dummy Pawn used in an automation test. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md), renamed in [0010](decisions/0010-code-foundations.md) |
 | **Simulator** | A physics-ish model of the drone and room, including noise and drift. | PIE with a simulated world. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
-| **Behavior** | Decision-making logic that turns sensed state into commands. Never imports cflib. | The AIController's Behavior Tree. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
+| **Behavior** | Decision-making logic that turns sensed state into commands. Never imports cflib. | The AIController's brain component: a behavior tree or a state tree. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md), [0036](decisions/0036-game-logic-is-a-state-machine.md) |
+| **Outcome** | What a behavior's tick reports: running, succeeded or failed. | `EBTNodeResult` (InProgress, Succeeded, Failed). | [0036](decisions/0036-game-logic-is-a-state-machine.md) |
 | **Failure rule** | What a behavior does when a command request is refused or a step runs out of time: stop, land or retry. Game behaviors follow ADR-0020; a behavior written for a field test chooses its own and says so in its docstring. | A Behavior Tree task's choice to fail its branch or try again. | [0020](decisions/0020-failures-degrade-gracefully.md), [0033](decisions/0033-field-tests-choose-their-failure-rule.md) |
 | **Tick** | One iteration of the behavior update loop. | `Tick(DeltaTime)`. | [0003](decisions/0003-tick-loop-timing-model.md) |
 | **Tick loop** | The loop that runs ticks at the tick rate: it calls the tick step, then waits for the next due time. It keeps time, measures each tick and watches for hangs, but doesn't know what a tick does. | The engine loop with a frame-rate cap. | [0003](decisions/0003-tick-loop-timing-model.md), [0024](decisions/0024-tick-timing-strategy.md), [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
@@ -137,6 +138,7 @@ this file in the same commit as the code or ADR that uses it.
 |---|---|---|
 | **Fitness function** | A test that enforces a structural rule from an ADR, such as "only the Crazyflie adapter imports cflib". It reads the code, for example its imports, instead of running it, and fails continuous integration when the rule is broken. Fitness functions live in `tests/architecture/`. | No UE analogy. |
 | **Field test** | A session of real flights with a goal and pass criteria, planned and logged as [docs/field-testing/](field-testing/README.md) describes ([ADR-0033](decisions/0033-field-tests-choose-their-failure-rule.md)). | A playtest with a test plan and a bug report afterwards. |
+| **Recording** | A file of one run: a header (the git commit, the program, the adapter, the settings, the format version), then each tick's snapshot, command requests and verdicts, events and timing, as JSON Lines. Kept in `recordings/`; chosen ones are committed ([ADR-0034](decisions/0034-recorded-flights-as-json-lines.md)). | A demo recording: everything needed to play a session back. |
 | **Bug planting** | Deliberately breaking the code a test guards, to check that the test fails. One small change at a time, always removed afterwards and never committed. A test that still passes has a gap. A hand-made form of mutation testing. | No UE analogy. |
 
 ## Milestones

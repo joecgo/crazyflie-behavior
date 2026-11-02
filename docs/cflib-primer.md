@@ -144,6 +144,12 @@ scf.cf.supervisor.send_arming_request(True)
 time.sleep(1.0)
 ```
 
+**Stock Crazyflie 2.1+ firmware arms itself** once its pre-flight checks pass
+(auto-arming; checked in the firmware source, [ADR-0037](decisions/0037-disconnect-does-not-disarm.md)),
+so the request above only matters for firmware built with
+`CONFIG_MOTORS_REQUIRE_ARMING`. A disarm request is undone at once by
+auto-arming. Armed alone doesn't spin the motors (idle thrust is 0).
+
 The older `scf.cf.platform.send_arming_request(...)` still exists but is
 **marked deprecated** in 0.1.34. `supervisor` (`crazyflie/supervisor.py`) also
 gives you state flags (`is_armed`, `can_fly`, `is_flying`, `is_tumbled`,

@@ -1,6 +1,6 @@
 # 0028: Programs: a bench program first, plain logging, the mock adapter by default
 
-- **Status:** Accepted. Its note on Ctrl+C while connecting on Windows is resolved by [ADR-0029](0029-connecting-has-time-limits.md).
+- **Status:** Accepted. Its note on Ctrl+C while connecting on Windows is resolved by [ADR-0029](0029-connecting-has-time-limits.md). Amended by [ADR-0035](0035-console-output-on-a-background-thread.md): console output runs on a background thread.
 - **Date:** 2026-10-29
 - **Origin:** Mixed. Plain logging rather than background threads: mine, on a fast laptop with an SSD, after I asked why the simpler option wasn't recommended (the AI then changed its recommendation). The bench program, the `programs/` package and the mock adapter by default: AI recommendations accepted.
 

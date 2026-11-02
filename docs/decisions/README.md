@@ -42,5 +42,9 @@ This column is honest about which ideas were mine.
 | [0031](0031-connect-waits-for-first-telemetry.md) | connect() returns only once every telemetry value has arrived | AI recommendation accepted |
 | [0032](0032-landing-with-a-go-to.md) | Landing is a go_to down to the floor; our touchdown check stops the motors | My call, keeping in line with ADR-0012 and ADR-0019 (the AI recommended the firmware's landing) |
 | [0033](0033-field-tests-choose-their-failure-rule.md) | Behaviors written for field tests choose their own failure rule | Mixed: each test choosing, and the hover test stopping at its first refusal, were mine |
+| [0034](0034-recorded-flights-as-json-lines.md) | A recording is one JSON Lines file per run; chosen ones are committed compressed | AI recommendation accepted |
+| [0035](0035-console-output-on-a-background-thread.md) | Console output runs on a background thread; log-file writes stay on the tick's thread | Mixed: measuring before deciding was mine; the console-only thread was the AI's |
+| [0036](0036-game-logic-is-a-state-machine.md) | Game logic is a state machine per game; a behavior's tick reports an outcome | Mixed: a state machine now, a behavior tree later, was mine |
+| [0037](0037-disconnect-does-not-disarm.md) | Disconnecting doesn't disarm; the Crazyflie adapter logs whether the drone arms itself | AI recommendation accepted; turning off auto-arming was mine, deferred |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
