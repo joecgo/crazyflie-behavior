@@ -28,8 +28,9 @@ rules. On top of `CLAUDE.md`:
   continuous integration all green (`.github/workflows/checks.yml`: ruff
   format, ruff check, pyright, pytest).
 - **The review matters most.** Before each item's commit, run
-  `/project-review max` on that item's uncommitted changes. Never skip it or
-  lower the level: not when the item is only partly built, not when it has
+  `/project-review max fresh` on that item's uncommitted changes (`fresh`
+  adds the fresh-context read, the skill's step 7). Never skip it, lower the
+  level or drop `fresh`: not when the item is only partly built, not when it has
   open questions, not when its checks fail (then review it and say so in the
   pull request). Fix only plain bugs with an obvious fix, then re-run the
   checks. Every other finding (ADR conflicts, design, glossary, failure
