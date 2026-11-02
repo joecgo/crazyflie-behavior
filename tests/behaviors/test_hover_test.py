@@ -30,8 +30,8 @@ class SafetyLayerStandIn:
         self.requests: list[CommandRequest] = []
         self._refuse_with = refuse_with
 
-    def __call__(self, request: CommandRequest) -> Verdict:
-        self.requests.append(request)
+    def __call__(self, command_request: CommandRequest) -> Verdict:
+        self.requests.append(command_request)
         if self._refuse_with is not None:
             return Verdict.refused(self._refuse_with)
         return Verdict.approved()
@@ -156,7 +156,7 @@ def test_it_lands_if_the_take_off_does_not_reach_the_height_in_time(
 
     assert Land() not in requests_at_the_limit
     assert safety_layer.requests[-1] == Land()
-    assert "not at 0.50 m after 5 s (at 0.25 m). Landing." in caplog.text
+    assert errors_in(caplog) == ["Hover test failed: not at 0.50 m after 5 s (at 0.25 m). Landing."]
 
 
 def test_a_refused_request_ends_the_hover_test(caplog: pytest.LogCaptureFixture) -> None:
@@ -166,6 +166,15 @@ def test_a_refused_request_ends_the_hover_test(caplog: pytest.LogCaptureFixture)
 
     assert is_done
     assert errors_in(caplog) == ["Hover test failed: Arm() was refused: the drone is already flying"]
+
+
+@pytest.mark.parametrize("missing", ["drone_status", "position_estimate"])
+def test_a_tick_without_a_drone_status_or_position_is_a_bug(missing: str) -> None:
+    """The safety pre-check rules this out, so if it happens, it must not pass silently."""
+    incomplete = replace(snapshot(0.0, ON_THE_FLOOR), **{missing: None})
+
+    with pytest.raises(RuntimeError, match="safety pre-check should rule this out"):
+        HoverTest().tick(incomplete, SafetyLayerStandIn())
 
 
 def test_it_makes_each_request_once() -> None:
