@@ -24,10 +24,18 @@ rules. On top of `CLAUDE.md`:
   Push the branch after each item, so finished items survive if the run
   stops. Never push to `main`.
 - **Done for each item** (CLAUDE.md's definition of done): new tests proven
-  by bug planting (`docs/coding-style.md`), `/project-review` at level xhigh
-  with its findings fixed or listed in the pull request, and the same checks
-  as continuous integration all green (`.github/workflows/checks.yml`:
-  ruff format, ruff check, pyright, pytest).
+  by bug planting (`docs/coding-style.md`), and the same checks as
+  continuous integration all green (`.github/workflows/checks.yml`: ruff
+  format, ruff check, pyright, pytest).
+- **The review matters most.** Before each item's commit, run
+  `/project-review max` on that item's uncommitted changes. Never skip it or
+  lower the level: not when the item is only partly built, not when it has
+  open questions, not when its checks fail (then review it and say so in the
+  pull request). Fix only plain bugs with an obvious fix, then re-run the
+  checks. Every other finding (ADR conflicts, design, glossary, failure
+  rules, anything that needs a decision) goes into the pull request
+  description unfixed, with the full ranked findings list for each item,
+  since `ReportFindings` may not show anywhere in a cloud run.
 - **Environment:** Linux, so `.venv/bin/python`, and the installed cflib
   source is in `.venv/lib/python3.12/site-packages/cflib/` (CLAUDE.md gives
   the Windows path). Set up as `checks.yml` does.
