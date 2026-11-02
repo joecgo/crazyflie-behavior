@@ -1,8 +1,8 @@
 """The telemetry buffer: latest telemetry, written in the background (ADR-0007).
 
-Adapters write here from whatever thread their data arrives on; the tick loop
-calls `snapshot()` once per tick. A single lock guards both sides. It's the
-only lock in the data path, so behaviors never need one.
+Adapters write here from whatever thread their data arrives on, and
+`snapshot()` copies it out for each tick. A single lock guards both sides.
+It's the only lock in the data path, so behaviors never need one.
 
 Every adapter uses this same class (ADR-0008), so the locking is written and
 tested once.

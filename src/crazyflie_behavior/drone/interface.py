@@ -1,7 +1,8 @@
 """The drone interface: how the safety layer commands a drone (ADR-0008).
 
-Only the safety layer (commands) and the tick loop (snapshots) use this.
-Behaviors never do: they send command requests to the safety layer.
+The safety layer sends the commands and the tick step takes the snapshots;
+a program connects and disconnects. Behaviors never use it:
+they send command requests to the safety layer.
 
 Rules every adapter follows:
 - Commands are non-blocking (ADR-0003). They start an action and return;
@@ -94,7 +95,7 @@ class DroneInterface(ABC):
 
     @abstractmethod
     def take_snapshot(self, time: float, dt: float) -> Snapshot:
-        """Called once per tick by the tick loop: return this tick's snapshot.
+        """Called once per tick by the tick step: return this tick's snapshot.
 
         Adapters may also use this call to advance their own pending work,
         e.g. the mock adapter moves its fake drone forward by `dt`.

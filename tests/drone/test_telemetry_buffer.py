@@ -1,3 +1,4 @@
+import dataclasses
 import threading
 from collections.abc import Callable
 
@@ -173,3 +174,19 @@ def test_missing_values_names_only_what_has_not_arrived() -> None:
     buffer.write_battery_voltage(4.0, None)
 
     assert buffer.missing_values() == []
+
+
+def count_not_yet_arrived(value: object) -> int:
+    """The values still None in a snapshot, counting inside groups such as the range readings."""
+    if value is None:
+        return 1
+    if dataclasses.is_dataclass(value):
+        return sum(count_not_yet_arrived(getattr(value, field.name)) for field in dataclasses.fields(value))
+    return 0
+
+
+def test_missing_values_covers_every_value_in_the_snapshot() -> None:
+    # A snapshot value left out of missing_values would let connect() return before it arrives (ADR-0031).
+    buffer = TelemetryBuffer(SimClock())
+
+    assert len(buffer.missing_values()) == count_not_yet_arrived(buffer.snapshot(time=0.0, dt=0.0))

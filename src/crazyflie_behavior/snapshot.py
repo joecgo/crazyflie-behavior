@@ -1,7 +1,7 @@
 """The snapshot: one consistent, read-only picture of the drone's world per tick.
 
-The tick loop copies the telemetry buffer into a snapshot at the start of each
-tick; every behavior in that tick reads the same snapshot (ADR-0007). Every
+Each tick starts with a snapshot, a copy of the telemetry buffer; every
+behavior in that tick reads the same one (ADR-0007). Every
 telemetry value is stamped, so its age can always be checked.
 
 The snapshot is a frozen dataclass, so nothing can modify it after it's taken

@@ -25,9 +25,8 @@ from crazyflie_behavior.timing.clock import Clock
 CHARGED_BATTERY_VOLTAGE = 4.0
 """Volts. A freshly charged Crazyflie battery reads a little above this."""
 
-# From the firmware source (supervisor.c, checked 2026-10-29): a Crazyflie
-# levels out 0.5 s after velocity setpoints stop, and cuts its motors after
-# 2 s. VERIFY at the bench that the drone's firmware matches (ADR-0011).
+# From the firmware source. VERIFY at the bench that the drone's firmware
+# matches (ADR-0011).
 SETPOINT_STOP_FOLLOWING_AFTER = 0.5
 """Seconds without a set_velocity before the drone stops following it."""
 SETPOINT_CUT_MOTORS_AFTER = 2.0
@@ -54,6 +53,7 @@ class MockAdapter(DroneInterface):
         self._is_streaming = True
 
     # --- Test hooks: set the telemetry a test needs -----------------------------
+    # A value set here arrives at once, so a test can set it and then stop the telemetry.
 
     def set_range_reading(self, direction: RangeDirection, reading: RangeReading) -> None:
         self._range_readings[direction] = reading
