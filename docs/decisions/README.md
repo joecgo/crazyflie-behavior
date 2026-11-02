@@ -47,5 +47,6 @@ This column is honest about which ideas were mine.
 | [0036](0036-game-logic-is-a-state-machine.md) | Game logic is a state machine per game; a behavior's tick reports an outcome | Mixed: a state machine now, a behavior tree later, was mine |
 | [0037](0037-disconnect-does-not-disarm.md) | Disconnecting doesn't disarm; the Crazyflie adapter logs whether the drone arms itself | AI recommendation accepted; turning off auto-arming was mine, deferred |
 | [0038](0038-connecting-to-a-flying-drone.md) | Connecting refuses a flying drone; a rescue landing takes over the flight | Mixed: AI recommendations accepted; the full version now and the manual emergency stop were mine |
+| [0039](0039-the-adapter-decides-may-be-flying.md) | The adapter decides whether the drone may be flying; hover on the floor does nothing | AI recommendation accepted; splitting it off from backlog #8 was mine |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
