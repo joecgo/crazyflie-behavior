@@ -42,6 +42,10 @@ takeaway applies to reviews, it's added here as a question.
 - For each cleanup path: what if an interruption lands between two lines (log
   lines included), or comes twice? Is everything that needs cleaning up started inside the `try`
   that cleans it up?
+- A claim about what happens after a failure: is the code path read to its
+  end, through the program's shutdown?
+- A safety gap that's deferred: does an accepted ADR plan a feature that
+  would open it first?
 
 ## Time
 

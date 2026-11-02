@@ -28,16 +28,16 @@ decisions are recorded), *communication* (how Claude explains things).
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 3 | 10 |
-| safety design | 2 | 5 |
-| recommendation | 5 | 2 |
+| safety design | 3 | 7 |
+| recommendation | 6 | 2 |
 | environment | 2 | 5 |
 | communication | 5 | 3 |
 | testing | 0 | 3 |
-| process | 0 | 4 |
-| **Total** | **17** | **32** |
+| process | 0 | 5 |
+| **Total** | **19** | **35** |
 
-Of the 17 I pointed out, a later Claude review would probably have caught
-none, maybe 5, and probably not 12. So far, 5 of the 7 recommendation
+Of the 19 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 13. So far, 6 of the 8 recommendation
 mistakes needed me, and 5 of the 8 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
@@ -47,6 +47,41 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-01: A gap described without reading the code that closes it
+
+- **What happened:** in my second code review, Claude described a gap in the
+  hover test (gap (a), my explain-back question): after a failed pre-check,
+  "the take-off continues to 0.5 m and the drone only lands at shutdown".
+  Claude hadn't read `run_tick_loop`, which disconnects, and so lands, right
+  after the tick loop returns.
+- **Why it was wrong:** a safety claim made from memory of the design, not
+  from the code. It sent my review after a gap that, in that form, wasn't
+  there.
+- **How I caught it:** I read `run_tick_loop` while answering the question.
+- **Would a Claude review have caught it?** Maybe: a review that reads
+  `start_up.py` would see the shutdown, but the claim was in conversation,
+  not in a file a review reads.
+- **Kind:** safety design.
+- **Takeaway:** before describing what happens after a failure, read the
+  code path to its end, including the program's shutdown.
+
+### 2026-11-01: A backlog item written and dropped without checking or measuring
+
+- **What happened:** Claude wrote backlog #33 (logging runs inside the tick)
+  without checking ADR-0028, which had already chosen plain logging and
+  planned a switch to background threads if writes proved slow. Later Claude
+  proposed removing #33 before anything was measured.
+- **Why it was wrong:** both steps skipped what was known: an accepted ADR
+  on the same question, and the project's rule to measure before deciding.
+  When I pushed back, the measurement showed console output into a pipe
+  stalling ticks for up to 0.44 s (ADR-0035).
+- **How I caught it:** I asked to measure before removing it.
+- **Would a Claude review have caught it?** Probably not: it was a
+  recommendation.
+- **Kind:** recommendation.
+- **Takeaway:** before writing or dropping a backlog item, check the ADRs on
+  the same question, and measure a performance risk before calling it small.
 
 ### 2026-11-01: A key named where the code handles a signal
 
@@ -335,6 +370,33 @@ times so far).
 
 ## Mistakes Claude caught itself
 
+### 2026-11-02: Manual arming called a barrier that doesn't rely on our code
+
+- **What happened:** for backlog #37, Claude said manual arming (our own
+  firmware build) gives hide-and-seek "a second barrier that doesn't rely on
+  our code staying correct".
+- **Why it was wrong:** the arm request comes from our code too. A bug that
+  sends an arm request and then a flight command still spins the motors. It
+  is a second step a bug must hit, not a barrier independent of our code.
+- **Caught at:** explaining the claim when I asked what it meant.
+- **Kind:** safety design.
+- **Takeaway:** before calling a backup independent, name what triggers it
+  and check that the primary's failure can't trigger it too.
+
+### 2026-11-02: A pushed commit that doesn't pass its own tests
+
+- **What happened:** the review's work was committed by topic, but
+  `878c16f` uses `Vector3.is_finite()` and a renamed safety-layer property
+  that only arrive in the next commit, so it fails 25 tests on its own. The
+  tests ran only before the first commit, and Claude's brief for the commit
+  session asked for nothing more.
+- **Caught at:** running the tests at each commit after they were made, but
+  the commits had been pushed by then. I left the history as it is: the
+  commits before and after it pass.
+- **Kind:** process.
+- **Takeaway:** commit in dependency order and run the tests at every commit
+  before pushing, so any commit can be rolled back to.
+
 ### 2026-11-02: A failsafe whose landing used the value that failed it
 
 - **What happened:** Claude recommended that the safety pre-check fail on a
@@ -415,6 +477,20 @@ times so far).
 - **Kind:** process.
 - **Takeaway:** when a skill runs another skill, read the inner skill's
   instructions for steps that clash with the outer one's.
+
+### 2026-11-01: A safety gap deferred without checking the planned control that opens it
+
+- **What happened:** after the gap (a) correction, Claude proposed deferring
+  the fix for a hover command that can start the motors of a drone on the
+  floor (backlog #8), without checking ADR-0027, whose operator controls
+  include a "hover" key that would send exactly that command.
+- **Why it was wrong:** the deferral assumed nothing sends a hover command
+  on the floor before the safety-layer work; the accepted operator controls
+  do.
+- **Caught at:** the review session, checking the deferral against the ADRs.
+- **Kind:** safety design.
+- **Takeaway:** before deferring a safety gap, check the accepted ADRs for
+  planned features that would open it, and tie the fix to the first of them.
 
 ### 2026-11-01: A rename recommended without checking how the project already says it
 
