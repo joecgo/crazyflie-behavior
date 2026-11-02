@@ -1,6 +1,6 @@
 # 0019: Only the down range confirms touchdown; otherwise a bounded final descent
 
-- **Status:** Accepted. Supersedes part of [ADR-0012](0012-landing-confirms-touchdown.md): the height-estimate fallback, and holding at the landing target when touchdown isn't confirmed.
+- **Status:** Accepted. Supersedes part of [ADR-0012](0012-landing-confirms-touchdown.md): the height-estimate fallback, and holding at the landing target when touchdown isn't confirmed. Two notes below are outdated: the VERIFY now asks about a `go_to` after our landing's `go_to`, not after the firmware's landing ([ADR-0032](0032-landing-with-a-go-to.md)); and the interrupt signal no longer cuts shutdown short, since later ones are ignored ([ADR-0026](0026-tick-loop-calls-one-tick-step.md)).
 - **Date:** 2026-10-24
 - **Origin:** Mixed. Finding that the fallback can drop the drone, and requiring that it always lands rather than hovering until the battery dies: mine, from code review. The bounded final descent and its safeguards: AI recommendations accepted.
 

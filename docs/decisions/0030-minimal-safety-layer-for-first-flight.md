@@ -1,8 +1,8 @@
 # 0030: A minimal safety layer for First flight: a pre-check, one failsafe, the hover test's commands
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended 2026-11-02: a value that isn't finite counts as missing, and the Crazyflie adapter drops an estimate that isn't finite.
 - **Date:** 2026-10-30
-- **Origin:** Mixed. Asking whether the safety layer needs more than a pre-check, to keep the code simple, and one failsafe for now: mine. Keeping it the only code that sends commands, the scope below and plain functions: AI recommendations accepted.
+- **Origin:** Mixed. Asking whether the safety layer needs more than a pre-check, to keep the code simple, and one failsafe for now: mine. Keeping it the only code that sends commands, the scope below and plain functions: AI recommendations accepted. Counting a value that isn't finite (NaN or infinite) as missing, and dropping such an estimate in the adapter: AI recommendations accepted in my second code review.
 
 ## Context
 
@@ -26,13 +26,15 @@ failsafes (backlog #8). The question was how much of that First flight needs.
 
 Option A.
 
-- **The safety pre-check** checks for stale data, a low battery and a crashed
-  or tumbled drone, plus the operator's "land now" and "hover" (ADR-0027).
+- **The safety pre-check** checks for missing or stale data, a low battery
+  and a crashed or tumbled drone, plus the operator's "land now" and "hover" (ADR-0027).
 - **One failsafe: land.** Any failed check lands the drone; the operator's
   "hover" holds it instead. Severity levels wait (backlog #8).
 - **The safety layer stays the only code that sends commands** (ADR-0008). It
   approves arm, take off, hover and land by simple state rules, such as
-  "take off only when armed and on the floor".
+  "take off only when armed and on the floor". Hover and land need a flying
+  drone: on the floor, the firmware starts the move anyway and spins an armed
+  drone's motors (checked in `planner.c`, 2026-10-30).
 - **Velocity and fast-mode requests are refused** until steering mode and fast
   mode are built. Only the movement slot exists.
 - **The pre-check and the request judging are plain functions:** a snapshot
@@ -41,7 +43,12 @@ Option A.
 ## Failure modes
 
 - **Inputs:** a stale or missing value fails the pre-check and lands the
-  drone. A low battery reading does too; a noisy dip only lands it early,
+  drone. A battery voltage or position estimate that isn't finite counts as
+  missing. The Crazyflie adapter drops a position or velocity estimate that
+  isn't finite, with a warning once per streak: the last finite one stays, goes
+  stale within 0.25 s and fails the pre-check, and the landing goes to it
+  instead of to a NaN. A NaN battery voltage isn't dropped: nothing steers by
+  it, and dropping it would delay the failsafe by up to 3 s. A low battery reading does too; a noisy dip only lands it early,
   which is the safe direction. A lost link makes every value stale, but then
   the land command can't reach the drone either (backlog #26).
 - **Backups:** the firmware's own battery handling comes later than ours: low

@@ -1,5 +1,6 @@
 """Geometry types shared by every layer."""
 
+import math
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -25,6 +26,10 @@ class Vector3:
 
     def __mul__(self, scale: float) -> "Vector3":
         return Vector3(self.x * scale, self.y * scale, self.z * scale)
+
+    def is_finite(self) -> bool:
+        """Whether no component is NaN or infinite."""
+        return math.isfinite(self.x) and math.isfinite(self.y) and math.isfinite(self.z)
 
 
 Vector3.ZERO = Vector3(0.0, 0.0, 0.0)

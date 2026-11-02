@@ -22,3 +22,9 @@ def test_a_refused_verdict_says_why() -> None:
 
     assert not verdict.is_approved
     assert verdict.reason == "the drone isn't armed"
+
+
+@pytest.mark.parametrize(("is_approved", "reason"), [(False, ""), (True, "the drone isn't armed")])
+def test_a_refusal_without_a_reason_or_an_approval_with_one_is_a_bug(is_approved: bool, reason: str) -> None:
+    with pytest.raises(ValueError, match="reason"):
+        Verdict(is_approved=is_approved, reason=reason)

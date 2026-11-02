@@ -77,6 +77,12 @@ class Verdict:
     reason: str
     """Why the request was refused. Empty when approved."""
 
+    def __post_init__(self) -> None:
+        if not self.is_approved and not self.reason:
+            raise ValueError("A refused verdict needs a reason")
+        if self.is_approved and self.reason:
+            raise ValueError(f"An approved verdict has no reason: {self.reason}")
+
     @classmethod
     def approved(cls) -> "Verdict":
         return cls(is_approved=True, reason="")

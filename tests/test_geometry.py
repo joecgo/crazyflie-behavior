@@ -1,3 +1,7 @@
+import math
+
+import pytest
+
 from crazyflie_behavior.geometry import Vector3
 
 
@@ -17,3 +21,11 @@ def test_scaling_a_velocity_by_time_gives_a_displacement() -> None:
 
 def test_zero_is_the_origin() -> None:
     assert Vector3(0.0, 0.0, 0.0) == Vector3.ZERO
+
+
+@pytest.mark.parametrize(
+    "vector", [Vector3(math.nan, 0.0, 0.0), Vector3(0.0, math.inf, 0.0), Vector3(0.0, 0.0, -math.inf)]
+)
+def test_a_vector_with_a_nan_or_infinite_axis_isnt_finite(vector: Vector3) -> None:
+    assert Vector3(1.0, -2.0, 3.0).is_finite()
+    assert not vector.is_finite()

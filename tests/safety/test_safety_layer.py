@@ -154,8 +154,23 @@ def test_a_battery_below_the_landing_voltage_fails() -> None:
     ]
 
 
-def test_a_battery_voltage_that_isnt_a_number_fails() -> None:
-    assert safety_pre_check(snapshot(battery_voltage=math.nan)) == ["battery at nan V (land below 3.40 V)"]
+@pytest.mark.parametrize("voltage", [math.nan, math.inf])
+def test_a_battery_voltage_that_isnt_finite_fails(voltage: float) -> None:
+    assert safety_pre_check(snapshot(battery_voltage=voltage)) == [f"battery voltage isn't finite: {voltage} V"]
+
+
+@pytest.mark.parametrize(
+    "position",
+    [Vector3(math.nan, 0.0, 0.5), Vector3(0.0, math.inf, 0.5), Vector3(0.0, 0.0, -math.inf)],
+)
+def test_a_position_estimate_that_isnt_finite_fails(position: Vector3) -> None:
+    fresh = snapshot(FLYING)
+    broken = replace(fresh, position_estimate=stamped(position, 0.0))
+
+    failures = safety_pre_check(broken)
+
+    assert len(failures) == 1
+    assert failures[0].startswith("position estimate isn't finite: (")
 
 
 def test_a_crashed_drone_fails() -> None:
@@ -186,18 +201,18 @@ def test_taking_off_needs_an_armed_drone_on_the_floor() -> None:
     assert judge(TakeOff(0.5), snapshot(FLYING)).reason == "the drone is already flying"
 
 
-@pytest.mark.parametrize("request_", [Hover(), Land()])
-def test_hovering_and_landing_need_a_flying_drone(request_: CommandRequest) -> None:
+@pytest.mark.parametrize("command_request", [Hover(), Land()])
+def test_hovering_and_landing_need_a_flying_drone(command_request: CommandRequest) -> None:
     """On the floor, the firmware would spin up an armed drone's motors."""
-    assert judge(request_, snapshot(FLYING)).is_approved
-    assert judge(request_, snapshot(ARMED)).reason == "the drone isn't flying"
+    assert judge(command_request, snapshot(FLYING)).is_approved
+    assert judge(command_request, snapshot(ARMED)).reason == "the drone isn't flying"
 
 
-@pytest.mark.parametrize("request_", [SetVelocity(Vector3(0.1, 0.0, 0.0)), MoveTo(Vector3(1.0, 0.0, 0.5), 2.0)])
+@pytest.mark.parametrize("command_request", [SetVelocity(Vector3(0.1, 0.0, 0.0)), MoveTo(Vector3(1.0, 0.0, 0.5), 2.0)])
 def test_velocity_and_fast_mode_are_refused_until_the_speed_envelope_exists(
-    request_: CommandRequest,
+    command_request: CommandRequest,
 ) -> None:
-    verdict = judge(request_, snapshot(FLYING))
+    verdict = judge(command_request, snapshot(FLYING))
 
     assert not verdict.is_approved
     assert "speed envelope" in verdict.reason
@@ -235,13 +250,13 @@ def test_a_take_off_is_sent_with_its_height() -> None:
     assert drone.take_off_heights == [0.75]
 
 
-@pytest.mark.parametrize(("request_", "command"), [(Hover(), "hover"), (Land(), "land")])
-def test_hover_and_land_are_sent_as_themselves(request_: CommandRequest, command: str) -> None:
+@pytest.mark.parametrize(("command_request", "command"), [(Hover(), "hover"), (Land(), "land")])
+def test_hover_and_land_are_sent_as_themselves(command_request: CommandRequest, command: str) -> None:
     drone = RecordingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(FLYING))
 
-    safety_layer.request(request_)
+    safety_layer.request(command_request)
     safety_layer.send()
 
     assert drone.command_log == [command]
@@ -332,7 +347,7 @@ def test_a_failed_pre_check_lands_a_flying_drone_and_skips_behaviors(
 
     assert not behaviors_may_run
     assert drone.command_log == ["land"]
-    assert safety_layer.flight_is_over
+    assert safety_layer.pre_check_has_failed
     assert warnings_in(caplog) == ["Safety pre-check failed: battery at 3.30 V (land below 3.40 V). Landing."]
 
 
@@ -355,7 +370,7 @@ def test_a_failed_pre_check_on_the_floor_sends_nothing() -> None:
     safety_layer.send()
 
     assert drone.command_log == []
-    assert safety_layer.flight_is_over
+    assert safety_layer.pre_check_has_failed
 
 
 def test_after_the_failsafe_the_flight_never_resumes() -> None:
