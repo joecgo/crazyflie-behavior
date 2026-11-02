@@ -30,14 +30,14 @@ decisions are recorded), *communication* (how Claude explains things).
 | design | 3 | 10 |
 | safety design | 3 | 8 |
 | recommendation | 7 | 2 |
-| environment | 2 | 5 |
+| environment | 3 | 5 |
 | communication | 5 | 3 |
 | testing | 0 | 3 |
 | process | 0 | 5 |
-| **Total** | **20** | **36** |
+| **Total** | **21** | **36** |
 
-Of the 20 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 14. So far, 7 of the 9 recommendation
+Of the 21 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 15. So far, 7 of the 9 recommendation
 mistakes needed me, and 5 of the 8 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
@@ -47,6 +47,24 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-02: "Nothing is scheduled" said without checking
+
+- **What happened:** I asked whether there was enough information for the
+  cloud run at noon on 2026-11-03 to work without me. Claude answered that
+  nothing was scheduled and offered to create a routine, without checking.
+  A weekly routine that works through `docs/next-up.md` already existed, and
+  `next-up.md` itself said it was committed for cloud scheduled tasks.
+- **Why it was wrong:** a claim about my setup must come from checking it
+  (the routines list, the file the question was about), not from what this
+  conversation had seen.
+- **How I caught it:** I said I was confused and explained that the task
+  runs through `next-up.md`.
+- **Would a Claude review have caught it?** Probably not: it was said in
+  conversation, and reviews look at code and records.
+- **Kind:** environment.
+- **Takeaway:** before saying something does or doesn't exist (a schedule,
+  a session, a file), look it up, and read the file the question is about.
 
 ### 2026-11-02: Options offered that didn't fix the problem
 
