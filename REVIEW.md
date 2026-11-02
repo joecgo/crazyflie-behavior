@@ -44,6 +44,9 @@ takeaway applies to reviews, it's added here as a question.
   that cleans it up?
 - A claim about what happens after a failure: is the code path read to its
   end, through the program's shutdown?
+- For each error or cleanup path that closes the link: could the drone be
+  flying then? cflib's `close_link()` sends a zero-thrust setpoint first
+  (ADR-0038).
 - A safety gap that's deferred: does an accepted ADR plan a feature that
   would open it first?
 

@@ -28,16 +28,16 @@ decisions are recorded), *communication* (how Claude explains things).
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 3 | 10 |
-| safety design | 3 | 7 |
-| recommendation | 6 | 2 |
+| safety design | 3 | 8 |
+| recommendation | 7 | 2 |
 | environment | 2 | 5 |
 | communication | 5 | 3 |
 | testing | 0 | 3 |
 | process | 0 | 5 |
-| **Total** | **19** | **35** |
+| **Total** | **20** | **36** |
 
-Of the 19 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 13. So far, 6 of the 8 recommendation
+Of the 20 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 14. So far, 7 of the 9 recommendation
 mistakes needed me, and 5 of the 8 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
@@ -47,6 +47,23 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-02: Options offered that didn't fix the problem
+
+- **What happened:** for backlog #36, after finding that closing the link
+  drops a flying drone, Claude offered three ways to close it. B (always take
+  over and land) and C (don't close the link, let the process exit) were
+  listed as alternatives, though neither stops the drop: B left the other
+  `connect()` failures, and with C a later `disconnect()` still sends the
+  zero-thrust setpoint.
+- **Why it was wrong:** an option must solve the problem being decided.
+  These two only looked like alternatives.
+- **How I caught it:** I asked why B and C were suggested if they don't fix it.
+- **Would a Claude review have caught it?** Probably not: the options were in
+  conversation, and reviews look at code and records.
+- **Kind:** recommendation.
+- **Takeaway:** check each option against the problem before listing it. If
+  only one option fixes it, say so instead of inventing alternatives.
 
 ### 2026-11-01: A gap described without reading the code that closes it
 
@@ -369,6 +386,22 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-02: A refusal that drops the drone it protects
+
+- **What happened:** for backlog #36, Claude recommended that `connect()`
+  refuse a flying drone, right after noting that any `connect()` failure
+  closes the link and drops it, and the draft ADR said the refusal closes the
+  link "without a drop".
+- **Why it was wrong:** the refusal is a `connect()` failure too. cflib's
+  `close_link()` sends a zero-thrust setpoint before closing, so the refusal
+  would drop the flying drone (the adapter's own `disconnect()` comment says
+  so).
+- **Caught at:** checking `close_link()` in the cflib source while writing the
+  ADR, before it was recorded.
+- **Kind:** safety design.
+- **Takeaway:** for a new failure path, follow it through its cleanup, and
+  check what that cleanup sends to a drone that may be flying.
 
 ### 2026-11-02: Manual arming called a barrier that doesn't rely on our code
 
