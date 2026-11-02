@@ -92,7 +92,11 @@ ignores one:
   for who caught it, and update its at-a-glance table. For a mistake the user
   pointed out, say honestly whether a later Claude review would probably
   have caught it. When the takeaway applies to code reviews, add it to
-  `REVIEW.md` as a question.
+  `REVIEW.md` as a question. A mistake is something wrong by what was known
+  or written down at the time: a false claim, a bug, a broken ADR or rule, a
+  missed case, or an explanation that misled. A recommendation the user
+  decides against, a rule the user later changes, or a preference stated for
+  the first time is not a mistake.
 
 ## Shared language
 
@@ -148,10 +152,11 @@ ignores one:
 
 ## Skills to use
 
-- **`/code-review`** before committing changes to the safety layer, the
-  Crazyflie adapter or the timing loop (use a high level for safety code).
-  Every review also works through `REVIEW.md`, the checklist built from the
-  mistakes log.
+- **`/project-review`** before committing changes to the safety layer, the
+  Crazyflie adapter or the tick loop (use a high level for safety code). It
+  runs `/code-review`, then the checks that skill doesn't know about: the ADRs,
+  the glossary, failure handling and `REVIEW.md`, the checklist built from the
+  mistakes log (`.claude/skills/project-review/`).
 - **`dataviz`** for field-test and simulator analysis charts (drift over time,
   sensor noise by surface, sim-vs-real overlays).
 - Later, once the workflows have repeated a few times, consider project skills

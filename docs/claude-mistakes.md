@@ -5,6 +5,9 @@ The implementation and many of the options in this project are AI-assisted
 work it finds hard: where to focus my own learning, where to double-check
 Claude, and where a new skill for Claude might help.
 
+A mistake is something wrong by what was known or written down at the time.
+A recommendation I decide against, or a rule I change later, isn't one.
+
 Two sections, newest first in each:
 - **Mistakes I had to point out.** Each says whether a later Claude review
   would probably have caught it anyway.
@@ -15,7 +18,8 @@ Takeaways that apply to code reviews also become questions in the
 [review checklist](../REVIEW.md).
 
 **Kinds of work:** *design* (how parts fit together), *safety design*,
-*recommendation* (which option Claude pushed and why), *environment*
+*recommendation* (an option Claude pushed on a false fact, a missed
+constraint, or no real reason), *environment*
 (assumptions about my machine, time zone or tools), *testing*, *process* (how
 decisions are recorded), *communication* (how Claude explains things).
 
@@ -23,26 +27,83 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 2 | 7 |
-| safety design | 2 | 4 |
-| recommendation | 5 | 0 |
-| environment | 2 | 2 |
-| communication | 3 | 0 |
+| design | 3 | 10 |
+| safety design | 2 | 5 |
+| recommendation | 5 | 2 |
+| environment | 2 | 5 |
+| communication | 5 | 3 |
 | testing | 0 | 3 |
-| process | 0 | 2 |
-| **Total** | **14** | **18** |
+| process | 0 | 4 |
+| **Total** | **17** | **32** |
 
-Of the 14 I pointed out, a later Claude review would probably have caught
-none, maybe 4, and probably not 10. So far, every recommendation and
-communication mistake needed me. Claude's own reviews, planted bugs and
+Of the 17 I pointed out, a later Claude review would probably have caught
+none, maybe 5, and probably not 12. So far, 5 of the 7 recommendation
+mistakes needed me, and 5 of the 8 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
-pattern: an interruption landing between two lines of cleanup code (three
+pattern: an interruption landing between two lines of cleanup code (five
 times so far).
 
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-01: A key named where the code handles a signal
+
+- **What happened:** code, tests and log messages said "Ctrl+C" for what the
+  program actually receives: the operating system's interrupt signal
+  (SIGINT), which other tools can send too. The tests sent it with
+  `signal.raise_signal` while their docstrings said "pressing Ctrl+C", and
+  the start-up code logged "Ctrl+C pressed again" as a fact.
+- **Why it was wrong:** it's like naming a game's quit command after one of
+  its key bindings. A field-test log is evidence, and it would record a key
+  press that may not have happened: PyCharm's Stop button may send the same
+  signal (ADR-0027 still has to check).
+- **How I caught it:** reading the adapter's comments in my second code
+  review. Coming from games, I expected commands, not raw inputs.
+- **Would a Claude review have caught it?** Probably not: the wording was the
+  same everywhere, accepted ADRs included, and "Ctrl+C" is the everyday name
+  for this signal in command-line programs.
+- **Kind:** communication.
+- **Takeaway:** name what the code receives (a signal, a command), not the
+  raw input that usually sends it; only instructions for the operator name
+  the key. The glossary now has *Interrupt signal*, and the coding style has
+  the rule.
+
+### 2026-11-01: A local named for when it was fetched, not what it holds
+
+- **What happened:** in the Crazyflie adapter, three functions called the
+  position estimate `latest`, although the coding style already said to
+  name things after what they hold, not how they were obtained. The
+  `_may_be_flying()` docstring in the same diff was also hard to follow.
+- **Why it was wrong:** `latest` says when a value was fetched, not what it
+  is, so the reader has to look back to know it's the position estimate.
+- **How I caught it:** reading the adapter's diff in my second code review.
+- **Would a Claude review have caught it?** Maybe: the rule was written down,
+  but no review question asks about local names.
+- **Kind:** communication.
+- **Takeaway:** the naming rule applies to local variables too. The coding
+  style now says so, with `latest` as the example.
+
+### 2026-11-01: A behavior's failure rule chosen without asking
+
+- **What happened:** Claude wrote the hover test so that its first refused
+  request ends the test, and pinned that with a test, without asking me and
+  without noting that it goes against ADR-0020 ("keep going when it's safe,
+  retrying where it makes sense").
+- **Why it was wrong:** how a behavior handles a failure is error strategy,
+  which CLAUDE.md counts as architectural, and an exception to an accepted ADR
+  needs a decision. I kept the rule, for my own reason (the hover test is a
+  test), and ADR-0033 now lets each field test choose.
+- **How I caught it:** in my second code review, Claude said the hover test
+  treats any refusal as a failure, and I asked why the whole flight would fail
+  over a refusal that isn't a safety concern.
+- **Would a Claude review have caught it?** Probably not: the rule looked
+  deliberate and had its own test, and no review question asked whether a
+  behavior's failure handling follows ADR-0020.
+- **Kind:** design.
+- **Takeaway:** a rule for what code does on a failure (stop, retry or carry
+  on) is a decision: check it against ADR-0020 and ask.
 
 ### 2026-10-31: A quiz instead of an answer
 
@@ -273,6 +334,187 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-02: A failsafe whose landing used the value that failed it
+
+- **What happened:** Claude recommended that the safety pre-check fail on a
+  NaN position estimate and land, and built it. But the Crazyflie adapter's
+  landing flies to the estimated position, so it would have sent a NaN
+  `go_to`, and the NaN end time skipped the planned landing. Claude saw the
+  landing problem and put it in the backlog (#38) as later work, although the
+  new check made it the planned path.
+- **Caught at:** Claude's `/project-review`, at a high level, the same day.
+  Now the adapter drops an estimate that isn't finite, so the landing goes to
+  the last finite one (ADR-0030); tests are proven by bug planting.
+- **Kind:** safety design. A backup sharing the primary's failure.
+- **Takeaway:** when a check sends a bad value into a failsafe, follow that
+  value through the failsafe in the same change. The review checklist
+  already asked; the check was skipped while recommending.
+
+### 2026-11-02: Wording in the NaN change that missed the project's rules
+
+- **What happened:** in the same change, `Verdict`'s new check packed two
+  rules into one comparison, although `judge()` had just moved to plain `if`
+  statements; `Behavior.tick`'s docstring still promised only "present and
+  fresh"; and a comment restated ADR-0030's rule without pointing to it, as
+  the coding style asks.
+- **Caught at:** the same review.
+- **Kind:** communication.
+- **Takeaway:** a new rule also changes the docstrings that promise what
+  callers can rely on; check them in the same change.
+
+### 2026-11-02: The gap between two lines, a fifth time
+
+- **What happened:** the start-up code put the old interrupt signal handler
+  back before logging the end of a run. An interrupt signal during those last
+  log lines raised KeyboardInterrupt, which the program then logged as
+  "Interrupt signal while connecting", ending with exit code 130 after a
+  flight that had landed normally. The program's description was also logged
+  one line before the `try`, so an interrupt signal there escaped as an
+  uncaught KeyboardInterrupt.
+- **Caught at:** Claude's `/project-review`, at a high level, before
+  committing my second code review's fixes. Both now happen in the right
+  order, with two new tests proven by bug planting.
+- **Kind:** design. Windows of time between two steps.
+- **Takeaway:** log lines are lines too: keep a signal handler in place until
+  the last line it protects, and log inside the `try`.
+
+### 2026-11-02: A Windows call whose failure went unnoticed
+
+- **What happened:** `quick_edit_off` ignored what `SetConsoleMode` returned.
+  If turning QuickEdit off failed, the log still said it was off, and
+  selecting text could pause a tick with no warning. A failed restore went
+  unnoticed too.
+- **Caught at:** the same review. Both calls are checked now, and a failure is
+  a warning with the Windows error; two new tests (Windows only), proven by
+  bug planting.
+- **Kind:** environment.
+- **Takeaway:** check every Windows call's result: called through ctypes, a
+  failure is only a return value, never an exception.
+
+### 2026-11-02: A log message and a docstring narrower than the code
+
+- **What happened:** an abandoned connect step's late error was logged as
+  coming "after its time limit", but a step is also abandoned when the
+  interrupt signal stops connecting. And `_HelperStep`'s docstring said a
+  thread ends only when its code returns, leaving out raising.
+- **Caught at:** the same review. Now "after it was abandoned" and "returns
+  or raises".
+- **Kind:** communication.
+- **Takeaway:** check that a log message's cause holds on every path that
+  reaches it.
+
+### 2026-11-02: A review skill whose steps clashed with the skill it runs
+
+- **What happened:** `/project-review` runs `/code-review` and keeps its
+  findings for one merged report, but `/code-review`'s own instructions say
+  to report them itself. A run that followed `/code-review` would have
+  reported twice, with the merged list shown as a re-report.
+- **Caught at:** running `/project-review` in the same review. Its step 2 now
+  says not to report `/code-review`'s findings separately.
+- **Kind:** process.
+- **Takeaway:** when a skill runs another skill, read the inner skill's
+  instructions for steps that clash with the outer one's.
+
+### 2026-11-01: A rename recommended without checking how the project already says it
+
+- **What happened:** in my second code review, Claude recommended renaming
+  `missing_values`' "front range" to "front range reading", the glossary
+  term. But "down range" is the project's shorthand everywhere: the safety
+  layer's stale-data messages, the touchdown code and ADR-0019's title. The
+  rename would have made the operator's messages disagree. I accepted it.
+- **Caught at:** searching for the old names before making the change.
+- **Kind:** recommendation.
+- **Takeaway:** before recommending a rename, search how the rest of the
+  project already says it.
+
+### 2026-11-01: Code called dead without following every path to it
+
+- **What happened:** in my second code review, Claude recommended dropping
+  the writes in the mock adapter's `set_range_reading` and
+  `set_battery_voltage`, calling them dead because each snapshot rewrites
+  every value first. But after `stop_telemetry()` a snapshot rewrites
+  nothing, so the hook's write is the last value before the link goes quiet.
+  I accepted on that reasoning.
+- **Caught at:** the test run after the change: a bench summary test that
+  sets a reading and then stops the telemetry failed. The writes are back,
+  with a one-line comment saying why they're needed.
+- **Kind:** recommendation.
+- **Takeaway:** before calling code dead, follow every path to where its
+  result is read, including early returns.
+
+### 2026-11-01: A parameter named with a glossary term that means something else
+
+- **What happened:** `run_with_time_limit` called the "what to check" part of
+  its timeout message `hint`, but the glossary's *Hint* is the drone's LED
+  flash and chirp while it's hidden (ADR-0017). The docstring called the same
+  text "what to check" and a comment called it "the fix": three names for
+  one thing.
+- **Caught at:** walking me through `time_limit.py` in my second code review.
+  It's now `what_to_check`, keyword-only, so every call shows the name.
+- **Kind:** communication.
+- **Takeaway:** before naming something, look the word itself up in the
+  glossary, not only the concept.
+
+### 2026-11-01: Cloud setup advice from memory
+
+- **What happened:** to get `CLAUDE.local.md` into cloud sessions, Claude
+  described the cloud setup script from memory: where to find it, and a line
+  that downloads the file into the repo folder. The docs say the script runs
+  before Claude Code starts, is cached for about seven days, and should write
+  `~/.claude/CLAUDE.md` instead.
+- **Caught at:** looking up the docs after I couldn't find the setup script.
+- **Kind:** environment.
+- **Takeaway:** check how a tool works in its docs before giving
+  step-by-step instructions, the same as checking cflib against its source.
+
+### 2026-11-01: Code reviews that skipped the review checklist
+
+- **What happened:** CLAUDE.md says every `/code-review` also works through
+  `REVIEW.md`. The skill's own steps don't include it, and Claude's two
+  high-level reviews on 2026-11-01 followed the skill's steps only.
+- **Caught at:** answering my question about why some findings come up only
+  in my reviews.
+- **Kind:** process.
+- **Takeaway:** the skill doesn't know this project's checklist, ADRs or
+  glossary; a review here must bring them in itself. The project skill
+  `/project-review` now does.
+
+### 2026-11-01: The gap between two lines, a fourth time
+
+- **What happened:** the tick loop added its garbage-collector hook before
+  the `try` whose `finally` removes it, with a log call in between. Safe in
+  practice (Ctrl+C can't raise by then), but it's the same shape as the
+  earlier cleanup gaps.
+- **Caught at:** walking me through `tick_loop.py` in my second code review.
+  The hook is now added inside the `try`, and removed only if present.
+- **Kind:** design. Windows of time between two steps.
+- **Takeaway:** start anything that needs cleaning up inside the `try` that
+  cleans it up.
+
+### 2026-11-01: A tick that raised left no timing behind
+
+- **What happened:** when the tick step raised, the tick loop skipped
+  recording that tick, so the log and the summary left out its work time and
+  any overrun warning, against ADR-0026's "every tick is logged". A test
+  pinned the old count.
+- **Caught at:** walking me through `tick_loop.py` in my second code review.
+  The tick is now recorded in a `finally`; a new test is proven by bug
+  planting.
+- **Kind:** design. Edge cases at the start, end and between ticks.
+- **Takeaway:** on an error path, check that what the normal path records is
+  still recorded.
+
+### 2026-11-01: A cost from Linux in a comment, with no source
+
+- **What happened:** a comment said arming the hang watchdog costs "about
+  0.1 ms on Linux", with no source, and the program runs on Windows.
+- **Caught at:** walking me through `tick_loop.py` in my second code review.
+  Measured on my laptop (0.09 ms median, 0.8 ms worst), and the comment now
+  says so.
+- **Kind:** environment. Code that was only run on Linux.
+- **Takeaway:** a performance figure says where it was measured, on the
+  machine the program runs on.
 
 ### 2026-10-31: A battery check that a NaN voltage would pass
 

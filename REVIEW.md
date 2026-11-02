@@ -1,19 +1,22 @@
 # Review checklist
 
 Questions every code review asks, on top of looking for ordinary bugs: in
-Claude's `/code-review` (CLAUDE.md points it here) and in my own reviews.
+Claude's `/project-review` (step 6) and in my own reviews.
 Each one comes from a takeaway in the [mistakes log](docs/claude-mistakes.md),
 so reviews look for the kinds of mistakes Claude has made before. When a new
 takeaway applies to reviews, it's added here as a question.
 
 ## Facts about the hardware and libraries
 
-- Does every claim about how the firmware, cflib, Python or Windows behaves
-  name the file or document it was checked in? A claim without one is a guess.
+- Was each claim about how the firmware, cflib, Python or Windows behaves
+  checked, not recalled? If a decision or safety code rests on it, its ADR
+  names the file it was checked in. Docstrings and comments don't cite
+  sources.
 - For each library call the code relies on: what does it do on a timeout or
   an error? Is that checked in the source?
-- Windows-only code: is it checked against Windows' documented behavior?
-  Continuous integration runs on Linux.
+- Windows-only code: is it checked against Windows' documented behavior, and
+  is every Windows call's result checked? Continuous integration runs on
+  Linux.
 
 ## Fakes and the real drone
 
@@ -28,13 +31,16 @@ takeaway applies to reviews, it's added here as a question.
 - For each failure mode: how is it detected, how is it logged, and what
   handles it?
 - For each backup: what is it computed from, and is that the thing that just
-  failed?
+  failed? For a failsafe a check triggers, follow the failed value through
+  the failsafe's own action.
+- For each failure or refusal the code handles: does it stop, retry or carry
+  on, and does that follow ADR-0020 (or ADR-0033, for a field test)?
 - A decision made from telemetry: what does it do when the value is missing,
   old or not a number? Is that the safe choice for that decision?
 - For a check like "has it arrived?" or "is it ready?": could state left by
   an earlier run or connection satisfy it?
-- For each cleanup path: what if an interruption lands between two lines, or
-  comes twice? Is everything that needs cleaning up started inside the `try`
+- For each cleanup path: what if an interruption lands between two lines (log
+  lines included), or comes twice? Is everything that needs cleaning up started inside the `try`
   that cleans it up?
 
 ## Time
@@ -43,8 +49,8 @@ takeaway applies to reviews, it's added here as a question.
   what does a failing cleanup do to the error meant to be shown?
 - A loop: check the first tick, the last tick and the time between ticks, not
   just the middle.
-- A mechanism such as Ctrl+C or a timeout: what does it do by default, and
-  what does a second one do?
+- A mechanism such as the interrupt signal or a timeout: what does it do by
+  default, and what does a second one do?
 
 ## How I run things
 
@@ -62,6 +68,10 @@ takeaway applies to reviews, it's added here as a question.
   status line marked?
 - Does every term in a new name or comment appear in the glossary, even one
   that other docs already use? Does its definition still match the code?
+- Does a new name use a glossary term's word for something else?
+- Does a name, comment or log message name a raw input (a key) where the
+  code receives a signal or command?
+- Does each log message's stated cause hold on every path that reaches it?
 - New tests: are they proven by bug planting
   ([coding style](docs/coding-style.md))?
 

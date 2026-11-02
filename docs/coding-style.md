@@ -50,8 +50,13 @@ Unitless values (counts, ratios, flags) get no suffix.
 
 - Use **glossary terms** exactly (`docs/glossary.md`). A concept without a
   glossary term gets one proposed before it's named in code.
-- **Name things after what they hold**, not how they were obtained:
-  `available_drones`, not `found` or `result`.
+- **Name things after what they hold**, not how or when they were obtained:
+  `available_drones`, not `found` or `result`; `position_estimate`, not
+  `latest`. Local variables too: a short function is still read by someone
+  who doesn't know what was fetched two lines up.
+- **Name what the code receives, not the raw input that usually sends it:**
+  the interrupt signal, not Ctrl+C; a command, not its key. Only instructions
+  for the operator name the key to press.
 - **Full words, not abbreviations:** `crazyflie`, not `cf`; `reading`, not
   `rdg`. Standard abbreviations are fine: unit suffixes (`_ms`, `_mm`,
   `_rad`), and well-known ones such as `dt`, `uri` and `id`. Names that
@@ -80,15 +85,20 @@ Unitless values (counts, ratios, flags) get no suffix.
 - **Comments explain *why***, not what the next line does. A good comment
   records a non-obvious constraint ("cflib callbacks run on its receive
   thread, so only copy data here").
+- **A comment describes the code it's on.** A fact another module, an ADR or
+  the glossary owns gets a pointer there, not a copy that can go stale.
+- **Sources go in the ADR, not the code.** Check a claim about the firmware or
+  a library before writing it. If a decision rests on it, the ADR names the
+  file it was checked in; the docstring stays short.
 - Reference ADRs where code exists *because of* a decision (`# See ADR-0003.`).
 
 ## Tests
 
 - **Prove every new test by bug planting** (see the glossary): break the
   behavior the test guards, one small change at a time, and check that the
-  test fails, fails on its own (an escaped Ctrl+C or crash stops the whole
-  run) and doesn't hang. Then restore the code. A test that no planted bug
-  can fail is a gap.
+  test fails, fails on its own (an escaped KeyboardInterrupt or crash stops
+  the whole run) and doesn't hang. Then restore the code. A test that no
+  planted bug can fail is a gap.
 - **Compare computed floats with `pytest.approx`**, never `==`: most decimals
   (0.1, 0.3) aren't exact in binary, so `0.1 + 0.2 == 0.3` is false. `==` is
   fine for a value passed through unchanged, or for exact values (whole
