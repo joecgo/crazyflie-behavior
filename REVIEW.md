@@ -87,4 +87,5 @@ spec, by their names.
 | Dates | Reviewed up to | What |
 |---|---|---|
 | 2026-10-22 to 2026-10-27 | `b3bc274` | All the source then (geometry, snapshot, clock, the drone interface, telemetry buffer, mock adapter, conversions, touchdown, the Crazyflie adapter) and the tests, as a spec. Led to ADR-0018 to ADR-0021 and 20 new adapter tests |
-| Next | | Everything after `b3bc274`: ADRs 0022 to 0032, the safety layer, the tick loop, behaviors, programs and the drone changes |
+| 2026-10-28 to 2026-11-02 | `366714a` | ADRs 0022 to 0033, the safety layer, the tick loop, behaviors, programs and the drone changes. Led to ADR-0033 and the non-finite-value rule in ADR-0030 |
+| Next | | Everything after `366714a` |
