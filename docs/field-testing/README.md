@@ -71,9 +71,9 @@ One file per session: `sessions/YYYY-MM-DD-<env>-<short-goal>.md`, from
 Every session records the **git commit** (hash) that flew, so any result can be
 traced to the exact code. Commit before flying, and never fly uncommitted code.
 
-## Open decision
+## Recordings
 
-`.gitignore` currently excludes `logs/`, `flights/` and `*.csv`, so recorded
-telemetry wouldn't be in the repo. Replay tests and the portfolio both need
-some recorded flights committed. Where they live, in what format, and whether
-large files use Git LFS is an architecture decision for an ADR before stage 1.
+Each run writes one *recording* (JSON Lines) to the git-ignored `recordings/`
+folder. Recordings worth keeping, for replay tests and as field-test evidence,
+are committed compressed, without Git LFS
+([ADR-0034](../decisions/0034-recorded-flights-as-json-lines.md)).
