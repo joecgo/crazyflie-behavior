@@ -2,22 +2,71 @@
 
 Committed (lives in docs/, not the ignored drafts/) so cloud scheduled
 tasks can read it. The weekly limit resets 2026-11-03 at
-11:59 AM Pacific.
+11:59 AM Pacific; the "Weekly next-up.md run" routine starts at 12:05 PM.
 
-1. **ADR-0037 C: the auto-arming log line.** Open the stopped session "Log
-   whether the drone arms itself (ADR-0037 C)" and say "continue". Crazyflie
-   adapter code, with a `/project-review` before committing. Extra, Opus.
-2. **Build ADR-0038: connecting to a flying drone.** Decided 2026-11-02.
-   The reordered `connect()`, the safe link close, `take_over_flight`, the
-   rescue-landing program and the emergency-stop script. Crazyflie adapter
-   code, with a `/project-review`. Before First flight. Extra, Opus.
-3. **Backlog #8: "one definition: the adapter decides."** Already decided;
-   add a floor check to the adapter's `hover()` like `land()`'s, and fix the
-   failsafe's "no landing sent" wording. Due with the operator controls
-   (ADR-0027), before the "hover" key is built. Extra, Opus.
+## Rules for an unattended run
 
-Later (not urgent): a field-test list in `docs/field-testing/` with two
-sections, **Hardware checks** (the `VERIFY` notes: firmware and cflib
-assumptions, stages 0-1) and **Safety tests** (each designed failsafe tried
-for real, stage 3, e.g. kill the program mid-hover and run the rescue
-landing, ADR-0038). Also fix the README's stale "Open decision" (ADR-0034).
+The cloud run can't ask Joe anything, and it doesn't have his local-only
+rules. On top of `CLAUDE.md`:
+
+- **Joe makes every design decision.** Small local details (log level,
+  message wording, helper names) you may choose: list each one in the pull
+  request under "Choices for Joe to confirm". An architectural question
+  (CLAUDE.md's definition) you don't decide: skip that part, add the
+  question to `docs/decision-backlog.md`, and list it under "Questions for
+  Joe". Never change `docs/glossary.md`: propose the before and after in the
+  pull request.
+- **Delivery:** one branch, `next-up-2026-11-03`, and one pull request
+  against `main`. One commit per item, each message naming its ADR
+  (`Implements ADR-0037`), with the trailer
+  `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Author:
+  `Joe <13664218+joecgo@users.noreply.github.com>`, never another address.
+  Push the branch after each item, so finished items survive if the run
+  stops. Never push to `main`.
+- **Done for each item** (CLAUDE.md's definition of done): new tests proven
+  by bug planting (`docs/coding-style.md`), `/project-review` at level xhigh
+  with its findings fixed or listed in the pull request, and the same checks
+  as continuous integration all green (`.github/workflows/checks.yml`:
+  ruff format, ruff check, pyright, pytest).
+- **Environment:** Linux, so `.venv/bin/python`, and the installed cflib
+  source is in `.venv/lib/python3.12/site-packages/cflib/` (CLAUDE.md gives
+  the Windows path). Set up as `checks.yml` does.
+- **Logs Joe keeps:** add mistakes you catch yourself to
+  `docs/claude-mistakes.md` as CLAUDE.md says. Don't touch `docs/worklog.md`
+  or the review log in `REVIEW.md`: Joe adds those rows.
+- Tick each item's box below in the same commit. If an item is blocked, say
+  why next to it and go on to the next.
+
+## Items, in order
+
+1. [ ] **ADR-0037 C: the auto-arming log line.** The Crazyflie adapter
+   (`src/crazyflie_behavior/drone/crazyflie/adapter.py`) logs once at
+   connect whether the drone arms itself. Decode the bit from the
+   `supervisor.info` bitfield the adapter already streams in the drone
+   status log block (ADR-0021); cflib names it `BIT_IS_AUTO_ARMED` in
+   `cflib/crazyflie/supervisor.py` (check it there). Don't use cflib's
+   blocking `read_bitfield`. Auto-arming stays inside the adapter: adding it
+   to the drone interface or `DroneStatus` is a portability decision for
+   Joe. `connect()` already waits for the first telemetry (ADR-0031), so the
+   status is there to read. Tests in the adapter's test files, with the fake
+   cflib.
+2. [ ] **ADR-0038: connecting to a flying drone.** Everything in its
+   "To build" consequence: the reordered `connect()`, the safe link close,
+   the `take_over_flight` setting in the Crazyflie adapter and the mock, the
+   rescue-landing program in `src/crazyflie_behavior/programs/`, the
+   emergency-stop script in `tools/`, the field-testing procedure note, and
+   the tests it names. Item 1's log line has to keep working after the
+   reorder.
+3. [ ] **ADR-0039: the adapter decides whether the drone may be flying.**
+   `judge()` approves `Hover` and `Land` whatever the drone status says; the
+   failsafe always puts `Land` in the movement slot, and its log no longer
+   says "no landing sent"; the Crazyflie adapter's `hover()` does nothing on
+   the floor (not `_may_be_flying()`), logged once per streak at info level
+   (Claude's suggestion, not yet confirmed: list it for Joe). Tests for all
+   three, including the failsafe landing during the take-off grace period.
+
+Not for the cloud run (later, not urgent): a field-test list in
+`docs/field-testing/` with two sections, **Hardware checks** (the `VERIFY`
+notes: firmware and cflib assumptions, stages 0-1) and **Safety tests**
+(each designed failsafe tried for real, stage 3, e.g. kill the program
+mid-hover and run the rescue landing, ADR-0038).
