@@ -143,7 +143,7 @@ rules. On top of `CLAUDE.md`:
    and warns once over several ticks, and again after a normal age ends the
    streak.
 
-7. [ ] **ADR-0043: how field tests are organized** (docs only, after item
+7. [x] **ADR-0043: how field tests are organized** (docs only, after item
    6). Record the decisions Joe made on 2026-11-02 while revising
    `docs/field-testing/README.md`; that README and the commit messages
    (`f001895`, `6622b8e`, `7ec3ec2`, `0cc9dff`) are the source. Don't decide anything new:

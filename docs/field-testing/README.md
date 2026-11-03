@@ -34,7 +34,9 @@ room", is the portfolio story.
 ## Tests
 
 Three kinds: calibration tests measure the drone, safety tests make its
-failsafes fire on purpose, and flight tests fly it.
+failsafes fire on purpose, and flight tests fly it. The first time through,
+each is passed once, in order. [ADR-0043](../decisions/0043-how-field-tests-are-organized.md)
+records how the tests are organized, and why there is no gate between them.
 
 ### Calibration tests
 
