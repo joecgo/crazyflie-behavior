@@ -1,13 +1,13 @@
 # 0041: The Failsafe low and Failsafe high tests inject a fault into the safety pre-check
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended 2026-11-02: Failsafe high flies at 0.5 m, the Hover test's height, instead of 0.3 m, so the failsafe is proven at the height Hover then flies. Edited in place rather than superseded, since the program isn't built yet. Accepted risk: a bigger step from 0.1 m, with no middle height.
 - **Date:** 2026-11-02
-- **Origin:** Mixed. A failsafe test before the Hover test, from 0.1 m and then 0.3 m, run by one program, and the names Failsafe low and Failsafe high: mine. Injecting a fault into the pre-check, so the drone lands itself: my choice, after the AI first described the alternative (the program exits and the rescue landing takes over) wrongly as an automatic failsafe.
+- **Origin:** Mixed. A failsafe test before the Hover test, from 0.1 m and then 0.3 m, run by one program, and the names Failsafe low and Failsafe high: mine. Raising Failsafe high to the Hover test's 0.5 m, and amending this record in place: mine. Injecting a fault into the pre-check, so the drone lands itself: my choice, after the AI first described the alternative (the program exits and the rescue landing takes over) wrongly as an automatic failsafe.
 
 ## Context
 
 The field-testing README gets two tests before Hover: the drone takes off to
-0.1 m (Failsafe low) or 0.3 m (Failsafe high) and the failsafe landing
+0.1 m (Failsafe low) or 0.5 m (Failsafe high) and the failsafe landing
 ([ADR-0030](0030-minimal-safety-layer-for-first-flight.md)) brings it down.
 Something has to trigger it. The operator's "land now" hotkey
 ([ADR-0027](0027-operator-controls.md)) isn't built, and a program that exits
@@ -28,7 +28,7 @@ leaves the drone hovering for a manual rescue landing
 Option A. The drone landing itself on a failed pre-check is the behavior being
 proven, so the test uses that path.
 
-- One program flies both tests, taking the height (0.1 m or 0.3 m) as an
+- One program flies both tests, taking the height (0.1 m or 0.5 m) as an
   argument.
 - **The fault is a forged low battery, injected by a wrapper around the
   drone,** not by a change to the safety layer. The wrapper hands the safety
@@ -57,5 +57,4 @@ proven, so the test uses that path.
 
 - The safety layer doesn't change. An architecture test checks that only the
   failsafe program imports the wrapper.
-- Glossary: *Failsafe low* and *Failsafe high* may need terms (proposed at the
-  end of the field-testing README review).
+- Glossary: *Failsafe low / Failsafe high*.

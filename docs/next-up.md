@@ -107,8 +107,9 @@ rules. On top of `CLAUDE.md`:
    doubts you have under "Questions for Joe".
    - **Program:** `src/crazyflie_behavior/programs/failsafe.py`, shaped like
      `programs/hover.py`: `--crazyflie` (default: the mock adapter) and a
-     required `--height-meters`, which accepts only 0.1 (Failsafe low) or 0.3
-     (Failsafe high). Add a `.run/` configuration for each height, as the
+     required `--height-meters`, which accepts only 0.1 (Failsafe low) or 0.5
+     (Failsafe high, the Hover test's height; ADR-0041 amended
+     2026-11-02). Add a `.run/` configuration for each height, as the
      hover program has.
    - **Behavior:** a field-test behavior in `behaviors/` (ADR-0033: its
      docstring states its failure rule; it stops at its first refused
@@ -140,9 +141,8 @@ rules. On top of `CLAUDE.md`:
      line: Joe chose option A; the AI recommended the wrapper with a forged
      low battery), and remove backlog #38 (the ADR now closes it). Add the
      program to the README's "Run" section if it lists programs. Glossary:
-     don't edit it; propose the terms *Failsafe low* and *Failsafe high*
-     (the field-test stages that fly the failsafe program at 0.1 m and
-     0.3 m) in the pull request.
+     don't edit it; *Failsafe low / Failsafe high* is already there
+     (0.1 m and 0.5 m).
 6. [ ] **ADR-0042: slightly negative ages count as fresh.** Not needed for
    the hardware; do it last. `Stamped.age()` stays unclamped, and its
    docstring says the age can be slightly negative, meaning just arrived.

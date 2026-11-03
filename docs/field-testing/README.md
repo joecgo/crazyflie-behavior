@@ -43,7 +43,7 @@ Each stage has a gate: don't move on until its exit criteria are met once.
 |---|---|---|
 | **Bench** | Connected, **propellers off**. Telemetry and decks detected. | All sensors stream. |
 | **Failsafe low** | A program takes off to 0.1 m and injects a fault into the safety pre-check, so the failsafe lands the drone ([ADR-0041](../decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)). | The drone lands and its motors stop. |
-| **Failsafe high** | The same program, from 0.3 m. | The drone lands and its motors stop. |
+| **Failsafe high** | The same program, from 0.5 m (the Hover test's height). | The drone lands and its motors stop. |
 | **Hover** | Take off, hover at 0.5 m, land. | Any take-off and landing is a success. Drift over 60 s and the take-off-to-landing distance are recorded (no pass or fail on distance). |
 | **Sensor characterization** | Measure noise and drift: range sensors against different surfaces, flow deck over different floors and lighting. | Noise and drift numbers recorded and fed into the simulator. |
 | **Safety validation** | Deliberately trigger each failsafe: geofence breach, link loss, low battery, stale data, e-stop. | Every failsafe behaves as designed, in flight. |
