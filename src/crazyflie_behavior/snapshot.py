@@ -30,7 +30,13 @@ class Stamped[T]:
     source doesn't provide a timestamp."""
 
     def age(self, now: float) -> float:
-        """Seconds since this value arrived on the PC."""
+        """Seconds since this value arrived on the PC.
+
+        Not clamped: it can be slightly negative (a few milliseconds), meaning
+        the value arrived just after `now`, when the tick's time was read
+        before the snapshot was copied (ADR-0042). That counts as fresh. Test
+        staleness as `age > limit`, and never divide by an age.
+        """
         return now - self.arrival_time
 
 

@@ -131,7 +131,7 @@ rules. On top of `CLAUDE.md`:
      program to the README's "Run" section if it lists programs. Glossary:
      don't edit it; *Failsafe low / Failsafe high* is already there
      (0.1 m and 0.5 m).
-6. [ ] **ADR-0042: slightly negative ages count as fresh.** Not needed for
+6. [x] **ADR-0042: slightly negative ages count as fresh.** Not needed for
    the hardware; do it last. `Stamped.age()` stays unclamped, and its
    docstring says the age can be slightly negative, meaning just arrived.
    The safety pre-check's staleness check logs a warning when an age is
