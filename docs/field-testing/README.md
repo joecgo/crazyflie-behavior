@@ -1,7 +1,8 @@
 # Field testing
 
-> **Status: draft for the architect's review.** The stages, gates and
-> environments below are a proposal. Adjust them before the first flight.
+> **Status: accepted 2026-11-02.** Reviewed by the architect before First
+> flight. Exit criteria are deliberately light for now: add pass or fail
+> criteria later, if they're needed at all.
 
 Real flights are where the design gets proven or broken. This folder is the
 record: every test session gets a log, every log ties back to an exact code
@@ -20,6 +21,9 @@ is the portfolio story.
 
 1. **Plan.** Write the session log's *Goal* and *Pass criteria* before flying.
 2. **Simulate.** The same code passes in the simulator first. No first runs in the air.
+   Exempt: **Bench** and **Hover**. Their recordings are what the simulator's
+   noise and drift model is built from, so they can't be simulated first. They
+   are rehearsed on the mock adapter only.
 3. **Fly.** Follow the pre-flight checklist. One variable changes per session.
 4. **Record.** Telemetry logs, video, and notes written during the session, not after.
 5. **Analyze.** Compare with what the simulator predicted. The **sim-to-real gap**
@@ -33,20 +37,24 @@ measure it rather than configure it.
 
 ## Stages
 
-Each stage has a gate: don't move on until the exit criteria are met in at
-least two sessions.
+Each stage has a gate: don't move on until its exit criteria are met once.
 
 | Stage | Goal | Exit criteria (draft) |
 |---|---|---|
-| **0. Bench** | Connected, **propellers off**. Telemetry, decks detected, arming and e-stop work. | All sensors stream. E-stop cuts motors every time. |
-| **1. Hover** | Take off, hover at 0.5 m, land. | Lands within N cm of the takeoff point. Drift over 60 s measured. |
-| **2. Sensor characterization** | Measure noise and drift: range sensors against different surfaces, flow deck over different floors and lighting. | Noise and drift numbers recorded and fed into the simulator. |
-| **3. Safety validation** | Deliberately trigger each failsafe: geofence breach, link loss, low battery, stale data, e-stop. | Every failsafe behaves as designed, in flight. |
-| **4. First behavior** | Patrol between waypoints and react to an obstacle in a known room. | Completes N patrols without intervention. |
-| **5. New environments** | Same behavior in each test environment below. | Results compared across environments, failures explained. |
+| **Bench** | Connected, **propellers off**. Telemetry and decks detected. | All sensors stream. |
+| **Failsafe low** | A program takes off to 0.1 m and injects a fault into the safety pre-check, so the failsafe lands the drone ([ADR-0041](../decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)). | The drone lands and its motors stop. |
+| **Failsafe high** | The same program, from 0.3 m. | The drone lands and its motors stop. |
+| **Hover** | Take off, hover at 0.5 m, land. | Any take-off and landing is a success. Drift over 60 s and the take-off-to-landing distance are recorded (no pass or fail on distance). |
+| **Sensor characterization** | Measure noise and drift: range sensors against different surfaces, flow deck over different floors and lighting. | Noise and drift numbers recorded and fed into the simulator. |
+| **Safety validation** | Deliberately trigger each failsafe: geofence breach, link loss, low battery, stale data, e-stop. | Every failsafe behaves as designed, in flight. |
+| **First behavior** | Patrol between waypoints and react to an obstacle in a known room. | Set when this stage is planned. |
+| **New environments** | Same behavior in each test environment below. | Results compared across environments, failures explained. |
 
-Stages 2 and 3 are what separate this from a hobby project. They show you
+Sensor characterization and Safety validation are what separate this from a hobby project. They show you
 measured the real system and verified safety, instead of hoping.
+
+**After a change** to the safety layer, the Crazyflie adapter or the tick loop,
+run Bench, then Failsafe low, then Failsafe high, then Hover again before anything else.
 
 ## Test environments
 
@@ -61,15 +69,34 @@ glass, mirrors and dark surfaces).
 | `away-<n>` | Other people's homes | Unseen layouts, which test generalization. |
 
 Profile each one in its first session log: size, ceiling height, floor
-surface, lighting, obstacles, and anything reflective.
+surface, lighting (including time of day and sunlight through windows),
+obstacles, and anything reflective.
+
+**First flights** (Bench, Failsafe low, Failsafe high, Hover) are flown in a
+room at least 3 x 3 m with a textured hard floor (the flow deck needs texture),
+a soft landing patch (a mat or carpet) under the drone, and one operator, with
+nobody else in the room, no people and no pets.
+
+**The attic and the `away-<n>` homes come only after Safety validation.**
+Flying near other people's property before every failsafe is proven is a risk
+to them and to the project.
 
 ## Session logs
 
-One file per session: `sessions/YYYY-MM-DD-<env>-<short-goal>.md`, from
-[`session-template.md`](session-template.md).
+One file per test: `sessions/YYYY-MM-DD-<env>-<short-goal>.md`, from
+[`session-template.md`](session-template.md). An outing with several tests
+(Bench, Failsafe low, Failsafe high, Hover, flown one after another) gets one
+log per test, all with the same date.
+
+The observations and measurements in a log come from the operator or from
+recorded data, never from an AI. Analysis is written apart from what was
+observed.
 
 Every session records the **git commit** (hash) that flew, so any result can be
 traced to the exact code. Commit before flying, and never fly uncommitted code.
+
+After an abnormal end (a crash, an unexpected landing, a failsafe that fired
+when it shouldn't have), no more flights that outing. Write it up first.
 
 ## Recordings
 
