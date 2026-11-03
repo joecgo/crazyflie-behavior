@@ -71,8 +71,12 @@ proven, so the test uses that path.
 
 - The safety layer doesn't change. An architecture test checks that only the
   failsafe program imports the wrapper. The wrapper passes commands on, so the
-  test "only the safety layer sends commands" needed an exemption for its file
-  (backlog #39).
+  test "only the safety layer sends commands" has an exemption for that one
+  file, marked in ADR-0008 and ADR-0030 (amended 2026-11-03, my call on the
+  AI's recommendation; closes backlog #39). Exempting all of `programs/` was
+  rejected: game programs live there, and the rule must catch them. When a
+  second fault is planned, fault wrappers move to a `faults/` folder with
+  the exemption (backlog #44).
 - The failsafe test reaches its pass through the exit code, not through the
   behavior reporting done (see "Who judges the pass" below).
 - Glossary: *Failsafe low / Failsafe high*.

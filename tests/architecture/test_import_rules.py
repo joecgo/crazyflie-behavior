@@ -167,7 +167,7 @@ def test_only_the_safety_layer_sends_commands_to_the_drone() -> None:
     One exemption: the failsafe program's forged battery wrapper is itself a
     drone that passes every command on unchanged (ADR-0041), so it calls them
     without ever deciding one. Its own fitness function keeps everyone else
-    from importing it. Backlog #39 asks whether it belongs in the drone package.
+    from importing it. ADR-0041 records the exemption; backlog #44 moves it to a faults folder with a second fault.
     """
     offenders = [
         path
