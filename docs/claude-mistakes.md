@@ -33,11 +33,11 @@ decisions are recorded), *communication* (how Claude explains things).
 | environment | 3 | 5 |
 | communication | 5 | 6 |
 | testing | 0 | 6 |
-| process | 1 | 8 |
-| **Total** | **22** | **52** |
+| process | 2 | 8 |
+| **Total** | **23** | **52** |
 
-Of the 22 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 16. So far, 7 of the 10 recommendation
+Of the 23 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 17. So far, 7 of the 10 recommendation
 mistakes needed me, and 5 of the 9 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
@@ -47,6 +47,22 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-03: An idea of mine credited to the AI
+
+- **What happened:** `docs/next-up.md` (written by Claude on 2026-11-03)
+  said "Origin: Joe's usage; the AI proposed the split" for the split
+  between *field test* and *session*. The cloud run copied it into
+  ADR-0043's origin line, and Claude then offered it back to me as an
+  option. The split was my idea.
+- **Why it was wrong:** an origin line must record who suggested what, and
+  nothing in the conversation or the commits showed the AI proposing it.
+- **How I caught it:** I said it was all my idea.
+- **Would a Claude review have caught it?** Probably not: only I know who
+  suggested it.
+- **Kind:** process.
+- **Takeaway:** when who suggested something isn't recorded, say so and
+  ask; don't fill in an origin.
 
 ### 2026-11-02: Follow-up commits pushed to a pull request already merged
 

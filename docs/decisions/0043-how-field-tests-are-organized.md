@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-03 (the decisions are from 2026-11-02, and the words from 2026-11-03; recorded after the fact)
-- **Origin:** Mixed: the decisions were mine, recorded after the fact; the AI proposed the split between *field test* and *session* from my usage.
+- **Origin:** My decisions, recorded after the fact, including the split between *field test* and *session*.
 
 ## Context
 

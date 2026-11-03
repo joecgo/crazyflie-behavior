@@ -171,7 +171,7 @@ rules. On top of `CLAUDE.md`:
      trip with one or more field tests (for example Bench, Failsafe low,
      Failsafe high, Hover in order) and gets a **session doc**: the planned
      order, links to its test logs, and what the next session depends on.
-     "Outing" is not used. Origin: Joe's usage; the AI proposed the split.
+     "Outing" is not used. Origin: Joe's idea.
    Consequences must state the risk honestly: a test that skips the
    simulator has no simulator prediction to compare its flight against
    (focus area 5); the plan is to use the simulator wherever it adds
