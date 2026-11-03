@@ -161,6 +161,17 @@ rules. On top of `CLAUDE.md`:
      simulator run skip it. The same code always runs on the mock adapter
      first.
    - The README keeps a dated status brief (CLAUDE.md).
+   - Environments are reusable docs in `docs/field-testing/environments/`
+     (see `living-room.md`): locations with floor and ceiling height, and
+     lighting setups. A test log links to one and adds its own note (time of
+     day, sunlight).
+   - The Hover and Failsafe tests run on the mock adapter only, no simulator.
+   - Words (Joe's decision, 2026-11-03): a **field test** is one test
+     (Bench, Failsafe low, ...) and gets a **test log**; a **session** is a
+     trip with one or more field tests (for example Bench, Failsafe low,
+     Failsafe high, Hover in order) and gets a **session doc**: the planned
+     order, links to its test logs, and what the next session depends on.
+     "Outing" is not used. Origin: Joe's usage; the AI proposed the split.
    Consequences must state the risk honestly: a test that skips the
    simulator has no simulator prediction to compare its flight against
    (focus area 5); the plan is to use the simulator wherever it adds
@@ -175,6 +186,27 @@ rules. On top of `CLAUDE.md`:
    confirm", since who suggested each part isn't recorded. Add the index
    row, and link the ADR from the field-testing README. Leave ADR-0010 and
    ADR-0028's "field-test stage 0" as written: they are a historical record.
+
+8. [ ] **ADR-0044: the Bench is flown with propellers on** (docs only, after
+   item 7). Joe's decision of 2026-11-03: taking the propellers off is too
+   much work. Record the risk he accepts knowingly: the drone auto-arms
+   (ADR-0037) with propellers on; mitigations are that the bench program
+   never commands the drone (ADR-0028) and stock 2.1+ idle thrust is 0
+   (ADR-0037). Origin: Joe's decision, with the AI pushing back on the
+   risk. Also change the README's Bench row ("propellers off"), the bench
+   program's docstring and the glossary-free comments in `src/` and `tools/`
+   that say "propellers off" for the Bench; don't edit `docs/glossary.md`,
+   propose any change in the pull request. Add the index row. Link the ADR
+   from the field-testing README's Bench row.
+
+9. [ ] **The glossary proposal for the session and field-test words** (docs
+   only; Joe already did the renames on 2026-11-03: `field-tests/` holds the
+   test logs, `sessions/` the session docs, `field-test-template.md` and
+   `sessions/session-template.md` the templates). Don't edit
+   `docs/glossary.md`: propose in the pull request **Field test** reworded to
+   one test, plus new **Session** and **Test log** terms, with the exact
+   before and after. Check the README and `docs/` for leftover "outing" or
+   `sessions/` paths that now mean the wrong thing.
 
 Not for the cloud run (later, not urgent): a field-test list in
 `docs/field-testing/` with two sections, **Hardware checks** (the `VERIFY`
