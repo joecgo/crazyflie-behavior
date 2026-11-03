@@ -1,4 +1,4 @@
-# YYYY-MM-DD · home-<room> · bench: connect and telemetry (propellers off)
+# YYYY-MM-DD · living-room · bench: connect and telemetry (propellers off)
 
 > **DRAFT.** Date and commit are pending. Nothing below the pre-flight section has been filled in.
 
@@ -63,7 +63,7 @@ a go_to landing, `TAKE_OFF_STATUS_GRACE`, and the touchdown placeholders.
 ## Pre-flight checklist
 
 - [ ] Code committed, hash recorded above
-- [ ] Simulator run of this exact code passed
+- [ ] Mock adapter run of this exact code passed (and the simulator's, if used)
 - [ ] **Propellers off** (bench session), battery charged (voltage: ___)
 - [ ] Flight area clear of people and pets
 - [ ] Geofence configured for this space

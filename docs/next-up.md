@@ -75,8 +75,8 @@ rules. On top of `CLAUDE.md`:
    three, including the failsafe landing during the take-off grace period.
 4. [ ] **Field-test stages become names, and hover drift is measured, not
    passed.** Joe's decisions of 2026-11-02, while drafting the first session
-   logs (`docs/field-testing/sessions/YYYY-MM-DD-home-bench.md` and
-   `...-home-hover.md`, already written with these changes):
+   logs (`docs/field-testing/sessions/YYYY-MM-DD-living-room-bench.md` and
+   `...-living-room-hover.md`, already written with these changes):
    - Call the stages by name, **bench** and **hover** (the ladder's order stays
      in the README table), not "stage 0", "stage 1". Do it in
      `docs/field-testing/README.md` (stage table, session-log text),
@@ -97,7 +97,8 @@ rules. On top of `CLAUDE.md`:
    - **Update 2026-11-02:** the walkthrough session already made the three
      README changes above (stage names, the hover criterion, the bench row),
      and added the Failsafe low and Failsafe high rows. Skip the README
-     parts; do the rest of this item.
+     parts; do the rest of this item. **Also done 2026-11-02:** the
+     session template's `Stage:` field lists the stages by name; skip it too.
 5. [ ] **ADR-0041: the Failsafe low and Failsafe high program.** Joe's
    decision of 2026-11-02, needed for the hardware arriving 2026-11-03. Build
    it after items 1 to 3 (it relies on take-off, hover and the failsafe

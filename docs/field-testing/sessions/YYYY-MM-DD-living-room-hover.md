@@ -1,4 +1,4 @@
-# YYYY-MM-DD · home-<room> · hover at 0.5 m and land
+# YYYY-MM-DD · living-room · hover at 0.5 m and land
 
 > **DRAFT.** Date and commit are pending. Nothing below the pre-flight
 > section has been filled in.
@@ -62,7 +62,7 @@ streaming (`adapter.py`), since the hover test never streams velocity.
 
 - [ ] Bench passed in at least two sessions
 - [ ] Code committed, hash recorded above
-- [ ] Simulator run of this exact code passed
+- [ ] Mock adapter run of this exact code passed (and the simulator's, if used)
 - [ ] Propellers undamaged, battery charged (voltage: ___)
 - [ ] Flight area clear of people and pets
 - [ ] Geofence configured for this space
