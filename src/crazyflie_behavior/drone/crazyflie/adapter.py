@@ -5,8 +5,8 @@
 
 NOT YET RUN ON HARDWARE. Written before the drone arrived, as a deliberate
 exception for learning (ADR-0010), from the installed cflib source and
-docs/cflib-primer.md. Its first real test is field-test stage 0 (bench,
-propellers off). Assumptions that need checking there are marked VERIFY.
+docs/cflib-primer.md. Its first real test is the Bench field test (propellers
+off). Assumptions that need checking there are marked VERIFY.
 
 How the interface maps onto cflib:
 - Telemetry: log blocks stream into the shared TelemetryBuffer, converted to

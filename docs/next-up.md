@@ -77,7 +77,7 @@ rules. On top of `CLAUDE.md`:
    the floor (not `_may_be_flying()`), logged once per streak at info level
    (Claude's suggestion, not yet confirmed: list it for Joe). Tests for all
    three, including the failsafe landing during the take-off grace period.
-4. [ ] **Field tests by name, not "stage 0/1".** Joe's decisions of
+4. [x] **Field tests by name, not "stage 0/1".** Joe's decisions of
    2026-11-02: the field-testing README has no stages any more, only
    calibration, safety and flight tests, each called by name. Everything
    else is already done (the README, the session template and drafts, the

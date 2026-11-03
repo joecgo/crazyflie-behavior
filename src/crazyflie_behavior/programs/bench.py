@@ -1,6 +1,6 @@
 """The bench program (ADR-0028): connect, tick, and log every snapshot. Never commands the drone.
 
-For field-test stage 0, propellers off. It uses the mock adapter unless it's
+For the Bench field test, propellers off. It uses the mock adapter unless it's
 run with --crazyflie:
 
     .venv\\Scripts\\python -m crazyflie_behavior.programs.bench
@@ -105,7 +105,7 @@ def _yes_no(flag: bool) -> str:
 def main(arguments: list[str] | None = None) -> int:
     """Run the bench program until a stop request. Returns the program's exit code."""
     parser = argparse.ArgumentParser(
-        prog="bench", description="Connect, tick and log every snapshot (field-test stage 0)."
+        prog="bench", description="Connect, tick and log every snapshot (the Bench field test)."
     )
     parser.add_argument(
         "--crazyflie",
