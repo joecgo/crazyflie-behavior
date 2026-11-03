@@ -145,7 +145,8 @@ ignores one:
 - Real flights follow `docs/field-testing/`: before each session, help draft the
   session log from the template (goal, pass criteria, simulator prediction).
   After it, help analyze the data and turn findings into code, simulator or ADR
-  changes.
+  changes. `docs/field-testing/README.md` opens with a short status brief and
+  its last-updated date; update both with every change to the README.
 - **Continuous integration** (focus area 6). Set up GitHub Actions as soon as the repo is on GitHub
   and the first test exists, rather than later. Keep everything runnable
   headless and without hardware so it always runs in continuous integration.
