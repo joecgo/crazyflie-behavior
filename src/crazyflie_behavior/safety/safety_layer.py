@@ -49,11 +49,12 @@ LOW_BATTERY_VOLTAGE = 3.4
 load, so this may land a little early, which is the safe direction."""
 # ------------------------------------------------------------------------------
 MAX_NEGATIVE_AGE = 0.05
-"""Seconds: one tick period at `TICK_RATE`, 20 Hz (ADR-0023, ADR-0042). A value that
-arrived just after the tick's time has a slightly negative age and counts as fresh. One
-more than this in the future can only be a bug, such as mixing drone time with PC time,
-so it's warned about. A copy of the tick period, not an import: the safety layer doesn't
-depend on the loop package. A test keeps the two equal."""
+"""Seconds: how far after the tick's time a value may have arrived and still be normal.
+It's one tick period, 1 / `TICK_RATE` (20 Hz, ADR-0023, ADR-0042). A value that arrived
+just after the tick's time has a slightly negative age and counts as fresh. A value
+that arrived more than this after it, such as one stamped on the wrong clock, is
+warned about but still counts as fresh. Copied, not imported, so the safety layer
+doesn't depend on the loop package: `test_safety_layer.py` keeps the two equal."""
 
 
 class _CheckedValue(NamedTuple):

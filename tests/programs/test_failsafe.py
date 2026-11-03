@@ -98,7 +98,7 @@ def test_the_failsafe_is_the_real_one_so_the_forged_battery_is_the_only_thing_th
 def test_a_fault_that_never_takes_effect_lands_normally_and_fails_the_test(
     recorder: MockAdapterRecorder, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The bug-planting check: a wrapper that injects nothing must fail the test."""
+    """A fault that never lands (a wrapper that injects nothing) must fail the test: the time limit lands the drone."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(failsafe_fault_module, "HOVER_DURATION_BEFORE_FAULT", 1000.0)
     monkeypatch.setattr(failsafe_test_module, "FAULT_TIME_LIMIT", 0.3)

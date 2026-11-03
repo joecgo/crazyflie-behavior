@@ -7,15 +7,16 @@
 ## Context
 
 The field-testing README ([`docs/field-testing/`](../field-testing/README.md))
-had a ladder of stages, each passed before the next, a gate between two of
-them, and a simulator run required before most field tests. Revising it on
+had a ladder of stages, each with a gate (don't move on until its exit
+criteria are met once), and a simulator run required before every field test
+except Bench and Hover. Revising it on
 2026-11-02, I changed how the tests are organized. The sources are that
 README and its commits (`f001895`, `6622b8e`, `7ec3ec2`, `0cc9dff`).
 
 ## Options considered
 
-- **A. Keep the stage ladder and its gate,** and require a simulator run before
-  every field test (how the README was).
+- **A. Keep the stage ladder and its gates,** and require a simulator run before
+  every field test except Bench and Hover (how the README was).
 - **B. Group the tests by kind, pass each once in order, repeat by rule, and
   use the simulator where it adds something.**
 

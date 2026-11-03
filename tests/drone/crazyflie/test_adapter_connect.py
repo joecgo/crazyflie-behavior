@@ -572,6 +572,20 @@ def test_after_taking_over_land_runs_the_normal_landing_not_just_a_motor_stop(
     commander.stop.assert_not_called()
 
 
+def test_taking_over_a_drone_that_reports_it_is_on_the_floor_only_stops_the_motors(
+    taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    # A land request must not spin up the motors of an armed drone our code knows is on the floor (ADR-0039).
+    fake_cflib.samples["state"]["supervisor.info"] = float(1 << adapter_module.BIT_IS_ARMED)
+    taking_over_adapter.connect()
+
+    taking_over_adapter.land()
+
+    commander = fake_cflib.link.cf.high_level_commander
+    commander.go_to.assert_not_called()
+    commander.stop.assert_called_once()
+
+
 def test_disconnecting_after_taking_over_lands_the_drone_then_closes_the_link(
     taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
 ) -> None:
@@ -596,3 +610,16 @@ def test_a_failure_while_connecting_to_take_over_closes_only_the_radio_link(fake
         adapter.connect()
 
     assert_only_the_radio_link_closed(fake_cflib)
+
+
+def test_connecting_again_waits_for_a_new_status_not_the_last_connections(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    adapter.connect()
+    adapter.disconnect()
+    fake_cflib.silent_blocks.add("state")
+    second_adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0))
+    second_adapter._latest_status_bitfield = 0  # as if left from an earlier connection
+
+    with pytest.raises(TimeoutError, match="Waiting for the drone's status"):
+        second_adapter.connect()

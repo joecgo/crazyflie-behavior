@@ -63,16 +63,19 @@ def test_it_is_done_once_the_drone_no_longer_reports_flying(caplog: pytest.LogCa
         is_done = rescue_landing.tick(snapshot(0.05, ON_THE_FLOOR), safety_layer)
 
     assert is_done
+    assert not rescue_landing.has_failed
     assert "Done." in caplog.text
 
 
 def test_a_refused_landing_ends_it_with_an_error_naming_the_reason(caplog: pytest.LogCaptureFixture) -> None:
     safety_layer = SafetyLayerStandIn(refuse_with="the flight is over")
+    rescue_landing = RescueLanding()
 
     with caplog.at_level(logging.ERROR):
-        is_done = RescueLanding().tick(snapshot(0.0, FLYING), safety_layer)
+        is_done = rescue_landing.tick(snapshot(0.0, FLYING), safety_layer)
 
     assert is_done
+    assert rescue_landing.has_failed
     assert "Land() was refused: the flight is over" in caplog.text
     assert safety_layer.requests == [Land()]  # it doesn't ask again
 
@@ -87,6 +90,7 @@ def test_a_drone_that_keeps_reporting_flying_ends_it_after_the_time_limit(caplog
         is_done = rescue_landing.tick(snapshot(LANDING_TIME_LIMIT + 0.05, FLYING), safety_layer)
 
     assert is_done
+    assert rescue_landing.has_failed
     assert "still reports flying" in caplog.text
 
 

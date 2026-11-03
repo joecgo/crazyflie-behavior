@@ -11,9 +11,11 @@ It uses the mock adapter unless it's run with --crazyflie:
     .venv\\Scripts\\python -m crazyflie_behavior.programs.failsafe --crazyflie --height-meters 0.5
 
 If the fault never takes effect, the program lands the drone normally after a
-time limit and the test has failed. The exit code is 0 only if the failsafe
-landed the drone. In a terminal, Ctrl+C makes a stop request: the drone lands,
-and the test hasn't passed.
+time limit and the test has failed. The exit code is 0 only if the fault was
+injected, the safety pre-check then failed and the test didn't fail by its own
+rules; a pytest test checks that the pre-check failed because of the battery
+(ADR-0041). The interrupt signal makes a stop request: before the fault, the
+drone lands and the test hasn't passed.
 """
 
 import argparse
@@ -68,11 +70,11 @@ def main(arguments: list[str] | None = None) -> int:
     exit_code = run_program("failsafe", description, drone, tick_step, clock)
     if exit_code != EXIT_OK:
         return exit_code
-    # The failsafe landed the drone only if the fault was injected and the safety pre-check then failed.
-    failsafe_landed_the_drone = (
+    # Passed: the fault was injected, the safety pre-check failed, and the test didn't fail by its own rules.
+    failsafe_fired_after_the_fault = (
         drone.has_forged_battery_voltage and safety_layer.pre_check_has_failed and not failsafe_test.has_failed
     )
-    return EXIT_OK if failsafe_landed_the_drone else EXIT_ERROR
+    return EXIT_OK if failsafe_fired_after_the_fault else EXIT_ERROR
 
 
 if __name__ == "__main__":

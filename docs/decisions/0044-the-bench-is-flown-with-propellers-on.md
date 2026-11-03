@@ -25,8 +25,11 @@ pre-flight checks pass, so the drone is armed with its propellers on
 ([ADR-0037](0037-disconnect-does-not-disarm.md)). I accept that, for these
 reasons:
 
-- **The bench program never commands the drone** (ADR-0028): nothing in our code
-  sends it a setpoint.
+- **The bench program sends the drone no command** through the drone interface
+  (ADR-0028). Two things still reach it: connecting resets the position
+  estimate, and closing the link on a drone known to be on the floor makes
+  cflib send a zero-thrust setpoint first (ADR-0038). Zero thrust asks for no
+  motor speed, but like the next point it holds only if the idle thrust is 0.
 - **A stock 2.1+ drone's idle thrust is 0** (ADR-0037, checked in the firmware
   source on 2026-11-02, not yet on hardware): armed alone doesn't spin the
   motors.
@@ -37,7 +40,7 @@ reasons:
   propellers spin on the bench. Nothing in our code would stop it: the Bench's
   connect log shows whether the drone arms itself (ADR-0037), not its idle thrust.
 - **Backups:** none for that case: nothing in our code stops it.
-- **Never:** the bench program sends a command to the drone.
+- **Never:** the bench program sends a command to the drone through the drone interface.
 - **Always eventually:** nothing new.
 
 ## Consequences

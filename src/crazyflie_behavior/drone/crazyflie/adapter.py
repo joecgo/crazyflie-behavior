@@ -18,6 +18,7 @@ How the interface maps onto cflib:
 """
 
 import logging
+import math
 from collections.abc import Callable
 from enum import Enum
 
@@ -163,6 +164,7 @@ class CrazyflieAdapter(DroneInterface):
         clock: Clock,
         uri: str = DEFAULT_URI,
         cache_directory: str = "./cache",
+        *,
         take_over_flight: bool = False,
     ) -> None:
         """`take_over_flight`: only the rescue landing sets this (ADR-0038). `connect()` then
@@ -181,8 +183,9 @@ class CrazyflieAdapter(DroneInterface):
         self._is_ignoring_hover = False
         """The latest hover was ignored because the drone isn't flying: the log line for it comes once per streak."""
         self._is_drone_state_unknown = False
-        """True from the start of `connect()` until a fresh drone status says whether the drone
-        is flying (ADR-0038): until then, the drone may be flying."""
+        """True from the start of `connect()` until the drone is known to be on the floor or its
+        flight is taken over (ADR-0038). It stays True when the drone is found flying and refused:
+        while True, the drone may be flying, so the link is closed without a zero-thrust setpoint."""
         self._take_off_sent_at = 0.0
         """When the latest take-off was sent. Meaningful while airborne."""
         self._landing_phase = _LandingPhase.NOT_LANDING
@@ -316,8 +319,8 @@ class CrazyflieAdapter(DroneInterface):
             # leaves this decision to the adapter.
             if not self._is_ignoring_hover:
                 logger.info(
-                    "Hover ignored: the drone isn't flying, and a move on the floor would spin up its motors. "
-                    "Logged once per streak."
+                    "Hover ignored: the drone isn't known to be flying, and a move on the floor would "
+                    "spin up its motors. Logged once per streak."
                 )
                 self._is_ignoring_hover = True
             return
@@ -375,7 +378,7 @@ class CrazyflieAdapter(DroneInterface):
             return
         crazyflie = self._sync_crazyflie.cf
         if crazyflie.link is not None:
-            logger.info("Closing the radio link only: the drone may be flying, so it keeps doing what it was doing")
+            logger.info("Closing the radio link only, with no zero-thrust setpoint: the drone may be flying")
             crazyflie.link.close()
             crazyflie.link = None
         if crazyflie.incoming and crazyflie.incoming.is_alive():
@@ -576,7 +579,9 @@ class CrazyflieAdapter(DroneInterface):
                 "Taking over the flight: the position estimate isn't reset and the drone is treated as airborne."
             )
             self._is_airborne = True
-            self._take_off_sent_at = self._clock.now()
+            # No take-off of ours, so no status lag to wait out: the status just read is the truth. A land
+            # request for a drone that reports it's on the floor then only stops the motors (ADR-0039).
+            self._take_off_sent_at = -math.inf
             self._is_drone_state_unknown = False
             return
         if drone_status_from_bitfield(bitfield).is_flying:

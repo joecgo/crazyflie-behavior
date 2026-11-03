@@ -6,7 +6,12 @@ from pathlib import Path
 
 import pytest
 
+from crazyflie_behavior.behaviors import rescue_landing as rescue_landing_behavior
+from crazyflie_behavior.drone.interface import DroneInterface
+from crazyflie_behavior.drone.mock_adapter import MockAdapter
+from crazyflie_behavior.programs import rescue_landing as rescue_landing_program
 from crazyflie_behavior.programs.rescue_landing import main
+from crazyflie_behavior.timing.clock import Clock
 
 
 def the_log_file_text(log_directory: Path) -> str:
@@ -42,3 +47,28 @@ def test_the_rescue_landing_program_runs_as_a_program(tmp_path: Path) -> None:
 
     assert finished.returncode == 0
     assert "Done." in the_log_file_text(tmp_path / "logs")
+
+
+class UnlandableMockAdapter(MockAdapter):
+    """A mock drone that ignores land requests, so it keeps reporting flying."""
+
+    def land(self) -> None:
+        self.command_log.append("land (ignored)")
+
+
+def test_a_rescue_that_fails_exits_with_1_though_the_program_itself_ran_fine(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(rescue_landing_behavior, "LANDING_TIME_LIMIT", 0.3)
+
+    def make_unlandable_drone(use_crazyflie: bool, clock: Clock, *, take_over_flight: bool = False) -> DroneInterface:
+        assert take_over_flight
+        return UnlandableMockAdapter(clock, take_over_flight=True)
+
+    monkeypatch.setattr(rescue_landing_program, "make_drone", make_unlandable_drone)
+
+    exit_code = main([])
+
+    assert exit_code == 1
+    assert "Rescue landing failed: the drone still reports flying" in the_log_file_text(tmp_path / "logs")

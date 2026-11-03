@@ -3,7 +3,7 @@
 """Last-resort emergency stop for a drone out of reach (ADR-0038).
 
 Only opens the radio link and sends the emergency stop, a few times in case a
-packet is lost. It reads no parameters, checks no decks, logs nothing and
+packet is lost. It reads no parameters, checks no decks, sets up no logging and
 resets no estimate, and it never imports project code, so a bug elsewhere can't
 stop it. The motors stop at once: the drone drops. Run the rescue landing first
 (`crazyflie_behavior.programs.rescue_landing`), and before running this, slide
@@ -11,7 +11,8 @@ something soft under the drone.
 
 It sends both of cflib's emergency stop packets, the supervisor port's and the
 older localization port's, because it doesn't ask the drone which firmware it
-runs (that needs a full connection). A firmware ignores the one it doesn't know.
+runs (that needs a full connection). NOT YET RUN ON HARDWARE. VERIFY at the bench that a firmware accepts either packet
+without a connection set up first, and ignores the one it doesn't know.
 
 Run from the repository root:
     .venv\\Scripts\\python tools\\emergency_stop.py
@@ -20,6 +21,7 @@ Run from the repository root:
 
 import argparse
 import struct
+import sys
 import time
 
 import cflib.crtp
@@ -47,29 +49,46 @@ def emergency_stop_packets() -> list[CRTPPacket]:
     return [supervisor_packet, localization_packet]
 
 
-def emergency_stop(uri: str = DEFAULT_URI, send_count: int = SEND_COUNT, send_period: float = SEND_PERIOD) -> None:
-    """Open the radio link, send the emergency stop `send_count` times, close the link."""
+def emergency_stop(uri: str = DEFAULT_URI, send_count: int = SEND_COUNT, send_period: float = SEND_PERIOD) -> bool:
+    """Open the radio link, send the emergency stop `send_count` times, close the link.
+
+    Returns whether the radio took every packet without a link error. False means
+    the stop isn't confirmed: cflib's `send_packet` waits up to 2 s for a free slot
+    and returns False when the radio isn't delivering (a drone out of range, off or
+    on another channel), so it gives up at the first failure instead of waiting
+    for the rest.
+    """
     cflib.crtp.init_drivers()
-    link = cflib.crtp.get_link_driver(uri)
+    link_errors: list[str] = []
+    link = cflib.crtp.get_link_driver(uri, link_error_callback=link_errors.append)
     if link is None:
         raise RuntimeError(f"No link driver for {uri}: check the URI.")
     try:
         for _ in range(send_count):
             for packet in emergency_stop_packets():
-                link.send_packet(packet)
+                if not link.send_packet(packet):
+                    return False
             time.sleep(send_period)
     finally:
         link.close()
+    return not link_errors
 
 
-def main() -> None:
+def main(arguments: list[str] | None = None) -> int:
+    """Returns the exit code: 0 only if the radio took every packet."""
     parser = argparse.ArgumentParser(description="Last-resort emergency stop: the drone's motors stop at once.")
     parser.add_argument("--uri", default=DEFAULT_URI, help=f"the drone's radio URI (default: {DEFAULT_URI})")
-    parsed_arguments = parser.parse_args()
+    parsed_arguments = parser.parse_args(arguments)
     print(f"Sending the emergency stop to {parsed_arguments.uri}: the drone's motors will stop at once.")
-    emergency_stop(parsed_arguments.uri)
-    print("Sent.")
+    if emergency_stop(parsed_arguments.uri):
+        print("Sent: the radio took every packet. Check that the motors stopped.")
+        return 0
+    print(
+        "NOT CONFIRMED: the radio did not deliver the emergency stop. Assume the drone is still flying.",
+        file=sys.stderr,
+    )
+    return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

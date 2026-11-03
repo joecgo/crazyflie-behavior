@@ -30,6 +30,12 @@ class RescueLanding(Behavior):
 
     def __init__(self) -> None:
         self._landing_requested_at: float | None = None
+        self._has_failed = False
+
+    @property
+    def has_failed(self) -> bool:
+        """Whether the rescue failed by its own rules: a refused landing or the time limit."""
+        return self._has_failed
 
     def tick(self, snapshot: Snapshot, ask_safety_layer: Callable[[CommandRequest], Verdict]) -> bool:
         status = snapshot.drone_status
@@ -40,6 +46,7 @@ class RescueLanding(Behavior):
             verdict = ask_safety_layer(Land())
             if not verdict.is_approved:
                 logger.error("Rescue landing failed: Land() was refused: %s", verdict.reason)
+                self._has_failed = True
                 return True
             logger.info("Rescue landing: landing")
             self._landing_requested_at = now
@@ -52,5 +59,6 @@ class RescueLanding(Behavior):
                 "Rescue landing failed: the drone still reports flying %g s after the landing was requested",
                 LANDING_TIME_LIMIT,
             )
+            self._has_failed = True
             return True
         return False

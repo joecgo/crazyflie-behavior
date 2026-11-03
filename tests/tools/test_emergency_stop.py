@@ -4,6 +4,7 @@ tools/ isn't a package that project code or tests import, so the script is
 loaded from its path.
 """
 
+import ast
 import importlib.util
 from pathlib import Path
 from types import ModuleType
@@ -44,7 +45,8 @@ def test_it_sends_both_generations_of_the_emergency_stop_packet_repeatedly(
     script.emergency_stop(send_count=3, send_period=0.0)
 
     sent = [
-        (call.args[0].port, call.args[0].channel, bytes(call.args[0].data)) for call in fake_link.send_packet.mock_calls
+        (call.args[0].port, call.args[0].channel, bytes(call.args[0].data))
+        for call in fake_link.send_packet.call_args_list
     ]
     supervisor_port, localization_port = 9, 6  # cflib's CRTPPort.SUPERVISOR and LOCALIZATION
     assert sent == [(supervisor_port, 1, b"\x03"), (localization_port, 1, b"\x03")] * 3
@@ -71,10 +73,75 @@ def test_it_opens_nothing_but_the_radio_link(script: ModuleType, fake_link: Magi
     # No full connection: no parameters, no decks, no estimate reset, no Crazyflie object.
     script.emergency_stop(send_count=1, send_period=0.0)
 
-    script.cflib.crtp.get_link_driver.assert_called_once_with(DEFAULT_URI)
+    script.cflib.crtp.get_link_driver.assert_called_once()
+    assert script.cflib.crtp.get_link_driver.call_args.args == (DEFAULT_URI,)
     assert not hasattr(script, "Crazyflie")
     assert not hasattr(script, "SyncCrazyflie")
 
 
 def test_its_default_uri_is_the_adapters(script: ModuleType) -> None:
     assert script.DEFAULT_URI == DEFAULT_URI
+
+
+def test_it_reports_success_only_if_the_radio_took_every_packet(script: ModuleType, fake_link: MagicMock) -> None:
+    fake_link.send_packet.return_value = True
+
+    assert script.emergency_stop(send_count=2, send_period=0.0) is True
+
+
+def test_a_radio_that_does_not_deliver_is_reported_at_the_first_failure_not_after_the_rest(
+    script: ModuleType, fake_link: MagicMock
+) -> None:
+    # cflib's send_packet waits 2 s for a free slot, then returns False: don't wait that long 20 times.
+    fake_link.send_packet.return_value = False
+
+    assert script.emergency_stop(send_count=10, send_period=0.0) is False
+    assert fake_link.send_packet.call_count == 1
+    fake_link.close.assert_called_once()
+
+
+def test_a_link_error_means_the_stop_is_not_confirmed(script: ModuleType, fake_link: MagicMock) -> None:
+    def link_driver(_uri: str, link_error_callback: object) -> MagicMock:
+        assert callable(link_error_callback)
+        link_error_callback("Too many packets lost")
+        return fake_link
+
+    script.cflib.crtp.get_link_driver.side_effect = link_driver
+
+    assert script.emergency_stop(send_count=1, send_period=0.0) is False
+
+
+def test_main_says_not_confirmed_and_exits_1_when_nothing_was_delivered(
+    script: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(script, "emergency_stop", MagicMock(return_value=False))
+
+    exit_code = script.main([])
+
+    assert exit_code == 1
+    assert "NOT CONFIRMED" in capsys.readouterr().err
+
+
+def test_main_exits_0_when_the_radio_took_every_packet(
+    script: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(script, "emergency_stop", MagicMock(return_value=True))
+
+    assert script.main(["--uri", "radio://0/60/2M"]) == 0
+    assert "radio://0/60/2M" in capsys.readouterr().out
+
+
+def test_the_script_imports_no_project_code_so_a_bug_elsewhere_cant_stop_it() -> None:
+    imported = {
+        alias.name.split(".")[0]
+        for node in ast.walk(ast.parse(SCRIPT.read_text(encoding="utf-8")))
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    } | {
+        (node.module or "").split(".")[0]
+        for node in ast.walk(ast.parse(SCRIPT.read_text(encoding="utf-8")))
+        if isinstance(node, ast.ImportFrom)
+    }
+
+    assert "cflib" in imported  # the scan sees real imports
+    assert "crazyflie_behavior" not in imported

@@ -39,7 +39,7 @@ SETPOINT_CUT_MOTORS_AFTER = 2.0
 class MockAdapter(DroneInterface):
     """A fake drone that does exactly what it's told, instantly."""
 
-    def __init__(self, clock: Clock, take_over_flight: bool = False) -> None:
+    def __init__(self, clock: Clock, *, take_over_flight: bool = False) -> None:
         """`take_over_flight`: the rescue landing's setting (ADR-0038). `connect()` then finds the
         drone armed and hovering at `TAKEN_OVER_HEIGHT`, as if a program had been lost with it
         in the air, so the rescue landing has something to land."""
