@@ -451,7 +451,7 @@ def test_the_interrupt_signal_while_waiting_for_telemetry_gets_through_and_close
     fake_cflib.link.close_link.assert_called_once()
 
 
-def test_connecting_again_waits_for_new_telemetry_not_the_last_session_s(
+def test_connecting_again_waits_for_new_telemetry_not_the_last_connection_s(
     adapter: CrazyflieAdapter, fake_cflib: FakeCflib
 ) -> None:
     adapter.connect()
@@ -462,13 +462,13 @@ def test_connecting_again_waits_for_new_telemetry_not_the_last_session_s(
         adapter.connect()
 
 
-def test_connecting_again_drops_a_landing_left_from_the_last_session(fake_cflib: FakeCflib) -> None:
+def test_connecting_again_drops_a_landing_left_from_the_last_connection(fake_cflib: FakeCflib) -> None:
     clock = StreamingSimClock(fake_cflib, start=10.0)
     adapter = CrazyflieAdapter(clock)
     adapter.connect()
     adapter.take_off(0.5)
     adapter.land()  # a landing under way
-    adapter._shut_down_link()  # the session ends without finishing it, as when the landing at disconnect fails
+    adapter._shut_down_link()  # the connection ends without finishing it, as when the landing at disconnect fails
     adapter.connect()  # a drone on the floor
     fake_cflib.link.cf.high_level_commander.reset_mock()
 

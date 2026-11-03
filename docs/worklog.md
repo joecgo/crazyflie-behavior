@@ -37,7 +37,7 @@ findings, key design turns. Added only with the architect's OK.
 
 <!-- Format:
 ### YYYY-MM-DD: <short title>
-A few sentences: what happened, why it matters, links to ADRs, commits or session logs.
+A few sentences: what happened, why it matters, links to ADRs, commits or test logs.
 -->
 
 ### 2026-10-24: A touchdown backup that failed with the sensor it backed up
