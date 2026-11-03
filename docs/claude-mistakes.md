@@ -33,8 +33,8 @@ decisions are recorded), *communication* (how Claude explains things).
 | environment | 3 | 5 |
 | communication | 5 | 4 |
 | testing | 0 | 3 |
-| process | 0 | 5 |
-| **Total** | **21** | **38** |
+| process | 0 | 6 |
+| **Total** | **21** | **39** |
 
 Of the 21 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 15. So far, 7 of the 10 recommendation
@@ -404,6 +404,17 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-02: A work-log row raised without its total
+
+- **What happened:** the work-log commit for ADR-0040 and ADR-0042 raised the
+  2026-11-02 row from ~2.5 to ~3 hours but left the milestone total at
+  ~36.75; the rows summed to ~37.25.
+- **Caught at:** adding the next row to the same day, by summing the rows
+  with a script.
+- **Kind:** process.
+- **Takeaway:** when a work-log row's hours change, recompute the milestone
+  total from the rows, not by adding the change to the old total.
 
 ### 2026-11-02: A tick period quoted from memory
 
