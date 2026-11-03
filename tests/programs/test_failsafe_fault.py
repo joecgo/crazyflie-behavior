@@ -5,7 +5,7 @@ from dataclasses import replace
 
 import pytest
 
-from crazyflie_behavior.behaviors.failsafe_test import FAULT_TIME_LIMIT
+from crazyflie_behavior.behaviors.failsafe_test import HOVER_TIME_LIMIT
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.programs.failsafe_fault import (
@@ -247,4 +247,4 @@ def test_every_command_goes_to_the_real_drone_unchanged() -> None:
 
 def test_the_failsafe_test_waits_longer_than_the_hover_before_the_fault() -> None:
     # Otherwise the failsafe test gives up and lands before the fault is ever injected (ADR-0041).
-    assert FAULT_TIME_LIMIT > HOVER_DURATION_BEFORE_FAULT
+    assert HOVER_TIME_LIMIT > HOVER_DURATION_BEFORE_FAULT

@@ -243,7 +243,7 @@ class _InterruptSignalHandler:
         previous_handler = self._previous_handler
         signal.signal(signal.SIGINT, previous_handler if previous_handler is not None else signal.SIG_DFL)
 
-    def make_stop_requests(self) -> None:
+    def start_making_stop_requests(self) -> None:
         """From now on, the interrupt signal makes a stop request instead of raising KeyboardInterrupt."""
         self._makes_stop_requests = True
 
@@ -275,7 +275,7 @@ def run_tick_loop(drone: DroneInterface, tick_step: TickStep, clock: Clock, log_
     with _InterruptSignalHandler(tick_loop) as interrupt_signal_handler:
         try:
             drone.connect()
-            interrupt_signal_handler.make_stop_requests()
+            interrupt_signal_handler.start_making_stop_requests()
             tick_loop.run()
         finally:
             drone.disconnect()

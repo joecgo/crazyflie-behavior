@@ -17,7 +17,7 @@ SHORT_HOVER = 0.2
 """Seconds of hovering before the fault, in place of the 3 s a field test uses."""
 
 
-class MockAdapterRecorder:
+class MockAdapterMaker:
     """Stands in for `make_drone`: builds the mock adapter and keeps it for the test to inspect."""
 
     def __init__(self) -> None:
@@ -39,8 +39,8 @@ class MockAdapterRecorder:
 
 
 @pytest.fixture
-def recorder(monkeypatch: pytest.MonkeyPatch) -> MockAdapterRecorder:
-    recorder = MockAdapterRecorder()
+def recorder(monkeypatch: pytest.MonkeyPatch) -> MockAdapterMaker:
+    recorder = MockAdapterMaker()
     monkeypatch.setattr(failsafe_module, "make_drone", recorder)
     monkeypatch.setattr(failsafe_fault_module, "HOVER_DURATION_BEFORE_FAULT", SHORT_HOVER)
     return recorder
@@ -64,7 +64,7 @@ def assert_landed_with_the_motors_off(mock_adapter: MockAdapter) -> None:
 
 @pytest.mark.parametrize(("height", "test_name"), [("0.1", "Failsafe low"), ("0.5", "Failsafe high")])
 def test_the_failsafe_lands_the_drone_after_the_forged_low_battery(
-    height: str, test_name: str, recorder: MockAdapterRecorder, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    height: str, test_name: str, recorder: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
@@ -83,7 +83,7 @@ def test_the_failsafe_lands_the_drone_after_the_forged_low_battery(
 
 
 def test_the_failsafe_is_the_real_one_so_the_forged_battery_is_the_only_thing_that_fails(
-    recorder: MockAdapterRecorder, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    recorder: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
@@ -96,12 +96,12 @@ def test_the_failsafe_is_the_real_one_so_the_forged_battery_is_the_only_thing_th
 
 
 def test_a_fault_that_never_takes_effect_lands_normally_and_fails_the_test(
-    recorder: MockAdapterRecorder, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    recorder: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A fault that never lands (a wrapper that injects nothing) must fail the test: the time limit lands the drone."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(failsafe_fault_module, "HOVER_DURATION_BEFORE_FAULT", 1000.0)
-    monkeypatch.setattr(failsafe_test_module, "FAULT_TIME_LIMIT", 0.3)
+    monkeypatch.setattr(failsafe_test_module, "HOVER_TIME_LIMIT", 0.3)
 
     exit_code = main(["--height-meters", "0.5"])
 
@@ -115,7 +115,7 @@ def test_a_fault_that_never_takes_effect_lands_normally_and_fails_the_test(
 
 
 def test_a_real_fault_before_the_forged_one_does_not_pass_the_test(
-    recorder: MockAdapterRecorder, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    recorder: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The failsafe fires, but not for the injected fault, so it proves nothing about that one."""
     monkeypatch.chdir(tmp_path)

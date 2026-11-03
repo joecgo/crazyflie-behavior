@@ -11,7 +11,7 @@ the ways the test failed.
 Failure rule (ADR-0033): the first refused request ends the test, since the
 basic sequence is what's tested and an unexpected state is the finding. So do
 its time limits: arming too slowly ends it at once, a take-off that doesn't
-reach the height lands first, and a hover that goes on past `FAULT_TIME_LIMIT`
+reach the height lands first, and a hover that goes on past `HOVER_TIME_LIMIT`
 (the injected fault never took effect) lands the drone normally. Every failure
 is logged as an error with its reason and counts in `has_failed`.
 """
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 HEIGHT_TOLERANCE = 0.05
 """Meters: this close to the take-off height counts as there. Less than the Hover test's
 0.1 m, which would count the floor as being at the 0.1 m height."""
-FAULT_TIME_LIMIT = 10.0
+HOVER_TIME_LIMIT = 10.0
 """Seconds of hovering after which the injected fault is taken never to have worked. Longer
 than the failsafe program's wait before it forges the battery (`HOVER_DURATION_BEFORE_FAULT`
 in `programs/failsafe_fault.py`, ADR-0041): a test keeps it so."""
@@ -103,9 +103,9 @@ class FailsafeTest(Behavior):
                     )
                     self._land(ask_safety_layer, now)
             case _Step.HOVERING:
-                if time_in_step > FAULT_TIME_LIMIT:
+                if time_in_step > HOVER_TIME_LIMIT:
                     self._fail(
-                        f"the failsafe didn't land the drone within {FAULT_TIME_LIMIT:g} s of hovering: "
+                        f"the failsafe didn't land the drone within {HOVER_TIME_LIMIT:g} s of hovering: "
                         "the injected fault never took effect. Landing normally",
                         now,
                     )
