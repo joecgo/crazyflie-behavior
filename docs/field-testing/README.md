@@ -1,12 +1,7 @@
 # Field testing
 
-> **Status: accepted 2026-11-02, last updated 2026-11-02.** Reviewed by the
-> architect before First flight. A vertical slice: one room (the living room),
-> working toward hide-and-seek. Latest update: Mapping run and Hide-and-seek
-> stages replace patrol and new environments, the simulator is optional (a
-> mock adapter run is not), and Failsafe high flies at 0.5 m. Exit criteria
-> are deliberately light for now: add pass or fail criteria later, if they're
-> needed at all.
+> **Status, updated 2026-11-02:** a vertical slice: one room (the living
+> room), working toward hide-and-seek. Pass criteria are light for now.
 
 Real flights are where the design gets proven or broken. This folder is the
 record: every test session gets a log, every log ties back to an exact code
@@ -33,26 +28,49 @@ room", is the portfolio story.
 6. **Change.** Fix code, improve the simulator's noise and drift model from the
    recorded data, or write an ADR if a design assumption was wrong. Then loop.
 
-## Stages
+## Tests
 
-Each stage has a gate: don't move on until its exit criteria are met once.
+Three kinds: calibration tests measure the drone, safety tests make its
+failsafes fire on purpose, and flight tests fly it.
 
-| Stage | Goal | Exit criteria (draft) |
+The first time through, pass each test once, in this order: Bench, Failsafe
+low, Failsafe high, Hover, Sensor characterization, Safety validation, Mapping
+run, Hide-and-seek. After that, a test is done until a change calls for it
+again ([below](#when-to-repeat-a-test)).
+
+### Calibration tests
+
+| Test | Goal | Passed when |
 |---|---|---|
 | **Bench** | Connected, **propellers off**. Telemetry and decks detected. | All sensors stream. |
+| **Sensor characterization** | Measure noise and drift in the living room: range sensors against its walls and furniture, the flow deck over its floor, in its usual lighting. | Noise and drift numbers recorded and fed into the simulator. |
+
+### Safety tests
+
+| Test | Goal | Passed when |
+|---|---|---|
 | **Failsafe low** | A program takes off to 0.1 m and injects a fault into the safety pre-check, so the failsafe lands the drone ([ADR-0041](../decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)). | The drone lands and its motors stop. |
 | **Failsafe high** | The same program, from 0.5 m (the Hover test's height). | The drone lands and its motors stop. |
-| **Hover** | Take off, hover at 0.5 m, land. | Any take-off and landing is a success. Drift over 60 s and the take-off-to-landing distance are recorded (no pass or fail on distance). |
-| **Sensor characterization** | Measure noise and drift in the living room: range sensors against its walls and furniture, the flow deck over its floor, in its usual lighting. | Noise and drift numbers recorded and fed into the simulator. |
 | **Safety validation** | Deliberately trigger each failsafe: geofence breach, link loss, low battery, stale data, e-stop. | Every failsafe behaves as designed, in flight. |
-| **Mapping run** | Map the living room in a mapping run. | Set when this stage is planned. |
-| **Hide-and-seek** | Play rounds of [hide-and-seek](../hide-and-seek.md) in the living room. | Set when this stage is planned. |
 
-Sensor characterization and Safety validation are what separate this from a hobby project. They show you
-measured the real system and verified safety, instead of hoping.
+### Flight tests
 
-**After a change** to the safety layer, the Crazyflie adapter or the tick loop,
-run Bench, then Failsafe low, then Failsafe high, then Hover again before anything else.
+| Test | Goal | Passed when |
+|---|---|---|
+| **Hover** | Take off, hover at 0.5 m, land. | Any take-off and landing is a success. Drift over 60 s and the take-off-to-landing distance are recorded (no pass or fail on distance). |
+| **Mapping run** | Map the living room in a mapping run. | Set when this test is planned. |
+| **Hide-and-seek** | Play rounds of [hide-and-seek](../hide-and-seek.md) in the living room. | Set when this test is planned. |
+
+## When to repeat a test
+
+- **Calibration tests:** after a change to code that affects the sensor
+  readings.
+- **Safety tests:** after a change to the safety layer, the Crazyflie adapter
+  or the tick loop.
+- **Flight tests:** whenever the work on them needs it. Flying one never means
+  flying the others again first.
+
+Repeats keep the first-time order.
 
 ## Test environment
 

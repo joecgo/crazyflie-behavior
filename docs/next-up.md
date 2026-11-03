@@ -73,32 +73,16 @@ rules. On top of `CLAUDE.md`:
    the floor (not `_may_be_flying()`), logged once per streak at info level
    (Claude's suggestion, not yet confirmed: list it for Joe). Tests for all
    three, including the failsafe landing during the take-off grace period.
-4. [ ] **Field-test stages become names, and hover drift is measured, not
-   passed.** Joe's decisions of 2026-11-02, while drafting the first session
-   logs (`docs/field-testing/sessions/YYYY-MM-DD-living-room-bench.md` and
-   `...-living-room-hover.md`, already written with these changes):
-   - Call the stages by name, **bench** and **hover** (the ladder's order stays
-     in the README table), not "stage 0", "stage 1". Do it in
-     `docs/field-testing/README.md` (stage table, session-log text),
-     `docs/field-testing/session-template.md` (the `Stage:` field) and the
-     comments and docstrings in `src/` and `tools/` that say "stage 0/1".
-     `docs/glossary.md` also says "field-test stage 0/1" (Bench program,
-     Hover test, Hover program, First flight): don't edit it, propose the
-     exact before and after in the pull request.
-   - The README's hover exit criterion "Lands within N cm of the takeoff
-     point" goes: Joe wants the drift measured, with no pass or fail on
-     distance. Reword it to "Drift over 60 s and the take-off-to-landing
-     distance are measured and recorded."
-   - The bench exit criteria no longer test arming (the firmware arms itself)
-     or the emergency stop (no operator control exists yet, ADR-0013,
-     ADR-0027). Adjust the README's bench row to match: "All sensors stream."
-   - Another session may still be editing the README: re-read it first, and
-     change only these lines.
-   - **Update 2026-11-02:** the walkthrough session already made the three
-     README changes above (stage names, the hover criterion, the bench row),
-     and added the Failsafe low and Failsafe high rows. Skip the README
-     parts; do the rest of this item. **Also done 2026-11-02:** the
-     session template's `Stage:` field lists the stages by name; skip it too.
+4. [ ] **Field tests by name, not "stage 0/1".** Joe's decisions of
+   2026-11-02: the field-testing README has no stages any more, only
+   calibration, safety and flight tests, each called by name. Everything
+   else is already done (the README, the session template and drafts, the
+   glossary, the main README). Left for this run: the comments, docstrings
+   and argparse descriptions in `src/` and `tools/` that say "field-test
+   stage 0" or "stage 1" become "the Bench field test" and "the Hover field
+   test" (`programs/bench.py`, `programs/hover.py`,
+   `behaviors/hover_test.py`, `drone/crazyflie/adapter.py`; search for
+   others). Wording only, no behavior change.
 5. [ ] **ADR-0041: the Failsafe low and Failsafe high program.** Joe's
    decision of 2026-11-02, needed for the hardware arriving 2026-11-03. Build
    it after items 1 to 3 (it relies on take-off, hover and the failsafe
@@ -158,6 +142,6 @@ rules. On top of `CLAUDE.md`:
 
 Not for the cloud run (later, not urgent): a field-test list in
 `docs/field-testing/` with two sections, **Hardware checks** (the `VERIFY`
-notes: firmware and cflib assumptions, stages 0-1) and **Safety tests**
-(each designed failsafe tried for real, stage 3, e.g. kill the program
+notes: firmware and cflib assumptions, Bench and Hover) and **Safety tests**
+(each designed failsafe tried for real, Safety validation, e.g. kill the program
 mid-hover and run the rescue landing, ADR-0038).

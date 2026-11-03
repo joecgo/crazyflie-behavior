@@ -2,7 +2,7 @@
 
 > **DRAFT.** Date and commit are pending. Nothing below the pre-flight section has been filled in.
 
-- **Stage:** Bench
+- **Test:** Bench (calibration)
 - **Git commit:** `<hash>` (must be committed before flying)
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger, battery #
 - **Firmware / cflib:** <firmware version> / <cflib version>
