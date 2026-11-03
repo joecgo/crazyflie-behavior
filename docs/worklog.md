@@ -72,5 +72,5 @@ from sensing ([ADR-0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)
 
 | Milestone | Hours |
 |---|---|
-| First flight | ~39 |
-| **Total** | **~39** |
+| First flight | ~40 |
+| **Total** | **~40** |
