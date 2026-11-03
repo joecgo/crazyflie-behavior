@@ -33,8 +33,8 @@ decisions are recorded), *communication* (how Claude explains things).
 | environment | 3 | 5 |
 | communication | 5 | 6 |
 | testing | 0 | 6 |
-| process | 2 | 8 |
-| **Total** | **24** | **52** |
+| process | 2 | 9 |
+| **Total** | **24** | **53** |
 
 Of the 24 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 18. So far, 7 of the 10 recommendation
@@ -455,6 +455,21 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-03: Crazyflie adapter code committed without `/project-review`
+
+- **What happened:** building ADR-0045, Claude changed the Crazyflie
+  adapter (a new time-out message for a take-over connect, then a comment)
+  and committed and pushed it with tests and bug planting, but without the
+  `/project-review` that `CLAUDE.md` requires before committing adapter
+  changes. The stop hook's push-every-change rule made it easy to forget.
+- **Why it was wrong:** the rule has no size exception, and the change is on
+  the rescue landing's path.
+- **How it was caught:** Claude, at the end of the session.
+- **Kind:** process.
+- **Takeaway:** before each commit, check whether it touches the safety
+  layer, the Crazyflie adapter or the tick loop. If it does, review first,
+  or ask before committing without one.
 
 ### 2026-11-03: Docstrings that a change left behind
 
