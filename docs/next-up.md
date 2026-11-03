@@ -167,9 +167,9 @@ rules. On top of `CLAUDE.md`:
    something. Also record, as a risk Joe accepts knowingly: with no gate,
    a test passes once the first time through, so a lucky pass or a later
    regression is caught only when a repeat rule is followed. Joe's
-   reasoning, in his terms: this is a side project, not a full-time job;
-   a strict suite before every flight he wants to do isn't practical, and
-   the time is for learning, exploring and trying new things. He retests
+   reasoning, in Joe's terms: this is a side project, not a full-time job;
+   a strict suite before every flight Joe wants to do isn't practical, and
+   the time is for learning, exploring and trying new things. Joe retests
    occasionally, guided by the repeat rules, without being bound by them. Origin line: "Joe's decisions,
    recorded after the fact"; list the origin under "Choices for Joe to
    confirm", since who suggested each part isn't recorded. Add the index
