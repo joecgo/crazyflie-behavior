@@ -30,7 +30,9 @@ up. That move gets its own ADR.
   state machine is a `Behavior`, and a later behavior tree is one too.
 - **`tick` returns an outcome:** running, succeeded or failed, like UE's
   `EBTNodeResult`. A program exits with a nonzero code when a test fails or
-  the failsafe ends the flight.
+  the failsafe ends the flight, unless the program tests that failsafe: then
+  the program defines its own pass (amended 2026-11-03; the Failsafe low and
+  Failsafe high tests, [ADR-0041](0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)).
 - **Robotics rules for states:** every state that waits on the world has a
   time limit and a failure path; a transition on noisy readings needs a hold
   time (backlog #4); interrupts for safety stay in the safety layer beneath

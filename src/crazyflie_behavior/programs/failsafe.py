@@ -13,10 +13,14 @@ It uses the mock adapter unless it's run with --crazyflie:
 
 If the fault never takes effect, the program lands the drone normally after a
 time limit and the test has failed. The exit code is 0 only if the fault was
-injected, the safety pre-check then failed and the test didn't fail by its own
-rules; a pytest test checks that the pre-check failed because of the battery
-(ADR-0041). The interrupt signal makes a stop request: before the fault, the
-drone lands and the test hasn't passed.
+injected, the safety pre-check then failed, the test didn't fail by its own
+rules, and the landing in `disconnect()` finished with the motors stopped (it
+raises otherwise, which makes the exit code 1). Exit code 0 doesn't say whether
+touchdown was confirmed or the final descent ran out its time limit: the test
+log records that. A pytest test checks that the pre-check failed because of the
+battery (ADR-0041; ADR-0036's exit-code rule, amended for tests of a failsafe).
+The interrupt signal makes a stop request: before the fault, the drone lands
+and the test hasn't passed.
 """
 
 import argparse

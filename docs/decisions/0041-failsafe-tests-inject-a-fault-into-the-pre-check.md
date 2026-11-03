@@ -74,5 +74,16 @@ proven, so the test uses that path.
   test "only the safety layer sends commands" needed an exemption for its file
   (backlog #39).
 - The failsafe test reaches its pass through the exit code, not through the
-  behavior reporting done (backlog #40).
+  behavior reporting done (see "Who judges the pass" below).
 - Glossary: *Failsafe low / Failsafe high*.
+- **Who judges the pass (amended 2026-11-03, my call on the AI's
+  recommendation; closes backlog #40 and #42):** the failsafe program, not
+  the behavior. A failed pre-check ends the run at once and the failsafe
+  landing finishes inside `disconnect()`, so `FailsafeTest` is never ticked
+  again. Exit code 0 means the fault was injected, the pre-check then failed,
+  the test didn't fail by its own rules, and the landing in `disconnect()`
+  finished with the motors stopped (a landing that raises makes it 1). It
+  doesn't say whether touchdown was confirmed or the final descent ran out
+  its time limit ([ADR-0019](0019-final-descent-when-touchdown-unconfirmed.md)):
+  the test log records that from the operator and the recording. ADR-0036's
+  exit-code rule is amended to allow this.
