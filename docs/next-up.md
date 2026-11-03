@@ -94,6 +94,66 @@ rules. On top of `CLAUDE.md`:
      ADR-0027). Adjust the README's bench row to match: "All sensors stream."
    - Another session may still be editing the README: re-read it first, and
      change only these lines.
+   - **Update 2026-11-02:** the walkthrough session already made the three
+     README changes above (stage names, the hover criterion, the bench row),
+     and added the Failsafe low and Failsafe high rows. Skip the README
+     parts; do the rest of this item.
+5. [ ] **ADR-0041: the Failsafe low and Failsafe high program.** Joe's
+   decision of 2026-11-02, needed for the hardware arriving 2026-11-03. Build
+   it after items 1 to 3 (it relies on take-off, hover and the failsafe
+   landing working). **Joe asked to skip `/project-review` for this item
+   for now:** run the checks and bug planting as usual, say in the pull
+   request that this item was not reviewed, and still list any design
+   doubts you have under "Questions for Joe".
+   - **Program:** `src/crazyflie_behavior/programs/failsafe.py`, shaped like
+     `programs/hover.py`: `--crazyflie` (default: the mock adapter) and a
+     required `--height-meters`, which accepts only 0.1 (Failsafe low) or 0.3
+     (Failsafe high). Add a `.run/` configuration for each height, as the
+     hover program has.
+   - **Behavior:** a field-test behavior in `behaviors/` (ADR-0033: its
+     docstring states its failure rule; it stops at its first refused
+     request): arm, take off to the height, hover, then report done only after
+     the failsafe has landed the drone. Give it a time limit that lands the
+     drone normally if the fault never takes effect (ADR-0041's input
+     failure mode), logged as a failed test.
+   - **The fault (ADR-0041 option A, how decided by Joe 2026-11-02):** a small
+     wrapper class around the `DroneInterface`, in the same program module (or
+     a file next to it), whose `take_snapshot()` returns the real snapshot
+     unchanged until the drone has hovered for about 3 s (a named constant,
+     units in the name), then returns it with `battery_voltage` replaced by a
+     value below `LOW_BATTERY_VOLTAGE` (use `dataclasses.replace`; check the
+     snapshot classes are frozen with slots, ADR-0018). Every other field,
+     down range included, stays real: the landing uses it for touchdown
+     (ADR-0032). The wrapper logs one warning, "FAULT INJECTED: battery
+     voltage forged", when it starts, and delegates everything else to the
+     real drone. **Do not change `safety_layer.py`:** the real pre-check and
+     failsafe must run unmodified. No flag, hook or parameter in the safety
+     layer, behaviors or the drone interface.
+   - **Tests:** run the program on the mock adapter at both heights; check
+     the pre-check fails with the battery message, a landing is sent, and the
+     drone ends landed with its motors off. Bug-plant it: a wrapper that
+     injects nothing must make the test fail (the time limit lands it).
+     **Architecture test (fitness function):** the wrapper is imported only
+     by the failsafe program, and never by `behaviors/`, `safety/`, `loop/`
+     or `drone/`. Put it with the other architecture tests.
+   - **Docs:** amend ADR-0041's decision with the mechanism above (origin
+     line: Joe chose option A; the AI recommended the wrapper with a forged
+     low battery), and remove backlog #38 (the ADR now closes it). Add the
+     program to the README's "Run" section if it lists programs. Glossary:
+     don't edit it; propose the terms *Failsafe low* and *Failsafe high*
+     (the field-test stages that fly the failsafe program at 0.1 m and
+     0.3 m) in the pull request.
+6. [ ] **ADR-0042: slightly negative ages count as fresh.** Not needed for
+   the hardware; do it last. `Stamped.age()` stays unclamped, and its
+   docstring says the age can be slightly negative, meaning just arrived.
+   The safety pre-check's staleness check logs a warning when an age is
+   below `-MAX_NEGATIVE_AGE` (one tick period, 0.05 s at `TICK_RATE` 20 Hz;
+   derive it from `TICK_RATE` if the import doesn't cross a boundary,
+   otherwise a named constant, and say which in the pull request), once per
+   streak per value. The warning never fails the pre-check. Tests: an age of
+   about -0.01 s passes the pre-check with no warning; one of -1 s passes
+   and warns once over several ticks, and again after a normal age ends the
+   streak.
 
 Not for the cloud run (later, not urgent): a field-test list in
 `docs/field-testing/` with two sections, **Hardware checks** (the `VERIFY`
