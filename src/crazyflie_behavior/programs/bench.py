@@ -1,7 +1,7 @@
 """The bench program (ADR-0028): connect, tick, and log every snapshot. Never commands the drone.
 
-For the Bench field test, propellers off. It uses the mock adapter unless it's
-run with --crazyflie:
+For the Bench field test, with the propellers on (ADR-0044). It uses the mock
+adapter unless it's run with --crazyflie:
 
     .venv\\Scripts\\python -m crazyflie_behavior.programs.bench
     .venv\\Scripts\\python -m crazyflie_behavior.programs.bench --crazyflie

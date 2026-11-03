@@ -42,7 +42,7 @@ records how the tests are organized, and why there is no gate between them.
 
 | Test | Goal | Passed when |
 |---|---|---|
-| **Bench** | Connected, **propellers off**. Telemetry and decks detected. | All sensors stream. |
+| **Bench** | Connected, propellers on ([ADR-0044](../decisions/0044-the-bench-is-flown-with-propellers-on.md)). Telemetry and decks detected. | All sensors stream. |
 | **Sensor characterization** | Measure noise and drift in the living room: range sensors against its walls and furniture, the flow deck over its floor, in its usual lighting. | Noise and drift numbers recorded and fed into the simulator. |
 
 ### Safety tests

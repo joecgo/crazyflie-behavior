@@ -75,7 +75,8 @@ setup works. In PyCharm, use the **first_flight** run configuration.
 ```
 
 It connects, runs the tick loop and logs every snapshot, but never commands
-the drone: the Bench field test, propellers off. Without `--crazyflie` it uses
+the drone: the Bench field test, propellers on
+([ADR-0044](docs/decisions/0044-the-bench-is-flown-with-propellers-on.md)). Without `--crazyflie` it uses
 the mock adapter. The console shows a summary every second, with how old each
 value is, and everything goes to a log file in `logs/`. (With the mock
 adapter every value is 0 ms old: it streams them all again with each

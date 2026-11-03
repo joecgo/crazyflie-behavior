@@ -187,7 +187,7 @@ rules. On top of `CLAUDE.md`:
    row, and link the ADR from the field-testing README. Leave ADR-0010 and
    ADR-0028's "field-test stage 0" as written: they are a historical record.
 
-8. [ ] **ADR-0044: the Bench is flown with propellers on** (docs only, after
+8. [x] **ADR-0044: the Bench is flown with propellers on** (docs only, after
    item 7). Joe's decision of 2026-11-03: taking the propellers off is too
    much work. Record the risk he accepts knowingly: the drone auto-arms
    (ADR-0037) with propellers on; mitigations are that the bench program
