@@ -8,6 +8,7 @@ then puts the real ones back.
 
 import copy
 import logging
+import math
 import signal
 import threading
 import time
@@ -627,6 +628,43 @@ def test_a_failure_while_connecting_to_take_over_closes_only_the_radio_link(fake
         adapter.connect()
 
     assert_only_the_radio_link_closed(fake_cflib)
+
+
+@pytest.mark.parametrize("estimate_variable", ["stateEstimate.z", "stateEstimate.vz"])
+def test_taking_over_a_drone_with_no_finite_estimate_points_to_the_emergency_stop(
+    fake_cflib: FakeCflib, estimate_variable: str
+) -> None:
+    # A flying drone with a NaN estimate can't follow a landing command (ADR-0045).
+    fake_cflib.samples["state"][estimate_variable] = math.nan
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0), take_over_flight=True)
+
+    with pytest.raises(TimeoutError, match=r"estimate\. The drone can't land under control.*emergency_stop\.py"):
+        adapter.connect()
+
+    assert_only_the_radio_link_closed(fake_cflib)
+
+
+def test_a_normal_connect_with_no_finite_estimate_does_not_point_to_the_emergency_stop(fake_cflib: FakeCflib) -> None:
+    # The drone is on the floor here: the emergency stop is for a flying drone only (ADR-0045).
+    fake_cflib.samples["state"]["stateEstimate.z"] = math.nan
+    adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0))
+
+    with pytest.raises(TimeoutError, match="Still missing: position estimate") as error:
+        adapter.connect()
+
+    assert "emergency_stop" not in str(error.value)
+
+
+def test_a_take_over_that_misses_other_telemetry_says_to_check_the_radio(fake_cflib: FakeCflib) -> None:
+    fake_cflib.silent_blocks.add("battery")
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0), take_over_flight=True)
+
+    with pytest.raises(TimeoutError, match="Check the Crazyflie is in range") as error:
+        adapter.connect()
+
+    assert "emergency_stop" not in str(error.value)
 
 
 def test_connecting_again_waits_for_a_new_status_not_the_last_connections(

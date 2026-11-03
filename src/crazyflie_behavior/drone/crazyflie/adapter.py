@@ -615,14 +615,22 @@ class CrazyflieAdapter(DroneInterface):
 
     def _wait_for_first_telemetry(self) -> None:
         """Return once every telemetry value has arrived once (ADR-0031)."""
-        self._wait_until(
-            lambda: not self._telemetry.missing_values(),
-            lambda: (
-                f"Waiting for the first telemetry took longer than "
-                f"{FIRST_TELEMETRY_TIME_LIMIT:g} s. Still missing: {', '.join(self._telemetry.missing_values())}. "
-                "Check the Crazyflie is in range, and that its firmware logs these values."
-            ),
+        self._wait_until(lambda: not self._telemetry.missing_values(), self._first_telemetry_time_limit_message)
+
+    def _first_telemetry_time_limit_message(self) -> str:
+        missing_values = self._telemetry.missing_values()
+        message = (
+            f"Waiting for the first telemetry took longer than "
+            f"{FIRST_TELEMETRY_TIME_LIMIT:g} s. Still missing: {', '.join(missing_values)}. "
         )
+        if self._take_over_flight and ("position estimate" in missing_values or "velocity estimate" in missing_values):
+            # A flying drone whose estimate isn't finite can't follow any landing command: the
+            # firmware's own controller flies on that estimate (ADR-0045).
+            return message + (
+                "The drone can't land under control without its estimate. "
+                "Use tools/emergency_stop.py, with something soft under the drone first."
+            )
+        return message + "Check the Crazyflie is in range, and that its firmware logs these values."
 
     def _wait_until(self, is_done: Callable[[], bool], time_limit_message: Callable[[], str]) -> None:
         """Wait up to `FIRST_TELEMETRY_TIME_LIMIT` for `is_done()`, or raise a TimeoutError.

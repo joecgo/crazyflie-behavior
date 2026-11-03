@@ -53,5 +53,6 @@ This column is honest about which ideas were mine.
 | [0042](0042-negative-ages-count-as-fresh.md) | Slightly negative ages count as fresh; a large one is a warning | AI recommendation accepted |
 | [0043](0043-how-field-tests-are-organized.md) | Field tests are grouped by kind and repeated by rule, with no stage gate; a session is a trip, a field test is one test | My decisions, recorded after the fact |
 | [0044](0044-the-bench-is-flown-with-propellers-on.md) | The Bench is flown with the propellers on | My decision, with the AI pushing back on the risk |
+| [0045](0045-rescue-without-an-estimate-points-to-the-emergency-stop.md) | A rescue that gets no estimate points to the emergency stop | AI recommendation accepted |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
