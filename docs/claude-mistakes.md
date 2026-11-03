@@ -28,16 +28,16 @@ decisions are recorded), *communication* (how Claude explains things).
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 3 | 12 |
-| safety design | 3 | 12 |
+| safety design | 4 | 12 |
 | recommendation | 7 | 3 |
 | environment | 3 | 5 |
 | communication | 5 | 6 |
 | testing | 0 | 6 |
 | process | 2 | 8 |
-| **Total** | **23** | **52** |
+| **Total** | **24** | **52** |
 
-Of the 23 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 17. So far, 7 of the 10 recommendation
+Of the 24 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 18. So far, 7 of the 10 recommendation
 mistakes needed me, and 5 of the 9 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
@@ -47,6 +47,25 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-03: "No landing command can work" on a NaN estimate
+
+- **What happened:** for backlog #41, Claude said a drone whose position
+  estimate is NaN "can't follow any landing command", and wrote it into
+  ADR-0045 and a code comment. It's true only for position commands, which
+  is every landing our code has. A descent on tilt and thrust, with
+  touchdown from the raw down range, doesn't use the position estimate.
+- **Why it was wrong:** the firmware source showed the position controller
+  depends on the estimate; it didn't show that every way of flying does.
+  The claim went one step past the evidence.
+- **How I caught it:** I asked why not just descend slowly until a sensor
+  detects touchdown.
+- **Would a Claude review have caught it?** Probably not: the claim was
+  sourced and the decision stayed right, so a review would likely have
+  accepted it.
+- **Kind:** safety design.
+- **Takeaway:** when a source shows one path fails, say "this path", not
+  "every path", unless the other paths were checked too.
 
 ### 2026-11-03: An idea of mine credited to the AI
 

@@ -624,8 +624,8 @@ class CrazyflieAdapter(DroneInterface):
             f"{FIRST_TELEMETRY_TIME_LIMIT:g} s. Still missing: {', '.join(missing_values)}. "
         )
         if self._take_over_flight and ("position estimate" in missing_values or "velocity estimate" in missing_values):
-            # A flying drone whose estimate isn't finite can't follow any landing command: the
-            # firmware's own controller flies on that estimate (ADR-0045).
+            # A flying drone whose estimate isn't finite can't follow our landings: they're
+            # position commands, and the firmware's controller flies them on that estimate (ADR-0045).
             return message + (
                 "The drone can't land under control without its estimate. "
                 "Use tools/emergency_stop.py, with something soft under the drone first."

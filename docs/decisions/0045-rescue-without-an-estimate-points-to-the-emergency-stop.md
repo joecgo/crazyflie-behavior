@@ -15,8 +15,11 @@ take-over connect times out, and the adapter's landing for "no estimate"
 (`master`, 2026-11-03): the Kalman estimator's bounds check
 (`kalman_supervisor.c`) compares against limits, which a NaN passes, and its
 NaN check exists only in debug builds (`kalman_core.c`). The firmware's
-controller flies on that same estimate, so a drone with a NaN estimate can't
-follow any landing command.
+position controller flies on that same estimate, so a drone with a NaN
+estimate can't follow a position command (`go_to`, hover), which is every
+landing our code has. (Corrected 2026-11-03: this first said "any landing
+command". A tilt-and-thrust descent doesn't use the position estimate; see
+backlog #45.)
 
 ## Options considered
 
@@ -38,7 +41,7 @@ Any other missing value, and any normal connect, keeps the old message.
 ## Failure modes
 
 - **Inputs:** an estimate that never arrives is either NaN on the drone or
-  lost on the radio. In both cases no landing command would work.
+  lost on the radio. In both cases no landing our code has would work.
 - **Never:** the rescue landing must not claim a landing it can't fly.
 - **Always eventually:** the operator is told which last resort to use.
 
@@ -51,4 +54,7 @@ Any other missing value, and any normal connect, keeps the old message.
   estimator behaves as `master` does.
 - Tests: `test_taking_over_a_drone_with_no_finite_estimate_points_to_the_emergency_stop`
   and the two tests that keep the old message elsewhere.
-- Closes backlog #41.
+- Closes backlog #41. Backlog #45 explores two rescues that might land a
+  drone with a NaN estimate: an estimator reset in flight, then the normal
+  landing, and a descent on tilt and thrust with touchdown from the raw down
+  range. Until one is built, the emergency stop is the last resort.

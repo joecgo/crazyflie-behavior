@@ -12,6 +12,8 @@ takeaway applies to reviews, it's added here as a question.
   checked, not recalled? If a decision or safety code rests on it, its ADR
   names the file it was checked in. Docstrings and comments don't cite
   sources.
+- Does a checked claim say only what its source showed? "This path fails" is
+  not "every path fails" unless the other paths were checked too.
 - For each library call the code relies on: what does it do on a timeout or
   an error? Is that checked in the source?
 - Windows-only code: is it checked against Windows' documented behavior, and

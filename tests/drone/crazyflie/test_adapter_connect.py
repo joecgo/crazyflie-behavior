@@ -634,7 +634,7 @@ def test_a_failure_while_connecting_to_take_over_closes_only_the_radio_link(fake
 def test_taking_over_a_drone_with_no_finite_estimate_points_to_the_emergency_stop(
     fake_cflib: FakeCflib, estimate_variable: str
 ) -> None:
-    # A flying drone with a NaN estimate can't follow a landing command (ADR-0045).
+    # A flying drone with a NaN estimate can't follow our landings, which are position commands (ADR-0045).
     fake_cflib.samples["state"][estimate_variable] = math.nan
     fake_cflib.samples["state"]["supervisor.info"] = FLYING
     adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0), take_over_flight=True)
