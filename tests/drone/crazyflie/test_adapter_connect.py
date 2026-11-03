@@ -461,6 +461,23 @@ def test_connecting_again_waits_for_new_telemetry_not_the_last_session_s(
         adapter.connect()
 
 
+def test_connecting_again_drops_a_landing_left_from_the_last_session(fake_cflib: FakeCflib) -> None:
+    clock = StreamingSimClock(fake_cflib, start=10.0)
+    adapter = CrazyflieAdapter(clock)
+    adapter.connect()
+    adapter.take_off(0.5)
+    adapter.land()  # a landing under way
+    adapter._shut_down_link()  # the session ends without finishing it, as when the landing at disconnect fails
+    adapter.connect()  # a drone on the floor
+    fake_cflib.link.cf.high_level_commander.reset_mock()
+
+    clock.advance(60.0)  # long past the old landing's time limits
+    adapter.take_snapshot(clock.now(), 0.05)
+
+    # The old landing would have stopped the motors or sent a go_to to an armed drone on the floor.
+    assert fake_cflib.link.cf.high_level_commander.mock_calls == []
+
+
 # --- Connecting to a flying drone (ADR-0038) --------------------------------------
 
 FLYING = float(1 << adapter_module.BIT_IS_FLYING)

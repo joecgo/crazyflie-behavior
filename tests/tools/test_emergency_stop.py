@@ -122,6 +122,25 @@ def test_main_says_not_confirmed_and_exits_1_when_nothing_was_delivered(
     assert "NOT CONFIRMED" in capsys.readouterr().err
 
 
+def test_main_names_both_causes_of_a_stop_that_is_not_confirmed(
+    script: ModuleType, fake_link: MagicMock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Every packet taken, but a link error on the way: the stop may well have arrived, so the
+    # message must not say the radio delivered nothing (REVIEW.md: the stated cause holds on every path).
+    def link_driver(_uri: str, link_error_callback: object) -> MagicMock:
+        assert callable(link_error_callback)
+        link_error_callback("Too many packets lost")
+        return fake_link
+
+    fake_link.send_packet.return_value = True
+    script.cflib.crtp.get_link_driver.side_effect = link_driver
+
+    assert script.main([]) == 1
+    error_output = capsys.readouterr().err
+    assert "didn't take every packet" in error_output
+    assert "link error" in error_output
+
+
 def test_main_exits_0_when_the_radio_took_every_packet(
     script: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

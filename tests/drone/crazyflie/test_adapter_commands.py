@@ -160,6 +160,26 @@ def test_hover_on_the_floor_is_logged_once_per_streak_at_info_level(
     assert {record.levelno for record in ignored} == {logging.INFO}
 
 
+def test_a_hover_that_goes_through_ends_the_streak_of_ignored_ones(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    # After the rescue landing takes over a flight, no take-off is ever sent, so a hover that goes
+    # through is the only thing that can end a streak of ignored ones (ADR-0038, ADR-0039).
+    adapter.take_off(1.0)
+    clock.advance(TAKE_OFF_STATUS_GRACE + 0.5)
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+        adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)
+        adapter.hover()  # ignored: the first streak
+        adapter._telemetry.write_drone_status(FLYING, None)
+        adapter.hover()  # goes through
+        adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)
+        adapter.hover()  # ignored: a new streak
+
+    fake_link.cf.high_level_commander.go_to.assert_called_once()
+    ignored = [record for record in caplog.records if "Hover ignored" in record.getMessage()]
+    assert len(ignored) == 2
+
+
 def test_set_velocity_sends_the_yaw_rate_in_degrees(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
     adapter.set_velocity(Vector3(0.2, 0.0, -0.1), yaw_rate_rad_per_s=math.pi)
 

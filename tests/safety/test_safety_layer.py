@@ -297,7 +297,7 @@ def test_arming_and_taking_off_are_refused_without_a_drone_status() -> None:
 
 @pytest.mark.parametrize("command_request", [Hover(), Land()])
 def test_hovering_and_landing_are_approved_without_a_drone_status(command_request: CommandRequest) -> None:
-    """A missing status counts as flying: hover and land fly when unsure (ADR-0039)."""
+    """Approved whatever the status, even a missing one: the adapter decides if the drone may be flying (ADR-0039)."""
     no_status = replace(snapshot(FLYING), drone_status=None)
 
     assert judge(command_request, no_status).is_approved

@@ -42,15 +42,19 @@ class DroneInterface(ABC):
         """Open the link and start telemetry. May block while connecting.
 
         When it returns, every telemetry value has arrived at least once, so
-        the first snapshot has nothing missing (ADR-0031).
+        the first snapshot has nothing missing (ADR-0031). Raises for a drone
+        that is already flying, unless the adapter was built to take over its
+        flight, as only the rescue landing program does (ADR-0038).
         """
 
     @abstractmethod
     def disconnect(self) -> None:
         """Leave the drone on the ground with motors stopped, then close the link.
 
-        If the drone is flying, it lands first. Unlike the other commands this
-        may block, because it's only used at shutdown.
+        If the drone may be flying, it lands first. If that landing fails, the
+        link is closed without stopping the motors, so a flying drone keeps
+        flying: run the rescue landing (ADR-0038). Unlike the other commands
+        this may block, because it's only used at shutdown.
         """
 
     @abstractmethod
@@ -87,7 +91,11 @@ class DroneInterface(ABC):
 
     @abstractmethod
     def hover(self) -> None:
-        """Stop and hold the current position."""
+        """Stop and hold the current position.
+
+        Does nothing when the drone isn't known to be flying: on the floor, a
+        move to hold the position would spin up an armed drone's motors (ADR-0039).
+        """
 
     @abstractmethod
     def emergency_stop(self) -> None:

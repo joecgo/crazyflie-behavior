@@ -181,7 +181,8 @@ class CrazyflieAdapter(DroneInterface):
         self._is_airborne = False
         """A take-off was sent (or the flight was taken over) and the motors haven't been stopped since."""
         self._is_ignoring_hover = False
-        """The latest hover was ignored because the drone isn't flying: the log line for it comes once per streak."""
+        """The latest hover was ignored because the drone isn't known to be flying: the log line for it
+        comes once per streak."""
         self._is_drone_state_unknown = False
         """True from the start of `connect()` until the drone is known to be on the floor or its
         flight is taken over (ADR-0038). It stays True when the drone is found flying and refused:
@@ -211,6 +212,7 @@ class CrazyflieAdapter(DroneInterface):
         self._is_airborne = False  # a new session learns what the drone is doing from the drone
         self._is_ignoring_hover = False
         self._is_drone_state_unknown = True
+        self._cancel_landing()  # nor does it carry on a landing from an earlier session
         # A new session starts with no values, so the wait for the first telemetry
         # can't pass on values left from an earlier one (ADR-0031).
         self._telemetry = TelemetryBuffer(self._clock)
@@ -324,6 +326,7 @@ class CrazyflieAdapter(DroneInterface):
                 )
                 self._is_ignoring_hover = True
             return
+        self._is_ignoring_hover = False  # this hover goes through: the streak is over
         self._cancel_landing()
         self._release_velocity_streaming()
         commander = self._crazyflie.high_level_commander
@@ -370,9 +373,14 @@ class CrazyflieAdapter(DroneInterface):
         """Turn off the radio link and nothing else, so a flying drone keeps flying (ADR-0038).
 
         cflib's `Crazyflie.close_link()` first sends a zero-thrust setpoint, which
-        would drop a flying drone. This is the rest of it, in the same order. It
-        uses cflib internals (`link`, `incoming`): re-check it whenever cflib is
-        upgraded. Safe to call twice, and when the link isn't open.
+        would drop a flying drone. This does three of its other steps, in the same
+        order: close the link, stop the incoming packet handler, and call the
+        disconnected callbacks. It skips the rest (re-creating the incoming packet
+        handler, clearing the expected answers, setting the state to disconnected),
+        which matters only to a Crazyflie object that is used again: `connect()`
+        always makes a new one. It uses cflib internals (`link`, `incoming`):
+        re-check it against `close_link()` whenever cflib is upgraded. Safe to call
+        twice, and when the link isn't open.
         """
         if self._sync_crazyflie is None:
             return

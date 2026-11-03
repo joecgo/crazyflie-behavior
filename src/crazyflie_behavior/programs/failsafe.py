@@ -3,8 +3,9 @@
 Arm, take off to the height (0.1 m for Failsafe low, 0.5 m for Failsafe high),
 hover, and wait for the safety layer's failsafe to land the drone. The fault
 that makes it fire is a forged low battery: a wrapper around the drone hands
-the safety layer a snapshot with a low battery voltage after about 3 s of
-hovering, and logs "FAULT INJECTED". The safety layer itself is unmodified.
+the safety layer a snapshot with a low battery voltage after a few seconds of
+hovering (`HOVER_DURATION_BEFORE_FAULT` in `failsafe_fault.py`), and logs
+"FAULT INJECTED". The safety layer itself is unmodified.
 It uses the mock adapter unless it's run with --crazyflie:
 
     .venv\\Scripts\\python -m crazyflie_behavior.programs.failsafe --height-meters 0.1
@@ -35,7 +36,7 @@ FAILSAFE_HIGH_HEIGHT = 0.5
 
 
 def main(arguments: list[str] | None = None) -> int:
-    """Run the failsafe test once. Returns the program's exit code: 0 only if the failsafe landed the drone."""
+    """Run the failsafe test once. Returns the exit code: 0 only if it passed, as the module docstring says."""
     parser = argparse.ArgumentParser(
         prog="failsafe",
         description=(

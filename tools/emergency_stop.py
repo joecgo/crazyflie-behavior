@@ -84,7 +84,8 @@ def main(arguments: list[str] | None = None) -> int:
         print("Sent: the radio took every packet. Check that the motors stopped.")
         return 0
     print(
-        "NOT CONFIRMED: the radio did not deliver the emergency stop. Assume the drone is still flying.",
+        "NOT CONFIRMED: the radio didn't take every packet, or it reported a link error. "
+        "Assume the drone is still flying.",
         file=sys.stderr,
     )
     return 1

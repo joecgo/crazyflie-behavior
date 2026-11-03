@@ -33,8 +33,9 @@ HEIGHT_TOLERANCE_FRACTION = 0.25
 """Of the take-off height: this close to it counts as there. A fraction, not meters,
 because the Hover test's 0.1 m would count the floor as being at the 0.1 m height."""
 FAULT_TIME_LIMIT = 10.0
-"""Seconds of hovering after which the injected fault is taken never to have worked. The
-program's wrapper forges the battery after 3 s of hovering (ADR-0041)."""
+"""Seconds of hovering after which the injected fault is taken never to have worked. Longer
+than the failsafe program's wait before it forges the battery (`HOVER_DURATION_BEFORE_FAULT`
+in `programs/failsafe_fault.py`, ADR-0041): a test keeps it so."""
 # ------------------------------------------------------------------------------------------
 
 
