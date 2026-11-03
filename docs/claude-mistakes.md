@@ -33,11 +33,11 @@ decisions are recorded), *communication* (how Claude explains things).
 | environment | 3 | 5 |
 | communication | 5 | 4 |
 | testing | 0 | 3 |
-| process | 0 | 6 |
-| **Total** | **21** | **39** |
+| process | 1 | 6 |
+| **Total** | **22** | **39** |
 
-Of the 21 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 15. So far, 7 of the 10 recommendation
+Of the 22 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 16. So far, 7 of the 10 recommendation
 mistakes needed me, and 5 of the 9 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
@@ -47,6 +47,22 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-02: Follow-up commits pushed to a pull request already merged
+
+- **What happened:** I merged pull request #5 seconds after Claude opened
+  it. Claude then pushed three more commits to its branch and rewrote its
+  description to include them, without checking whether it was still open.
+  The commits never reached `main`, and the merged pull request's
+  description listed changes it didn't contain.
+- **Why it was wrong:** the session's own rules say a merged pull request
+  is finished: follow-up work goes in a new pull request.
+- **How I caught it:** I said I'd merged it and couldn't see the new one.
+- **Would a Claude review have caught it?** Probably not: reviews look at
+  the code and records, not at a pull request's state.
+- **Kind:** process.
+- **Takeaway:** before pushing to a pull request's branch or editing its
+  description, check that it's still open.
 
 ### 2026-11-02: "Nothing is scheduled" said without checking
 
