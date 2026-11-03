@@ -87,7 +87,7 @@ rules. On top of `CLAUDE.md`:
    test" (`programs/bench.py`, `programs/hover.py`,
    `behaviors/hover_test.py`, `drone/crazyflie/adapter.py`; search for
    others). Wording only, no behavior change.
-5. [ ] **ADR-0041: the Failsafe low and Failsafe high program.** Joe's
+5. [x] **ADR-0041: the Failsafe low and Failsafe high program.** Joe's
    decision of 2026-11-02, needed for the hardware arriving 2026-11-03. Build
    it after items 1 to 3 (it relies on take-off, hover and the failsafe
    landing working). Run the checks and bug planting as usual; the one

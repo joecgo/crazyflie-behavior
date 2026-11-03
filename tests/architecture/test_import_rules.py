@@ -16,6 +16,10 @@ BEHAVIORS_ROOT = PACKAGE_ROOT / "behaviors"
 SAFETY_ROOT = PACKAGE_ROOT / "safety"
 DRONE_ROOT = PACKAGE_ROOT / "drone"
 TICK_LOOP = PACKAGE_ROOT / "loop" / "tick_loop.py"
+PROGRAMS_ROOT = PACKAGE_ROOT / "programs"
+FAILSAFE_PROGRAM = PROGRAMS_ROOT / "failsafe.py"
+FORGED_BATTERY_WRAPPER = "crazyflie_behavior.programs.failsafe_fault"
+FORGED_BATTERY_FILE = PROGRAMS_ROOT / "failsafe_fault.py"
 
 CLOCK_MODULES = ["time", "datetime", "crazyflie_behavior.timing"]
 
@@ -83,6 +87,22 @@ def drone_commands_called(path: Path) -> set[str]:
     }
 
 
+def imports_module_in_any_form(path: Path, module_name: str) -> bool:
+    """Whether a source file imports exactly this module: `import a.b`, `from a import b` or `from a.b import x`.
+
+    `imported_modules` records only the module a `from` import names, so
+    `from crazyflie_behavior.programs import failsafe_fault` would slip past it.
+    """
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import) and any(alias.name == module_name for alias in node.names):
+            return True
+        if isinstance(node, ast.ImportFrom):
+            source = resolve_relative_import(path, node.level, node.module) if node.level > 0 else (node.module or "")
+            if source == module_name or any(f"{source}.{alias.name}" == module_name for alias in node.names):
+                return True
+    return False
+
+
 def relative_paths(paths: list[Path]) -> list[str]:
     return [path.relative_to(REPO_ROOT).as_posix() for path in paths]
 
@@ -128,11 +148,18 @@ def test_behaviors_use_only_the_request_types_from_the_safety_package() -> None:
 
 
 def test_only_the_safety_layer_sends_commands_to_the_drone() -> None:
-    """ADR-0008, ADR-0030: everything else asks. The drone package implements the commands."""
+    """ADR-0008, ADR-0030: everything else asks. The drone package implements the commands.
+
+    One exemption: the failsafe program's forged battery wrapper is itself a
+    drone that passes every command on unchanged (ADR-0041), so it calls them
+    without ever deciding one. Its own fitness function keeps everyone else
+    from importing it. Backlog #39 asks whether it belongs in the drone package.
+    """
     offenders = [
         path
         for path in python_files(PACKAGE_ROOT)
-        if drone_commands_called(path) and not (path.is_relative_to(SAFETY_ROOT) or path.is_relative_to(DRONE_ROOT))
+        if drone_commands_called(path)
+        and not (path.is_relative_to(SAFETY_ROOT) or path.is_relative_to(DRONE_ROOT) or path == FORGED_BATTERY_FILE)
     ]
 
     assert relative_paths(offenders) == []
@@ -156,6 +183,21 @@ def test_the_tick_loop_imports_only_the_clock_from_the_project() -> None:
     assert offenders == []
 
 
+def test_only_the_failsafe_program_imports_the_forged_battery_wrapper() -> None:
+    """ADR-0041: the fault must be unreachable from a game program, a behavior or the safety layer.
+
+    Not behaviors/, safety/, loop/ or drone/, and no other program either. (The
+    wrapper itself and tests don't count: the tests are outside the package.)
+    """
+    importers = [
+        path
+        for path in python_files(PACKAGE_ROOT)
+        if path != FORGED_BATTERY_FILE and imports_module_in_any_form(path, FORGED_BATTERY_WRAPPER)
+    ]
+
+    assert relative_paths(importers) == relative_paths([FAILSAFE_PROGRAM])
+
+
 def test_the_import_scanner_sees_real_imports() -> None:
     """Guards the fitness functions themselves: if the scanner silently found
     nothing, every rule above would pass for the wrong reason."""
@@ -166,3 +208,7 @@ def test_the_import_scanner_sees_real_imports() -> None:
     assert imports_any(TICK_LOOP, ["crazyflie_behavior.timing"])
     assert imports_any(BEHAVIORS_ROOT / "hover_test.py", ["crazyflie_behavior.safety"])
     assert drone_commands_called(SAFETY_ROOT / "safety_layer.py") >= {"arm", "take_off", "land"}
+    assert drone_commands_called(FORGED_BATTERY_FILE) >= {"arm", "take_off", "land"}  # why it needs its exemption
+    assert imports_module_in_any_form(FAILSAFE_PROGRAM, FORGED_BATTERY_WRAPPER)
+    # The scanner also sees the other forms of the same import.
+    assert not imports_module_in_any_form(PROGRAMS_ROOT / "hover.py", FORGED_BATTERY_WRAPPER)
