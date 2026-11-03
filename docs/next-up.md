@@ -156,12 +156,15 @@ rules. On top of `CLAUDE.md`:
      Crazyflie adapter or the tick loop, flight tests when the work needs them.
    - A vertical slice: one test environment (the living room, static while
      the drone flies) toward hide-and-seek (ADR-0016).
-   - The simulator is optional for field tests; the same code always runs
-     on the mock adapter first.
+   - The simulator is used a lot, but it is not a required step for every
+     field test: calibration and safety tests that gain nothing from a
+     simulator run skip it. The same code always runs on the mock adapter
+     first.
    - The README keeps a dated status brief (CLAUDE.md).
-   Consequences must state the risk honestly: with the simulator optional,
-   there are fewer sim-vs-real comparisons (focus area 5), and passing once
-   with no gate leans on the repeat rules. Origin line: "Joe's decisions,
+   Consequences must state the risk honestly: a test that skips the
+   simulator has no simulator prediction to compare its flight against
+   (focus area 5); the plan is to use the simulator wherever it adds
+   something. Origin line: "Joe's decisions,
    recorded after the fact"; list the origin under "Choices for Joe to
    confirm", since who suggested each part isn't recorded. Add the index
    row, and link the ADR from the field-testing README. Leave ADR-0010 and
