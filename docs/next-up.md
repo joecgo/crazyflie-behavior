@@ -27,16 +27,18 @@ rules. On top of `CLAUDE.md`:
   by bug planting (`docs/coding-style.md`), and the same checks as
   continuous integration all green (`.github/workflows/checks.yml`: ruff
   format, ruff check, pyright, pytest).
-- **The review matters most.** Before each item's commit, run
-  `/project-review max fresh` on that item's uncommitted changes (`fresh`
-  adds the fresh-context read, the skill's step 7). Never skip it, lower the
-  level or drop `fresh`: not when the item is only partly built, not when it has
-  open questions, not when its checks fail (then review it and say so in the
-  pull request). Fix only plain bugs with an obvious fix, then re-run the
-  checks. Every other finding (ADR conflicts, design, glossary, failure
-  rules, anything that needs a decision) goes into the pull request
-  description unfixed, with the full ranked findings list for each item,
-  since `ReportFindings` may not show anywhere in a cloud run.
+- **The review matters most.** Run it **once**, after all the items are
+  built and committed: `/project-review max fresh` on the whole branch
+  (`main..next-up-2026-11-03`; `fresh` adds the fresh-context read, the
+  skill's step 7). Not one review per item. Never skip it, lower the level or
+  drop `fresh`: not when an item is only partly built, not when one has open
+  questions, not when checks fail (then review anyway and say so in the pull
+  request). Fix only plain bugs with an obvious fix, in one extra commit
+  after the review, then re-run the checks. Every other finding (ADR
+  conflicts, design, glossary, failure rules, anything that needs a
+  decision) goes into the pull request description unfixed, with the full
+  ranked findings list, since `ReportFindings` may not show anywhere in a
+  cloud run.
 - **Environment:** Linux, so `.venv/bin/python`, and the installed cflib
   source is in `.venv/lib/python3.12/site-packages/cflib/` (CLAUDE.md gives
   the Windows path). Set up as `checks.yml` does.
@@ -86,9 +88,8 @@ rules. On top of `CLAUDE.md`:
 5. [ ] **ADR-0041: the Failsafe low and Failsafe high program.** Joe's
    decision of 2026-11-02, needed for the hardware arriving 2026-11-03. Build
    it after items 1 to 3 (it relies on take-off, hover and the failsafe
-   landing working). **Joe asked to skip `/project-review` for this item
-   for now:** run the checks and bug planting as usual, say in the pull
-   request that this item was not reviewed, and still list any design
+   landing working). Run the checks and bug planting as usual; the one
+   end-of-run review covers it with the rest of the branch. List any design
    doubts you have under "Questions for Joe".
    - **Program:** `src/crazyflie_behavior/programs/failsafe.py`, shaped like
      `programs/hover.py`: `--crazyflie` (default: the mock adapter) and a
