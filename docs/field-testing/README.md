@@ -33,11 +33,6 @@ room", is the portfolio story.
 Three kinds: calibration tests measure the drone, safety tests make its
 failsafes fire on purpose, and flight tests fly it.
 
-The first time through, pass each test once, in this order: Bench, Failsafe
-low, Failsafe high, Hover, Sensor characterization, Safety validation, Mapping
-run, Hide-and-seek. After that, a test is done until a change calls for it
-again ([below](#when-to-repeat-a-test)).
-
 ### Calibration tests
 
 | Test | Goal | Passed when |
@@ -69,8 +64,6 @@ again ([below](#when-to-repeat-a-test)).
   or the tick loop.
 - **Flight tests:** whenever the work on them needs it. Flying one never means
   flying the others again first.
-
-Repeats keep the first-time order.
 
 ## Test environment
 
