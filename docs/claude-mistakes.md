@@ -29,16 +29,16 @@ decisions are recorded), *communication* (how Claude explains things).
 |---|---|---|
 | design | 3 | 10 |
 | safety design | 3 | 8 |
-| recommendation | 7 | 2 |
+| recommendation | 7 | 3 |
 | environment | 3 | 5 |
-| communication | 5 | 3 |
+| communication | 5 | 4 |
 | testing | 0 | 3 |
 | process | 0 | 5 |
-| **Total** | **21** | **36** |
+| **Total** | **21** | **38** |
 
 Of the 21 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 15. So far, 7 of the 9 recommendation
-mistakes needed me, and 5 of the 8 communication mistakes. Claude's own reviews, planted bugs and
+none, maybe 6, and probably not 15. So far, 7 of the 10 recommendation
+mistakes needed me, and 5 of the 9 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
 pattern: an interruption landing between two lines of cleanup code (five
@@ -404,6 +404,33 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-02: A tick period quoted from memory
+
+- **What happened:** explaining the negative-ages options, Claude gave one
+  tick period as 20 ms at 50 Hz.
+- **Why it was wrong:** the tick loop runs at 20 Hz (`TICK_RATE`), so a tick
+  is 50 ms.
+- **Caught at:** looking up `TICK_RATE` while writing ADR-0042, before it was
+  recorded.
+- **Kind:** communication.
+- **Takeaway:** look up project constants before quoting them, even in
+  conversation.
+
+### 2026-11-02: A watchdog recommended that the backlog already ruled out
+
+- **What happened:** for where landing progress runs (backlog #8), Claude
+  recommended D, a hang watchdog thread that lands the drone, and listed a
+  hang inside cflib only as something to check later.
+- **Why it was wrong:** backlog #26 already recorded that a watchdog thread on
+  the PC is no real backup, because its land command waits behind the same
+  blocked cflib send. D still helps with hangs outside cflib, but it was
+  presented as covering more than it does.
+- **Caught at:** writing up the decision (A, with D backlogged), when Claude
+  found #26 before adding a new backlog item.
+- **Kind:** recommendation.
+- **Takeaway:** before proposing options, search the backlog and ADRs for the
+  same problem; an earlier finding may already rule an option out.
 
 ### 2026-11-02: A refusal that drops the drone it protects
 
