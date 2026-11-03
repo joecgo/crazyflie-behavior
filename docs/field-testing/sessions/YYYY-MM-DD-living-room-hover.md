@@ -3,7 +3,7 @@
 > **DRAFT.** Date and commit are pending. Nothing below the pre-flight
 > section has been filled in.
 
-- **Stage:** Hover
+- **Test:** Hover (flight)
 - **Git commit:** `<hash>` (must be committed before flying)
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger, battery #
 - **Firmware / cflib:** <firmware version> / <cflib version>
@@ -27,7 +27,6 @@
         recorded.
   - [ ] Motors stop only after touchdown is confirmed. A landing that needed the final descent still
         passes, but is recorded as a finding.
-  - [ ] Two sessions meet these criteria before moving on (README gate).
 - Simulator prediction: **mock adapter, run 2026-11-02 (`programs.hover
   --hover-seconds 5`, mock):** arming, take-off to 0.50 m, hover, landing,
   done, no errors, 105 ticks at 20 Hz, 0 overruns. The mock does exactly what
@@ -60,7 +59,7 @@ streaming (`adapter.py`), since the hover test never streams velocity.
 
 ## Pre-flight checklist
 
-- [ ] Bench passed in at least two sessions
+- [ ] Bench, Failsafe low and Failsafe high passed
 - [ ] Code committed, hash recorded above
 - [ ] Mock adapter run of this exact code passed (and the simulator's, if used)
 - [ ] Propellers undamaged, battery charged (voltage: ___)

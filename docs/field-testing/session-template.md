@@ -1,6 +1,6 @@
 # YYYY-MM-DD · <env-id> · <short goal>
 
-- **Stage:** Bench | Failsafe low | Failsafe high | Hover | Sensor characterization | Safety validation | Mapping run | Hide-and-seek
+- **Test:** calibration: Bench | Sensor characterization · safety: Failsafe low | Failsafe high | Safety validation · flight: Hover | Mapping run | Hide-and-seek
 - **Git commit:** `<hash>` (must be committed before flying)
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger, battery #
 - **Firmware / cflib:** <firmware version> / <cflib version>
