@@ -81,12 +81,18 @@ room at least 3 x 3 m with a textured hard floor (the flow deck needs texture),
 a soft landing patch (a mat or carpet) under the drone, and one operator, with
 nobody else in the room, no people and no pets.
 
-## Session logs
+## Sessions and test logs
 
-One file per test: `sessions/YYYY-MM-DD-<env>-<short-goal>.md`, from
-[`session-template.md`](session-template.md). An outing with several tests
-(Bench, Failsafe low, Failsafe high, Hover, flown one after another) gets one
-log per test, all with the same date.
+A **session** is one trip with one or more field tests, flown in order. It has
+a doc in `sessions/` (`YYYY-MM-DD-<milestone>-<session#>.md`, from
+[`sessions/session-template.md`](sessions/session-template.md)): the plan, the
+results and what comes next.
+
+Each **field test** has its own log in `field-tests/`
+(`YYYY-MM-DD-<milestone>-<session#>-<test-name>.md`, from
+[`field-tests/field-test-template.md`](field-tests/field-test-template.md)). A session of Bench,
+Failsafe low, Failsafe high and Hover has four logs and one session doc, all
+with the same date.
 
 The observations and measurements in a log come from the operator or from
 recorded data, never from an AI. Analysis is written apart from what was
@@ -96,7 +102,7 @@ Every session records the **git commit** (hash) that flew, so any result can be
 traced to the exact code. Commit before flying, and never fly uncommitted code.
 
 After an abnormal end (a crash, an unexpected landing, a failsafe that fired
-when it shouldn't have), no more flights that outing. Write it up first.
+when it shouldn't have), no more flights that session. Write it up first.
 
 ## Recordings
 

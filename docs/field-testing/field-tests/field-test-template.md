@@ -1,9 +1,11 @@
-# YYYY-MM-DD · <env-id> · <short goal>
+# YYYY-MM-DD-{milestone}-{session#}-{test-name}
 
+- **Session:** [{milestone} {session#}](../sessions/YYYY-MM-DD-{milestone}-{session#}.md)
 - **Test:** calibration: Bench | Sensor characterization · safety: Failsafe low | Failsafe high | Safety validation · flight: Hover | Mapping run | Hide-and-seek
+- **Environment:** [{environment}](../environments/{environment}.md), {location}, {lighting setup}. Time of day / sunlight: ___
 - **Git commit:** `<hash>` (must be committed before flying)
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger, battery #
-- **Firmware / cflib:** <firmware version> / <cflib version>
+- **Firmware / cflib:** {firmware version} / {cflib version}
 
 ## Goal and pass criteria
 *Written before flying.*
@@ -11,14 +13,6 @@
 - Goal:
 - Pass if:
 - Simulator prediction (or, if not simulated, the mock adapter run):
-
-## Environment
-*Full profile on the first visit; afterwards, only what changed.*
-
-- Size / ceiling height:
-- Floor surface:
-- Lighting:
-- Obstacles and reflective surfaces:
 
 ## Pre-flight checklist
 
@@ -30,6 +24,11 @@
 - [ ] Geofence configured for this space
 - [ ] Recording on (telemetry + video)
 
+## During the test
+*The operator's steps, in order.*
+
+- [ ]
+
 ## Flights
 
 | # | What was run | Result | Data file | Notes |
@@ -40,7 +39,7 @@
 What happened, especially anything surprising. Include numbers.
 
 ## Sim vs real
-Where the prediction matched reality and where it didn't.
+Where the prediction matched reality and where it didn't. Optional: remove this section if there was no simulator run.
 
 ## Next
 - Code changes:
