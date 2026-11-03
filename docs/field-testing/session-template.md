@@ -1,6 +1,6 @@
 # YYYY-MM-DD · <env-id> · <short goal>
 
-- **Stage:** 0 Bench | 1 Hover | 2 Sensors | 3 Safety | 4 Behavior | 5 Environments
+- **Stage:** Bench | Failsafe low | Failsafe high | Hover | Sensor characterization | Safety validation | Mapping run | Hide-and-seek
 - **Git commit:** `<hash>` (must be committed before flying)
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger, battery #
 - **Firmware / cflib:** <firmware version> / <cflib version>
@@ -10,7 +10,7 @@
 
 - Goal:
 - Pass if:
-- Simulator prediction:
+- Simulator prediction (or, if not simulated, the mock adapter run):
 
 ## Environment
 *Full profile on the first visit; afterwards, only what changed.*
@@ -23,7 +23,7 @@
 ## Pre-flight checklist
 
 - [ ] Code committed, hash recorded above
-- [ ] Simulator run of this exact code passed
+- [ ] Mock adapter run of this exact code passed (and the simulator's, if used)
 - [ ] Propellers undamaged, battery charged (voltage: ___)
 - [ ] Flight area clear of people and pets
 - [ ] E-stop tested on the ground this session
@@ -40,7 +40,7 @@
 What happened, especially anything surprising. Include numbers.
 
 ## Sim vs real
-Where the simulator's prediction matched reality and where it didn't.
+Where the prediction matched reality and where it didn't.
 
 ## Next
 - Code changes:

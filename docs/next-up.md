@@ -75,8 +75,8 @@ rules. On top of `CLAUDE.md`:
    three, including the failsafe landing during the take-off grace period.
 4. [ ] **Field-test stages become names, and hover drift is measured, not
    passed.** Joe's decisions of 2026-11-02, while drafting the first session
-   logs (`docs/field-testing/sessions/YYYY-MM-DD-home-bench.md` and
-   `...-home-hover.md`, already written with these changes):
+   logs (`docs/field-testing/sessions/YYYY-MM-DD-living-room-bench.md` and
+   `...-living-room-hover.md`, already written with these changes):
    - Call the stages by name, **bench** and **hover** (the ladder's order stays
      in the README table), not "stage 0", "stage 1". Do it in
      `docs/field-testing/README.md` (stage table, session-log text),
@@ -97,7 +97,8 @@ rules. On top of `CLAUDE.md`:
    - **Update 2026-11-02:** the walkthrough session already made the three
      README changes above (stage names, the hover criterion, the bench row),
      and added the Failsafe low and Failsafe high rows. Skip the README
-     parts; do the rest of this item.
+     parts; do the rest of this item. **Also done 2026-11-02:** the
+     session template's `Stage:` field lists the stages by name; skip it too.
 5. [ ] **ADR-0041: the Failsafe low and Failsafe high program.** Joe's
    decision of 2026-11-02, needed for the hardware arriving 2026-11-03. Build
    it after items 1 to 3 (it relies on take-off, hover and the failsafe
@@ -107,8 +108,9 @@ rules. On top of `CLAUDE.md`:
    doubts you have under "Questions for Joe".
    - **Program:** `src/crazyflie_behavior/programs/failsafe.py`, shaped like
      `programs/hover.py`: `--crazyflie` (default: the mock adapter) and a
-     required `--height-meters`, which accepts only 0.1 (Failsafe low) or 0.3
-     (Failsafe high). Add a `.run/` configuration for each height, as the
+     required `--height-meters`, which accepts only 0.1 (Failsafe low) or 0.5
+     (Failsafe high, the Hover test's height; ADR-0041 amended
+     2026-11-02). Add a `.run/` configuration for each height, as the
      hover program has.
    - **Behavior:** a field-test behavior in `behaviors/` (ADR-0033: its
      docstring states its failure rule; it stops at its first refused
@@ -140,9 +142,8 @@ rules. On top of `CLAUDE.md`:
      line: Joe chose option A; the AI recommended the wrapper with a forged
      low battery), and remove backlog #38 (the ADR now closes it). Add the
      program to the README's "Run" section if it lists programs. Glossary:
-     don't edit it; propose the terms *Failsafe low* and *Failsafe high*
-     (the field-test stages that fly the failsafe program at 0.1 m and
-     0.3 m) in the pull request.
+     don't edit it; *Failsafe low / Failsafe high* is already there
+     (0.1 m and 0.5 m).
 6. [ ] **ADR-0042: slightly negative ages count as fresh.** Not needed for
    the hardware; do it last. `Stamped.age()` stays unclamped, and its
    docstring says the age can be slightly negative, meaning just arrived.
