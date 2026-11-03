@@ -48,5 +48,7 @@ This column is honest about which ideas were mine.
 | [0037](0037-disconnect-does-not-disarm.md) | Disconnecting doesn't disarm; the Crazyflie adapter logs whether the drone arms itself | AI recommendation accepted; turning off auto-arming was mine, deferred |
 | [0038](0038-connecting-to-a-flying-drone.md) | Connecting refuses a flying drone; a rescue landing takes over the flight | Mixed: AI recommendations accepted; the full version now and the manual emergency stop were mine |
 | [0039](0039-the-adapter-decides-may-be-flying.md) | The adapter decides whether the drone may be flying; hover on the floor does nothing | AI recommendation accepted; splitting it off from backlog #8 was mine |
+| [0040](0040-landing-progress-stays-in-take-snapshot.md) | Landing progress stays in take_snapshot for First flight | Mixed: option A was mine, against the AI's recommendation of D |
+| [0042](0042-negative-ages-count-as-fresh.md) | Slightly negative ages count as fresh; a large one is a warning | AI recommendation accepted |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
