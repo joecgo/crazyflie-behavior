@@ -49,9 +49,14 @@ _STANDARD_INPUT_HANDLE = 0xFFFFFFF6  # STD_INPUT_HANDLE, (DWORD)-10
 _SignalHandler = Callable[[int, FrameType | None], Any] | int | signal.Handlers | None
 
 
-def make_drone(use_crazyflie: bool, clock: Clock) -> DroneInterface:
-    """The real Crazyflie only when asked for, otherwise the mock adapter (ADR-0028)."""
-    return CrazyflieAdapter(clock) if use_crazyflie else MockAdapter(clock)
+def make_drone(use_crazyflie: bool, clock: Clock, take_over_flight: bool = False) -> DroneInterface:
+    """The real Crazyflie only when asked for, otherwise the mock adapter (ADR-0028).
+
+    `take_over_flight` is for the rescue landing program only (ADR-0038).
+    """
+    if use_crazyflie:
+        return CrazyflieAdapter(clock, take_over_flight=take_over_flight)
+    return MockAdapter(clock, take_over_flight=take_over_flight)
 
 
 def run_program(program_name: str, description: str, drone: DroneInterface, tick_step: TickStep, clock: Clock) -> int:

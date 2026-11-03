@@ -158,16 +158,29 @@ def drone_status_from_bitfield(bitfield: int) -> DroneStatus:
 class CrazyflieAdapter(DroneInterface):
     """Drives a real Crazyflie over the Crazyradio."""
 
-    def __init__(self, clock: Clock, uri: str = DEFAULT_URI, cache_directory: str = "./cache") -> None:
+    def __init__(
+        self,
+        clock: Clock,
+        uri: str = DEFAULT_URI,
+        cache_directory: str = "./cache",
+        take_over_flight: bool = False,
+    ) -> None:
+        """`take_over_flight`: only the rescue landing sets this (ADR-0038). `connect()` then
+        accepts a drone that is flying, skips the position estimate reset and treats the
+        drone as airborne, as if this adapter had sent the take-off."""
         self._clock = clock
         self._uri = uri
         self._cache_directory = cache_directory
+        self._take_over_flight = take_over_flight
         self._telemetry = TelemetryBuffer(clock)
         self._sync_crazyflie: SyncCrazyflie | None = None
         self._log_configs: list[LogConfig] = []
         self._is_streaming_velocity = False
         self._is_airborne = False
-        """A take-off was sent and the motors haven't been stopped since."""
+        """A take-off was sent (or the flight was taken over) and the motors haven't been stopped since."""
+        self._is_drone_state_unknown = False
+        """True from the start of `connect()` until a fresh drone status says whether the drone
+        is flying (ADR-0038): until then, the drone may be flying."""
         self._take_off_sent_at = 0.0
         """When the latest take-off was sent. Meaningful while airborne."""
         self._landing_phase = _LandingPhase.NOT_LANDING
@@ -190,6 +203,8 @@ class CrazyflieAdapter(DroneInterface):
         self._last_drone_time = None  # a new session: the drone may have rebooted
         self._dropped_state_count = 0
         self._latest_status_bitfield = None
+        self._is_airborne = False  # a new session learns what the drone is doing from the drone
+        self._is_drone_state_unknown = True
         # A new session starts with no values, so the wait for the first telemetry
         # can't pass on values left from an earlier one (ADR-0031).
         self._telemetry = TelemetryBuffer(self._clock)
@@ -204,9 +219,10 @@ class CrazyflieAdapter(DroneInterface):
                 LINK_TIME_LIMIT,
                 what_to_check="Check the Crazyflie is switched on, charged and in range.",
                 clock=self._clock,
-                # Stop a connection still under way. When connecting fails on its
-                # own, cflib closes the link itself.
-                on_abandon=sync_crazyflie.cf.close_link,
+                # Stop a connection still under way, without cflib's zero-thrust
+                # setpoint: the drone may be flying (ADR-0038). When connecting
+                # fails on its own, cflib closes the link itself.
+                on_abandon=self._close_radio_link_only,
             )
             run_with_time_limit(
                 "Reading the parameters",
@@ -217,17 +233,11 @@ class CrazyflieAdapter(DroneInterface):
             )
             if not self._deck_attached("deck.bcFlow2", "deck.bcFlow"):  # Flow deck v2 or v1
                 raise RuntimeError("Flow deck not detected: autonomous flight needs it.")
-            run_with_time_limit(
-                "Settling the position estimate",
-                lambda: reset_estimator(sync_crazyflie),
-                POSITION_ESTIMATE_TIME_LIMIT,
-                what_to_check=(
-                    "Check the Flow deck can see the floor (enough light and texture) "
-                    "and that the drone is sitting still."
-                ),
-                clock=self._clock,
-            )
-            self._start_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
+            # Find out whether the drone is flying before anything else touches it: the
+            # position estimate reset below expects a drone sitting still (ADR-0038).
+            self._start_state_logging()
+            self._settle_whether_the_drone_is_flying(self._wait_for_drone_status())
+            self._start_remaining_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
             self._wait_for_first_telemetry()
             self._log_whether_the_drone_arms_itself()
         except BaseException:
@@ -330,9 +340,34 @@ class CrazyflieAdapter(DroneInterface):
 
     def _close_link(self) -> None:
         if self._sync_crazyflie is not None:
-            self._sync_crazyflie.close_link()
+            if self._is_airborne or self._is_drone_state_unknown:
+                # The drone may be flying: cflib's close_link() would drop it (ADR-0038).
+                self._close_radio_link_only()
+            else:
+                self._sync_crazyflie.close_link()
             self._sync_crazyflie = None
         self._log_configs.clear()  # they belonged to that link
+
+    def _close_radio_link_only(self) -> None:
+        """Turn off the radio link and nothing else, so a flying drone keeps flying (ADR-0038).
+
+        cflib's `Crazyflie.close_link()` first sends a zero-thrust setpoint, which
+        would drop a flying drone. This is the rest of it, in the same order. It
+        uses cflib internals (`link`, `incoming`): re-check it whenever cflib is
+        upgraded. Safe to call twice, and when the link isn't open.
+        """
+        if self._sync_crazyflie is None:
+            return
+        crazyflie = self._sync_crazyflie.cf
+        if crazyflie.link is not None:
+            logger.info("Closing the radio link only: the drone may be flying, so it keeps doing what it was doing")
+            crazyflie.link.close()
+            crazyflie.link = None
+        if crazyflie.incoming and crazyflie.incoming.is_alive():
+            crazyflie.incoming.stop()
+            crazyflie.incoming.join(timeout=1)
+        # cflib's own close_link() calls this too: it tells SyncCrazyflie the link is closed.
+        crazyflie.disconnected.call(crazyflie.link_uri)
 
     def _deck_attached(self, *parameters: str) -> bool:
         """True if any of the deck parameters says the deck is attached."""
@@ -481,8 +516,10 @@ class CrazyflieAdapter(DroneInterface):
 
     # --- Telemetry ----------------------------------------------------------
 
-    def _start_logging(self, has_multiranger: bool) -> None:
+    def _start_state_logging(self) -> None:
         self._add_log_block("state", STATE_PERIOD_MS, list(_STATE_VARIABLES), self._on_state)
+
+    def _start_remaining_logging(self, has_multiranger: bool) -> None:
         self._add_log_block("battery", BATTERY_PERIOD_MS, ["pm.vbat"], self._on_battery)
         self._add_log_block("down", DOWN_RANGE_PERIOD_MS, [_DOWN_RANGE_VARIABLE], self._on_down_range)
         if has_multiranger:
@@ -499,22 +536,77 @@ class CrazyflieAdapter(DroneInterface):
                 dict.fromkeys(_MULTIRANGER_VARIABLES, RangeReading.invalid()), drone_time=None
             )
 
-    def _wait_for_first_telemetry(self) -> None:
-        """Return once every telemetry value has arrived once (ADR-0031).
+    def _wait_for_drone_status(self) -> int:
+        """Return the supervisor bitfield of the first state packet since connecting (ADR-0038).
 
-        Checks the telemetry buffer every wait slice. Unlike cflib's waits
-        (ADR-0029), a plain sleep ends at once on the interrupt signal, so this
-        needs no helper thread.
+        It arrives after the state block started, so it's fresh. A status that
+        never arrives is a time-limit error: unknown fails safe.
+        """
+        self._wait_until(
+            lambda: self._latest_status_bitfield is not None,
+            lambda: (
+                f"Waiting for the drone's status took longer than {FIRST_TELEMETRY_TIME_LIMIT:g} s. "
+                "Check the Crazyflie is in range, and that its firmware logs its status."
+            ),
+        )
+        bitfield = self._latest_status_bitfield
+        if bitfield is None:
+            raise RuntimeError("The drone's status vanished after it arrived")  # the callback never clears it
+        return bitfield
+
+    def _settle_whether_the_drone_is_flying(self, bitfield: int) -> None:
+        """Refuse a flying drone, take over its flight, or reset the position estimate (ADR-0038)."""
+        if self._take_over_flight:
+            logger.warning(
+                "Taking over the flight: the position estimate isn't reset and the drone is treated as airborne."
+            )
+            self._is_airborne = True
+            self._take_off_sent_at = self._clock.now()
+            self._is_drone_state_unknown = False
+            return
+        if drone_status_from_bitfield(bitfield).is_flying:
+            # Raised before the estimate reset. The drone stays unknown-or-flying for the
+            # link close, which then leaves it alone.
+            raise RuntimeError(
+                "The drone is still flying: run the rescue landing. "
+                "(If it just landed, its status says flying for 2 s after the motors stop: wait and run again.)"
+            )
+        self._is_drone_state_unknown = False  # on the floor: a normal link close is safe from here
+        run_with_time_limit(
+            "Settling the position estimate",
+            lambda: reset_estimator(self._sync_crazyflie),
+            POSITION_ESTIMATE_TIME_LIMIT,
+            what_to_check=(
+                "Check the Flow deck can see the floor (enough light and texture) and that the drone is sitting still."
+            ),
+            clock=self._clock,
+        )
+        # The state block kept streaming through the reset, so drop what it wrote before
+        # it: no position from before the reset is used (ADR-0038).
+        self._telemetry = TelemetryBuffer(self._clock)
+
+    def _wait_for_first_telemetry(self) -> None:
+        """Return once every telemetry value has arrived once (ADR-0031)."""
+        self._wait_until(
+            lambda: not self._telemetry.missing_values(),
+            lambda: (
+                f"Waiting for the first telemetry took longer than "
+                f"{FIRST_TELEMETRY_TIME_LIMIT:g} s. Still missing: {', '.join(self._telemetry.missing_values())}. "
+                "Check the Crazyflie is in range, and that its firmware logs these values."
+            ),
+        )
+
+    def _wait_until(self, is_done: Callable[[], bool], time_limit_message: Callable[[], str]) -> None:
+        """Wait up to `FIRST_TELEMETRY_TIME_LIMIT` for `is_done()`, or raise a TimeoutError.
+
+        Checks every wait slice. Unlike cflib's waits (ADR-0029), a plain sleep
+        ends at once on the interrupt signal, so this needs no helper thread.
         """
         deadline = self._clock.now() + FIRST_TELEMETRY_TIME_LIMIT
-        while missing := self._telemetry.missing_values():
+        while not is_done():
             now = self._clock.now()
             if now >= deadline:
-                raise TimeoutError(
-                    f"Waiting for the first telemetry took longer than "
-                    f"{FIRST_TELEMETRY_TIME_LIMIT:g} s. Still missing: {', '.join(missing)}. "
-                    "Check the Crazyflie is in range, and that its firmware logs these values."
-                )
+                raise TimeoutError(time_limit_message())
             self._clock.sleep_until(min(deadline, now + WAIT_SLICE))
 
     def _log_whether_the_drone_arms_itself(self) -> None:

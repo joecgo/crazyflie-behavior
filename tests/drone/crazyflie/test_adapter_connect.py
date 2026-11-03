@@ -6,6 +6,7 @@ then puts the real ones back.
 
 # pyright: reportPrivateUsage=false
 
+import copy
 import logging
 import signal
 import threading
@@ -48,25 +49,39 @@ class FakeCflib:
 
     Each log block sends one sample when it starts, like a drone's first
     packet: at once, after `first_sample_delay` seconds, or never for blocks
-    in `silent_blocks`.
+    in `silent_blocks`. A real drone keeps streaming, and connect() relies on
+    that after it swaps the telemetry buffer (ADR-0038): `stream_samples()`
+    sends every started block's sample again, and with a delay the blocks keep
+    streaming on a thread.
     """
 
     def __init__(self) -> None:
         self.link = MagicMock()
         """The SyncCrazyflie: open_link, close_link, and the Crazyflie as .cf."""
+        self.radio_link = self.link.cf.link
+        """The Crazyflie's radio link: closing it is what a safe link close does (ADR-0038)."""
         self.parameters = {"deck.bcFlow2": "1", "deck.bcMultiranger": "0"}
         """Parameter values as cflib returns them (strings). Missing means the
         firmware doesn't know the parameter, so cflib raises KeyError."""
         self.link.cf.param.get_value.side_effect = self.get_parameter
-        self.reset_estimator = MagicMock()
+        self.events: list[str] = []
+        """What happened, in order: "start <block>" and "reset estimator"."""
+        self.reset_estimator = MagicMock(side_effect=self._record_the_reset)
+        self.samples = copy.deepcopy(FIRST_SAMPLES)
+        """Each block's sample. A test can change one before it's sent."""
         self.log_block_names: list[str] = []
         self.log_block_periods_ms: dict[str, int] = {}
         self.silent_blocks: set[str] = set()
         self.first_sample_delay = 0.0
-        """Seconds; above zero, the first samples arrive on a timer thread."""
+        """Seconds; above zero, the blocks stream from a thread after this delay."""
+        self._started_blocks: dict[str, tuple[MagicMock, list[Callable[[int, dict[str, float], object], None]]]] = {}
+        self._stopped = threading.Event()
 
     def get_parameter(self, name: str) -> str:
         return self.parameters[name]
+
+    def _record_the_reset(self, *_arguments: object) -> None:
+        self.events.append("reset estimator")
 
     def make_log_block(self, name: str, period_in_ms: int) -> MagicMock:
         self.log_block_names.append(name)
@@ -74,44 +89,81 @@ class FakeCflib:
         block = MagicMock()
         callbacks: list[Callable[[int, dict[str, float], object], None]] = []
         block.data_received_cb.add_callback.side_effect = callbacks.append
-        block.start.side_effect = lambda: self._send_first_sample(name, block, callbacks)
+        block.start.side_effect = lambda: self._start_block(name, block, callbacks)
+        block.stop.side_effect = lambda: self._started_blocks.pop(name, None)
         return block
 
-    def _send_first_sample(
+    def stream_samples(self) -> None:
+        """Send every started block's sample again, as a streaming drone does."""
+        for name in list(self._started_blocks):
+            self._send(name)
+
+    def stop(self) -> None:
+        self._stopped.set()
+
+    def _send(self, name: str) -> None:
+        block, callbacks = self._started_blocks[name]
+        for callback in callbacks:
+            callback(1000, self.samples[name], block)
+
+    def _start_block(
         self,
         name: str,
         block: MagicMock,
         callbacks: list[Callable[[int, dict[str, float], object], None]],
     ) -> None:
+        self.events.append(f"start {name}")
         if name in self.silent_blocks:
             return
-
-        def send() -> None:
-            for callback in callbacks:
-                callback(1000, FIRST_SAMPLES[name], block)
-
+        self._started_blocks[name] = (block, callbacks)
         if self.first_sample_delay > 0.0:
-            timer = threading.Timer(self.first_sample_delay, send)
-            timer.daemon = True
-            timer.start()
+
+            def stream_after_the_delay() -> None:
+                self._stopped.wait(self.first_sample_delay)
+                while not self._stopped.is_set():
+                    self._send(name)
+                    self._stopped.wait(0.02)
+
+            threading.Thread(target=stream_after_the_delay, daemon=True).start()
         else:
-            send()
+            self._send(name)
+
+
+class StreamingSimClock(SimClock):
+    """A sim clock that has the fake drone stream whenever the adapter waits, as a real drone would."""
+
+    def __init__(self, fake_cflib: FakeCflib, start: float) -> None:
+        super().__init__(start)
+        self._fake_cflib = fake_cflib
+
+    def sleep_until(self, deadline: float) -> None:
+        self._fake_cflib.stream_samples()
+        super().sleep_until(deadline)
 
 
 @pytest.fixture
-def fake_cflib(monkeypatch: pytest.MonkeyPatch) -> FakeCflib:
+def fake_cflib(monkeypatch: pytest.MonkeyPatch) -> Generator[FakeCflib]:
     fake = FakeCflib()
     monkeypatch.setattr(adapter_module, "_drivers_initialized", True)
     monkeypatch.setattr(adapter_module, "SyncCrazyflie", MagicMock(return_value=fake.link))
     monkeypatch.setattr(adapter_module, "Crazyflie", MagicMock())
     monkeypatch.setattr(adapter_module, "reset_estimator", fake.reset_estimator)
     monkeypatch.setattr(adapter_module, "LogConfig", fake.make_log_block)
-    return fake
+    yield fake
+    fake.stop()  # ends the streaming threads
+
+
+def assert_only_the_radio_link_closed(fake_cflib: FakeCflib) -> None:
+    """The drone may be flying, so no zero-thrust setpoint (cflib's close_link sends it) (ADR-0038)."""
+    fake_cflib.radio_link.close.assert_called_once()
+    fake_cflib.link.close_link.assert_not_called()
+    fake_cflib.link.cf.close_link.assert_not_called()
+    fake_cflib.link.cf.commander.send_setpoint.assert_not_called()
 
 
 @pytest.fixture
-def adapter() -> CrazyflieAdapter:
-    return CrazyflieAdapter(SimClock(start=10.0))
+def adapter(fake_cflib: FakeCflib) -> CrazyflieAdapter:
+    return CrazyflieAdapter(StreamingSimClock(fake_cflib, start=10.0))
 
 
 def test_connecting_resets_the_estimate_and_starts_telemetry(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
@@ -128,7 +180,7 @@ def test_connecting_logs_that_the_drone_arms_itself(
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setitem(FIRST_SAMPLES["state"], "supervisor.info", float(1 << adapter_module.BIT_IS_AUTO_ARMED))
+    fake_cflib.samples["state"]["supervisor.info"] = float(1 << adapter_module.BIT_IS_AUTO_ARMED)
 
     with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
         adapter.connect()
@@ -189,7 +241,7 @@ def test_the_older_flow_deck_counts_too(adapter: CrazyflieAdapter, fake_cflib: F
     fake_cflib.reset_estimator.assert_called_once()
 
 
-def test_without_a_flow_deck_it_refuses_to_fly_and_closes_the_link(
+def test_without_a_flow_deck_it_refuses_to_fly_and_closes_only_the_radio_link(
     adapter: CrazyflieAdapter, fake_cflib: FakeCflib
 ) -> None:
     fake_cflib.parameters["deck.bcFlow2"] = "0"
@@ -197,7 +249,7 @@ def test_without_a_flow_deck_it_refuses_to_fly_and_closes_the_link(
     with pytest.raises(RuntimeError, match="Flow deck"):
         adapter.connect()
 
-    fake_cflib.link.close_link.assert_called_once()
+    assert_only_the_radio_link_closed(fake_cflib)
     fake_cflib.reset_estimator.assert_not_called()
 
 
@@ -243,7 +295,7 @@ def real_time_adapter() -> CrazyflieAdapter:
 
 
 @pytest.mark.usefixtures("short_time_limits")
-def test_opening_the_link_has_a_time_limit_then_stops_the_connection_under_way(
+def test_opening_the_link_has_a_time_limit_then_stops_the_connection_under_way_without_a_setpoint(
     fake_cflib: FakeCflib, blocking_step: BlockingStep
 ) -> None:
     fake_cflib.link.open_link.side_effect = blocking_step
@@ -251,11 +303,11 @@ def test_opening_the_link_has_a_time_limit_then_stops_the_connection_under_way(
     with pytest.raises(TimeoutError, match=r"Opening the link took longer than 0\.2 s\. Check the"):
         real_time_adapter().connect()
 
-    fake_cflib.link.cf.close_link.assert_called_once()
+    assert_only_the_radio_link_closed(fake_cflib)
 
 
 @pytest.mark.usefixtures("short_time_limits")
-def test_reading_the_parameters_has_a_time_limit_then_closes_the_link(
+def test_reading_the_parameters_has_a_time_limit_then_closes_only_the_radio_link(
     fake_cflib: FakeCflib, blocking_step: BlockingStep
 ) -> None:
     fake_cflib.link.wait_for_params.side_effect = blocking_step
@@ -263,7 +315,7 @@ def test_reading_the_parameters_has_a_time_limit_then_closes_the_link(
     with pytest.raises(TimeoutError, match=r"Reading the parameters took longer than 0\.2 s"):
         real_time_adapter().connect()
 
-    fake_cflib.link.close_link.assert_called_once()
+    assert_only_the_radio_link_closed(fake_cflib)
 
 
 @pytest.mark.usefixtures("short_time_limits")
@@ -286,10 +338,10 @@ def test_the_interrupt_signal_while_the_link_opens_gets_through_and_stops_the_co
     with pytest.raises(KeyboardInterrupt):
         adapter.connect()
 
-    fake_cflib.link.cf.close_link.assert_called_once()
+    assert_only_the_radio_link_closed(fake_cflib)
 
 
-def test_the_interrupt_signal_while_reading_the_parameters_gets_through_and_closes_the_link(
+def test_the_interrupt_signal_while_reading_the_parameters_gets_through_and_closes_only_the_radio_link(
     adapter: CrazyflieAdapter, fake_cflib: FakeCflib, interrupt_signal_step: BlockingStep
 ) -> None:
     fake_cflib.link.wait_for_params.side_effect = interrupt_signal_step
@@ -297,7 +349,7 @@ def test_the_interrupt_signal_while_reading_the_parameters_gets_through_and_clos
     with pytest.raises(KeyboardInterrupt):
         adapter.connect()
 
-    fake_cflib.link.close_link.assert_called_once()
+    assert_only_the_radio_link_closed(fake_cflib)
 
 
 def test_a_connect_that_fails_on_its_own_is_left_to_cflib_to_close(
@@ -327,7 +379,7 @@ def test_a_missing_log_variable_says_to_update_the_firmware(adapter: CrazyflieAd
     with pytest.raises(RuntimeError, match="Update the firmware"):
         adapter.connect()
 
-    fake_cflib.link.close_link.assert_called_once()
+    assert_only_the_radio_link_closed(fake_cflib)
 
 
 def test_connect_returns_only_once_every_telemetry_value_has_arrived(
@@ -350,13 +402,13 @@ def test_connect_waits_for_telemetry_that_arrives_late(fake_cflib: FakeCflib) ->
     assert time.perf_counter() - started < 2.0
 
 
-class BoundedSimClock(SimClock):
+class BoundedSimClock(StreamingSimClock):
     """A sim clock that fails the test instead of letting a broken wait loop forever."""
 
     MAX_SLEEPS = 1000
 
-    def __init__(self, start: float) -> None:
-        super().__init__(start)
+    def __init__(self, fake_cflib: FakeCflib, start: float) -> None:
+        super().__init__(fake_cflib, start)
         self._sleeps = 0
 
     def sleep_until(self, deadline: float) -> None:
@@ -370,7 +422,7 @@ def test_a_value_that_never_arrives_has_a_time_limit_then_closes_the_link(
     fake_cflib: FakeCflib,
 ) -> None:
     fake_cflib.silent_blocks.add("battery")
-    adapter = CrazyflieAdapter(BoundedSimClock(start=10.0))
+    adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0))
 
     with pytest.raises(TimeoutError, match=r"Still missing: battery voltage\. Check"):
         adapter.connect()
@@ -407,3 +459,140 @@ def test_connecting_again_waits_for_new_telemetry_not_the_last_session_s(
 
     with pytest.raises(TimeoutError, match="Still missing: battery voltage"):
         adapter.connect()
+
+
+# --- Connecting to a flying drone (ADR-0038) --------------------------------------
+
+FLYING = float(1 << adapter_module.BIT_IS_FLYING)
+"""A `supervisor.info` value whose flying bit is set."""
+
+
+def test_the_state_log_block_starts_before_the_estimate_reset(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
+    adapter.connect()
+
+    assert fake_cflib.events.index("start state") < fake_cflib.events.index("reset estimator")
+
+
+def test_a_flying_drone_is_refused_before_the_estimate_reset_and_without_a_zero_thrust_setpoint(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+
+    with pytest.raises(RuntimeError, match=r"still flying: run the rescue landing\..*just landed.*wait"):
+        adapter.connect()
+
+    fake_cflib.reset_estimator.assert_not_called()
+    assert_only_the_radio_link_closed(fake_cflib)
+
+
+def test_a_status_that_never_arrives_is_a_time_limit_error_that_closes_only_the_radio_link(
+    fake_cflib: FakeCflib,
+) -> None:
+    fake_cflib.silent_blocks.add("state")
+    adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0))
+
+    with pytest.raises(TimeoutError, match=r"Waiting for the drone's status took longer than 3 s\. Check"):
+        adapter.connect()
+
+    fake_cflib.reset_estimator.assert_not_called()
+    assert_only_the_radio_link_closed(fake_cflib)
+
+
+def test_a_drone_on_the_floor_is_connected_and_a_later_failure_closes_the_link_normally(
+    fake_cflib: FakeCflib,
+) -> None:
+    fake_cflib.silent_blocks.add("battery")
+    adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0))
+
+    with pytest.raises(TimeoutError, match="Still missing: battery voltage"):
+        adapter.connect()
+
+    fake_cflib.link.close_link.assert_called_once()  # the drone is known to be on the floor
+
+
+def test_telemetry_from_before_the_estimate_reset_is_not_used(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
+    fake_cflib.samples["state"]["stateEstimate.x"] = 5.0  # where the drone thought it was before the reset
+
+    def reset_the_estimate(*_arguments: object) -> None:
+        fake_cflib.samples["state"]["stateEstimate.x"] = 0.0
+
+    fake_cflib.reset_estimator.side_effect = reset_the_estimate
+
+    adapter.connect()
+
+    position_estimate = adapter._telemetry.snapshot(10.0, 0.0).position_estimate
+    assert position_estimate is not None
+    assert position_estimate.value.x == 0.0
+
+
+@pytest.fixture
+def taking_over_adapter(fake_cflib: FakeCflib) -> CrazyflieAdapter:
+    return CrazyflieAdapter(StreamingSimClock(fake_cflib, start=10.0), take_over_flight=True)
+
+
+def test_taking_over_accepts_a_flying_drone_and_never_resets_its_estimate(
+    taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -> None:
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+
+    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+        taking_over_adapter.connect()
+
+    fake_cflib.reset_estimator.assert_not_called()
+    fake_cflib.link.close_link.assert_not_called()
+    assert "Taking over the flight" in caplog.text
+
+
+def test_taking_over_keeps_the_position_the_drone_already_reported(
+    taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    fake_cflib.samples["state"]["stateEstimate.z"] = 0.4
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+
+    taking_over_adapter.connect()
+
+    position_estimate = taking_over_adapter._telemetry.snapshot(10.0, 0.0).position_estimate
+    assert position_estimate is not None
+    assert position_estimate.value.z == pytest.approx(0.4)
+
+
+def test_after_taking_over_land_runs_the_normal_landing_not_just_a_motor_stop(
+    taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    fake_cflib.samples["state"]["stateEstimate.z"] = 0.4
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    taking_over_adapter.connect()
+
+    taking_over_adapter.land()
+
+    commander = fake_cflib.link.cf.high_level_commander
+    commander.go_to.assert_called_once_with(
+        0.0, 0.0, 0.0, adapter_module.DEFAULT_YAW_RAD, pytest.approx(0.4 / adapter_module.VERTICAL_SPEED)
+    )
+    commander.stop.assert_not_called()
+
+
+def test_disconnecting_after_taking_over_lands_the_drone_then_closes_the_link(
+    taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    fake_cflib.samples["state"]["stateEstimate.z"] = 0.4
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    taking_over_adapter.connect()
+
+    taking_over_adapter.disconnect()
+
+    commander = fake_cflib.link.cf.high_level_commander
+    commander.go_to.assert_called()  # the landing
+    commander.stop.assert_called()  # the motors, once touchdown was confirmed
+    fake_cflib.link.close_link.assert_called_once()
+
+
+def test_a_failure_while_connecting_to_take_over_closes_only_the_radio_link(fake_cflib: FakeCflib) -> None:
+    fake_cflib.silent_blocks.add("battery")
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0), take_over_flight=True)
+
+    with pytest.raises(TimeoutError, match="Still missing: battery voltage"):
+        adapter.connect()
+
+    assert_only_the_radio_link_closed(fake_cflib)

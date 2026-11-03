@@ -63,7 +63,7 @@ rules. On top of `CLAUDE.md`:
    Joe. `connect()` already waits for the first telemetry (ADR-0031), so the
    status is there to read. Tests in the adapter's test files, with the fake
    cflib.
-2. [ ] **ADR-0038: connecting to a flying drone.** Everything in its
+2. [x] **ADR-0038: connecting to a flying drone.** Everything in its
    "To build" consequence: the reordered `connect()`, the safe link close,
    the `take_over_flight` setting in the Crazyflie adapter and the mock, the
    rescue-landing program in `src/crazyflie_behavior/programs/`, the

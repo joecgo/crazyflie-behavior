@@ -213,6 +213,21 @@ def test_shutdown_with_a_failed_down_sensor_lands_and_closes_the_link(
     fake_link.close_link.assert_called_once()
 
 
+def test_shutdown_after_a_failed_landing_closes_only_the_radio_link(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    # The link dropped, so the landing couldn't be sent: the drone may still be flying (ADR-0038).
+    radio_link = fake_link.cf.link
+    fake_link.cf.high_level_commander.go_to.side_effect = OSError("the link dropped")
+
+    with pytest.raises(OSError, match="the link dropped"):
+        adapter.disconnect()
+
+    radio_link.close.assert_called_once()
+    fake_link.close_link.assert_not_called()  # cflib's close sends a zero-thrust setpoint
+    fake_link.cf.commander.send_setpoint.assert_not_called()
+
+
 def test_shutdown_during_a_landing_does_not_restart_it(
     adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
 ) -> None:
