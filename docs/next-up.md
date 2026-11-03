@@ -143,6 +143,30 @@ rules. On top of `CLAUDE.md`:
    and warns once over several ticks, and again after a normal age ends the
    streak.
 
+7. [ ] **ADR-0043: how field tests are organized** (docs only, after item
+   6). Record the decisions Joe made on 2026-11-02 while revising
+   `docs/field-testing/README.md`; that README and the commit messages
+   (`f001895`, `6622b8e`, `7ec3ec2`, `0cc9dff`) are the source. Don't decide anything new:
+   - The stage ladder and its gate go. Tests are grouped as calibration
+     (Bench, Sensor characterization), safety (Failsafe low, Failsafe high,
+     Safety validation) and flight (Hover, Mapping run, Hide-and-seek). The
+     first time through, each is passed once, in order.
+   - When to repeat: calibration tests after changes to code that affects
+     sensor readings, safety tests after changes to the safety layer, the
+     Crazyflie adapter or the tick loop, flight tests when the work needs them.
+   - A vertical slice: one test environment (the living room, static while
+     the drone flies) toward hide-and-seek (ADR-0016).
+   - The simulator is optional for field tests; the same code always runs
+     on the mock adapter first.
+   - The README keeps a dated status brief (CLAUDE.md).
+   Consequences must state the risk honestly: with the simulator optional,
+   there are fewer sim-vs-real comparisons (focus area 5), and passing once
+   with no gate leans on the repeat rules. Origin line: "Joe's decisions,
+   recorded after the fact"; list the origin under "Choices for Joe to
+   confirm", since who suggested each part isn't recorded. Add the index
+   row, and link the ADR from the field-testing README. Leave ADR-0010 and
+   ADR-0028's "field-test stage 0" as written: they are a historical record.
+
 Not for the cloud run (later, not urgent): a field-test list in
 `docs/field-testing/` with two sections, **Hardware checks** (the `VERIFY`
 notes: firmware and cflib assumptions, Bench and Hover) and **Safety tests**
