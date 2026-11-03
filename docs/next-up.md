@@ -52,7 +52,7 @@ rules. On top of `CLAUDE.md`:
 
 ## Items, in order
 
-1. [ ] **ADR-0037 C: the auto-arming log line.** The Crazyflie adapter
+1. [x] **ADR-0037 C: the auto-arming log line.** The Crazyflie adapter
    (`src/crazyflie_behavior/drone/crazyflie/adapter.py`) logs once at
    connect whether the drone arms itself. Decode the bit from the
    `supervisor.info` bitfield the adapter already streams in the drone

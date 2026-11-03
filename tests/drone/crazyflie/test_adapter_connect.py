@@ -6,6 +6,7 @@ then puts the real ones back.
 
 # pyright: reportPrivateUsage=false
 
+import logging
 import signal
 import threading
 import time
@@ -119,6 +120,33 @@ def test_connecting_resets_the_estimate_and_starts_telemetry(adapter: CrazyflieA
     fake_cflib.reset_estimator.assert_called_once_with(fake_cflib.link)
     assert fake_cflib.log_block_names == ["state", "battery", "down"]
     fake_cflib.link.close_link.assert_not_called()
+
+
+def test_connecting_logs_that_the_drone_arms_itself(
+    adapter: CrazyflieAdapter,
+    fake_cflib: FakeCflib,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(FIRST_SAMPLES["state"], "supervisor.info", float(1 << adapter_module.BIT_IS_AUTO_ARMED))
+
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+        adapter.connect()
+
+    assert [r.getMessage() for r in caplog.records if "arms itself" in r.getMessage()] == [
+        "The drone arms itself (auto-arming is on): a disarm won't last."
+    ]
+
+
+def test_connecting_logs_that_the_drone_does_not_arm_itself(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+        adapter.connect()
+
+    assert [r.getMessage() for r in caplog.records if "arm itself" in r.getMessage()] == [
+        "The drone doesn't arm itself: it needs an arm request before it can fly."
+    ]
 
 
 def test_a_multi_ranger_adds_its_own_log_block(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:

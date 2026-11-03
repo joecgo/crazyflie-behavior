@@ -26,6 +26,7 @@ from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.supervisor import (
     BIT_IS_ARMED,
+    BIT_IS_AUTO_ARMED,
     BIT_IS_CRASHED,
     BIT_IS_FLYING,
     BIT_IS_TUMBLED,
@@ -178,6 +179,9 @@ class CrazyflieAdapter(DroneInterface):
         self._last_drone_time: float | None = None
         self._dropped_state_count = 0
         """State packets in a row with an estimate that isn't finite."""
+        self._latest_status_bitfield: int | None = None
+        """The supervisor bitfield of the latest state packet, for bits `DroneStatus`
+        doesn't carry (auto-arming, ADR-0037). Written on cflib's receive thread."""
 
     # --- Connection ---------------------------------------------------------
 
@@ -185,6 +189,7 @@ class CrazyflieAdapter(DroneInterface):
         _init_drivers_once()
         self._last_drone_time = None  # a new session: the drone may have rebooted
         self._dropped_state_count = 0
+        self._latest_status_bitfield = None
         # A new session starts with no values, so the wait for the first telemetry
         # can't pass on values left from an earlier one (ADR-0031).
         self._telemetry = TelemetryBuffer(self._clock)
@@ -224,6 +229,7 @@ class CrazyflieAdapter(DroneInterface):
             )
             self._start_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
             self._wait_for_first_telemetry()
+            self._log_whether_the_drone_arms_itself()
         except BaseException:
             self._close_link()
             raise
@@ -511,6 +517,16 @@ class CrazyflieAdapter(DroneInterface):
                 )
             self._clock.sleep_until(min(deadline, now + WAIT_SLICE))
 
+    def _log_whether_the_drone_arms_itself(self) -> None:
+        """Log once whether the firmware arms the drone by itself (ADR-0037)."""
+        bitfield = self._latest_status_bitfield
+        if bitfield is None:
+            return  # can't happen once the first telemetry has arrived (ADR-0031)
+        if (bitfield >> BIT_IS_AUTO_ARMED) & 1:
+            logger.info("The drone arms itself (auto-arming is on): a disarm won't last.")
+        else:
+            logger.info("The drone doesn't arm itself: it needs an arm request before it can fly.")
+
     def _add_log_block(self, name: str, period_ms: int, variables: list[str], on_data: _LogCallback) -> None:
         log_config = LogConfig(name=name, period_in_ms=period_ms)
         for variable in variables:
@@ -538,7 +554,9 @@ class CrazyflieAdapter(DroneInterface):
         drone_time = self._drone_time(timestamp)
         position = Vector3(*(data[variable] for variable in _POSITION_VARIABLES))
         velocity = Vector3(*(data[variable] for variable in _VELOCITY_VARIABLES))
-        status = drone_status_from_bitfield(int(data[_STATUS_VARIABLE]))
+        bitfield = int(data[_STATUS_VARIABLE])
+        self._latest_status_bitfield = bitfield
+        status = drone_status_from_bitfield(bitfield)
         if position.is_finite() and velocity.is_finite():
             self._telemetry.write_estimates_and_status(position, velocity, status, drone_time)
             if self._dropped_state_count > 0:
