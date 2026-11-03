@@ -202,10 +202,12 @@ def test_taking_off_needs_an_armed_drone_on_the_floor() -> None:
 
 
 @pytest.mark.parametrize("command_request", [Hover(), Land()])
-def test_hovering_and_landing_need_a_flying_drone(command_request: CommandRequest) -> None:
-    """On the floor, the firmware would spin up an armed drone's motors."""
-    assert judge(command_request, snapshot(FLYING)).is_approved
-    assert judge(command_request, snapshot(ARMED)).reason == "the drone isn't flying"
+@pytest.mark.parametrize("status", [ON_THE_FLOOR, ARMED, FLYING], ids=["on the floor", "armed", "flying"])
+def test_hovering_and_landing_are_approved_whatever_the_drone_status_says(
+    command_request: CommandRequest, status: DroneStatus
+) -> None:
+    """The adapter decides whether the drone may be flying (ADR-0039): the status lags a take-off."""
+    assert judge(command_request, snapshot(status)).is_approved
 
 
 @pytest.mark.parametrize("command_request", [SetVelocity(Vector3(0.1, 0.0, 0.0)), MoveTo(Vector3(1.0, 0.0, 0.5), 2.0)])
@@ -218,10 +220,19 @@ def test_velocity_and_fast_mode_are_refused_until_the_speed_envelope_exists(
     assert "speed envelope" in verdict.reason
 
 
-def test_nothing_is_approved_without_a_drone_status() -> None:
+def test_arming_and_taking_off_are_refused_without_a_drone_status() -> None:
     no_status = replace(snapshot(FLYING), drone_status=None)
 
-    assert judge(Land(), no_status).reason == "no drone status yet"
+    assert judge(Arm(), no_status).reason == "no drone status yet"
+    assert judge(TakeOff(0.5), no_status).reason == "no drone status yet"
+
+
+@pytest.mark.parametrize("command_request", [Hover(), Land()])
+def test_hovering_and_landing_are_approved_without_a_drone_status(command_request: CommandRequest) -> None:
+    """A missing status counts as flying: hover and land fly when unsure (ADR-0039)."""
+    no_status = replace(snapshot(FLYING), drone_status=None)
+
+    assert judge(command_request, no_status).is_approved
 
 
 # --- Sending -----------------------------------------------------------------------
@@ -280,7 +291,7 @@ def test_a_refused_request_sends_nothing() -> None:
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(ON_THE_FLOOR))
 
-    assert not safety_layer.request(Land()).is_approved
+    assert not safety_layer.request(TakeOff(0.5)).is_approved  # not armed
     safety_layer.send()
 
     assert drone.command_log == []
@@ -361,16 +372,32 @@ def test_the_failsafe_lands_on_a_stale_drone_status_that_says_flying() -> None:
     assert drone.command_log == ["land"]
 
 
-def test_a_failed_pre_check_on_the_floor_sends_nothing() -> None:
-    """On the floor, landing would spin up an armed drone's motors."""
+@pytest.mark.parametrize("status", [ON_THE_FLOOR, ARMED, FLYING], ids=["on the floor", "armed", "flying"])
+def test_the_failsafe_always_lands_and_leaves_whether_the_drone_may_be_flying_to_the_adapter(
+    status: DroneStatus, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The status lags a take-off by about a second, so it can't gate the landing (ADR-0039)."""
     drone = RecordingDrone()
     safety_layer = SafetyLayer(drone)
 
-    safety_layer.pre_check(snapshot(ARMED, position_age=1.0))
+    safety_layer.pre_check(snapshot(status, position_age=1.0))
     safety_layer.send()
 
-    assert drone.command_log == []
+    assert drone.command_log == ["land"]
     assert safety_layer.pre_check_has_failed
+    assert warnings_in(caplog) == [
+        "Safety pre-check failed: position estimate is 1.00 s old (stale after 0.25 s). Landing."
+    ]
+
+
+def test_the_failsafe_lands_without_any_drone_status() -> None:
+    drone = RecordingDrone()
+    safety_layer = SafetyLayer(drone)
+
+    safety_layer.pre_check(replace(snapshot(FLYING), drone_status=None))
+    safety_layer.send()
+
+    assert drone.command_log == ["land"]
 
 
 def test_after_the_failsafe_the_flight_never_resumes() -> None:

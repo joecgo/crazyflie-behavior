@@ -63,5 +63,6 @@ mid-air. Otherwise the motors are just stopped.
   holds it there.
 - The safety layer's `judge()` still refuses a land request until the status
   says flying (ADR-0030), so it and the adapter define "may be flying"
-  differently during the take-off grace period (backlog #8).
+  differently during the take-off grace period (backlog #8). Resolved by
+  [ADR-0039](0039-the-adapter-decides-may-be-flying.md): the adapter decides.
 - Backlog #31 is closed.

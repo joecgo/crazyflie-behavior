@@ -178,6 +178,8 @@ class CrazyflieAdapter(DroneInterface):
         self._is_streaming_velocity = False
         self._is_airborne = False
         """A take-off was sent (or the flight was taken over) and the motors haven't been stopped since."""
+        self._is_ignoring_hover = False
+        """The latest hover was ignored because the drone isn't flying: the log line for it comes once per streak."""
         self._is_drone_state_unknown = False
         """True from the start of `connect()` until a fresh drone status says whether the drone
         is flying (ADR-0038): until then, the drone may be flying."""
@@ -204,6 +206,7 @@ class CrazyflieAdapter(DroneInterface):
         self._dropped_state_count = 0
         self._latest_status_bitfield = None
         self._is_airborne = False  # a new session learns what the drone is doing from the drone
+        self._is_ignoring_hover = False
         self._is_drone_state_unknown = True
         # A new session starts with no values, so the wait for the first telemetry
         # can't pass on values left from an earlier one (ADR-0031).
@@ -271,6 +274,7 @@ class CrazyflieAdapter(DroneInterface):
             raise ValueError(f"Take-off height must be positive: {height}")
         self._cancel_landing()
         self._release_velocity_streaming()
+        self._is_ignoring_hover = False  # flying from now on: a hover on the floor later is a new streak
         current_height = self._latest_height(if_unknown=0.0)
         duration = move_duration(height - current_height, VERTICAL_SPEED, MIN_MOVE_DURATION)
         self._crazyflie.high_level_commander.takeoff(height, duration, yaw=DEFAULT_YAW_RAD)
@@ -306,6 +310,17 @@ class CrazyflieAdapter(DroneInterface):
         )
 
     def hover(self) -> None:
+        if not self._may_be_flying():
+            # On the floor, a go_to at floor height would spin up an armed drone's
+            # motors (ADR-0039). The safety layer approved the hover anyway: it
+            # leaves this decision to the adapter.
+            if not self._is_ignoring_hover:
+                logger.info(
+                    "Hover ignored: the drone isn't flying, and a move on the floor would spin up its motors. "
+                    "Logged once per streak."
+                )
+                self._is_ignoring_hover = True
+            return
         self._cancel_landing()
         self._release_velocity_streaming()
         commander = self._crazyflie.high_level_commander

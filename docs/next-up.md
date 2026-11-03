@@ -70,7 +70,7 @@ rules. On top of `CLAUDE.md`:
    emergency-stop script in `tools/`, the field-testing procedure note, and
    the tests it names. Item 1's log line has to keep working after the
    reorder.
-3. [ ] **ADR-0039: the adapter decides whether the drone may be flying.**
+3. [x] **ADR-0039: the adapter decides whether the drone may be flying.**
    `judge()` approves `Hover` and `Land` whatever the drone status says; the
    failsafe always puts `Land` in the movement slot, and its log no longer
    says "no landing sent"; the Crazyflie adapter's `hover()` does nothing on

@@ -94,32 +94,29 @@ def _staleness[T](name: str, stamped: Stamped[T] | None, now: float, limit: floa
 
 
 def judge(command_request: CommandRequest, snapshot: Snapshot) -> Verdict:
-    """Approve or refuse a command request by First flight's state rules (ADR-0030).
+    """Approve or refuse a command request by First flight's state rules (ADR-0030, ADR-0039).
 
-    Uses the drone status, never what was sent: a command the drone refused
-    leaves its status unchanged.
+    Arming and taking off use the drone status, never what was sent: a command
+    the drone refused leaves its status unchanged. Hover and land are approved
+    whatever the status says (even a missing one): only the adapter knows
+    whether the drone may be flying, and it does nothing, or just stops the
+    motors, for a drone on the floor (ADR-0039).
     """
+    if isinstance(command_request, Hover | Land):
+        return Verdict.approved()
     status = snapshot.drone_status
     if status is None:
         return Verdict.refused("no drone status yet")
-    is_armed = status.value.is_armed
-    is_flying = status.value.is_flying
     match command_request:
         case Arm():
-            if is_flying:
+            if status.value.is_flying:
                 return Verdict.refused("the drone is already flying")
             return Verdict.approved()
         case TakeOff():
-            if not is_armed:
+            if not status.value.is_armed:
                 return Verdict.refused("the drone isn't armed")
-            if is_flying:
+            if status.value.is_flying:
                 return Verdict.refused("the drone is already flying")
-            return Verdict.approved()
-        case Hover() | Land():
-            # On the floor, the firmware would start the move anyway and spin the
-            # motors of an armed drone (ADR-0030).
-            if not is_flying:
-                return Verdict.refused("the drone isn't flying")
             return Verdict.approved()
         case SetVelocity() | MoveTo():
             return Verdict.refused("steering mode and fast mode wait for the speed envelope (backlog #30)")
@@ -151,9 +148,9 @@ class SafetyLayer:
     def pre_check(self, snapshot: Snapshot) -> bool:
         """Run the safety pre-check on this tick's snapshot. Returns whether behaviors may run.
 
-        On the first failure, the failsafe takes the movement slot: land, if
-        the drone reports flying. The drone status may be stale by then, but
-        it's the best knowledge there is.
+        On the first failure, the failsafe takes the movement slot: land,
+        whatever the drone status says. The adapter decides whether the drone
+        may be flying, which the status alone can't tell (ADR-0039).
         """
         self._snapshot = snapshot
         if self._pre_check_has_failed:
@@ -162,15 +159,8 @@ class SafetyLayer:
         if not failures:
             return True
         self._pre_check_has_failed = True
-        status = snapshot.drone_status
-        if status is not None and status.value.is_flying:
-            self._movement = Land()
-            logger.warning("Safety pre-check failed: %s. Landing.", "; ".join(failures))
-        else:
-            logger.warning(
-                "Safety pre-check failed: %s. The drone doesn't report flying: no landing sent.",
-                "; ".join(failures),
-            )
+        self._movement = Land()
+        logger.warning("Safety pre-check failed: %s. Landing.", "; ".join(failures))
         return False
 
     def request(self, command_request: CommandRequest) -> Verdict:
