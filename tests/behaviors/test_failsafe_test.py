@@ -110,6 +110,14 @@ def test_the_floor_is_not_the_take_off_height_even_for_the_low_one(height: float
     assert not is_at_take_off_height(2 * height, height)
 
 
+@pytest.mark.parametrize("height", [0.1, 0.5])
+def test_within_5_cm_of_the_take_off_height_counts_as_there(height: float) -> None:
+    assert is_at_take_off_height(height + 0.049, height)
+    assert is_at_take_off_height(height - 0.049, height)
+    assert not is_at_take_off_height(height + 0.051, height)
+    assert not is_at_take_off_height(height - 0.051, height)
+
+
 @pytest.mark.parametrize("height", [0.0, -0.1, math.nan, math.inf])
 def test_a_take_off_height_that_isnt_a_positive_number_is_refused(height: float) -> None:
     with pytest.raises(ValueError, match="Take-off height must be a positive number"):
