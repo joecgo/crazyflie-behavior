@@ -97,8 +97,8 @@ this file in the same commit as the code or ADR that uses it.
 | **Console** | The text window the program runs in: PyCharm's Run window, or a terminal window. Shows log messages at info level and above; the log file gets everything. | The Output Log window. Not UE's `~` console, where you type commands. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
 | **Log level** | How important a log message is: debug (every detail, such as each tick's timing), info (normal events), warning (something went wrong but the program carries on), error (something failed), critical (the most severe). The console and the log file each show messages at or above a chosen level. | `UE_LOG` verbosity (`Verbose`, `Log`, `Warning`, `Error`). Unlike UE's `Fatal`, critical doesn't stop the program. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
 | **Program** | A runnable entry point, such as the bench program. It sets up logging, the drone and the tick loop, then runs until it's done or stopped. | Like UE's `Source/Programs`: standalone executables built from the same code. | [0028](decisions/0028-programs-bench-first-plain-logging.md) |
-| **Bench program** | The program for field-test stage 0. It connects to the drone, runs the tick loop and logs every snapshot, but never commands the drone. | No UE analogy. | [0028](decisions/0028-programs-bench-first-plain-logging.md) |
-| **Hover test** | The behavior for field-test stage 1: arm, take off to 0.5 m, hover, land, then report done. | No UE analogy. | [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
+| **Bench program** | The program for the Bench field test. It connects to the drone, runs the tick loop and logs every snapshot, but never commands the drone. | No UE analogy. | [0028](decisions/0028-programs-bench-first-plain-logging.md) |
+| **Hover test** | The behavior for the Hover field test: arm, take off to 0.5 m, hover, land, then report done. | No UE analogy. | [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
 | **Hover program** | The program that runs the hover test, like the bench program but flying. | No UE analogy. | [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
 | **Tick rate** | Ticks per second: 20 Hz. | `t.MaxFPS`. | [0023](decisions/0023-tick-rate-20-hz.md) |
 | **Due time** | When a tick should start: the previous due time plus one tick period, or, after an overrun, the moment the late tick ends. | When the next frame is due under a frame cap. | [0024](decisions/0024-tick-timing-strategy.md) |
@@ -139,7 +139,7 @@ this file in the same commit as the code or ADR that uses it.
 |---|---|---|
 | **Fitness function** | A test that enforces a structural rule from an ADR, such as "only the Crazyflie adapter imports cflib". It reads the code, for example its imports, instead of running it, and fails continuous integration when the rule is broken. Fitness functions live in `tests/architecture/`. | No UE analogy. |
 | **Field test** | A session of real flights with a goal and pass criteria, planned and logged as [docs/field-testing/](field-testing/README.md) describes ([ADR-0033](decisions/0033-field-tests-choose-their-failure-rule.md)). | A playtest with a test plan and a bug report afterwards. |
-| **Failsafe low / Failsafe high** | The field-test stages that fly the failsafe program: it takes off to 0.1 m (low) or 0.5 m (high, the Hover test's height), then the program forges a low battery so the safety layer's failsafe lands the drone. | A cheat command that fakes a low-health state to test the death flow. | [0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) |
+| **Failsafe low / Failsafe high** | The field tests that fly the failsafe program: it takes off to 0.1 m (low) or 0.5 m (high, the Hover test's height), then the program forges a low battery so the safety layer's failsafe lands the drone. | A cheat command that fakes a low-health state to test the death flow. | [0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) |
 | **Recording** | A file of one run: a header (the git commit, the program, the adapter, the settings, the format version), then each tick's snapshot, command requests and verdicts, events and timing, as JSON Lines. Kept in `recordings/`; chosen ones are committed ([ADR-0034](decisions/0034-recorded-flights-as-json-lines.md)). | A demo recording: everything needed to play a session back. |
 | **Bug planting** | Deliberately breaking the code a test guards, to check that the test fails. One small change at a time, always removed afterwards and never committed. A test that still passes has a gap. A hand-made form of mutation testing. | No UE analogy. |
 
@@ -147,7 +147,7 @@ this file in the same commit as the code or ADR that uses it.
 
 | Term | Definition | UE5 analogy |
 |---|---|---|
-| **First flight** | The project's first milestone: everything up to the drone's first hover through the project's own code (field-test stage 1). Code "minimal for First flight" does only what that hover needs. | Like a game's "first playable" milestone (a production term, not a UE feature). |
+| **First flight** | The project's first milestone: everything up to the drone's first hover through the project's own code (the Hover field test). Code "minimal for First flight" does only what that hover needs. | Like a game's "first playable" milestone (a production term, not a UE feature). |
 
 ## Hide-and-seek
 

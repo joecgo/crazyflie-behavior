@@ -75,7 +75,7 @@ setup works. In PyCharm, use the **first_flight** run configuration.
 ```
 
 It connects, runs the tick loop and logs every snapshot, but never commands
-the drone: field-test stage 0, propellers off. Without `--crazyflie` it uses
+the drone: the Bench field test, propellers off. Without `--crazyflie` it uses
 the mock adapter. The console shows a summary every second, with how old each
 value is, and everything goes to a log file in `logs/`. (With the mock
 adapter every value is 0 ms old: it streams them all again with each
@@ -94,7 +94,7 @@ the program shut down cleanly; without it, Stop ended the program outright.
 .venv\Scripts\python -m crazyflie_behavior.programs.hover --crazyflie --hover-seconds 60
 ```
 
-It runs the hover test once, for field-test stage 1: arm, take off to 0.5 m,
+It runs the hover test once, for the Hover field test: arm, take off to 0.5 m,
 hover (10 s unless `--hover-seconds` says otherwise), land. Without
 `--crazyflie` it flies the mock adapter. Every command goes through the
 safety layer, whose pre-check lands the drone on stale data, a low battery or
