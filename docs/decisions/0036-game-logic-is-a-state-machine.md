@@ -44,6 +44,10 @@ up. That move gets its own ADR.
   picks the exit code. The hover test and its tests change to match.
 - **Still open:** how states are written (an enum and `match`, like the hover
   test, or a class per state with enter, tick and exit). Decided with the
-  first game behavior.
+  first game behavior. That decision also settles whether behaviors share
+  that code: `HoverTest` and `FailsafeTest` copy one enum-and-`match`
+  skeleton (`_Step`, `_start_step`, `_ask`, `_land`), left as a copy on
+  2026-11-03 (my call on the AI's recommendation) so nothing settles this
+  question early.
 - Glossary: *Outcome* added; *Behavior*'s UE analogy changed. Backlog #6 is
   closed.
