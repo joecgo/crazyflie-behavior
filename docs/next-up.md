@@ -34,7 +34,9 @@ rules. On top of `CLAUDE.md`:
   drop `fresh`: not when an item is only partly built, not when one has open
   questions, not when checks fail (then review anyway and say so in the pull
   request). Fix only plain bugs with an obvious fix, in one extra commit
-  after the review, then re-run the checks. Every other finding (ADR
+  after the review, then re-run the checks. If those fixes are big enough
+  to need it, run one more `/project-review max fresh` on the branch and
+  handle its findings the same way. Every other finding (ADR
   conflicts, design, glossary, failure rules, anything that needs a
   decision) goes into the pull request description unfixed, with the full
   ranked findings list, since `ReportFindings` may not show anywhere in a
