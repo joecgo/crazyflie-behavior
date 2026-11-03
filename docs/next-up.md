@@ -199,7 +199,7 @@ rules. On top of `CLAUDE.md`:
    propose any change in the pull request. Add the index row. Link the ADR
    from the field-testing README's Bench row.
 
-9. [ ] **The glossary proposal for the session and field-test words** (docs
+9. [x] **The glossary proposal for the session and field-test words** (docs
    only; Joe already did the renames on 2026-11-03: `field-tests/` holds the
    test logs, `sessions/` the session docs, `field-test-template.md` and
    `sessions/session-template.md` the templates). Don't edit

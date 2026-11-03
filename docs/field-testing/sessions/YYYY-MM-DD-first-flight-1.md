@@ -1,7 +1,6 @@
 # YYYY-MM-DD-first-flight-1
 
-> **DRAFT.** Date pending. The failsafe program isn't built yet (next-up.md,
-> item 5).
+> **DRAFT.** Date pending.
 
 A session is one trip with one or more field tests, flown in order. Each
 field test has its own log in [`../field-tests/`](../field-tests/).
@@ -12,7 +11,7 @@ field test has its own log in [`../field-tests/`](../field-tests/).
 ## Plan
 
 Each test needs the ones before it to pass. If one fails, stop and write it
-up before flying the next (README, "Session logs").
+up before flying the next (README, "Sessions and test logs").
 
 1. [Bench](../field-tests/YYYY-MM-DD-first-flight-1-bench.md)
 2. [Failsafe low](../field-tests/YYYY-MM-DD-first-flight-1-failsafe-low.md)

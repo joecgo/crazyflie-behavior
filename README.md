@@ -185,7 +185,7 @@ docs/
   coding-style.md   # conventions the tools can't check
   decisions/        # Architecture Decision Records (ADRs)
   decision-backlog.md  # open design questions, in order of need
-  field-testing/    # real-world test process and session logs
+  field-testing/    # real-world test process, test logs and session docs
   cflib-primer.md   # how cflib works, checked against the installed version
   claude-mistakes.md  # mistakes Claude made, and what they say about its weak spots
 ```
