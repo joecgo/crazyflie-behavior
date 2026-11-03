@@ -93,3 +93,11 @@ fails unsafe.
   flight, and whether cflib's link opening waits for more than the radio (the
   emergency-stop script must not).
 - Glossary: **Rescue landing** added.
+- **Known risk, accepted (amended 2026-11-03, my call on the AI's
+  recommendation):** if the link opens and cflib's download of the parameter
+  and log tables then fails, cflib's own `SyncCrazyflie.open_link` calls
+  `close_link()`, which sends a zero-thrust setpoint before our code gets
+  control back. On a rescue landing, that drops the flying drone. It needs a
+  link that opens, a download that fails, and a zero-thrust packet that still
+  gets through; at 0.1 to 0.5 m it is the drop the emergency stop makes on
+  purpose. Fixing it (our own `open_link` in the adapter) is backlog #43.

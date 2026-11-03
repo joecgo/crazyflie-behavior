@@ -90,8 +90,12 @@ nobody else in the room, no people and no pets.
 **If a program dies with the drone in the air**
 ([ADR-0038](../decisions/0038-connecting-to-a-flying-drone.md)): run the
 rescue landing (`crazyflie_behavior.programs.rescue_landing --crazyflie`), not
-the program that was flying: that one refuses to connect to a flying drone. If
-the rescue landing can't bring it down, slide something soft under the drone
+the program that was flying: that one refuses to connect to a flying drone.
+Keep the area under the drone clear: if connecting fails partway, cflib itself
+stops the motors and the drone drops (ADR-0038, known risk). If the rescue
+landing says the drone's estimate isn't arriving, it can't land under control
+([ADR-0045](../decisions/0045-rescue-without-an-estimate-points-to-the-emergency-stop.md)):
+go straight to the emergency stop. If the rescue landing can't bring it down, slide something soft under the drone
 and run `tools/emergency_stop.py`: the motors stop at once. Both use the radio
 link, so if the link is why the drone was lost, only the physical backup is
 left: fly the early sessions low over a soft mat.
