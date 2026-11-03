@@ -164,7 +164,13 @@ rules. On top of `CLAUDE.md`:
    Consequences must state the risk honestly: a test that skips the
    simulator has no simulator prediction to compare its flight against
    (focus area 5); the plan is to use the simulator wherever it adds
-   something. Origin line: "Joe's decisions,
+   something. Also record, as a risk Joe accepts knowingly: with no gate,
+   a test passes once the first time through, so a lucky pass or a later
+   regression is caught only when a repeat rule is followed. Joe's
+   reasoning, in his terms: this is a side project, not a full-time job;
+   a strict suite before every flight he wants to do isn't practical, and
+   the time is for learning, exploring and trying new things. He retests
+   occasionally, guided by the repeat rules, without being bound by them. Origin line: "Joe's decisions,
    recorded after the fact"; list the origin under "Choices for Joe to
    confirm", since who suggested each part isn't recorded. Add the index
    row, and link the ADR from the field-testing README. Leave ADR-0010 and
