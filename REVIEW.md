@@ -84,6 +84,8 @@ takeaway applies to reviews, it's added here as a question.
   real file? Is each form its scanner handles exercised by a test?
 - A decision that makes an exception to an older ADR: is the older ADR's
   status line marked?
+- A change to what a value or term means: was the old wording searched for
+  across the code, the glossary and the ADRs?
 - An ADR amendment that changes how a test passes: do the test log drafts'
   pass criteria and checklists match it, and is there a test for the new rule?
 - Does every term in a new name or comment appear in the glossary, even one
@@ -93,7 +95,8 @@ takeaway applies to reviews, it's added here as a question.
   code receives a signal or command?
 - Does each log message's stated cause hold on every path that reaches it?
 - Is every new log or console message one short sentence an operator could
-  read mid-flight, with the reasons left in a comment or the ADR?
+  read mid-flight, with the reasons left in a comment or the ADR? Does a
+  shortened message still say the outcome (failed, not confirmed, refused)?
 - Does new wording name a milestone, quote a constant's value, or describe
   something temporary without `TODO:`?
 - Is any new constant a copy of a value that follows from another one?

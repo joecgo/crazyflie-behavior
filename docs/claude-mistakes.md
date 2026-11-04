@@ -31,14 +31,14 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 4 | 12 |
 | recommendation | 7 | 4 |
 | environment | 3 | 5 |
-| communication | 5 | 10 |
-| testing | 0 | 6 |
-| process | 3 | 10 |
-| **Total** | **25** | **61** |
+| communication | 6 | 12 |
+| testing | 0 | 7 |
+| process | 3 | 11 |
+| **Total** | **26** | **65** |
 
-Of the 25 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 19. So far, 7 of the 11 recommendation
-mistakes needed me, and 5 of the 15 communication mistakes. Claude's own reviews, planted bugs and
+Of the 26 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 20. So far, 7 of the 11 recommendation
+mistakes needed me, and 6 of the 18 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
 pattern: an interruption landing between two lines of cleanup code (five
@@ -47,6 +47,22 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-04: A right understanding "corrected"
+
+- **What happened:** reviewing the adapter's `hover()` on the floor
+  (ADR-0039), I said I hadn't realized a drone would fail if it hovered on
+  the floor. Claude "corrected" me: the drone doesn't fail, it obeys too
+  literally. But I was right. On the floor, the position controller isn't in
+  control: the floor pushes back and the air cushion near it adds lift,
+  neither of which the controller expects, so the drone can hop or skid.
+  Claude's correction pushed me away from the real reason.
+- **Would a Claude review have caught it?** Probably not: reviews read the
+  code and the docs, not what Claude said in the chat.
+- **Kind:** communication.
+- **Takeaway:** before correcting me, check whether my words, read in
+  everyday terms, are right. If they are, confirm them and add the
+  technical detail.
 
 ### 2026-11-04: A commit rule that says "before" a review, read as "during"
 
@@ -471,6 +487,54 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-04: ADR-0046 applied without searching for the old wording
+
+- **What happened:** ADR-0046 changed the snapshot's time from the tick's
+  start to a clock reading after the copy. Claude updated the code it named
+  but left the old meaning in ADR-0009's Consequences (its status line not
+  marked as amended), the glossary's *Clock* entry, `clock.py`'s docstring
+  and three "tick time" docstrings. Trimming `Stamped.age()`'s docstring also
+  dropped "never divide by an age", which still holds: an age can be 0.
+- **How it was caught:** `/project-review` (its `/code-review` step and the
+  ADR check) before committing my third code review's fixes.
+- **Kind:** process.
+- **Takeaway:** when a change alters what a value means, search for the old
+  wording everywhere (code, glossary, ADRs) before calling it done. When
+  trimming a docstring, keep each piece of guidance that's still true.
+
+### 2026-11-04: A shortened log line that dropped the outcome
+
+- **What happened:** the short-message sweep turned the failsafe test's last
+  line, "landed. Done (the test failed).", into "landed. Done.". That step is
+  reached only after a failure, so the operator's last line read like a pass.
+- **How it was caught:** `/project-review`, before committing.
+- **Kind:** communication.
+- **Takeaway:** shortening a message removes reasons, never the outcome
+  (failed, not confirmed, refused).
+
+### 2026-11-04: Restoring a planted bug with `git checkout` discarded edits
+
+- **What happened:** while proving a new test by bug planting, Claude
+  restored the planted file with `git checkout`, which also threw away that
+  file's uncommitted review fixes. Claude saw the diff vanish at once and
+  re-applied them.
+- **How it was caught:** Claude, checking the file's diff right after.
+- **Kind:** testing.
+- **Takeaway:** before planting a bug in a file with uncommitted work, copy
+  it and restore from the copy; never `git checkout` it.
+
+### 2026-11-04: "No test enforces it" said without looking at the tests
+
+- **What happened:** reviewing the rescue landing program in my third code
+  review, Claude said that only the rescue landing passing
+  `take_over_flight=True` was a stated rule with no test, and offered a
+  fitness function for it. That fitness function already existed
+  (`test_only_the_rescue_landing_program_asks_to_take_over_a_flight`, in the
+  architecture tests).
+- **How it was caught:** Claude, listing the test names for the same review.
+- **Kind:** communication.
+- **Takeaway:** before saying a rule has no test, search the tests for it.
 
 ### 2026-11-04: "Can only be a clock bug", and a cost overstated
 
