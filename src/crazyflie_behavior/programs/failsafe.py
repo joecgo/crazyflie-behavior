@@ -32,6 +32,7 @@ import argparse
 import sys
 
 from crazyflie_behavior.behaviors.failsafe_test import FailsafeTest
+from crazyflie_behavior.behaviors.hover_test import TAKE_OFF_HEIGHT
 from crazyflie_behavior.loop.tick_step import BehaviorTickStep
 from crazyflie_behavior.programs.failsafe_fault import ForgedLowBatteryDrone
 from crazyflie_behavior.programs.start_up import EXIT_ERROR, EXIT_OK, make_drone, run_program
@@ -40,7 +41,7 @@ from crazyflie_behavior.timing.clock import RealClock
 
 FAILSAFE_LOW_HEIGHT = 0.1
 """Meters: the Failsafe low field test."""
-FAILSAFE_HIGH_HEIGHT = 0.5
+FAILSAFE_HIGH_HEIGHT = TAKE_OFF_HEIGHT
 """Meters: the Failsafe high field test, the Hover test's height."""
 
 
