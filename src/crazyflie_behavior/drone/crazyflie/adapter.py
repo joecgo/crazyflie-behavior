@@ -181,8 +181,8 @@ class CrazyflieAdapter(DroneInterface):
         self._is_airborne = False
         """A take-off was sent (or the flight was taken over) and the motors haven't been stopped since."""
         self._is_ignoring_hover = False
-        """The latest hover was ignored because the drone isn't known to be flying: the log line for it
-        comes once per streak."""
+        """The latest hover was ignored because the drone isn't one that may be flying: the log line for
+        it comes once per streak."""
         self._is_drone_state_unknown = False
         """True from the start of `connect()` until the drone is known to be on the floor or its
         flight is taken over (ADR-0038). It stays True when the drone is found flying and refused:
@@ -320,10 +320,7 @@ class CrazyflieAdapter(DroneInterface):
             # motors (ADR-0039). The safety layer approved the hover anyway: it
             # leaves this decision to the adapter.
             if not self._is_ignoring_hover:
-                logger.info(
-                    "Hover ignored: the drone isn't known to be flying, and a move on the floor would "
-                    "spin up its motors. Logged once per streak."
-                )
+                logger.info("Hover ignored: the drone isn't flying. Logged once per streak.")
                 self._is_ignoring_hover = True
             return
         self._is_ignoring_hover = False  # this hover goes through: the streak is over

@@ -31,14 +31,14 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 4 | 12 |
 | recommendation | 7 | 4 |
 | environment | 3 | 5 |
-| communication | 5 | 9 |
+| communication | 5 | 10 |
 | testing | 0 | 6 |
 | process | 2 | 10 |
-| **Total** | **24** | **59** |
+| **Total** | **24** | **60** |
 
 Of the 24 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 18. So far, 7 of the 11 recommendation
-mistakes needed me, and 5 of the 14 communication mistakes. Claude's own reviews, planted bugs and
+mistakes needed me, and 5 of the 15 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
 pattern: an interruption landing between two lines of cleanup code (five
@@ -455,6 +455,22 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-04: "Isn't known to be flying", the opposite of the rule
+
+- **What happened:** the `hover()` docstring in the drone interface, the
+  adapter's "Hover ignored" log message and the docstring of its streak flag
+  said hover does nothing when the drone "isn't known to be flying". The rule
+  (ADR-0039, *May be flying*) is the opposite: when unsure, the adapter says
+  flying, so the hover goes through. The code was right; only the words were
+  backwards. They came from two review-fix commits (`4c1ef1f`, `045c0be`)
+  in the next-up run, which no later review read.
+- **How it was caught:** Claude, showing me the diffs for my third code
+  review. Fixed: the docstrings use *may be flying*, and the log message is
+  now one short sentence.
+- **Kind:** communication.
+- **Takeaway:** wording that describes a safety judgment must say which way
+  it fails when unsure. Review fixes are new code and need a review too.
 
 ### 2026-11-04: Comments that said more than their code
 
