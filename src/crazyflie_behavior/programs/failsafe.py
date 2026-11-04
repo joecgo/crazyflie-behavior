@@ -11,14 +11,19 @@ It uses the mock adapter unless it's run with --crazyflie:
     .venv\\Scripts\\python -m crazyflie_behavior.programs.failsafe --height-meters 0.1
     .venv\\Scripts\\python -m crazyflie_behavior.programs.failsafe --crazyflie --height-meters 0.5
 
-If the fault never takes effect, the program lands the drone normally after a
-time limit and the test has failed. The exit code is 0 only if the fault was
+If the fault never takes effect, the failsafe test lands the drone normally
+after a time limit and has failed. The exit code is 0 only if the fault was
 injected, the safety pre-check then failed, the test didn't fail by its own
-rules, and the landing in `disconnect()` finished with the motors stopped (it
-raises otherwise, which makes the exit code 1). Exit code 0 doesn't say whether
-touchdown was confirmed or the final descent ran out its time limit: the test
-log records that. A pytest test checks that the pre-check failed because of the
-battery (ADR-0041; ADR-0036's exit-code rule, amended for tests of a failsafe).
+rules, and `disconnect()` returned (it raises if its landing fails, which makes
+the exit code 1). ADR-0036 says a program exits nonzero when the failsafe ends
+the flight; for this program that is the pass (ADR-0041 amends the rule).
+
+Exit code 0 doesn't say whether the motors stopped (a lost radio link drops the
+motor stop without an error, backlog #46), nor whether touchdown was confirmed
+or the final descent ran out its time limit. The operator's test log records
+those, from what they saw and the warnings in the log file. A pytest test checks
+that the pre-check failed because of the battery.
+
 The interrupt signal makes a stop request: before the fault, the drone lands
 and the test hasn't passed.
 """
@@ -75,11 +80,12 @@ def main(arguments: list[str] | None = None) -> int:
     exit_code = run_program("failsafe", description, drone, tick_step, clock)
     if exit_code != EXIT_OK:
         return exit_code
-    # Passed: the fault was injected, the safety pre-check failed, and the test didn't fail by its own rules.
-    failsafe_fired_after_the_fault = (
+    # The run ended without an error (`disconnect()` returned). It passed if the fault was injected, the
+    # safety pre-check failed, and the test didn't fail by its own rules.
+    test_passed = (
         drone.has_forged_battery_voltage and safety_layer.pre_check_has_failed and not failsafe_test.has_failed
     )
-    return EXIT_OK if failsafe_fired_after_the_fault else EXIT_ERROR
+    return EXIT_OK if test_passed else EXIT_ERROR
 
 
 if __name__ == "__main__":

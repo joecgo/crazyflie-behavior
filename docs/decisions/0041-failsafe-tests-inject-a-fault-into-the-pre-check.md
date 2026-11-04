@@ -75,7 +75,7 @@ proven, so the test uses that path.
   file, marked in ADR-0008 and ADR-0030 (amended 2026-11-03, my call on the
   AI's recommendation; closes backlog #39). Exempting all of `programs/` was
   rejected: game programs live there, and the rule must catch them. When a
-  second fault is planned, fault wrappers move to a `faults/` folder with
+  second fault is planned, drones like it move to a `faults/` folder with
   the exemption (backlog #44).
 - The failsafe test reaches its pass through the exit code, not through the
   behavior reporting done (see "Who judges the pass" below).
@@ -85,9 +85,15 @@ proven, so the test uses that path.
   the behavior. A failed pre-check ends the run at once and the failsafe
   landing finishes inside `disconnect()`, so `FailsafeTest` is never ticked
   again. Exit code 0 means the fault was injected, the pre-check then failed,
-  the test didn't fail by its own rules, and the landing in `disconnect()`
-  finished with the motors stopped (a landing that raises makes it 1). It
-  doesn't say whether touchdown was confirmed or the final descent ran out
-  its time limit ([ADR-0019](0019-final-descent-when-touchdown-unconfirmed.md)):
-  the test log records that from the operator and the recording. ADR-0036's
-  exit-code rule is amended to allow this.
+  the test didn't fail by its own rules, and `disconnect()` returned (a
+  landing that raises makes it 1). It doesn't say whether the motors
+  stopped: this first said it did, and was corrected 2026-11-04. If the radio
+  link is lost during the landing, cflib drops outgoing packets without an
+  error (checked in cflib 0.1.34, `crazyflie/__init__.py`: `_link_error_cb`
+  sets `link` to None, and `send_packet` sends only while it isn't), so
+  `disconnect()` returns normally without the motor stop having left the PC.
+  Nor does it say whether touchdown was confirmed or the final descent ran
+  out its time limit ([ADR-0019](0019-final-descent-when-touchdown-unconfirmed.md)).
+  The test log records all of this, from the operator and the log file's
+  warnings. Detecting a lost link is backlog #46. ADR-0036's exit-code rule is
+  amended to allow this.

@@ -20,8 +20,10 @@
 - Pass if:
   - [ ] The log shows `FAULT INJECTED: battery voltage forged`.
   - [ ] The pre-check fails with the battery message, and a landing is sent.
-  - [ ] The drone lands and its motors stop, and the program reports done
-        (not the time limit landing it: that is a failed test).
+  - [ ] The drone lands and its motors stop (seen by the operator: the exit
+        code can't show it, ADR-0041), and the program exits with code 0.
+  - [ ] The log has no "Failsafe test failed" error (the time limit landing
+        the drone is a failed test).
   - [ ] The landing needed no help from the kill switch or rescue landing.
 
 ## Pre-flight checklist
@@ -39,6 +41,7 @@
 - [ ] Start: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --crazyflie --height-meters 0.5`
 - [ ] Watch the take-off and hover, then the landing; note anything unexpected while it happens
 - [ ] Note whether the drone landed by the failsafe or by the time limit (the log says which)
+- [ ] Note whether touchdown was confirmed: the log warns "Landing time is up but touchdown isn't confirmed" if the final descent started, and "Touchdown never confirmed by the down range" if it ran out its time limit
 
 ## Flights
 
