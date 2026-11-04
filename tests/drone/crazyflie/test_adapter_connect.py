@@ -639,14 +639,17 @@ def test_taking_over_a_drone_with_no_finite_estimate_points_to_the_emergency_sto
     fake_cflib.samples["state"]["supervisor.info"] = FLYING
     adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0), take_over_flight=True)
 
-    with pytest.raises(TimeoutError, match=r"estimate\. The drone can't land under control.*emergency_stop\.py"):
+    with pytest.raises(
+        TimeoutError, match=r"estimate\. If the drone is in the air, it can't land under control.*emergency_stop\.py"
+    ):
         adapter.connect()
 
     assert_only_the_radio_link_closed(fake_cflib)
 
 
 def test_a_normal_connect_with_no_finite_estimate_does_not_point_to_the_emergency_stop(fake_cflib: FakeCflib) -> None:
-    # The drone is on the floor here: the emergency stop is for a flying drone only (ADR-0045).
+    # A normal connect has already refused a flying drone, so this one is on the floor: only a take-over
+    # points to the emergency stop (ADR-0045).
     fake_cflib.samples["state"]["stateEstimate.z"] = math.nan
     adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0))
 
@@ -665,6 +668,40 @@ def test_a_take_over_that_misses_other_telemetry_says_to_check_the_crazyflie_is_
         adapter.connect()
 
     assert "emergency_stop" not in str(error.value)
+
+
+class BatteryArrivesAtTheDeadlineClock(BoundedSimClock):
+    """The missing battery voltage arrives the moment the first-telemetry wait reads the clock at its deadline:
+    after the wait's last check, before its error message is written."""
+
+    def __init__(self, fake_cflib: FakeCflib, start: float) -> None:
+        super().__init__(fake_cflib, start)
+        self.adapter: CrazyflieAdapter | None = None
+        self._wait_started_at: float | None = None
+        self._has_arrived = False
+
+    def now(self) -> float:
+        now = super().now()
+        if self.adapter is None or self._has_arrived or "start battery" not in self._fake_cflib.events:
+            return now
+        if self._wait_started_at is None:
+            self._wait_started_at = now  # the first reading after the battery block starts: the wait's start
+        elif now >= self._wait_started_at + adapter_module.FIRST_TELEMETRY_TIME_LIMIT:
+            self._has_arrived = True  # set first: the write reads the clock too
+            self.adapter._telemetry.write_battery_voltage(4.0, drone_time=None)
+        return now
+
+
+def test_the_time_limit_message_names_what_was_missing_when_the_wait_ran_out(fake_cflib: FakeCflib) -> None:
+    fake_cflib.silent_blocks.add("battery")
+    clock = BatteryArrivesAtTheDeadlineClock(fake_cflib, start=10.0)
+    adapter = CrazyflieAdapter(clock)
+    clock.adapter = adapter
+
+    with pytest.raises(TimeoutError, match=r"Still missing: battery voltage\. "):
+        adapter.connect()
+
+    assert adapter._telemetry.missing_values() == []  # it did arrive, after the check that timed out
 
 
 def test_connecting_again_waits_for_a_new_status_not_the_last_connections(

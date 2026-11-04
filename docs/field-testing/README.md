@@ -94,8 +94,8 @@ the program that was flying: that one refuses to connect to a flying drone.
 If the rescue landing can't bring it down, slide something soft under the drone
 and run `tools/emergency_stop.py`: the motors stop at once. The rescue landing
 tells you when it is the estimate: if it fails with "Still missing: position
-estimate" (or "velocity estimate") and "The drone can't land under control
-without its estimate", go straight to the emergency stop
+estimate" (or "velocity estimate") and "it can't land under control without
+its estimate", go straight to the emergency stop
 ([ADR-0045](../decisions/0045-rescue-without-an-estimate-points-to-the-emergency-stop.md)).
 Both use the radio link, so if the link is why the drone was lost, only the physical backup is
 left: fly the early sessions low over a soft mat.
