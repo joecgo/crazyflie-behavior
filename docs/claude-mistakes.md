@@ -31,14 +31,14 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 4 | 12 |
 | recommendation | 7 | 4 |
 | environment | 3 | 5 |
-| communication | 5 | 8 |
+| communication | 5 | 9 |
 | testing | 0 | 6 |
 | process | 2 | 10 |
-| **Total** | **24** | **58** |
+| **Total** | **24** | **59** |
 
 Of the 24 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 18. So far, 7 of the 11 recommendation
-mistakes needed me, and 5 of the 13 communication mistakes. Claude's own reviews, planted bugs and
+mistakes needed me, and 5 of the 14 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
 pattern: an interruption landing between two lines of cleanup code (five
@@ -455,6 +455,19 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-04: Comments that said more than their code
+
+- **What happened:** fixing the take-over message, Claude wrote a comment
+  saying none of the estimates was finite, though the branch runs when either
+  one is missing. The comment on dropped estimates kept saying the failsafe's
+  landing "has a real position to go to", which ADR-0045 had already shown
+  doesn't help a drone whose own estimate is NaN.
+- **How it was caught:** Claude, in the `/project-review` before committing.
+  Both comments are fixed, and backlog #45 now notes the in-flight case.
+- **Kind:** communication.
+- **Takeaway:** when a decision shows a reason is wrong, search for the
+  comments that give that reason, not only the code it changed.
 
 ### 2026-11-04: A time-limit message that read the telemetry again after the check
 
