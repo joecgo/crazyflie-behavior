@@ -94,7 +94,7 @@ class FailsafeTest(Behavior):
             case _Step.TAKING_OFF:
                 height = position.value.z
                 if is_at_take_off_height(height, self._take_off_height):
-                    logger.info("Failsafe test: at %.2f m. Hovering until the failsafe lands the drone", height)
+                    logger.info("Failsafe test: hovering at %.2f m", height)
                     self._start_step(_Step.HOVERING, now)
                 elif time_in_step > TAKE_OFF_TIME_LIMIT:
                     self._fail(
@@ -106,14 +106,14 @@ class FailsafeTest(Behavior):
             case _Step.HOVERING:
                 if time_in_step > HOVER_TIME_LIMIT:
                     self._fail(
-                        f"the failsafe didn't land the drone within {HOVER_TIME_LIMIT:g} s of hovering: "
-                        "the injected fault never took effect. Landing normally",
+                        # The injected fault never took effect, so this lands the drone normally.
+                        f"the failsafe didn't land the drone within {HOVER_TIME_LIMIT:g} s of hovering. Landing",
                         now,
                     )
                     self._land(ask_safety_layer, now)
             case _Step.LANDING:
                 if not status.value.is_flying:
-                    logger.info("Failsafe test: landed. Done (the test failed).")
+                    logger.info("Failsafe test: landed after a failure.")
                     self._start_step(_Step.DONE, now)
             case _Step.DONE:
                 pass

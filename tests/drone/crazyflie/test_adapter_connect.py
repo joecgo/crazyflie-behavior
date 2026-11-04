@@ -497,7 +497,7 @@ def test_a_flying_drone_is_refused_before_the_estimate_reset_and_without_a_zero_
 ) -> None:
     fake_cflib.samples["state"]["supervisor.info"] = FLYING
 
-    with pytest.raises(RuntimeError, match=r"still flying: run the rescue landing\..*just landed.*wait"):
+    with pytest.raises(RuntimeError, match=r"still flying: run the rescue landing, or wait .* if it just landed"):
         adapter.connect()
 
     fake_cflib.reset_estimator.assert_not_called()

@@ -1,4 +1,4 @@
-"""The safety layer, minimal for First flight (ADR-0030).
+"""The safety layer (ADR-0030).
 
 Each tick, the tick step calls it in this order (ADR-0025):
 
@@ -11,7 +11,7 @@ Each tick, the tick step calls it in this order (ADR-0025):
 The pre-check and the judging are plain functions of the snapshot. Only the
 SafetyLayer holds state: what it sends, and which warnings it has already given.
 
-Not built yet: the operator's "land now" and "hover" commands (ADR-0027).
+TODO: the operator's "land now" and "hover" commands aren't built yet (ADR-0027).
 Both will fail the pre-check, so behaviors are skipped and no behavior can
 override the operator. "Land now" lands like any failed check; "hover" holds
 the drone instead, so it needs a failed pre-check that doesn't end the flight
@@ -37,7 +37,7 @@ from crazyflie_behavior.snapshot import Snapshot, Stamped
 
 logger = logging.getLogger(__name__)
 
-# --- PLACEHOLDERS, NOT DECISIONS: measure at the bench (ADR-0030) -------------
+# --- PLACEHOLDERS, NOT DECISIONS: measure in the Bench field test (ADR-0030) --
 STALE_AFTER = 0.25
 """Seconds. The position estimate, drone status and down range stream every
 20 ms, so this is about 12 missed values in a row."""
@@ -132,14 +132,15 @@ def judge(command_request: CommandRequest, snapshot: Snapshot) -> Verdict:
                 return Verdict.refused("the drone is already flying")
             return Verdict.approved()
         case SetVelocity() | MoveTo():
+            # TODO: refused until the speed envelope exists (backlog #30).
             return Verdict.refused("steering mode and fast mode wait for the speed envelope (backlog #30)")
 
 
 class SafetyLayer:
     """The only code that sends commands to the drone, apart from the kill switch (ADR-0013).
 
-    Minimal for First flight (ADR-0030): one failsafe, land, and only the
-    movement slot. Once the safety pre-check fails, the flight is over: it
+    TODO: one failsafe (land) and only the movement slot so far (ADR-0030).
+    Once the safety pre-check fails, the flight is over: it
     never resumes, and every later request is refused.
     """
 
@@ -197,7 +198,7 @@ class SafetyLayer:
     def send(self) -> None:
         """Send each command slot's command, if any, then empty the slots for the next tick.
 
-        Only the movement slot exists so far (ADR-0030); buzzer and LED slots come later (ADR-0025).
+        TODO: only the movement slot exists so far (ADR-0030); buzzer and LED slots come later (ADR-0025).
         """
         command, self._movement = self._movement, None
         self._movement_replaced_last_tick = self._movement_replaced_this_tick

@@ -3,7 +3,7 @@
 # exposes is fully typed; the looseness stays inside this file.
 """The Crazyflie adapter: implements the drone interface on a real Crazyflie.
 
-NOT YET RUN ON HARDWARE. Written before the drone arrived, as a deliberate
+TODO: not yet run on hardware. Written before the drone arrived, as a deliberate
 exception for learning (ADR-0010), from the installed cflib source and
 docs/cflib-primer.md. Its first real test is the Bench field test (propellers on:
 ADR-0044). Assumptions that need checking there are marked VERIFY.
@@ -316,9 +316,8 @@ class CrazyflieAdapter(DroneInterface):
 
     def hover(self) -> None:
         if not self._may_be_flying():
-            # On the floor, a go_to at floor height would spin up an armed drone's
-            # motors (ADR-0039). The safety layer approved the hover anyway: it
-            # leaves this decision to the adapter.
+            # Ignored on the floor: a hover is a go_to to the current position, and on the
+            # floor that would spin up an armed drone's motors (ADR-0039).
             if not self._is_ignoring_hover:
                 logger.info("Hover ignored: the drone isn't flying. Logged once per streak.")
                 self._is_ignoring_hover = True
@@ -580,9 +579,7 @@ class CrazyflieAdapter(DroneInterface):
     def _settle_whether_the_drone_is_flying(self, bitfield: int) -> None:
         """Refuse a flying drone, take over its flight, or reset the position estimate (ADR-0038)."""
         if self._take_over_flight:
-            logger.warning(
-                "Taking over the flight: the position estimate isn't reset and the drone is treated as airborne."
-            )
+            logger.warning("Taking over the flight: no estimate reset.")
             self._is_airborne = True
             # No take-off of ours, so no status lag to wait out: the status just read is the truth. A land
             # request for a drone that reports it's on the floor then only stops the motors (ADR-0039).
@@ -591,10 +588,10 @@ class CrazyflieAdapter(DroneInterface):
             return
         if drone_status_from_bitfield(bitfield).is_flying:
             # Raised before the estimate reset. The drone stays unknown-or-flying for the
-            # link close, which then leaves it alone.
+            # link close, which then leaves it alone. A drone that just landed also lands
+            # here: its status says flying for a while after the motors stop (ADR-0032).
             raise RuntimeError(
-                "The drone is still flying: run the rescue landing. "
-                "(If it just landed, its status says flying for 2 s after the motors stop: wait and run again.)"
+                "The drone is still flying: run the rescue landing, or wait a few seconds if it just landed."
             )
         self._is_drone_state_unknown = False  # on the floor: a normal link close is safe from here
         run_with_time_limit(
@@ -709,8 +706,7 @@ class CrazyflieAdapter(DroneInterface):
         self._telemetry.write_drone_status(status, drone_time)
         if self._dropped_state_count == 0:
             logger.warning(
-                "The drone sent an estimate that isn't finite (position %s, velocity %s): dropped, "
-                "so any earlier finite one stays and goes stale. Warned once per streak.",
+                "Dropped an estimate that isn't finite (position %s, velocity %s). Warned once per streak.",
                 position,
                 velocity,
             )

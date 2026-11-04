@@ -1,6 +1,6 @@
 """The failsafe program (ADR-0041): runs the Failsafe low or Failsafe high field test once.
 
-Arm, take off to the height (0.1 m for Failsafe low, 0.5 m for Failsafe high),
+Arm, take off to the height (`FAILSAFE_LOW_HEIGHT` or `FAILSAFE_HIGH_HEIGHT`),
 hover, and wait for the safety layer's failsafe to land the drone. The fault
 that makes it fire is a forged low battery: a wrapper around the drone hands
 the safety layer a snapshot with a low battery voltage after a few seconds of

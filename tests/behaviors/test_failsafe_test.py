@@ -7,6 +7,7 @@ from dataclasses import replace
 import pytest
 
 from crazyflie_behavior.behaviors.failsafe_test import (
+    HEIGHT_TOLERANCE,
     HOVER_TIME_LIMIT,
     FailsafeTest,
     is_at_take_off_height,
@@ -111,11 +112,11 @@ def test_the_floor_is_not_the_take_off_height_even_for_the_low_one(height: float
 
 
 @pytest.mark.parametrize("height", [0.1, 0.5])
-def test_within_5_cm_of_the_take_off_height_counts_as_there(height: float) -> None:
-    assert is_at_take_off_height(height + 0.049, height)
-    assert is_at_take_off_height(height - 0.049, height)
-    assert not is_at_take_off_height(height + 0.051, height)
-    assert not is_at_take_off_height(height - 0.051, height)
+def test_within_the_height_tolerance_of_the_take_off_height_counts_as_there(height: float) -> None:
+    assert is_at_take_off_height(height + HEIGHT_TOLERANCE - 0.001, height)
+    assert is_at_take_off_height(height - HEIGHT_TOLERANCE + 0.001, height)
+    assert not is_at_take_off_height(height + HEIGHT_TOLERANCE + 0.001, height)
+    assert not is_at_take_off_height(height - HEIGHT_TOLERANCE - 0.001, height)
 
 
 @pytest.mark.parametrize("height", [0.0, -0.1, math.nan, math.inf])
@@ -139,7 +140,7 @@ def test_a_fault_that_never_takes_effect_lands_the_drone_normally_and_fails_the_
     assert not done  # it waits for the landing
     assert safety_layer.requests == [Land()]
     assert failsafe_test.has_failed
-    assert "the injected fault never took effect. Landing normally" in caplog.text
+    assert f"didn't land the drone within {HOVER_TIME_LIMIT:g} s of hovering. Landing" in caplog.text
 
 
 def test_after_the_normal_landing_it_reports_done() -> None:

@@ -27,8 +27,7 @@ logger = logging.getLogger(__name__)
 HOVER_DURATION_BEFORE_FAULT = 3.0
 """Seconds the drone hovers at the take-off height before the battery voltage is forged."""
 FORGED_BATTERY_VOLTAGE = LOW_BATTERY_VOLTAGE - 0.2
-"""Volts. Below the safety pre-check's limit, and about where the firmware's own low
-battery handling starts."""
+"""Volts. Below the safety pre-check's limit."""
 # ------------------------------------------------------------------------------------------
 
 

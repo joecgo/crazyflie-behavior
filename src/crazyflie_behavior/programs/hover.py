@@ -1,7 +1,7 @@
 """The hover program (ADR-0030): runs the hover test once, for the Hover field test.
 
-Arm, take off to 0.5 m, hover, land. It uses the mock adapter unless it's run
-with --crazyflie:
+Arm, take off to `TAKE_OFF_HEIGHT`, hover, land. It uses the mock adapter
+unless it's run with --crazyflie:
 
     .venv\\Scripts\\python -m crazyflie_behavior.programs.hover
     .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie
@@ -15,7 +15,7 @@ makes a stop request: the drone lands.
 import argparse
 import sys
 
-from crazyflie_behavior.behaviors.hover_test import DEFAULT_HOVER_DURATION, HoverTest
+from crazyflie_behavior.behaviors.hover_test import DEFAULT_HOVER_DURATION, TAKE_OFF_HEIGHT, HoverTest
 from crazyflie_behavior.loop.tick_step import BehaviorTickStep
 from crazyflie_behavior.programs.start_up import make_drone, run_program
 from crazyflie_behavior.safety.safety_layer import SafetyLayer
@@ -25,7 +25,7 @@ from crazyflie_behavior.timing.clock import RealClock
 def main(arguments: list[str] | None = None) -> int:
     """Run the hover test once. Returns the program's exit code."""
     parser = argparse.ArgumentParser(
-        prog="hover", description="Arm, take off to 0.5 m, hover, land (the Hover field test)."
+        prog="hover", description=f"Arm, take off to {TAKE_OFF_HEIGHT:g} m, hover, land (the Hover field test)."
     )
     parser.add_argument(
         "--crazyflie",

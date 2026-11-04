@@ -201,11 +201,11 @@ def quick_edit_off() -> Generator[None]:
 class _InterruptSignalHandler:
     """The interrupt signal during one run: an error while connecting, then a stop request (ADR-0026).
 
-    While connecting, nothing is commanded (a drone found flying is left as it is: ADR-0038), so the first
-    signal raises KeyboardInterrupt, as Python does by default, and the program stops. (The
-    Crazyflie adapter waits in short slices while connecting, so this works on
-    Windows too: ADR-0029.) Once connected, the first signal makes a stop
-    request instead.
+    While connecting, nothing is commanded (a drone found flying is left as it
+    is: ADR-0038), so the first signal raises KeyboardInterrupt, as Python does
+    by default, and the program stops. (The Crazyflie adapter waits in short
+    slices while connecting, so this works on Windows too: ADR-0029.) Once
+    connected, the first signal makes a stop request instead.
     Every later signal is ignored, so it can't cut the landing, or the cleanup
     after a failed connect, short. The handler never logs: a log write that a
     signal interrupts can fail with a "reentrant call" error. Python runs

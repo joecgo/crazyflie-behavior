@@ -1,4 +1,4 @@
-"""The minimal safety layer for First flight (ADR-0030): pre-check, judging, sending."""
+"""The safety layer (ADR-0030): pre-check, judging, sending."""
 
 import logging
 import math

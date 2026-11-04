@@ -4,9 +4,9 @@ A behavior makes a command request; the safety layer answers it at once with
 a verdict (ADR-0025) and is the only code that sends commands (ADR-0008).
 Behaviors import this module, never the safety layer itself.
 
-The safety layer approves only arm, take off, hover and land: the requests
-the First flight milestone needs (ADR-0030). It refuses velocity and
-fast-mode requests until the speed envelope exists (backlog #30).
+The safety layer approves only arm, take off, hover and land (ADR-0030).
+TODO: it refuses velocity and fast-mode requests until the speed envelope
+exists (backlog #30).
 """
 
 import math
@@ -44,7 +44,7 @@ class Land:
 
 @dataclass(frozen=True, slots=True)
 class SetVelocity:
-    """Steering mode (ADR-0005). Always refused until the speed envelope exists."""
+    """Steering mode (ADR-0005). TODO: always refused until the speed envelope exists."""
 
     velocity: Vector3
     """World frame, meters per second."""
@@ -52,7 +52,7 @@ class SetVelocity:
 
 @dataclass(frozen=True, slots=True)
 class MoveTo:
-    """Fast mode (ADR-0005). Always refused until the speed envelope exists."""
+    """Fast mode (ADR-0005). TODO: always refused until the speed envelope exists."""
 
     position: Vector3
     """World frame, meters."""
