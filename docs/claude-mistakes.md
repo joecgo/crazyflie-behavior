@@ -29,16 +29,16 @@ decisions are recorded), *communication* (how Claude explains things).
 |---|---|---|
 | design | 3 | 12 |
 | safety design | 4 | 12 |
-| recommendation | 7 | 3 |
+| recommendation | 7 | 4 |
 | environment | 3 | 5 |
-| communication | 5 | 6 |
+| communication | 5 | 7 |
 | testing | 0 | 6 |
-| process | 2 | 9 |
-| **Total** | **24** | **53** |
+| process | 2 | 10 |
+| **Total** | **24** | **56** |
 
 Of the 24 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 18. So far, 7 of the 10 recommendation
-mistakes needed me, and 5 of the 9 communication mistakes. Claude's own reviews, planted bugs and
+none, maybe 6, and probably not 18. So far, 7 of the 11 recommendation
+mistakes needed me, and 5 of the 12 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
 pattern: an interruption landing between two lines of cleanup code (five
@@ -455,6 +455,57 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-04: A "known risk" that cflib's own guard rules out
+
+- **What happened:** for the next-up run's question 4, Claude said that
+  cflib's `SyncCrazyflie.open_link` calls `close_link()` after a failed
+  download of the parameter and log tables, and that `close_link()` sends a
+  zero-thrust setpoint that drops a flying drone. I accepted it as a known
+  risk. It went into ADR-0038, backlog #43 (a max-level rewrite of how the
+  adapter opens the link) and the field-testing README, and the note named no
+  source file.
+- **Why it was wrong:** `close_link()` sends the setpoint only
+  `if self.link is not None`, and every path from `open_link` to it has set
+  `link` to None first (cflib 0.1.34, `crazyflie/__init__.py`).
+- **How it was caught:** Claude, in `/project-review` (a fresh code review
+  reading cflib's source). Backlog #43 is removed and ADR-0038 says so.
+- **Kind:** recommendation.
+- **Takeaway:** a claim that a library "does X when Y fails" needs the
+  condition around the call checked, not only the function's body. The
+  review checklist's library-call question now says so.
+
+### 2026-11-04: Records that claimed more than the code or the source showed
+
+- **What happened:** ADR-0041's amendment and the failsafe program's
+  docstring said exit code 0 means the landing finished "with the motors
+  stopped". It means `disconnect()` returned: once the radio link is lost,
+  cflib drops outgoing packets without an error, so the motor stop may never
+  have left the PC. ADR-0045 said a missing estimate could also be "lost on
+  the radio", which can't happen on a take-over (the status that ends the
+  status wait arrives in the same packet as the estimates).
+- **How it was caught:** Claude, in `/project-review`. The exit code's claim
+  is corrected; detecting a lost link is backlog #46.
+- **Kind:** communication.
+- **Takeaway:** when a record says an action "stopped" or "landed", name what
+  observed it. A command sent over the radio is not a command that arrived.
+  The checklist question about success and exit codes now says so.
+
+### 2026-11-04: An ADR amendment without the documents and the test that follow from it
+
+- **What happened:** after ADR-0041 was amended (the program judges the pass,
+  and exit code 0 includes `disconnect()` returning), the Failsafe low and
+  Failsafe high test log drafts still said "the program reports done" and had
+  no line for whether touchdown was confirmed; no test covered "a landing
+  that raises makes the exit code 1"; ADR-0036 and ADR-0038 were amended
+  without their status lines saying so (a question the checklist already
+  asks); and the field-testing README said any failed connect drops the
+  drone, which went further than even ADR-0038's claim.
+- **How it was caught:** Claude, in `/project-review`.
+- **Kind:** process.
+- **Takeaway:** an amendment is done when every document that restates the
+  rule matches it (test log drafts, README procedures, status lines) and the
+  test for the new rule exists. The checklist now asks about test log drafts.
 
 ### 2026-11-03: Crazyflie adapter code committed without `/project-review`
 

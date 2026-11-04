@@ -15,7 +15,8 @@ takeaway applies to reviews, it's added here as a question.
 - Does a checked claim say only what its source showed? "This path fails" is
   not "every path fails" unless the other paths were checked too.
 - For each library call the code relies on: what does it do on a timeout or
-  an error? Is that checked in the source?
+  an error? Is that checked in the source, including the `if` that guards the
+  call (not only what the function does when it runs)?
 - Windows-only code: is it checked against Windows' documented behavior, and
   is every Windows call's result checked? Continuous integration runs on
   Linux.
@@ -52,8 +53,9 @@ takeaway applies to reviews, it's added here as a question.
 - A claim about what happens after a failure: is the code path read to its
   end, through the program's shutdown?
 - For each error or cleanup path that closes the link: could the drone be
-  flying then? cflib's `close_link()` sends a zero-thrust setpoint first
-  (ADR-0038).
+  flying then? cflib's `close_link()` sends a zero-thrust setpoint first,
+  while its link is still open (ADR-0038; the condition was checked in the
+  source on 2026-11-04).
 - A safety gap that's deferred: does an accepted ADR plan a feature that
   would open it first?
 
@@ -80,6 +82,8 @@ takeaway applies to reviews, it's added here as a question.
   real file? Is each form its scanner handles exercised by a test?
 - A decision that makes an exception to an older ADR: is the older ADR's
   status line marked?
+- An ADR amendment that changes how a test passes: do the test log drafts'
+  pass criteria and checklists match it, and is there a test for the new rule?
 - Does every term in a new name or comment appear in the glossary, even one
   that other docs already use? Does its definition still match the code?
 - Does a new name use a glossary term's word for something else?
@@ -88,7 +92,9 @@ takeaway applies to reviews, it's added here as a question.
 - Does each log message's stated cause hold on every path that reaches it?
 - A tool or program whose job is one outcome (a stop, a rescue, a pass): does
   it report success only when that outcome happened, through its exit code
-  as well as its message?
+  as well as its message? When a record says an action "stopped" or "landed",
+  does it say what observed that? A command the adapter sent is not a command
+  that arrived: cflib drops packets without an error once the link is lost.
 - New tests: are they proven by bug planting
   ([coding style](docs/coding-style.md))?
 
