@@ -451,7 +451,7 @@ def test_the_interrupt_signal_while_waiting_for_telemetry_gets_through_and_close
     fake_cflib.link.close_link.assert_called_once()
 
 
-def test_connecting_again_waits_for_new_telemetry_not_the_last_connection_s(
+def test_connecting_again_waits_for_new_telemetry_not_the_last_connections(
     adapter: CrazyflieAdapter, fake_cflib: FakeCflib
 ) -> None:
     adapter.connect()
@@ -656,7 +656,7 @@ def test_a_normal_connect_with_no_finite_estimate_does_not_point_to_the_emergenc
     assert "emergency_stop" not in str(error.value)
 
 
-def test_a_take_over_that_misses_other_telemetry_says_to_check_the_radio(fake_cflib: FakeCflib) -> None:
+def test_a_take_over_that_misses_other_telemetry_says_to_check_the_crazyflie_is_in_range(fake_cflib: FakeCflib) -> None:
     fake_cflib.silent_blocks.add("battery")
     fake_cflib.samples["state"]["supervisor.info"] = FLYING
     adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0), take_over_flight=True)

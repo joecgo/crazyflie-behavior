@@ -30,8 +30,9 @@ logger = logging.getLogger(__name__)
 
 # --- PLACEHOLDERS, NOT DECISIONS: tune in the Failsafe low and Failsafe high field tests ---
 HEIGHT_TOLERANCE = 0.05
-"""Meters: this close to the take-off height counts as there. Less than the Hover test's
-0.1 m, which would count the floor as being at the 0.1 m height."""
+"""Meters: this close to the take-off height counts as there. A fixed distance, not a fraction
+of the height. It must stay below Failsafe low's take-off height, or the floor counts as being
+there. (The Hover test has its own, `HEIGHT_TOLERANCE` in `hover_test.py`.)"""
 HOVER_TIME_LIMIT = 10.0
 """Seconds of hovering after which the injected fault is taken never to have worked. Longer
 than the failsafe program's wait before it forges the battery (`HOVER_DURATION_BEFORE_FAULT`

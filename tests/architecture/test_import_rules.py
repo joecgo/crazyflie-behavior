@@ -164,10 +164,11 @@ def test_behaviors_use_only_the_request_types_from_the_safety_package() -> None:
 def test_only_the_safety_layer_sends_commands_to_the_drone() -> None:
     """ADR-0008, ADR-0030: everything else asks. The drone package implements the commands.
 
-    One exemption: the failsafe program's forged battery wrapper is itself a
-    drone that passes every command on unchanged (ADR-0041), so it calls them
-    without ever deciding one. Its own fitness function keeps everyone else
-    from importing it. ADR-0041 records the exemption; backlog #44 moves it to a faults folder with a second fault.
+    One exemption: the forged low battery drone is itself a drone that passes
+    every command on unchanged (ADR-0041), so it calls them without ever
+    deciding one. Its own fitness function keeps everyone else from importing
+    it. ADR-0041 records the exemption; backlog #44 would move it to a faults
+    folder with a second fault.
     """
     offenders = [
         path
