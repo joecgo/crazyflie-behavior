@@ -92,6 +92,12 @@ takeaway applies to reviews, it's added here as a question.
 - Does a name, comment or log message name a raw input (a key) where the
   code receives a signal or command?
 - Does each log message's stated cause hold on every path that reaches it?
+- Is every new log or console message one short sentence an operator could
+  read mid-flight, with the reasons left in a comment or the ADR?
+- A docstring, comment or message that describes a safety judgment: which
+  way does the judgment fail when unsure, and does the wording say the same?
+- Review fixes are new code: did anything review the lines a fix commit
+  added, wording included?
 - A tool or program whose job is one outcome (a stop, a rescue, a pass): does
   it report success only when that outcome happened, through its exit code
   as well as its message? When a record says an action "stopped" or "landed",

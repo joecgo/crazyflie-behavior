@@ -91,6 +91,11 @@ Unitless values (counts, ratios, flags) get no suffix.
   a library before writing it. If a decision rests on it, the ADR names the
   file it was checked in; the docstring stays short.
 - Reference ADRs where code exists *because of* a decision (`# See ADR-0003.`).
+- **Log and console messages are short:** one plain sentence saying what
+  happened, plus what the operator should do, if anything. No reasons in
+  parentheses and no lists of cases: the why goes in a comment beside the
+  call, or in the ADR. Write for the operator glancing at the console
+  mid-flight.
 
 ## Tests
 
