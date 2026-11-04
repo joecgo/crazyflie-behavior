@@ -1,6 +1,6 @@
 # Field testing
 
-> **Status, updated 2026-11-03:** a vertical slice: one room (the living
+> **Status, updated 2026-11-04:** a vertical slice: one room (the living
 > room), working toward hide-and-seek. Pass criteria are light for now. The
 > rescue landing and the emergency-stop script are built
 > ([ADR-0038](../decisions/0038-connecting-to-a-flying-drone.md)) and not yet
@@ -90,10 +90,14 @@ nobody else in the room, no people and no pets.
 **If a program dies with the drone in the air**
 ([ADR-0038](../decisions/0038-connecting-to-a-flying-drone.md)): run the
 rescue landing (`crazyflie_behavior.programs.rescue_landing --crazyflie`), not
-the program that was flying: that one refuses to connect to a flying drone. If
-the rescue landing can't bring it down, slide something soft under the drone
-and run `tools/emergency_stop.py`: the motors stop at once. Both use the radio
-link, so if the link is why the drone was lost, only the physical backup is
+the program that was flying: that one refuses to connect to a flying drone.
+If the rescue landing can't bring it down, slide something soft under the drone
+and run `tools/emergency_stop.py`: the motors stop at once. The rescue landing
+tells you when it is the estimate: if it fails with "Still missing: position
+estimate" (or "velocity estimate") and "it can't land under control without
+its estimate", go straight to the emergency stop
+([ADR-0045](../decisions/0045-rescue-without-an-estimate-points-to-the-emergency-stop.md)).
+Both use the radio link, so if the link is why the drone was lost, only the physical backup is
 left: fly the early sessions low over a soft mat.
 
 ## Sessions and test logs

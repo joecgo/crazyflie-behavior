@@ -7,7 +7,7 @@ from dataclasses import replace
 import pytest
 
 from crazyflie_behavior.behaviors.failsafe_test import (
-    FAULT_TIME_LIMIT,
+    HOVER_TIME_LIMIT,
     FailsafeTest,
     is_at_take_off_height,
 )
@@ -96,7 +96,7 @@ def test_hovering_never_ends_by_itself_before_the_time_limit() -> None:
     safety_layer = SafetyLayerStandIn()
     failsafe_test = hovering_test(safety_layer)
 
-    done = failsafe_test.tick(snapshot(0.5 + FAULT_TIME_LIMIT - 0.05, FLYING, HEIGHT), safety_layer)
+    done = failsafe_test.tick(snapshot(0.5 + HOVER_TIME_LIMIT - 0.05, FLYING, HEIGHT), safety_layer)
 
     assert not done
     assert safety_layer.requests == []
@@ -108,6 +108,14 @@ def test_the_floor_is_not_the_take_off_height_even_for_the_low_one(height: float
     assert is_at_take_off_height(height, height)
     assert not is_at_take_off_height(0.0, height)
     assert not is_at_take_off_height(2 * height, height)
+
+
+@pytest.mark.parametrize("height", [0.1, 0.5])
+def test_within_5_cm_of_the_take_off_height_counts_as_there(height: float) -> None:
+    assert is_at_take_off_height(height + 0.049, height)
+    assert is_at_take_off_height(height - 0.049, height)
+    assert not is_at_take_off_height(height + 0.051, height)
+    assert not is_at_take_off_height(height - 0.051, height)
 
 
 @pytest.mark.parametrize("height", [0.0, -0.1, math.nan, math.inf])
@@ -126,7 +134,7 @@ def test_a_fault_that_never_takes_effect_lands_the_drone_normally_and_fails_the_
     failsafe_test = hovering_test(safety_layer)
 
     with caplog.at_level(logging.ERROR):
-        done = failsafe_test.tick(snapshot(0.5 + FAULT_TIME_LIMIT + 0.05, FLYING, HEIGHT), safety_layer)
+        done = failsafe_test.tick(snapshot(0.5 + HOVER_TIME_LIMIT + 0.05, FLYING, HEIGHT), safety_layer)
 
     assert not done  # it waits for the landing
     assert safety_layer.requests == [Land()]
@@ -137,7 +145,7 @@ def test_a_fault_that_never_takes_effect_lands_the_drone_normally_and_fails_the_
 def test_after_the_normal_landing_it_reports_done() -> None:
     safety_layer = SafetyLayerStandIn()
     failsafe_test = hovering_test(safety_layer)
-    failsafe_test.tick(snapshot(0.5 + FAULT_TIME_LIMIT + 0.05, FLYING, HEIGHT), safety_layer)
+    failsafe_test.tick(snapshot(0.5 + HOVER_TIME_LIMIT + 0.05, FLYING, HEIGHT), safety_layer)
 
     still_flying = failsafe_test.tick(snapshot(11.0, FLYING, 0.2), safety_layer)
     landed = failsafe_test.tick(snapshot(11.05, ARMED, 0.0), safety_layer)

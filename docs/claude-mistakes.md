@@ -27,18 +27,18 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 3 | 12 |
-| safety design | 3 | 12 |
-| recommendation | 7 | 3 |
+| design | 3 | 13 |
+| safety design | 4 | 12 |
+| recommendation | 7 | 4 |
 | environment | 3 | 5 |
-| communication | 5 | 6 |
+| communication | 5 | 9 |
 | testing | 0 | 6 |
-| process | 1 | 8 |
-| **Total** | **22** | **52** |
+| process | 2 | 10 |
+| **Total** | **24** | **59** |
 
-Of the 22 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 16. So far, 7 of the 10 recommendation
-mistakes needed me, and 5 of the 9 communication mistakes. Claude's own reviews, planted bugs and
+Of the 24 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 18. So far, 7 of the 11 recommendation
+mistakes needed me, and 5 of the 14 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
 pattern: an interruption landing between two lines of cleanup code (five
@@ -47,6 +47,41 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-03: "No landing command can work" on a NaN estimate
+
+- **What happened:** for backlog #41, Claude said a drone whose position
+  estimate is NaN "can't follow any landing command", and wrote it into
+  ADR-0045 and a code comment. It's true only for position commands, which
+  is every landing our code has. A descent on tilt and thrust, with
+  touchdown from the raw down range, doesn't use the position estimate.
+- **Why it was wrong:** the firmware source showed the position controller
+  depends on the estimate; it didn't show that every way of flying does.
+  The claim went one step past the evidence.
+- **How I caught it:** I asked why not just descend slowly until a sensor
+  detects touchdown.
+- **Would a Claude review have caught it?** Probably not: the claim was
+  sourced and the decision stayed right, so a review would likely have
+  accepted it.
+- **Kind:** safety design.
+- **Takeaway:** when a source shows one path fails, say "this path", not
+  "every path", unless the other paths were checked too.
+
+### 2026-11-03: An idea of mine credited to the AI
+
+- **What happened:** `docs/next-up.md` (written by Claude on 2026-11-03)
+  said "Origin: Joe's usage; the AI proposed the split" for the split
+  between *field test* and *session*. The cloud run copied it into
+  ADR-0043's origin line, and Claude then offered it back to me as an
+  option. The split was my idea.
+- **Why it was wrong:** an origin line must record who suggested what, and
+  nothing in the conversation or the commits showed the AI proposing it.
+- **How I caught it:** I said it was all my idea.
+- **Would a Claude review have caught it?** Probably not: only I know who
+  suggested it.
+- **Kind:** process.
+- **Takeaway:** when who suggested something isn't recorded, say so and
+  ask; don't fill in an origin.
 
 ### 2026-11-02: Follow-up commits pushed to a pull request already merged
 
@@ -420,6 +455,114 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-04: Comments that said more than their code
+
+- **What happened:** fixing the take-over message, Claude wrote a comment
+  saying none of the estimates was finite, though the branch runs when either
+  one is missing. The comment on dropped estimates kept saying the failsafe's
+  landing "has a real position to go to", which ADR-0045 had already shown
+  doesn't help a drone whose own estimate is NaN.
+- **How it was caught:** Claude, in the `/project-review` before committing.
+  Both comments are fixed, and backlog #45 now notes the in-flight case.
+- **Kind:** communication.
+- **Takeaway:** when a decision shows a reason is wrong, search for the
+  comments that give that reason, not only the code it changed.
+
+### 2026-11-04: A time-limit message that read the telemetry again after the check
+
+- **What happened:** for ADR-0045, `_first_telemetry_time_limit_message`
+  called `missing_values()` again after the wait's last check. A value
+  arriving in between could make the message say "Still missing: ." or, on a
+  take-over, switch the advice from the emergency stop to "check the range".
+  The old message had the same race, but then it only chose wording.
+- **How it was caught:** Claude, in `/project-review` (the code review). Fixed:
+  the message now uses the list from the check that timed out, with a test
+  proven by bug planting.
+- **Kind:** design.
+- **Takeaway:** a wait's error message describes the state that timed out:
+  hand it the result of the last check, not a fresh read. Now a question in
+  the review checklist.
+
+### 2026-11-04: A take-over message that assumed the drone was flying
+
+- **What happened:** the ADR-0045 message said "The drone can't land under
+  control", and its comment and a test comment said the drone was flying.
+  But a take-over also accepts a drone on the floor (ADR-0039). The
+  dropped-estimate warning said "the last finite one stays", when on that
+  path none may ever have arrived.
+- **How it was caught:** Claude, in `/project-review`. Fixed: the message says
+  "If the drone is in the air", and the warning says "any earlier finite one".
+- **Kind:** communication.
+- **Takeaway:** the checklist's "Does each log message's stated cause hold on
+  every path?" already asks this; follow the paths into the case the
+  message's author didn't picture.
+
+### 2026-11-04: A "known risk" that cflib's own guard rules out
+
+- **What happened:** for the next-up run's question 4, Claude said that
+  cflib's `SyncCrazyflie.open_link` calls `close_link()` after a failed
+  download of the parameter and log tables, and that `close_link()` sends a
+  zero-thrust setpoint that drops a flying drone. I accepted it as a known
+  risk. It went into ADR-0038, backlog #43 (a max-level rewrite of how the
+  adapter opens the link) and the field-testing README, and the note named no
+  source file.
+- **Why it was wrong:** `close_link()` sends the setpoint only
+  `if self.link is not None`, and every path from `open_link` to it has set
+  `link` to None first (cflib 0.1.34, `crazyflie/__init__.py`).
+- **How it was caught:** Claude, in `/project-review` (a fresh code review
+  reading cflib's source). Backlog #43 is removed and ADR-0038 says so.
+- **Kind:** recommendation.
+- **Takeaway:** a claim that a library "does X when Y fails" needs the
+  condition around the call checked, not only the function's body. The
+  review checklist's library-call question now says so.
+
+### 2026-11-04: Records that claimed more than the code or the source showed
+
+- **What happened:** ADR-0041's amendment and the failsafe program's
+  docstring said exit code 0 means the landing finished "with the motors
+  stopped". It means `disconnect()` returned: once the radio link is lost,
+  cflib drops outgoing packets without an error, so the motor stop may never
+  have left the PC. ADR-0045 said a missing estimate could also be "lost on
+  the radio", which can't happen on a take-over (the status that ends the
+  status wait arrives in the same packet as the estimates).
+- **How it was caught:** Claude, in `/project-review`. The exit code's claim
+  is corrected; detecting a lost link is backlog #46.
+- **Kind:** communication.
+- **Takeaway:** when a record says an action "stopped" or "landed", name what
+  observed it. A command sent over the radio is not a command that arrived.
+  The checklist question about success and exit codes now says so.
+
+### 2026-11-04: An ADR amendment without the documents and the test that follow from it
+
+- **What happened:** after ADR-0041 was amended (the program judges the pass,
+  and exit code 0 includes `disconnect()` returning), the Failsafe low and
+  Failsafe high test log drafts still said "the program reports done" and had
+  no line for whether touchdown was confirmed; no test covered "a landing
+  that raises makes the exit code 1"; ADR-0036 and ADR-0038 were amended
+  without their status lines saying so (a question the checklist already
+  asks); and the field-testing README said any failed connect drops the
+  drone, which went further than even ADR-0038's claim.
+- **How it was caught:** Claude, in `/project-review`.
+- **Kind:** process.
+- **Takeaway:** an amendment is done when every document that restates the
+  rule matches it (test log drafts, README procedures, status lines) and the
+  test for the new rule exists. The checklist now asks about test log drafts.
+
+### 2026-11-03: Crazyflie adapter code committed without `/project-review`
+
+- **What happened:** building ADR-0045, Claude changed the Crazyflie
+  adapter (a new time-out message for a take-over connect, then a comment)
+  and committed and pushed it with tests and bug planting, but without the
+  `/project-review` that `CLAUDE.md` requires before committing adapter
+  changes. The stop hook's push-every-change rule made it easy to forget.
+- **Why it was wrong:** the rule has no size exception, and the change is on
+  the rescue landing's path.
+- **How it was caught:** Claude, at the end of the session.
+- **Kind:** process.
+- **Takeaway:** before each commit, check whether it touches the safety
+  layer, the Crazyflie adapter or the tick loop. If it does, review first,
+  or ask before committing without one.
 
 ### 2026-11-03: Docstrings that a change left behind
 

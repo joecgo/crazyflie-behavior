@@ -81,7 +81,7 @@ ignores one:
 ## Integrity
 
 - **Never invent field results.** Claude never writes observations,
-  measurements or outcomes in field-test session logs. Those come from the user
+  measurements or outcomes in test logs. Those come from the user
   or are computed from recorded data. Claude may analyze data and draft
   *questions*, but clearly separates analysis from what was observed.
 - **Honest attribution.** The README states that the architecture and decisions
@@ -142,8 +142,8 @@ ignores one:
   (`.venv/Lib/site-packages/cflib/`) and `docs/cflib-primer.md`, not memory.
 - Treat real-flight safety as a feature: every flying path needs a guaranteed
   land or stop on error.
-- Real flights follow `docs/field-testing/`: before each session, help draft the
-  session log from the template (goal, pass criteria, simulator prediction).
+- Real flights follow `docs/field-testing/`: before each session, help draft its
+  test logs from the template (goal, pass criteria, simulator prediction).
   After it, help analyze the data and turn findings into code, simulator or ADR
   changes. `docs/field-testing/README.md` opens with a short status brief and
   its last-updated date; update both with every change to the README.
@@ -162,7 +162,7 @@ ignores one:
   sensor noise by surface, sim-vs-real overlays).
 - Later, once the workflows have repeated a few times, consider project skills
   built with `skill-creator`: `/decide` (question → ADR → glossary) and
-  `/debrief` (session data → analysis → session log).
+  `/debrief` (flight data → analysis → test log).
 
 ## Environment
 

@@ -8,6 +8,7 @@ then puts the real ones back.
 
 import copy
 import logging
+import math
 import signal
 import threading
 import time
@@ -18,6 +19,7 @@ import pytest
 
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
 from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
+from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import RangeStatus
 from crazyflie_behavior.timing.clock import RealClock, SimClock
 
@@ -450,7 +452,7 @@ def test_the_interrupt_signal_while_waiting_for_telemetry_gets_through_and_close
     fake_cflib.link.close_link.assert_called_once()
 
 
-def test_connecting_again_waits_for_new_telemetry_not_the_last_session_s(
+def test_connecting_again_waits_for_new_telemetry_not_the_last_connections(
     adapter: CrazyflieAdapter, fake_cflib: FakeCflib
 ) -> None:
     adapter.connect()
@@ -461,13 +463,13 @@ def test_connecting_again_waits_for_new_telemetry_not_the_last_session_s(
         adapter.connect()
 
 
-def test_connecting_again_drops_a_landing_left_from_the_last_session(fake_cflib: FakeCflib) -> None:
+def test_connecting_again_drops_a_landing_left_from_the_last_connection(fake_cflib: FakeCflib) -> None:
     clock = StreamingSimClock(fake_cflib, start=10.0)
     adapter = CrazyflieAdapter(clock)
     adapter.connect()
     adapter.take_off(0.5)
     adapter.land()  # a landing under way
-    adapter._shut_down_link()  # the session ends without finishing it, as when the landing at disconnect fails
+    adapter._shut_down_link()  # the connection ends without finishing it, as when the landing at disconnect fails
     adapter.connect()  # a drone on the floor
     fake_cflib.link.cf.high_level_commander.reset_mock()
 
@@ -626,6 +628,104 @@ def test_a_failure_while_connecting_to_take_over_closes_only_the_radio_link(fake
     with pytest.raises(TimeoutError, match="Still missing: battery voltage"):
         adapter.connect()
 
+    assert_only_the_radio_link_closed(fake_cflib)
+
+
+@pytest.mark.parametrize("estimate_variable", ["stateEstimate.z", "stateEstimate.vz"])
+def test_taking_over_a_drone_with_no_finite_estimate_points_to_the_emergency_stop(
+    fake_cflib: FakeCflib, estimate_variable: str
+) -> None:
+    # A flying drone with a NaN estimate can't follow our landings, which are position commands (ADR-0045).
+    fake_cflib.samples["state"][estimate_variable] = math.nan
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0), take_over_flight=True)
+
+    with pytest.raises(
+        TimeoutError, match=r"estimate\. If the drone is in the air, it can't land under control.*emergency_stop\.py"
+    ):
+        adapter.connect()
+
+    assert_only_the_radio_link_closed(fake_cflib)
+
+
+def test_a_normal_connect_with_no_finite_estimate_does_not_point_to_the_emergency_stop(fake_cflib: FakeCflib) -> None:
+    # A normal connect has already refused a flying drone, so this one is on the floor: only a take-over
+    # points to the emergency stop (ADR-0045).
+    fake_cflib.samples["state"]["stateEstimate.z"] = math.nan
+    adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0))
+
+    with pytest.raises(TimeoutError, match="Still missing: position estimate") as error:
+        adapter.connect()
+
+    assert "emergency_stop" not in str(error.value)
+
+
+def test_a_take_over_that_misses_other_telemetry_says_to_check_the_crazyflie_is_in_range(fake_cflib: FakeCflib) -> None:
+    fake_cflib.silent_blocks.add("battery")
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    adapter = CrazyflieAdapter(BoundedSimClock(fake_cflib, start=10.0), take_over_flight=True)
+
+    with pytest.raises(TimeoutError, match="Check the Crazyflie is in range") as error:
+        adapter.connect()
+
+    assert "emergency_stop" not in str(error.value)
+
+
+class ValueArrivesAtTheDeadlineClock(BoundedSimClock):
+    """A missing value arrives the moment the first-telemetry wait reads the clock at its deadline: after the
+    wait's last check, before its error message is written. `arrive` writes the value."""
+
+    def __init__(self, fake_cflib: FakeCflib, start: float, arrive: Callable[[CrazyflieAdapter], None]) -> None:
+        super().__init__(fake_cflib, start)
+        self.adapter: CrazyflieAdapter | None = None
+        self._arrive = arrive
+        self._wait_started_at: float | None = None
+        self._has_arrived = False
+
+    def now(self) -> float:
+        now = super().now()
+        if self.adapter is None or self._has_arrived or "start battery" not in self._fake_cflib.events:
+            return now
+        if self._wait_started_at is None:
+            # The first clock reading after the battery block starts. Simulated time doesn't move between
+            # then and the start of the wait, so it is the wait's start time.
+            self._wait_started_at = now
+        elif now >= self._wait_started_at + adapter_module.FIRST_TELEMETRY_TIME_LIMIT:
+            self._has_arrived = True  # set first: the write reads the clock too
+            self._arrive(self.adapter)
+        return now
+
+
+def test_the_time_limit_message_names_what_was_missing_when_the_wait_ran_out(fake_cflib: FakeCflib) -> None:
+    fake_cflib.silent_blocks.add("battery")
+    clock = ValueArrivesAtTheDeadlineClock(
+        fake_cflib, 10.0, lambda adapter: adapter._telemetry.write_battery_voltage(4.0, drone_time=None)
+    )
+    adapter = CrazyflieAdapter(clock)
+    clock.adapter = adapter
+
+    with pytest.raises(TimeoutError, match=r"Still missing: battery voltage\. "):
+        adapter.connect()
+
+    assert adapter._telemetry.missing_values() == []  # it did arrive, after the check that timed out
+
+
+def test_an_estimate_arriving_after_a_take_over_times_out_still_points_to_the_emergency_stop(
+    fake_cflib: FakeCflib,
+) -> None:
+    # The advice follows the check that timed out, not a finite estimate that turned up a moment later (ADR-0045).
+    fake_cflib.samples["state"]["stateEstimate.z"] = math.nan
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    clock = ValueArrivesAtTheDeadlineClock(
+        fake_cflib, 10.0, lambda adapter: adapter._telemetry.write_position_estimate(Vector3(0.0, 0.0, 0.3), None)
+    )
+    adapter = CrazyflieAdapter(clock, take_over_flight=True)
+    clock.adapter = adapter
+
+    with pytest.raises(TimeoutError, match=r"Still missing: position estimate\. If the drone is in the air"):
+        adapter.connect()
+
+    assert adapter._telemetry.missing_values() == []
     assert_only_the_radio_link_closed(fake_cflib)
 
 

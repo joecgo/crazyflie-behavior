@@ -1,6 +1,6 @@
 # 0036: Game logic is a state machine per game; a behavior's tick reports an outcome
 
-- **Status:** Accepted. Amends [ADR-0026](0026-tick-loop-calls-one-tick-step.md): the tick step reports an outcome, not only "done".
+- **Status:** Accepted. Amends [ADR-0026](0026-tick-loop-calls-one-tick-step.md): the tick step reports an outcome, not only "done". Amended 2026-11-03: the exit-code rule has an exception for a program that tests a failsafe ([ADR-0041](0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)).
 - **Date:** 2026-11-01
 - **Origin:** Mixed. A state machine now and a behavior tree later: mine. `Behavior` as the shared base instead of a new brain class, and the outcome: AI recommendations accepted.
 
@@ -30,7 +30,9 @@ up. That move gets its own ADR.
   state machine is a `Behavior`, and a later behavior tree is one too.
 - **`tick` returns an outcome:** running, succeeded or failed, like UE's
   `EBTNodeResult`. A program exits with a nonzero code when a test fails or
-  the failsafe ends the flight.
+  the failsafe ends the flight, unless the program tests that failsafe: then
+  the program defines its own pass (amended 2026-11-03; the Failsafe low and
+  Failsafe high tests, [ADR-0041](0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)).
 - **Robotics rules for states:** every state that waits on the world has a
   time limit and a failure path; a transition on noisy readings needs a hold
   time (backlog #4); interrupts for safety stay in the safety layer beneath
@@ -42,6 +44,10 @@ up. That move gets its own ADR.
   picks the exit code. The hover test and its tests change to match.
 - **Still open:** how states are written (an enum and `match`, like the hover
   test, or a class per state with enter, tick and exit). Decided with the
-  first game behavior.
+  first game behavior. That decision also settles whether behaviors share
+  that code: `HoverTest` and `FailsafeTest` copy one enum-and-`match`
+  skeleton (`_Step`, `_start_step`, `_ask`, `_land`), left as a copy on
+  2026-11-03 (my call on the AI's recommendation) so nothing settles this
+  question early.
 - Glossary: *Outcome* added; *Behavior*'s UE analogy changed. Backlog #6 is
   closed.

@@ -1,6 +1,6 @@
 # 0030: A minimal safety layer for First flight: a pre-check, one failsafe, the hover test's commands
 
-- **Status:** Accepted. Amended 2026-11-02: a value that isn't finite counts as missing, and the Crazyflie adapter drops an estimate that isn't finite. Amended by [ADR-0039](0039-the-adapter-decides-may-be-flying.md): hover and land are approved whatever the drone status says, and the adapter decides whether the drone may be flying.
+- **Status:** Accepted. Amended 2026-11-02: a value that isn't finite counts as missing, and the Crazyflie adapter drops an estimate that isn't finite. Amended by [ADR-0039](0039-the-adapter-decides-may-be-flying.md): hover and land are approved whatever the drone status says, and the adapter decides whether the drone may be flying. Amended by [ADR-0041](0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) (2026-11-03): the failsafe program's forged-battery wrapper passes commands on, an exemption for that one file.
 - **Date:** 2026-10-30
 - **Origin:** Mixed. Asking whether the safety layer needs more than a pre-check, to keep the code simple, and one failsafe for now: mine. Keeping it the only code that sends commands, the scope below and plain functions: AI recommendations accepted. Counting a value that isn't finite (NaN or infinite) as missing, and dropping such an estimate in the adapter: AI recommendations accepted in my second code review.
 

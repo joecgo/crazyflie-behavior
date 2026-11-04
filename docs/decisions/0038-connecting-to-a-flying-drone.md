@@ -1,6 +1,6 @@
 # 0038: Connecting refuses a flying drone; a rescue landing takes over the flight
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended 2026-11-03 with a known risk, which a source check withdrew on 2026-11-04 (see the last bullet under Consequences).
 - **Date:** 2026-11-02
 - **Origin:** Mixed. AI recommendations accepted (choices 1 to 5). Doing the full version now, rather than only the guard, and a manual emergency stop over a soft landing area for a drone out of reach, were mine.
 
@@ -93,3 +93,16 @@ fails unsafe.
   flight, and whether cflib's link opening waits for more than the radio (the
   emergency-stop script must not).
 - Glossary: **Rescue landing** added.
+- **Known risk, recorded 2026-11-03 and withdrawn 2026-11-04.** The AI
+  recommended, and I accepted, this risk: if the link opens and cflib's
+  download of the parameter and log tables then fails, `SyncCrazyflie.open_link`
+  calls `close_link()`, which sends a zero-thrust setpoint and drops a flying
+  drone. That note named no source file it was checked in. In cflib 0.1.34 (`crazyflie/__init__.py`
+  and `crazyflie/syncCrazyflie.py`), `open_link` calls `close_link()` only
+  after a connection-failed event, every place that raises one has already
+  set `link` to None, and `close_link()` sends the setpoint only
+  `if self.link is not None`. A link error after the first packet raises
+  connection-lost instead, which leaves `open_link` waiting until our time
+  limit closes the radio link only. So this path sends no zero-thrust
+  setpoint, and backlog #43 (our own `open_link`) is removed. Not tried on
+  hardware; re-check it if cflib is upgraded (it is pinned to 0.1.34).

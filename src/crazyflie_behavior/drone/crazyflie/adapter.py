@@ -615,14 +615,32 @@ class CrazyflieAdapter(DroneInterface):
 
     def _wait_for_first_telemetry(self) -> None:
         """Return once every telemetry value has arrived once (ADR-0031)."""
-        self._wait_until(
-            lambda: not self._telemetry.missing_values(),
-            lambda: (
-                f"Waiting for the first telemetry took longer than "
-                f"{FIRST_TELEMETRY_TIME_LIMIT:g} s. Still missing: {', '.join(self._telemetry.missing_values())}. "
-                "Check the Crazyflie is in range, and that its firmware logs these values."
-            ),
+        missing_values: list[str] = []
+
+        def has_every_value() -> bool:
+            nonlocal missing_values
+            missing_values = self._telemetry.missing_values()
+            return not missing_values
+
+        # The message uses the list from the check that timed out: a value arriving just after
+        # it can't change what the message says.
+        self._wait_until(has_every_value, lambda: self._first_telemetry_time_limit_message(missing_values))
+
+    def _first_telemetry_time_limit_message(self, missing_values: list[str]) -> str:
+        message = (
+            f"Waiting for the first telemetry took longer than "
+            f"{FIRST_TELEMETRY_TIME_LIMIT:g} s. Still missing: {', '.join(missing_values)}. "
         )
+        if self._take_over_flight and ("position estimate" in missing_values or "velocity estimate" in missing_values):
+            # The status wait already got a state packet, which carries the estimates too, so
+            # every packet received had a value that isn't finite for the missing estimate
+            # (ADR-0045). A take-over's drone may be in the air or on the floor: in the air, it
+            # can't follow our landings, which are position commands.
+            return message + (
+                "If the drone is in the air, it can't land under control without its estimate: "
+                "use tools/emergency_stop.py, with something soft under the drone first."
+            )
+        return message + "Check the Crazyflie is in range, and that its firmware logs these values."
 
     def _wait_until(self, is_done: Callable[[], bool], time_limit_message: Callable[[], str]) -> None:
         """Wait up to `FIRST_TELEMETRY_TIME_LIMIT` for `is_done()`, or raise a TimeoutError.
@@ -683,9 +701,10 @@ class CrazyflieAdapter(DroneInterface):
                 logger.info("Finite estimates are back after %d dropped state packets", self._dropped_state_count)
                 self._dropped_state_count = 0
             return
-        # An estimate that isn't finite is dropped, so the last finite one stays
-        # and goes stale: the safety pre-check then lands the drone, and the
-        # landing has a real position to go to (ADR-0030).
+        # An estimate that isn't finite is dropped, so any earlier finite one stays
+        # and goes stale, and the safety pre-check fails on it (ADR-0030). The
+        # drone's own estimate is then NaN, so it can't follow the failsafe's
+        # landing either (ADR-0045, backlog #45).
         if position.is_finite():
             self._telemetry.write_position_estimate(position, drone_time)
         if velocity.is_finite():
@@ -694,7 +713,7 @@ class CrazyflieAdapter(DroneInterface):
         if self._dropped_state_count == 0:
             logger.warning(
                 "The drone sent an estimate that isn't finite (position %s, velocity %s): dropped, "
-                "so the last finite one stays and goes stale. Warned once per streak.",
+                "so any earlier finite one stays and goes stale. Warned once per streak.",
                 position,
                 velocity,
             )
