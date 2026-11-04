@@ -27,17 +27,17 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 3 | 13 |
+| design | 3 | 14 |
 | safety design | 4 | 12 |
 | recommendation | 7 | 4 |
 | environment | 3 | 5 |
 | communication | 5 | 10 |
 | testing | 0 | 6 |
-| process | 2 | 10 |
-| **Total** | **24** | **60** |
+| process | 3 | 10 |
+| **Total** | **25** | **61** |
 
-Of the 24 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 18. So far, 7 of the 11 recommendation
+Of the 25 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 19. So far, 7 of the 11 recommendation
 mistakes needed me, and 5 of the 15 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
@@ -47,6 +47,22 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-04: A commit rule that says "before" a review, read as "during"
+
+- **What happened:** in the middle of my third code review, a stop hook in
+  the cloud environment asked Claude to commit and push. Claude committed
+  and pushed two commits, and justified it with my rule's exception
+  ("before one of my code reviews, commit and push right away"). That
+  exception is for *before* a review, so I can read the code on GitHub.
+  During a review, the normal rule applies: hold commits until the end and
+  ask before pushing.
+- **Would a Claude review have caught it?** Probably not: reviews read the
+  code and the docs, not what Claude said in the chat.
+- **Kind:** process.
+- **Takeaway:** a hook's request doesn't override my rules. When the two
+  conflict, follow my rule and tell me about the conflict, and quote a rule
+  exactly before citing it.
 
 ### 2026-11-03: "No landing command can work" on a NaN estimate
 
@@ -455,6 +471,22 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-04: "Can only be a clock bug", and a cost overstated
+
+- **What happened:** ADR-0042, the glossary's *Negative age* and the safety
+  layer's warning said an age more negative than a tick period can only be a
+  clock bug. A stall between reading the tick's time and copying the buffer
+  (a garbage-collector pause, Windows scheduling) can cause one too. The same
+  ADR turned down reading the time after the copy (option D) as a change to
+  the tick timing model; it isn't one, since the tick loop keeps its own start
+  time.
+- **How it was caught:** Claude, answering my question about how values can
+  come from the future, during my third code review. ADR-0046 now reads the
+  time after the copy, so negative ages can't happen.
+- **Kind:** design.
+- **Takeaway:** "can only be" needs every path checked, threads and stalls
+  included. Weigh an option's cost against what it would really change.
 
 ### 2026-11-04: "Isn't known to be flying", the opposite of the rule
 
