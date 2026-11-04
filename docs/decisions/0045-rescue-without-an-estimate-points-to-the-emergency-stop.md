@@ -34,9 +34,11 @@ backlog #45.)
 ## Decision
 
 Option B. When a take-over connect times out with the position or velocity
-estimate missing, the error says the drone can't land under control and to
-use `tools/emergency_stop.py`, with something soft under the drone first.
-Any other missing value, and any normal connect, keeps the old message.
+estimate missing, the error says that, if the drone is in the air, it can't
+land under control, and to use `tools/emergency_stop.py`, with something soft
+under the drone first. (Worded 2026-11-04: a take-over also accepts a drone on
+the floor, ADR-0039.) Any other missing value, and any normal connect, keeps
+the old message.
 
 ## Failure modes
 
@@ -59,6 +61,9 @@ Any other missing value, and any normal connect, keeps the old message.
   estimator behaves as `master` does.
 - Tests: `test_taking_over_a_drone_with_no_finite_estimate_points_to_the_emergency_stop`
   and the two tests that keep the old message elsewhere.
+- Accepted risk (2026-11-04): on a normal connect, a NaN estimate also times
+  out, and the old message then points to radio range ("Check the Crazyflie
+  is in range"), though the drone status arriving shows the radio works.
 - Closes backlog #41. Backlog #45 explores two rescues that might land a
   drone with a NaN estimate: an estimator reset in flight, then the normal
   landing, and a descent on tilt and thrust with touchdown from the raw down
