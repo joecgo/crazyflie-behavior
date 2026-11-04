@@ -9,6 +9,7 @@ import pytest
 
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.geometry import Vector3
+from crazyflie_behavior.loop.tick_loop import TICK_RATE
 from crazyflie_behavior.safety.requests import (
     Arm,
     CommandRequest,
@@ -21,10 +22,12 @@ from crazyflie_behavior.safety.requests import (
 from crazyflie_behavior.safety.safety_layer import (
     BATTERY_STALE_AFTER,
     LOW_BATTERY_VOLTAGE,
+    MAX_NEGATIVE_AGE,
     STALE_AFTER,
     SafetyLayer,
     judge,
     safety_pre_check,
+    values_from_the_future,
 )
 from crazyflie_behavior.snapshot import (
     DroneStatus,
@@ -187,6 +190,71 @@ def test_every_failure_is_reported_not_just_the_first() -> None:
     assert len(failures) == 2
 
 
+# --- Values from the future (ADR-0042) ---------------------------------------------
+
+
+def test_the_largest_negative_age_that_counts_as_normal_is_one_tick_period() -> None:
+    # A copy of the tick period, not an import (the safety layer doesn't depend on the loop package).
+    assert pytest.approx(1.0 / TICK_RATE) == MAX_NEGATIVE_AGE
+
+
+def test_a_slightly_negative_age_passes_the_pre_check_without_a_warning(caplog: pytest.LogCaptureFixture) -> None:
+    safety_layer = SafetyLayer(RecordingDrone())
+
+    with caplog.at_level(logging.WARNING, logger=SAFETY_LOGGER):
+        results = [safety_layer.pre_check(snapshot(FLYING, position_age=-0.01)) for _ in range(3)]
+
+    assert results == [True, True, True]
+    assert warnings_in(caplog) == []
+
+
+def test_the_warning_starts_just_past_one_tick_period_not_just_inside_it(caplog: pytest.LogCaptureFixture) -> None:
+    safety_layer = SafetyLayer(RecordingDrone())
+
+    with caplog.at_level(logging.WARNING, logger=SAFETY_LOGGER):
+        safety_layer.pre_check(snapshot(FLYING, position_age=-MAX_NEGATIVE_AGE + 0.01))
+        assert warnings_in(caplog) == []
+        safety_layer.pre_check(snapshot(FLYING, position_age=-MAX_NEGATIVE_AGE - 0.01))
+
+    assert len(warnings_in(caplog)) == 1
+
+
+def test_a_large_negative_age_passes_the_pre_check_and_warns_once_per_streak(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    safety_layer = SafetyLayer(RecordingDrone())
+
+    with caplog.at_level(logging.WARNING, logger=SAFETY_LOGGER):
+        streak = [safety_layer.pre_check(snapshot(FLYING, position_age=-1.0)) for _ in range(4)]
+        assert len(warnings_in(caplog)) == 1
+        safety_layer.pre_check(snapshot(FLYING))  # a normal age ends the streak
+        safety_layer.pre_check(snapshot(FLYING, position_age=-1.0))  # and a new one starts
+
+    assert streak == [True, True, True, True]  # the warning never fails the pre-check
+    assert not safety_layer.pre_check_has_failed
+    assert len(warnings_in(caplog)) == 2
+    assert "position estimate arrived 1.00 s after the tick's time" in warnings_in(caplog)[0]
+
+
+def test_each_value_has_its_own_streak(caplog: pytest.LogCaptureFixture) -> None:
+    safety_layer = SafetyLayer(RecordingDrone())
+
+    with caplog.at_level(logging.WARNING, logger=SAFETY_LOGGER):
+        safety_layer.pre_check(snapshot(FLYING, position_age=-1.0))
+        safety_layer.pre_check(snapshot(FLYING, position_age=-1.0, battery_age=-1.0))
+        safety_layer.pre_check(snapshot(FLYING, position_age=-1.0, battery_age=-1.0))
+
+    assert len(warnings_in(caplog)) == 2
+    assert "position estimate" in warnings_in(caplog)[0]
+    assert "battery voltage" in warnings_in(caplog)[1]
+
+
+def test_the_values_from_the_future_are_found_by_name_with_their_ages() -> None:
+    found = values_from_the_future(snapshot(FLYING, position_age=-1.0, down_age=-0.01, status_age=-0.5))
+
+    assert found == {"position estimate": pytest.approx(-1.0), "drone status": pytest.approx(-0.5)}
+
+
 # --- Judging command requests ------------------------------------------------------
 
 
@@ -202,10 +270,12 @@ def test_taking_off_needs_an_armed_drone_on_the_floor() -> None:
 
 
 @pytest.mark.parametrize("command_request", [Hover(), Land()])
-def test_hovering_and_landing_need_a_flying_drone(command_request: CommandRequest) -> None:
-    """On the floor, the firmware would spin up an armed drone's motors."""
-    assert judge(command_request, snapshot(FLYING)).is_approved
-    assert judge(command_request, snapshot(ARMED)).reason == "the drone isn't flying"
+@pytest.mark.parametrize("status", [ON_THE_FLOOR, ARMED, FLYING], ids=["on the floor", "armed", "flying"])
+def test_hovering_and_landing_are_approved_whatever_the_drone_status_says(
+    command_request: CommandRequest, status: DroneStatus
+) -> None:
+    """The adapter decides whether the drone may be flying (ADR-0039): the status lags a take-off."""
+    assert judge(command_request, snapshot(status)).is_approved
 
 
 @pytest.mark.parametrize("command_request", [SetVelocity(Vector3(0.1, 0.0, 0.0)), MoveTo(Vector3(1.0, 0.0, 0.5), 2.0)])
@@ -218,10 +288,19 @@ def test_velocity_and_fast_mode_are_refused_until_the_speed_envelope_exists(
     assert "speed envelope" in verdict.reason
 
 
-def test_nothing_is_approved_without_a_drone_status() -> None:
+def test_arming_and_taking_off_are_refused_without_a_drone_status() -> None:
     no_status = replace(snapshot(FLYING), drone_status=None)
 
-    assert judge(Land(), no_status).reason == "no drone status yet"
+    assert judge(Arm(), no_status).reason == "no drone status yet"
+    assert judge(TakeOff(0.5), no_status).reason == "no drone status yet"
+
+
+@pytest.mark.parametrize("command_request", [Hover(), Land()])
+def test_hovering_and_landing_are_approved_without_a_drone_status(command_request: CommandRequest) -> None:
+    """Approved whatever the status, even a missing one: the adapter decides if the drone may be flying (ADR-0039)."""
+    no_status = replace(snapshot(FLYING), drone_status=None)
+
+    assert judge(command_request, no_status).is_approved
 
 
 # --- Sending -----------------------------------------------------------------------
@@ -280,7 +359,7 @@ def test_a_refused_request_sends_nothing() -> None:
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(ON_THE_FLOOR))
 
-    assert not safety_layer.request(Land()).is_approved
+    assert not safety_layer.request(TakeOff(0.5)).is_approved  # not armed
     safety_layer.send()
 
     assert drone.command_log == []
@@ -361,16 +440,32 @@ def test_the_failsafe_lands_on_a_stale_drone_status_that_says_flying() -> None:
     assert drone.command_log == ["land"]
 
 
-def test_a_failed_pre_check_on_the_floor_sends_nothing() -> None:
-    """On the floor, landing would spin up an armed drone's motors."""
+@pytest.mark.parametrize("status", [ON_THE_FLOOR, ARMED, FLYING], ids=["on the floor", "armed", "flying"])
+def test_the_failsafe_always_lands_and_leaves_whether_the_drone_may_be_flying_to_the_adapter(
+    status: DroneStatus, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The status lags a take-off by about a second, so it can't gate the landing (ADR-0039)."""
     drone = RecordingDrone()
     safety_layer = SafetyLayer(drone)
 
-    safety_layer.pre_check(snapshot(ARMED, position_age=1.0))
+    safety_layer.pre_check(snapshot(status, position_age=1.0))
     safety_layer.send()
 
-    assert drone.command_log == []
+    assert drone.command_log == ["land"]
     assert safety_layer.pre_check_has_failed
+    assert warnings_in(caplog) == [
+        "Safety pre-check failed: position estimate is 1.00 s old (stale after 0.25 s). Landing."
+    ]
+
+
+def test_the_failsafe_lands_without_any_drone_status() -> None:
+    drone = RecordingDrone()
+    safety_layer = SafetyLayer(drone)
+
+    safety_layer.pre_check(replace(snapshot(FLYING), drone_status=None))
+    safety_layer.send()
+
+    assert drone.command_log == ["land"]
 
 
 def test_after_the_failsafe_the_flight_never_resumes() -> None:

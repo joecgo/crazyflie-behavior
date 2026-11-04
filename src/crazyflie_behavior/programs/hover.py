@@ -1,4 +1,4 @@
-"""The hover program (ADR-0030): runs the hover test once, for field-test stage 1.
+"""The hover program (ADR-0030): runs the hover test once, for the Hover field test.
 
 Arm, take off to 0.5 m, hover, land. It uses the mock adapter unless it's run
 with --crazyflie:
@@ -25,7 +25,7 @@ from crazyflie_behavior.timing.clock import RealClock
 def main(arguments: list[str] | None = None) -> int:
     """Run the hover test once. Returns the program's exit code."""
     parser = argparse.ArgumentParser(
-        prog="hover", description="Arm, take off to 0.5 m, hover, land (field-test stage 1)."
+        prog="hover", description="Arm, take off to 0.5 m, hover, land (the Hover field test)."
     )
     parser.add_argument(
         "--crazyflie",

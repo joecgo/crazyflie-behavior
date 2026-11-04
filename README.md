@@ -75,7 +75,8 @@ setup works. In PyCharm, use the **first_flight** run configuration.
 ```
 
 It connects, runs the tick loop and logs every snapshot, but never commands
-the drone: the Bench field test, propellers off. Without `--crazyflie` it uses
+the drone: the Bench field test, propellers on
+([ADR-0044](docs/decisions/0044-the-bench-is-flown-with-propellers-on.md)). Without `--crazyflie` it uses
 the mock adapter. The console shows a summary every second, with how old each
 value is, and everything goes to a log file in `logs/`. (With the mock
 adapter every value is 0 ms old: it streams them all again with each
@@ -106,6 +107,45 @@ every snapshot. In a terminal, Ctrl+C lands the drone. In PyCharm, use the **hov
 **Not for the real drone yet:** the kill switch and the other operator
 controls come first ([ADR-0027](docs/decisions/0027-operator-controls.md)).
 
+## Failsafe program
+
+```powershell
+.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --height-meters 0.1
+.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --crazyflie --height-meters 0.5
+```
+
+It runs the Failsafe low (0.1 m) or Failsafe high (0.5 m) field test: arm, take
+off to the height and hover. After about 3 s of hovering, a wrapper around the
+drone forges a low battery voltage ("FAULT INJECTED" in the log), so the
+safety layer's real pre-check fails and its real failsafe lands the drone
+([ADR-0041](docs/decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)).
+Without `--crazyflie` it uses the mock adapter. The exit code is 0 only if the
+failsafe landed the drone; if the fault never takes effect, the program lands the
+drone normally after a time limit and the test has failed. In PyCharm, use the
+**failsafe low**, **failsafe high** or **failsafe ... (Crazyflie)** run
+configurations.
+
+## Rescue landing and emergency stop
+
+If a program is lost with the drone in the air, run the rescue landing, not the
+program that was flying: that one refuses to connect to a flying drone
+([ADR-0038](docs/decisions/0038-connecting-to-a-flying-drone.md)).
+
+```powershell
+.venv\Scripts\python -m crazyflie_behavior.programs.rescue_landing --crazyflie
+```
+
+It takes over the flight without resetting the position estimate and lands the
+drone with the normal landing. Without `--crazyflie` it lands a mock drone left
+hovering. In PyCharm, use the **rescue landing (Crazyflie)** run configuration.
+
+The last resort, for a drone out of reach, stops the motors at once: the drone
+drops, so slide something soft under it first.
+
+```powershell
+.venv\Scripts\python tools\emergency_stop.py
+```
+
 ## Hardware (planned)
 
 - Crazyflie 2.1+ (about 7 minutes of flight per battery) and Crazyradio USB dongle
@@ -130,13 +170,14 @@ src/crazyflie_behavior/
   loop/             # the tick loop (keeps time) and the tick step (what a tick does)
   safety/           # the safety layer: the only code that sends commands to the drone
   behaviors/        # behaviors, such as the hover test: they make command requests
-  programs/         # runnable programs (bench, hover) and their start-up code
+  programs/         # runnable programs (bench, hover, failsafe, rescue landing) and their start-up code
   drone/            # drone interface, telemetry buffer, mock adapter
     crazyflie/      # Crazyflie adapter: the only code that imports cflib
 tests/
   architecture/     # fitness functions: ADR rules enforced as tests
 tools/
   first_flight.py   # hardware smoke test: scan for a Crazyflie
+  emergency_stop.py # last resort: stop a drone's motors over the radio
 docs/
   hide-and-seek.md  # the rules of the first game
   catch-the-bird.md # the rules of the second game
@@ -144,7 +185,7 @@ docs/
   coding-style.md   # conventions the tools can't check
   decisions/        # Architecture Decision Records (ADRs)
   decision-backlog.md  # open design questions, in order of need
-  field-testing/    # real-world test process and session logs
+  field-testing/    # real-world test process, test logs and session docs
   cflib-primer.md   # how cflib works, checked against the installed version
   claude-mistakes.md  # mistakes Claude made, and what they say about its weak spots
 ```

@@ -1,8 +1,8 @@
 # 0041: The Failsafe low and Failsafe high tests inject a fault into the safety pre-check
 
-- **Status:** Accepted. Amended 2026-11-02: Failsafe high flies at 0.5 m, the Hover test's height, instead of 0.3 m, so the failsafe is proven at the height Hover then flies. Edited in place rather than superseded, since the program isn't built yet. Accepted risk: a bigger step from 0.1 m, with no middle height.
+- **Status:** Accepted. Amended 2026-11-02: Failsafe high flies at 0.5 m, the Hover test's height, instead of 0.3 m, so the failsafe is proven at the height Hover then flies. Edited in place rather than superseded, since the program isn't built yet. Accepted risk: a bigger step from 0.1 m, with no middle height. Amended 2026-11-03: the mechanism of the fault, and how the program judges the test, are recorded below as built.
 - **Date:** 2026-11-02
-- **Origin:** Mixed. A failsafe test before the Hover test, from 0.1 m and then 0.3 m, run by one program, and the names Failsafe low and Failsafe high: mine. Raising Failsafe high to the Hover test's 0.5 m, and amending this record in place: mine. Injecting a fault into the pre-check, so the drone lands itself: my choice, after the AI first described the alternative (the program exits and the rescue landing takes over) wrongly as an automatic failsafe.
+- **Origin:** Mixed. A failsafe test before the Hover test, from 0.1 m and then 0.3 m, run by one program, and the names Failsafe low and Failsafe high: mine. Raising Failsafe high to the Hover test's 0.5 m, and amending this record in place: mine. Injecting a fault into the pre-check (option A), so the drone lands itself: my choice, after the AI first described the alternative (the program exits and the rescue landing takes over) wrongly as an automatic failsafe. How: the AI recommended a wrapper around the drone that forges a low battery; I chose it.
 
 ## Context
 
@@ -39,6 +39,20 @@ proven, so the test uses that path.
   injected. Options considered for this: a flag on `SafetyLayer`, or passing
   the pre-check function in. Both put a test hook inside the code that must
   never be wrong.
+- **As built** (`programs/failsafe_fault.py`, `behaviors/failsafe_test.py`,
+  `programs/failsafe.py`): the wrapper's `take_snapshot()` returns the real
+  snapshot until the drone has hovered at the take-off height for 3 s, then a
+  copy (`dataclasses.replace`; snapshots are frozen with slots, ADR-0018) with
+  only `battery_voltage` replaced by 3.2 V. It logs one warning, "FAULT
+  INJECTED: battery voltage forged", and passes every command on unchanged. The
+  failsafe test behavior arms, takes off, hovers and waits; past a 10 s time
+  limit it lands normally and the test has failed (ADR-0033's failure rule).
+- **The pass is judged by the program.** A failed pre-check ends the run at once
+  (ADR-0026) and the landing finishes inside `disconnect()`, so no behavior
+  sees the drone land. The exit code is 0 only if the fault was injected, the
+  pre-check then failed, and the test didn't fail by its own rules. That the
+  pre-check failed *because of the battery* is checked by a pytest test on the
+  log line, not by the program.
 
 ## Failure modes
 
@@ -56,5 +70,9 @@ proven, so the test uses that path.
 ## Consequences
 
 - The safety layer doesn't change. An architecture test checks that only the
-  failsafe program imports the wrapper.
+  failsafe program imports the wrapper. The wrapper passes commands on, so the
+  test "only the safety layer sends commands" needed an exemption for its file
+  (backlog #39).
+- The failsafe test reaches its pass through the exit code, not through the
+  behavior reporting done (backlog #40).
 - Glossary: *Failsafe low / Failsafe high*.

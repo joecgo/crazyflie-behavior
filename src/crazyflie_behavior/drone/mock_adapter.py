@@ -25,6 +25,9 @@ from crazyflie_behavior.timing.clock import Clock
 CHARGED_BATTERY_VOLTAGE = 4.0
 """Volts. A freshly charged Crazyflie battery reads a little above this."""
 
+TAKEN_OVER_HEIGHT = 0.5
+"""Meters. How high the mock drone hovers when a rescue landing takes over its flight."""
+
 # From the firmware source. VERIFY at the bench that the drone's firmware
 # matches (ADR-0011).
 SETPOINT_STOP_FOLLOWING_AFTER = 0.5
@@ -36,8 +39,12 @@ SETPOINT_CUT_MOTORS_AFTER = 2.0
 class MockAdapter(DroneInterface):
     """A fake drone that does exactly what it's told, instantly."""
 
-    def __init__(self, clock: Clock) -> None:
+    def __init__(self, clock: Clock, *, take_over_flight: bool = False) -> None:
+        """`take_over_flight`: the rescue landing's setting (ADR-0038). `connect()` then finds the
+        drone armed and hovering at `TAKEN_OVER_HEIGHT`, as if a program had been lost with it
+        in the air, so the rescue landing has something to land."""
         self._clock = clock
+        self._take_over_flight = take_over_flight
         self._telemetry = TelemetryBuffer(clock)
         # Names of the commands received, in order, for tests to check.
         self.command_log: list[str] = []
@@ -74,6 +81,10 @@ class MockAdapter(DroneInterface):
     def connect(self) -> None:
         self.command_log.append("connect")
         self._is_connected = True
+        if self._take_over_flight:
+            self._is_armed = True
+            self._is_flying = True
+            self._position = Vector3(self._position.x, self._position.y, TAKEN_OVER_HEIGHT)
         self._publish_state()
 
     def disconnect(self) -> None:

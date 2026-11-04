@@ -1,4 +1,4 @@
-"""The hover test (ADR-0030): the behavior for field-test stage 1.
+"""The hover test (ADR-0030): the behavior for the Hover field test.
 
 Arm, take off to 0.5 m, hover, land, then report done. Each step waits until
 the snapshot shows it happened, because commands take effect after they're
@@ -23,11 +23,11 @@ from crazyflie_behavior.snapshot import Snapshot
 logger = logging.getLogger(__name__)
 
 TAKE_OFF_HEIGHT = 0.5
-"""Meters, as field-test stage 1 asks."""
+"""Meters, as the Hover field test asks."""
 DEFAULT_HOVER_DURATION = 10.0
 """Seconds."""
 
-# --- PLACEHOLDERS, NOT DECISIONS: tune in field-test stage 1 -------------------
+# --- PLACEHOLDERS, NOT DECISIONS: tune in the Hover field test ----------------
 HEIGHT_TOLERANCE = 0.1
 """Meters. This close to the take-off height counts as there."""
 ARM_TIME_LIMIT = 2.0

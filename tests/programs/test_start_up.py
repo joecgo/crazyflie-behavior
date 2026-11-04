@@ -403,6 +403,20 @@ def test_the_mock_adapter_is_the_default_and_the_crazyflie_needs_the_flag() -> N
     assert isinstance(make_drone(use_crazyflie=True, clock=clock), CrazyflieAdapter)
 
 
+def test_make_drone_passes_the_take_over_setting_on_to_either_adapter() -> None:
+    clock = SimClock()
+
+    mock_drone = make_drone(use_crazyflie=False, clock=clock, take_over_flight=True)
+    mock_drone.connect()
+    mock_status = mock_drone.take_snapshot(clock.now(), 0.0).drone_status
+    crazyflie = make_drone(use_crazyflie=True, clock=clock, take_over_flight=True)
+
+    assert mock_status is not None
+    assert mock_status.value.is_flying
+    assert isinstance(crazyflie, CrazyflieAdapter)
+    assert crazyflie._take_over_flight  # pyright: ignore[reportPrivateUsage]
+
+
 def run_test_program(tick_step: TickStep) -> int:
     clock = SimClock()
     return run_program("test", "Test program, the mock adapter", MockAdapter(clock), tick_step, clock)

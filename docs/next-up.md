@@ -63,21 +63,21 @@ rules. On top of `CLAUDE.md`:
    Joe. `connect()` already waits for the first telemetry (ADR-0031), so the
    status is there to read. Tests in the adapter's test files, with the fake
    cflib.
-2. [ ] **ADR-0038: connecting to a flying drone.** Everything in its
+2. [x] **ADR-0038: connecting to a flying drone.** Everything in its
    "To build" consequence: the reordered `connect()`, the safe link close,
    the `take_over_flight` setting in the Crazyflie adapter and the mock, the
    rescue-landing program in `src/crazyflie_behavior/programs/`, the
    emergency-stop script in `tools/`, the field-testing procedure note, and
    the tests it names. Item 1's log line has to keep working after the
    reorder.
-3. [ ] **ADR-0039: the adapter decides whether the drone may be flying.**
+3. [x] **ADR-0039: the adapter decides whether the drone may be flying.**
    `judge()` approves `Hover` and `Land` whatever the drone status says; the
    failsafe always puts `Land` in the movement slot, and its log no longer
    says "no landing sent"; the Crazyflie adapter's `hover()` does nothing on
    the floor (not `_may_be_flying()`), logged once per streak at info level
    (Claude's suggestion, not yet confirmed: list it for Joe). Tests for all
    three, including the failsafe landing during the take-off grace period.
-4. [ ] **Field tests by name, not "stage 0/1".** Joe's decisions of
+4. [x] **Field tests by name, not "stage 0/1".** Joe's decisions of
    2026-11-02: the field-testing README has no stages any more, only
    calibration, safety and flight tests, each called by name. Everything
    else is already done (the README, the session template and drafts, the
@@ -87,7 +87,7 @@ rules. On top of `CLAUDE.md`:
    test" (`programs/bench.py`, `programs/hover.py`,
    `behaviors/hover_test.py`, `drone/crazyflie/adapter.py`; search for
    others). Wording only, no behavior change.
-5. [ ] **ADR-0041: the Failsafe low and Failsafe high program.** Joe's
+5. [x] **ADR-0041: the Failsafe low and Failsafe high program.** Joe's
    decision of 2026-11-02, needed for the hardware arriving 2026-11-03. Build
    it after items 1 to 3 (it relies on take-off, hover and the failsafe
    landing working). Run the checks and bug planting as usual; the one
@@ -131,7 +131,7 @@ rules. On top of `CLAUDE.md`:
      program to the README's "Run" section if it lists programs. Glossary:
      don't edit it; *Failsafe low / Failsafe high* is already there
      (0.1 m and 0.5 m).
-6. [ ] **ADR-0042: slightly negative ages count as fresh.** Not needed for
+6. [x] **ADR-0042: slightly negative ages count as fresh.** Not needed for
    the hardware; do it last. `Stamped.age()` stays unclamped, and its
    docstring says the age can be slightly negative, meaning just arrived.
    The safety pre-check's staleness check logs a warning when an age is
@@ -143,7 +143,7 @@ rules. On top of `CLAUDE.md`:
    and warns once over several ticks, and again after a normal age ends the
    streak.
 
-7. [ ] **ADR-0043: how field tests are organized** (docs only, after item
+7. [x] **ADR-0043: how field tests are organized** (docs only, after item
    6). Record the decisions Joe made on 2026-11-02 while revising
    `docs/field-testing/README.md`; that README and the commit messages
    (`f001895`, `6622b8e`, `7ec3ec2`, `0cc9dff`) are the source. Don't decide anything new:
@@ -187,7 +187,7 @@ rules. On top of `CLAUDE.md`:
    row, and link the ADR from the field-testing README. Leave ADR-0010 and
    ADR-0028's "field-test stage 0" as written: they are a historical record.
 
-8. [ ] **ADR-0044: the Bench is flown with propellers on** (docs only, after
+8. [x] **ADR-0044: the Bench is flown with propellers on** (docs only, after
    item 7). Joe's decision of 2026-11-03: taking the propellers off is too
    much work. Record the risk he accepts knowingly: the drone auto-arms
    (ADR-0037) with propellers on; mitigations are that the bench program
@@ -199,7 +199,7 @@ rules. On top of `CLAUDE.md`:
    propose any change in the pull request. Add the index row. Link the ADR
    from the field-testing README's Bench row.
 
-9. [ ] **The glossary proposal for the session and field-test words** (docs
+9. [x] **The glossary proposal for the session and field-test words** (docs
    only; Joe already did the renames on 2026-11-03: `field-tests/` holds the
    test logs, `sessions/` the session docs, `field-test-template.md` and
    `sessions/session-template.md` the templates). Don't edit

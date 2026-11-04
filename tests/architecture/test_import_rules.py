@@ -5,7 +5,10 @@ fails if a rule is broken.
 """
 
 import ast
+import sys
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_ROOT = REPO_ROOT / "src"
@@ -16,6 +19,13 @@ BEHAVIORS_ROOT = PACKAGE_ROOT / "behaviors"
 SAFETY_ROOT = PACKAGE_ROOT / "safety"
 DRONE_ROOT = PACKAGE_ROOT / "drone"
 TICK_LOOP = PACKAGE_ROOT / "loop" / "tick_loop.py"
+PROGRAMS_ROOT = PACKAGE_ROOT / "programs"
+FAILSAFE_PROGRAM = PROGRAMS_ROOT / "failsafe.py"
+FORGED_BATTERY_WRAPPER = "crazyflie_behavior.programs.failsafe_fault"
+FORGED_BATTERY_FILE = PROGRAMS_ROOT / "failsafe_fault.py"
+RESCUE_LANDING_PROGRAM = PROGRAMS_ROOT / "rescue_landing.py"
+START_UP = PROGRAMS_ROOT / "start_up.py"
+TAKE_OVER_SETTING = "take_over_flight"
 
 CLOCK_MODULES = ["time", "datetime", "crazyflie_behavior.timing"]
 
@@ -83,6 +93,30 @@ def drone_commands_called(path: Path) -> set[str]:
     }
 
 
+def imports_module_in_any_form(path: Path, module_name: str) -> bool:
+    """Whether a source file imports exactly this module: `import a.b`, `from a import b` or `from a.b import x`.
+
+    `imported_modules` records only the module a `from` import names, so
+    `from crazyflie_behavior.programs import failsafe_fault` would slip past it.
+    """
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import) and any(alias.name == module_name for alias in node.names):
+            return True
+        if isinstance(node, ast.ImportFrom):
+            source = resolve_relative_import(path, node.level, node.module) if node.level > 0 else (node.module or "")
+            if source == module_name or any(f"{source}.{alias.name}" == module_name for alias in node.names):
+                return True
+    return False
+
+
+def passes_keyword(path: Path, keyword: str) -> bool:
+    """Whether a source file passes `keyword=...` in any call."""
+    return any(
+        isinstance(node, ast.Call) and any(argument.arg == keyword for argument in node.keywords)
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+    )
+
+
 def relative_paths(paths: list[Path]) -> list[str]:
     return [path.relative_to(REPO_ROOT).as_posix() for path in paths]
 
@@ -128,11 +162,18 @@ def test_behaviors_use_only_the_request_types_from_the_safety_package() -> None:
 
 
 def test_only_the_safety_layer_sends_commands_to_the_drone() -> None:
-    """ADR-0008, ADR-0030: everything else asks. The drone package implements the commands."""
+    """ADR-0008, ADR-0030: everything else asks. The drone package implements the commands.
+
+    One exemption: the failsafe program's forged battery wrapper is itself a
+    drone that passes every command on unchanged (ADR-0041), so it calls them
+    without ever deciding one. Its own fitness function keeps everyone else
+    from importing it. Backlog #39 asks whether it belongs in the drone package.
+    """
     offenders = [
         path
         for path in python_files(PACKAGE_ROOT)
-        if drone_commands_called(path) and not (path.is_relative_to(SAFETY_ROOT) or path.is_relative_to(DRONE_ROOT))
+        if drone_commands_called(path)
+        and not (path.is_relative_to(SAFETY_ROOT) or path.is_relative_to(DRONE_ROOT) or path == FORGED_BATTERY_FILE)
     ]
 
     assert relative_paths(offenders) == []
@@ -156,6 +197,32 @@ def test_the_tick_loop_imports_only_the_clock_from_the_project() -> None:
     assert offenders == []
 
 
+def test_only_the_failsafe_program_imports_the_forged_battery_wrapper() -> None:
+    """ADR-0041: the fault must be unreachable from a game program, a behavior or the safety layer.
+
+    Not behaviors/, safety/, loop/ or drone/, and no other program either. (The
+    wrapper itself and tests don't count: the tests are outside the package.)
+    """
+    importers = [
+        path
+        for path in python_files(PACKAGE_ROOT)
+        if path != FORGED_BATTERY_FILE and imports_module_in_any_form(path, FORGED_BATTERY_WRAPPER)
+    ]
+
+    assert relative_paths(importers) == relative_paths([FAILSAFE_PROGRAM])
+
+
+def test_only_the_rescue_landing_program_asks_to_take_over_a_flight() -> None:
+    """ADR-0038: behaviors and game programs have no way to ask for take-over.
+
+    `start_up.make_drone` only passes the setting on to the adapter it builds,
+    and the adapters themselves are in the drone package, which only defines it.
+    """
+    askers = [path for path in python_files(PACKAGE_ROOT) if passes_keyword(path, TAKE_OVER_SETTING)]
+
+    assert relative_paths(askers) == relative_paths([RESCUE_LANDING_PROGRAM, START_UP])
+
+
 def test_the_import_scanner_sees_real_imports() -> None:
     """Guards the fitness functions themselves: if the scanner silently found
     nothing, every rule above would pass for the wrong reason."""
@@ -166,3 +233,56 @@ def test_the_import_scanner_sees_real_imports() -> None:
     assert imports_any(TICK_LOOP, ["crazyflie_behavior.timing"])
     assert imports_any(BEHAVIORS_ROOT / "hover_test.py", ["crazyflie_behavior.safety"])
     assert drone_commands_called(SAFETY_ROOT / "safety_layer.py") >= {"arm", "take_off", "land"}
+    assert drone_commands_called(FORGED_BATTERY_FILE) >= {"arm", "take_off", "land"}  # why it needs its exemption
+    assert imports_module_in_any_form(FAILSAFE_PROGRAM, FORGED_BATTERY_WRAPPER)
+    assert not imports_module_in_any_form(PROGRAMS_ROOT / "hover.py", FORGED_BATTERY_WRAPPER)
+    assert passes_keyword(RESCUE_LANDING_PROGRAM, TAKE_OVER_SETTING)
+    assert not passes_keyword(PROGRAMS_ROOT / "hover.py", TAKE_OVER_SETTING)
+
+
+@pytest.mark.parametrize(
+    "import_line",
+    [
+        "import crazyflie_behavior.programs.failsafe_fault",
+        "import crazyflie_behavior.programs.failsafe_fault as fault",
+        "from crazyflie_behavior.programs import failsafe_fault",
+        "from crazyflie_behavior.programs.failsafe_fault import ForgedLowBatteryDrone",
+        "from . import failsafe_fault",
+        "from .failsafe_fault import ForgedLowBatteryDrone",
+        "from ..programs import failsafe_fault",
+    ],
+)
+def test_the_import_scanner_sees_every_form_of_an_import(
+    import_line: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each form `imports_module_in_any_form` handles, on a made-up program file.
+
+    Relative imports resolve from the file's package, so the file sits in a
+    made-up source tree at the same place as the real programs.
+    """
+    monkeypatch.setattr(sys.modules[__name__], "SOURCE_ROOT", tmp_path)
+    program = tmp_path / "crazyflie_behavior" / "programs" / "made_up_program.py"
+    program.parent.mkdir(parents=True)
+    program.write_text(import_line + "\n", encoding="utf-8")
+
+    assert imports_module_in_any_form(program, FORGED_BATTERY_WRAPPER)
+
+
+@pytest.mark.parametrize(
+    "import_line",
+    [
+        "import crazyflie_behavior.programs",
+        "from crazyflie_behavior.programs import failsafe",
+        "from crazyflie_behavior.programs.failsafe_faults import x",
+        "from . import failsafe",
+    ],
+)
+def test_the_import_scanner_does_not_see_a_near_miss(
+    import_line: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sys.modules[__name__], "SOURCE_ROOT", tmp_path)
+    program = tmp_path / "crazyflie_behavior" / "programs" / "made_up_program.py"
+    program.parent.mkdir(parents=True)
+    program.write_text(import_line + "\n", encoding="utf-8")
+
+    assert not imports_module_in_any_form(program, FORGED_BATTERY_WRAPPER)

@@ -1,8 +1,8 @@
 # Environment: living room
 
-A static room: nothing moves while the drone flies. Session logs link here and
-name a location and a lighting setup, plus any extra description (time of day,
-sunlight) in the log itself.
+A static room: nothing moves while the drone flies. Test logs and session docs
+link here and name a location and a lighting setup; a test log adds any extra
+description (time of day, sunlight) itself.
 
 ## Locations
 

@@ -1,11 +1,15 @@
 # Field testing
 
-> **Status, updated 2026-11-02:** a vertical slice: one room (the living
-> room), working toward hide-and-seek. Pass criteria are light for now.
+> **Status, updated 2026-11-03:** a vertical slice: one room (the living
+> room), working toward hide-and-seek. Pass criteria are light for now. The
+> rescue landing and the emergency-stop script are built
+> ([ADR-0038](../decisions/0038-connecting-to-a-flying-drone.md)) and not yet
+> run on hardware.
 
 Real flights are where the design gets proven or broken. This folder is the
-record: every test session gets a log, every log ties back to an exact code
-version, and every surprise feeds back into the design. That record, the
+record: every field test gets a test log and every session a session doc,
+every test log ties back to an exact code version, and every surprise feeds
+back into the design. That record, the
 progression from "can it hover" to "it plays hide-and-seek in the living
 room", is the portfolio story.
 
@@ -18,7 +22,7 @@ room", is the portfolio story.
    └──────────────── Change: code, sim model, or ADR ◄────┘
 ```
 
-1. **Plan.** Write the session log's *Goal* and *Pass criteria* before flying.
+1. **Plan.** Write the test log's *Goal* and *Pass criteria* before flying.
 2. **Rehearse.** The same code runs on the mock adapter first, so a plain bug
    fails on the desk, not in the air. A simulator run is optional.
 3. **Fly.** Follow the pre-flight checklist. One variable changes per session.
@@ -31,13 +35,15 @@ room", is the portfolio story.
 ## Tests
 
 Three kinds: calibration tests measure the drone, safety tests make its
-failsafes fire on purpose, and flight tests fly it.
+failsafes fire on purpose, and flight tests fly it. The first time through,
+each is passed once, in order. [ADR-0043](../decisions/0043-how-field-tests-are-organized.md)
+records how the tests are organized, and why there is no gate between them.
 
 ### Calibration tests
 
 | Test | Goal | Passed when |
 |---|---|---|
-| **Bench** | Connected, **propellers off**. Telemetry and decks detected. | All sensors stream. |
+| **Bench** | Connected, propellers on ([ADR-0044](../decisions/0044-the-bench-is-flown-with-propellers-on.md)). Telemetry and decks detected. | All sensors stream. |
 | **Sensor characterization** | Measure noise and drift in the living room: range sensors against its walls and furniture, the flow deck over its floor, in its usual lighting. | Noise and drift numbers recorded and fed into the simulator. |
 
 ### Safety tests
@@ -72,7 +78,7 @@ while the drone flies.
 
 Flight quality depends on the room (the flow deck needs floor texture and
 light, and range sensors struggle with glass, mirrors and dark surfaces), so
-the first session log profiles it: size, ceiling height, floor surface,
+the first test log profiles it: size, ceiling height, floor surface,
 lighting (including time of day and sunlight through windows), obstacles, and
 anything reflective.
 
@@ -80,6 +86,15 @@ anything reflective.
 room at least 3 x 3 m with a textured hard floor (the flow deck needs texture),
 a soft landing patch (a mat or carpet) under the drone, and one operator, with
 nobody else in the room, no people and no pets.
+
+**If a program dies with the drone in the air**
+([ADR-0038](../decisions/0038-connecting-to-a-flying-drone.md)): run the
+rescue landing (`crazyflie_behavior.programs.rescue_landing --crazyflie`), not
+the program that was flying: that one refuses to connect to a flying drone. If
+the rescue landing can't bring it down, slide something soft under the drone
+and run `tools/emergency_stop.py`: the motors stop at once. Both use the radio
+link, so if the link is why the drone was lost, only the physical backup is
+left: fly the early sessions low over a soft mat.
 
 ## Sessions and test logs
 

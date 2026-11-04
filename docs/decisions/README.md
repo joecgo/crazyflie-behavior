@@ -49,7 +49,9 @@ This column is honest about which ideas were mine.
 | [0038](0038-connecting-to-a-flying-drone.md) | Connecting refuses a flying drone; a rescue landing takes over the flight | Mixed: AI recommendations accepted; the full version now and the manual emergency stop were mine |
 | [0039](0039-the-adapter-decides-may-be-flying.md) | The adapter decides whether the drone may be flying; hover on the floor does nothing | AI recommendation accepted; splitting it off from backlog #8 was mine |
 | [0040](0040-landing-progress-stays-in-take-snapshot.md) | Landing progress stays in take_snapshot for First flight | Mixed: option A was mine, against the AI's recommendation of D |
-| [0041](0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) | The Failsafe low and Failsafe high tests inject a fault into the safety pre-check | Mixed: the tests and names were mine; the choice of A was mine after a corrected description; amended for Failsafe high at 0.5 m, mine |
+| [0041](0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) | The Failsafe low and Failsafe high tests inject a fault into the safety pre-check | Mixed: the tests and names were mine; the choice of A was mine after a corrected description; amended for Failsafe high at 0.5 m, mine; the wrapper mechanism was an AI recommendation I accepted |
 | [0042](0042-negative-ages-count-as-fresh.md) | Slightly negative ages count as fresh; a large one is a warning | AI recommendation accepted |
+| [0043](0043-how-field-tests-are-organized.md) | Field tests are grouped by kind and repeated by rule, with no stage gate; a session is a trip, a field test is one test | Joe's decisions, recorded after the fact |
+| [0044](0044-the-bench-is-flown-with-propellers-on.md) | The Bench is flown with the propellers on | My decision, with the AI pushing back on the risk |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

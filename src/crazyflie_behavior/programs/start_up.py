@@ -49,9 +49,14 @@ _STANDARD_INPUT_HANDLE = 0xFFFFFFF6  # STD_INPUT_HANDLE, (DWORD)-10
 _SignalHandler = Callable[[int, FrameType | None], Any] | int | signal.Handlers | None
 
 
-def make_drone(use_crazyflie: bool, clock: Clock) -> DroneInterface:
-    """The real Crazyflie only when asked for, otherwise the mock adapter (ADR-0028)."""
-    return CrazyflieAdapter(clock) if use_crazyflie else MockAdapter(clock)
+def make_drone(use_crazyflie: bool, clock: Clock, *, take_over_flight: bool = False) -> DroneInterface:
+    """The real Crazyflie only when asked for, otherwise the mock adapter (ADR-0028).
+
+    `take_over_flight` is for the rescue landing program only (ADR-0038).
+    """
+    if use_crazyflie:
+        return CrazyflieAdapter(clock, take_over_flight=take_over_flight)
+    return MockAdapter(clock, take_over_flight=take_over_flight)
 
 
 def run_program(program_name: str, description: str, drone: DroneInterface, tick_step: TickStep, clock: Clock) -> int:
@@ -196,8 +201,8 @@ def quick_edit_off() -> Generator[None]:
 class _InterruptSignalHandler:
     """The interrupt signal during one run: an error while connecting, then a stop request (ADR-0026).
 
-    While connecting, nothing is flying, so the first signal raises
-    KeyboardInterrupt, as Python does by default, and the program stops. (The
+    While connecting, nothing is commanded (a drone found flying is left as it is: ADR-0038), so the first
+    signal raises KeyboardInterrupt, as Python does by default, and the program stops. (The
     Crazyflie adapter waits in short slices while connecting, so this works on
     Windows too: ADR-0029.) Once connected, the first signal makes a stop
     request instead.
@@ -259,8 +264,8 @@ def run_tick_loop(drone: DroneInterface, tick_step: TickStep, clock: Clock, log_
     Disconnecting always happens, also after an error or a failed connect (it
     does nothing if nothing is connected), and it lands a flying drone. Once
     connected, the interrupt signal is a stop request, so it can't cut the
-    landing short. While connecting, nothing is flying, so the interrupt signal
-    stops the program (ADR-0028, ADR-0029).
+    landing short. While connecting, nothing is commanded, so the interrupt signal
+    stops the program (ADR-0028, ADR-0029, ADR-0038).
 
     This uses `try`/`finally` rather than `with drone:` so that the interrupt
     signal's handler is in place before connecting and stays until after the

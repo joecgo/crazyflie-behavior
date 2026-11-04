@@ -1,6 +1,6 @@
 import pytest
 
-from crazyflie_behavior.drone.mock_adapter import MockAdapter
+from crazyflie_behavior.drone.mock_adapter import TAKEN_OVER_HEIGHT, MockAdapter
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import (
     DroneStatus,
@@ -257,3 +257,34 @@ def test_after_connect_every_telemetry_value_has_arrived() -> None:
         ranges.down,
     ]
     assert None not in values
+
+
+def test_taking_over_a_flight_finds_the_drone_armed_and_hovering() -> None:
+    clock = SimClock()
+    drone = MockAdapter(clock, take_over_flight=True)
+
+    drone.connect()
+    snapshot = snapshot_now(drone, clock)
+
+    assert status_of(snapshot).is_armed
+    assert status_of(snapshot).is_flying
+    assert position_of(snapshot) == Vector3(0.0, 0.0, TAKEN_OVER_HEIGHT)
+
+
+def test_a_taken_over_drone_can_be_landed() -> None:
+    clock = SimClock()
+    drone = MockAdapter(clock, take_over_flight=True)
+    drone.connect()
+
+    drone.land()
+
+    assert not status_of(snapshot_now(drone, clock)).is_flying
+
+
+def test_without_the_take_over_setting_a_connected_drone_is_on_the_floor() -> None:
+    clock = SimClock()
+    drone = MockAdapter(clock)
+
+    drone.connect()
+
+    assert not status_of(snapshot_now(drone, clock)).is_flying

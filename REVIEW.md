@@ -39,6 +39,11 @@ takeaway applies to reviews, it's added here as a question.
   old or not a number? Is that the safe choice for that decision?
 - For a check like "has it arrived?" or "is it ready?": could state left by
   an earlier run or connection satisfy it?
+- Code that resets state for a new connection or run: is every field the
+  constructor sets either reset or kept on purpose? Check against the field
+  list, not memory.
+- A flag that limits a log line to once per streak: is it cleared on every
+  path that ends the streak, not only the usual one?
 - For each cleanup path: what if an interruption lands between two lines (log
   lines included), or comes twice? Is everything that needs cleaning up started inside the `try`
   that cleans it up?
@@ -70,7 +75,7 @@ takeaway applies to reviews, it's added here as a question.
 
 - "Only", "never", "always": what exactly does it apply to? If it's a rule
   about the code, is there a fitness function, and does it read at least one
-  real file?
+  real file? Is each form its scanner handles exercised by a test?
 - A decision that makes an exception to an older ADR: is the older ADR's
   status line marked?
 - Does every term in a new name or comment appear in the glossary, even one
@@ -79,6 +84,9 @@ takeaway applies to reviews, it's added here as a question.
 - Does a name, comment or log message name a raw input (a key) where the
   code receives a signal or command?
 - Does each log message's stated cause hold on every path that reaches it?
+- A tool or program whose job is one outcome (a stop, a rescue, a pass): does
+  it report success only when that outcome happened, through its exit code
+  as well as its message?
 - New tests: are they proven by bug planting
   ([coding style](docs/coding-style.md))?
 

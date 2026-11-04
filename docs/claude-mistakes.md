@@ -27,14 +27,14 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 3 | 10 |
-| safety design | 3 | 8 |
+| design | 3 | 12 |
+| safety design | 3 | 12 |
 | recommendation | 7 | 3 |
 | environment | 3 | 5 |
-| communication | 5 | 4 |
-| testing | 0 | 3 |
-| process | 1 | 6 |
-| **Total** | **22** | **39** |
+| communication | 5 | 6 |
+| testing | 0 | 6 |
+| process | 1 | 8 |
+| **Total** | **22** | **52** |
 
 Of the 22 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 16. So far, 7 of the 10 recommendation
@@ -420,6 +420,166 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-03: Docstrings that a change left behind
+
+- **What happened:** after ADR-0038 and ADR-0039, the `DroneInterface`
+  docstrings still said `disconnect()` always leaves the drone on the
+  ground and `hover()` always holds the position. The failsafe program's
+  `main()` still said its exit code meant "the failsafe landed the drone",
+  after the first review had fixed the same claim elsewhere. A test
+  docstring credited `judge()` with the adapter's "unsure counts as
+  flying". `_close_radio_link_only` said it did "the rest of" cflib's
+  `close_link()`, though it skips three steps. The first review had fixed
+  six more of the same kind (in `start_up.py`, the adapter and the safety
+  layer).
+- **Caught at:** the end-of-run reviews of the next-up run (pull request
+  #8), the second one by the fresh-context read.
+- **Kind:** communication.
+- **Takeaway:** when a decision changes what a function does, search for
+  every docstring that describes it, the interface's included, and fix a
+  claim everywhere it was copied, not only where it was found.
+
+### 2026-11-03: An emergency stop that said "not delivered" when it may have been
+
+- **What happened:** `tools/emergency_stop.py` printed "the radio did not
+  deliver the emergency stop" whenever the stop wasn't confirmed, also when
+  the radio took every packet and only reported a link error on the way.
+- **Caught at:** the second end-of-run review of pull request #8.
+- **Kind:** communication.
+- **Takeaway:** a failure message names every way to reach it (REVIEW.md:
+  the stated cause holds on every path).
+
+### 2026-11-03: A once-per-streak log line whose streak never ended
+
+- **What happened:** the adapter's "Hover ignored" line (ADR-0039) was
+  limited to once per streak, but the flag was cleared only by `connect()`
+  and `take_off()`, not by a hover that went through. After the first
+  ignored hover, a taken-over flight, which never sends a take-off, would
+  never log another.
+- **Caught at:** the second end-of-run review of pull request #8, reproduced
+  with a script.
+- **Kind:** design.
+- **Takeaway:** a once-per-streak flag is cleared on every path that ends
+  the streak (now a REVIEW.md question).
+
+### 2026-11-03: A new connection that kept the last one's landing
+
+- **What happened:** `connect()` started resetting per-connection state for
+  ADR-0038 (airborne, the drone status, the telemetry) but not the landing
+  phase. A landing left half-done by a failed disconnect resumed on the next
+  connection's first snapshot: a motor stop for a taken-over flying drone,
+  or a `go_to` that spins up an armed drone on the floor (ADR-0039's
+  "Never"). Only reachable when one adapter connects twice, which only the
+  tests do today.
+- **Caught at:** the second end-of-run review of pull request #8, reproduced
+  with the tests' fake cflib.
+- **Kind:** safety design.
+- **Takeaway:** state reset for a new connection is checked against the
+  constructor's field list (now a REVIEW.md question).
+
+### 2026-11-03: Fitness functions with blind spots
+
+- **What happened:** the scanner behind ADR-0041's fitness function handled
+  four import forms, but tests exercised only one: planting a bug in the
+  others left every test green, so a game program importing the fault as
+  `from crazyflie_behavior.programs import failsafe_fault` would have
+  passed. And ADR-0038's rule that only the rescue landing may take over a
+  flight had no fitness function at all, though `make_drone()` offers the
+  setting to every program.
+- **Caught at:** the first end-of-run review of pull request #8 (left
+  unfinished), fixed after the second.
+- **Kind:** testing.
+- **Takeaway:** a fitness function's scanner gets a test for each form it
+  handles, on a made-up file; every structural "only" in a new ADR gets its
+  fitness function in the same change.
+
+### 2026-11-03: Two constants that must agree, with no test between them
+
+- **What happened:** the failsafe test's `FAULT_TIME_LIMIT` (10 s) must
+  exceed the wrapper's `HOVER_DURATION_BEFORE_FAULT` (3 s), or the test
+  lands before the fault is injected. Nothing related them, and two
+  docstrings copied "3 s".
+- **Caught at:** the first end-of-run review of pull request #8, fixed after
+  the second.
+- **Kind:** testing.
+- **Takeaway:** when one placeholder only works relative to another, a test
+  says so, and the docstrings point to the constant instead of copying it.
+
+### 2026-11-03: A taken-over flight given the take-off grace period
+
+- **What happened:** taking over a flight (ADR-0038) started the 1 s take-off
+  grace period without reading the status, so a rescue run on an armed
+  drone already on the floor would send a floor-height `go_to` (ADR-0039's
+  "Never").
+- **Caught at:** the first end-of-run review of pull request #8.
+- **Kind:** safety design.
+- **Takeaway:** a new way into a state ("as if we had sent the take-off")
+  is checked against every rule that state's usual entry carries.
+
+### 2026-11-03: An emergency stop that said "Sent." when nothing was
+
+- **What happened:** `tools/emergency_stop.py` ignored `send_packet()`'s
+  result and printed "Sent." after about 38 s of silence when nothing
+  reached the drone (reproduced against cflib's real `RadioDriver`).
+- **Caught at:** the first end-of-run review of pull request #8.
+- **Kind:** safety design.
+- **Takeaway:** a tool whose job is one outcome reports success only when
+  that outcome happened (now a REVIEW.md question).
+
+### 2026-11-03: A rescue landing that exited 0 when the rescue failed
+
+- **What happened:** the rescue landing program returned exit code 0 after
+  a refused landing or its time limit.
+- **Caught at:** the first end-of-run review of pull request #8.
+- **Kind:** design.
+- **Takeaway:** the same as the emergency stop's: the exit code is part of
+  the report.
+
+### 2026-11-03: A mitigation in ADR-0044 that the code didn't provide
+
+- **What happened:** ADR-0044 said "nothing in our code sends it a
+  setpoint" during the Bench, but `disconnect()` on a drone on the floor
+  makes cflib send a zero-thrust setpoint, and `connect()` resets the
+  estimate.
+- **Caught at:** the first end-of-run review of pull request #8.
+- **Kind:** safety design.
+- **Takeaway:** a safety claim in an ADR is checked against the code path
+  it describes, end to end, before it's recorded.
+
+### 2026-11-03: ADR-0043 described the old field-testing README wrongly
+
+- **What happened:** ADR-0043 said the old README's gate and simulator rule
+  were different from what it said (the gate belonged to each stage; the
+  simulator was required except for Bench and Hover).
+- **Caught at:** the first end-of-run review of pull request #8.
+- **Kind:** process.
+- **Takeaway:** when an ADR describes what it replaces, quote or re-read
+  the old text rather than summarizing it from memory.
+
+### 2026-11-03: A test fake that streamed only once
+
+- **What happened:** the first `FakeCflib` sent each log block's sample once,
+  but `connect()` swaps the telemetry buffer after the estimate reset and
+  relies on the drone streaming on, so the fake couldn't model it.
+- **Caught at:** while building it.
+- **Kind:** testing.
+- **Takeaway:** REVIEW.md's "how does the real adapter differ from the
+  fake?" applies to timing too: a real drone keeps streaming.
+
+### 2026-11-03: New vocabulary in code names before proposing it
+
+- **What happened:** the unattended run named code with terms the glossary
+  lacks (Failsafe test, Forged low battery drone, Take over, Streak, and
+  others), then proposed them in the pull request afterwards.
+- **Why it was wrong:** CLAUDE.md says to propose a term before introducing
+  it in code.
+- **Caught at:** the first end-of-run review of pull request #8.
+- **Kind:** process.
+- **Takeaway:** in an unattended run, propose the term in the pull request
+  and use a plain description in code until it's accepted, or record the
+  name as a choice for Joe to confirm before using it.
+
 
 ### 2026-11-02: A work-log row raised without its total
 

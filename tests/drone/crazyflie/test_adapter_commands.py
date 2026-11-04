@@ -5,20 +5,23 @@ Each test checks what the adapter would send to a real drone.
 
 # pyright: reportPrivateUsage=false
 
+import logging
 import math
 from unittest.mock import MagicMock
 
 import pytest
 
+from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
 from crazyflie_behavior.drone.crazyflie.adapter import (
     DEFAULT_YAW_RAD,
     HOVER_SETTLE_DURATION,
     MIN_MOVE_DURATION,
+    TAKE_OFF_STATUS_GRACE,
     VERTICAL_SPEED,
     CrazyflieAdapter,
 )
 from crazyflie_behavior.geometry import Vector3
-from crazyflie_behavior.snapshot import RangeDirection, RangeReading
+from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
 from crazyflie_behavior.timing.clock import SimClock
 
 
@@ -73,6 +76,7 @@ def test_move_to_rejects_a_non_positive_duration(adapter: CrazyflieAdapter) -> N
 
 
 def test_hover_holds_the_latest_position_estimate(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
+    adapter.take_off(1.0)
     adapter._telemetry.write_position_estimate(Vector3(0.5, -0.25, 1.0), None)
 
     adapter.hover()
@@ -83,11 +87,97 @@ def test_hover_holds_the_latest_position_estimate(adapter: CrazyflieAdapter, fak
 
 
 def test_hover_without_an_estimate_holds_where_it_is(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
+    adapter.take_off(1.0)
+
     adapter.hover()
 
     fake_link.cf.high_level_commander.go_to.assert_called_once_with(
         0.0, 0.0, 0.0, DEFAULT_YAW_RAD, HOVER_SETTLE_DURATION, relative=True
     )
+
+
+ON_THE_FLOOR = DroneStatus(is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False)
+FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False)
+
+
+def test_hover_on_the_floor_does_nothing(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
+    # A go_to at floor height would spin up an armed drone's motors (ADR-0039).
+    adapter.hover()
+
+    assert call_names(fake_link) == []
+
+
+def test_hover_after_our_own_motor_stop_does_nothing_though_the_status_still_says_flying(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    adapter.take_off(1.0)
+    adapter.emergency_stop()
+    fake_link.reset_mock()
+    adapter._telemetry.write_drone_status(FLYING, None)  # the supervisor says flying for 2 s after the stop
+
+    adapter.hover()
+
+    assert call_names(fake_link) == []
+
+
+def test_hover_after_a_take_off_that_never_flew_does_nothing(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    adapter.take_off(1.0)
+    clock.advance(TAKE_OFF_STATUS_GRACE + 0.5)
+    adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)  # fresh, and says on the floor
+    fake_link.reset_mock()
+
+    adapter.hover()
+
+    assert call_names(fake_link) == []
+
+
+def test_hover_right_after_a_take_off_still_flies_before_the_status_shows_flying(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    adapter.take_off(1.0)
+    adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)
+
+    adapter.hover()
+
+    fake_link.cf.high_level_commander.go_to.assert_called_once()
+
+
+def test_hover_on_the_floor_is_logged_once_per_streak_at_info_level(
+    adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+        adapter.hover()
+        adapter.hover()
+        adapter.hover()
+        adapter.take_off(1.0)  # flying: the streak is over
+        adapter.emergency_stop()
+        adapter.hover()  # a new streak
+
+    ignored = [record for record in caplog.records if "Hover ignored" in record.getMessage()]
+    assert len(ignored) == 2
+    assert {record.levelno for record in ignored} == {logging.INFO}
+
+
+def test_a_hover_that_goes_through_ends_the_streak_of_ignored_ones(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    # After the rescue landing takes over a flight, no take-off is ever sent, so a hover that goes
+    # through is the only thing that can end a streak of ignored ones (ADR-0038, ADR-0039).
+    adapter.take_off(1.0)
+    clock.advance(TAKE_OFF_STATUS_GRACE + 0.5)
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+        adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)
+        adapter.hover()  # ignored: the first streak
+        adapter._telemetry.write_drone_status(FLYING, None)
+        adapter.hover()  # goes through
+        adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)
+        adapter.hover()  # ignored: a new streak
+
+    fake_link.cf.high_level_commander.go_to.assert_called_once()
+    ignored = [record for record in caplog.records if "Hover ignored" in record.getMessage()]
+    assert len(ignored) == 2
 
 
 def test_set_velocity_sends_the_yaw_rate_in_degrees(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
@@ -99,6 +189,7 @@ def test_set_velocity_sends_the_yaw_rate_in_degrees(adapter: CrazyflieAdapter, f
 def test_after_steering_mode_a_high_level_command_first_hands_control_back(
     adapter: CrazyflieAdapter, fake_link: MagicMock
 ) -> None:
+    adapter.take_off(1.0)
     adapter.set_velocity(Vector3(0.2, 0.0, 0.0))
 
     adapter.hover()

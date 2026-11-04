@@ -1,8 +1,7 @@
 # YYYY-MM-DD-first-flight-1-failsafe-low
 
-> **DRAFT.** Date and commit are pending. The failsafe program isn't built
-> yet (next-up.md, item 5). Nothing below the pre-flight section has been
-> filled in.
+> **DRAFT.** Date and commit are pending. Nothing below the pre-flight
+> section has been filled in.
 
 - **Session:** [First flight 1](../sessions/YYYY-MM-DD-first-flight-1.md)
 - **Test:** Failsafe low (safety)
