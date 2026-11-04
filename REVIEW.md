@@ -94,6 +94,9 @@ takeaway applies to reviews, it's added here as a question.
 - Does each log message's stated cause hold on every path that reaches it?
 - Is every new log or console message one short sentence an operator could
   read mid-flight, with the reasons left in a comment or the ADR?
+- Does new wording name a milestone, quote a constant's value, or describe
+  something temporary without `TODO:`?
+- Is any new constant a copy of a value that follows from another one?
 - A docstring, comment or message that describes a safety judgment: which
   way does the judgment fail when unsure, and does the wording say the same?
 - Review fixes are new code: did anything review the lines a fix commit
