@@ -85,7 +85,8 @@ def main(arguments: list[str] | None = None) -> int:
         return 0
     print(
         "NOT CONFIRMED: the radio didn't take every packet, or it reported a link error. "
-        "Assume the drone is still flying. Run it again, or move closer to the drone.",
+        "Assume the drone is still flying. Run it again, or bring the Crazyradio closer, "
+        "keeping clear of the drone.",
         file=sys.stderr,
     )
     return 1

@@ -122,6 +122,7 @@ def test_main_says_not_confirmed_and_exits_1_when_nothing_was_delivered(
     error_output = capsys.readouterr().err
     assert "NOT CONFIRMED" in error_output
     assert "Run it again" in error_output
+    assert "keeping clear of the drone" in error_output
 
 
 def test_main_names_both_causes_of_a_stop_that_is_not_confirmed(
