@@ -632,9 +632,10 @@ class CrazyflieAdapter(DroneInterface):
             f"{FIRST_TELEMETRY_TIME_LIMIT:g} s. Still missing: {', '.join(missing_values)}. "
         )
         if self._take_over_flight and ("position estimate" in missing_values or "velocity estimate" in missing_values):
-            # The status wait already got a state packet, and the estimates come in it too, so
-            # none of them was finite (ADR-0045). A take-over's drone may be in the air or on the
-            # floor: in the air, it can't follow our landings, which are position commands.
+            # The status wait already got a state packet, which carries the estimates too, so
+            # every packet received had a value that isn't finite for the missing estimate
+            # (ADR-0045). A take-over's drone may be in the air or on the floor: in the air, it
+            # can't follow our landings, which are position commands.
             return message + (
                 "If the drone is in the air, it can't land under control without its estimate: "
                 "use tools/emergency_stop.py, with something soft under the drone first."
@@ -700,9 +701,10 @@ class CrazyflieAdapter(DroneInterface):
                 logger.info("Finite estimates are back after %d dropped state packets", self._dropped_state_count)
                 self._dropped_state_count = 0
             return
-        # An estimate that isn't finite is dropped, so the last finite one stays
-        # and goes stale: the safety pre-check then lands the drone, and the
-        # landing has a real position to go to (ADR-0030).
+        # An estimate that isn't finite is dropped, so any earlier finite one stays
+        # and goes stale, and the safety pre-check fails on it (ADR-0030). The
+        # drone's own estimate is then NaN, so it can't follow the failsafe's
+        # landing either (ADR-0045, backlog #45).
         if position.is_finite():
             self._telemetry.write_position_estimate(position, drone_time)
         if velocity.is_finite():
