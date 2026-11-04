@@ -107,14 +107,14 @@ def _staleness(checked: _CheckedValue, now: float) -> str | None:
 
 
 def judge(command_request: CommandRequest, snapshot: Snapshot) -> Verdict:
-    """Approve or refuse a command request by First flight's state rules (ADR-0030, ADR-0039).
+    """Approve or refuse a behavior's command request (ADR-0030, ADR-0039).
 
-    Arming and taking off use the drone status, never what was sent: a command
-    the drone refused leaves its status unchanged. Hover and land are approved
-    whatever the status says (even a missing one): only the adapter knows
-    whether the drone may be flying, and it does nothing, or just stops the
-    motors, for a drone on the floor (ADR-0039).
+    Arm and take off are judged on the drone status. Hover and land are
+    always approved, and the adapter decides whether to act on them.
     """
+    # The drone status lags: it says "not flying" just after a take-off, and
+    # "flying" for a while after the motors stop. Only the adapter, which
+    # knows what it sent, can tell whether the drone may be flying.
     if isinstance(command_request, Hover | Land):
         return Verdict.approved()
     status = snapshot.drone_status
