@@ -63,6 +63,8 @@ takeaway applies to reviews, it's added here as a question.
 
 - A wait with a deadline: what happens just before and just after it, and
   what does a failing cleanup do to the error meant to be shown?
+- A wait whose error message reads live state: does the message use the
+  result of the check that timed out, not a fresh read?
 - A loop: check the first tick, the last tick and the time between ticks, not
   just the middle.
 - A mechanism such as the interrupt signal or a timeout: what does it do by

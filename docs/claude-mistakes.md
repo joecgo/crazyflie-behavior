@@ -27,18 +27,18 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 3 | 12 |
+| design | 3 | 13 |
 | safety design | 4 | 12 |
 | recommendation | 7 | 4 |
 | environment | 3 | 5 |
-| communication | 5 | 7 |
+| communication | 5 | 8 |
 | testing | 0 | 6 |
 | process | 2 | 10 |
-| **Total** | **24** | **56** |
+| **Total** | **24** | **58** |
 
 Of the 24 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 18. So far, 7 of the 11 recommendation
-mistakes needed me, and 5 of the 12 communication mistakes. Claude's own reviews, planted bugs and
+mistakes needed me, and 5 of the 13 communication mistakes. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
 pattern: an interruption landing between two lines of cleanup code (five
@@ -455,6 +455,35 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-04: A time-limit message that read the telemetry again after the check
+
+- **What happened:** for ADR-0045, `_first_telemetry_time_limit_message`
+  called `missing_values()` again after the wait's last check. A value
+  arriving in between could make the message say "Still missing: ." or, on a
+  take-over, switch the advice from the emergency stop to "check the range".
+  The old message had the same race, but then it only chose wording.
+- **How it was caught:** Claude, in `/project-review` (the code review). Fixed:
+  the message now uses the list from the check that timed out, with a test
+  proven by bug planting.
+- **Kind:** design.
+- **Takeaway:** a wait's error message describes the state that timed out:
+  hand it the result of the last check, not a fresh read. Now a question in
+  the review checklist.
+
+### 2026-11-04: A take-over message that assumed the drone was flying
+
+- **What happened:** the ADR-0045 message said "The drone can't land under
+  control", and its comment and a test comment said the drone was flying.
+  But a take-over also accepts a drone on the floor (ADR-0039). The
+  dropped-estimate warning said "the last finite one stays", when on that
+  path none may ever have arrived.
+- **How it was caught:** Claude, in `/project-review`. Fixed: the message says
+  "If the drone is in the air", and the warning says "any earlier finite one".
+- **Kind:** communication.
+- **Takeaway:** the checklist's "Does each log message's stated cause hold on
+  every path?" already asks this; follow the paths into the case the
+  message's author didn't picture.
 
 ### 2026-11-04: A "known risk" that cflib's own guard rules out
 
