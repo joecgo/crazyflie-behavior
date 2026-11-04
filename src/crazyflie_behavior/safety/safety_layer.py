@@ -48,13 +48,6 @@ LOW_BATTERY_VOLTAGE = 3.4
 3.2 V; at 3.0 V for 5 s it shuts the drone down). A battery reads lower under
 load, so this may land a little early, which is the safe direction."""
 # ------------------------------------------------------------------------------
-MAX_NEGATIVE_AGE = 0.05
-"""Seconds: how far after the tick's time a value may have arrived and still be normal.
-It's one tick period, 1 / `TICK_RATE` (20 Hz, ADR-0023, ADR-0042). A value that arrived
-just after the tick's time has a slightly negative age and counts as fresh. A value
-that arrived more than this after it, such as one stamped on the wrong clock, is
-warned about but still counts as fresh. Copied, not imported, so the safety layer
-doesn't depend on the loop package: `test_safety_layer.py` keeps the two equal."""
 
 
 class _CheckedValue(NamedTuple):
@@ -75,24 +68,10 @@ def _checked_values(snapshot: Snapshot) -> list[_CheckedValue]:
     ]
 
 
-def values_from_the_future(snapshot: Snapshot) -> dict[str, float]:
-    """The checked values that arrived more than `MAX_NEGATIVE_AGE` after the tick's time (ADR-0042).
-
-    Maps each one's name to its age, which is negative. They still count as fresh.
-    """
-    ages = {
-        checked.name: checked.stamped.age(snapshot.time)
-        for checked in _checked_values(snapshot)
-        if checked.stamped is not None
-    }
-    return {name: age for name, age in ages.items() if age < -MAX_NEGATIVE_AGE}
-
-
 def safety_pre_check(snapshot: Snapshot) -> list[str]:
     """The safety pre-check (ADR-0025): why it isn't safe to fly on this snapshot.
 
-    An empty list means it passed. Ages count from the tick's time. A value
-    that arrived just after it has a slightly negative age, which is fresh.
+    An empty list means it passed. Ages count from the snapshot's time (ADR-0046).
     """
     now = snapshot.time
     failures = [
@@ -173,9 +152,6 @@ class SafetyLayer:
         self._movement_replaced_this_tick = False
         self._movement_replaced_last_tick = False
         self._pre_check_has_failed = False
-        self._values_from_the_future: set[str] = set()
-        """The values whose age is below `-MAX_NEGATIVE_AGE` on the latest tick: a warning
-        comes once per streak per value (ADR-0042)."""
 
     @property
     def pre_check_has_failed(self) -> bool:
@@ -192,7 +168,6 @@ class SafetyLayer:
         self._snapshot = snapshot
         if self._pre_check_has_failed:
             return False
-        self._warn_about_values_from_the_future(snapshot)
         failures = safety_pre_check(snapshot)
         if not failures:
             return True
@@ -200,22 +175,6 @@ class SafetyLayer:
         self._movement = Land()
         logger.warning("Safety pre-check failed: %s. Landing.", "; ".join(failures))
         return False
-
-    def _warn_about_values_from_the_future(self, snapshot: Snapshot) -> None:
-        """Warn, once per streak per value, about a value that arrived long after the tick's time (ADR-0042).
-
-        The warning never fails the pre-check: the value still counts as fresh.
-        """
-        ages = values_from_the_future(snapshot)
-        for name, age in ages.items():
-            if name not in self._values_from_the_future:
-                logger.warning(
-                    "The %s arrived %.2f s after the tick's time, more than one tick period: a probable "
-                    "clock bug (mixed drone and PC time?). It still counts as fresh. Warned once per streak.",
-                    name,
-                    -age,
-                )
-        self._values_from_the_future = set(ages)
 
     def request(self, command_request: CommandRequest) -> Verdict:
         """Judge a behavior's command request at once (ADR-0025).

@@ -30,7 +30,7 @@ class BehaviorTickStep(TickStep):
         self._behavior = behavior
 
     def run(self, time: float, dt: float) -> bool:
-        snapshot = self._drone.take_snapshot(time, dt)
+        snapshot = self._drone.take_snapshot(dt)
         logger.debug("Snapshot: %s", snapshot)
         behavior_is_done = False
         if self._safety_layer.pre_check(snapshot):

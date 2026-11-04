@@ -62,7 +62,7 @@ def the_log_file_text(log_directory: Path) -> str:
 
 
 def assert_landed_with_the_motors_off(mock_adapter: MockAdapter) -> None:
-    snapshot = mock_adapter.take_snapshot(0.0, 0.0)
+    snapshot = mock_adapter.take_snapshot(0.0)
     assert snapshot.drone_status is not None
     assert snapshot.position_estimate is not None
     assert not snapshot.drone_status.value.is_flying

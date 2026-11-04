@@ -1,8 +1,8 @@
 """The clock interface and its real and simulated implementations (ADR-0009).
 
 The tick loop and adapters receive a clock instead of reading the computer's
-time directly. Behaviors never hold a clock, and the minimal safety layer
-doesn't either: they use the tick's time in the snapshot (ADR-0030).
+time directly. Behaviors never hold a clock, and the safety layer doesn't
+either: they use the snapshot's time (ADR-0030, ADR-0046).
 """
 
 import time

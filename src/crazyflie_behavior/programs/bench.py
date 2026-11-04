@@ -36,7 +36,7 @@ class BenchTickStep(TickStep):
         self._next_summary_time: float | None = None
 
     def run(self, time: float, dt: float) -> bool:
-        snapshot = self._drone.take_snapshot(time, dt)
+        snapshot = self._drone.take_snapshot(dt)
         logger.debug("Snapshot: %s", snapshot)
         if self._next_summary_time is None or time >= self._next_summary_time:
             logger.info("%s", snapshot_summary(snapshot))

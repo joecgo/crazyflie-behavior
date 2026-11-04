@@ -32,7 +32,8 @@ class TickStep(ABC):
         """Do one tick's work. Return True when the job is done and the loop should stop.
 
         `time` is when this tick started, in seconds. `dt` is the seconds since
-        the previous tick started, or 0.0 on the first tick.
+        the previous tick started, or 0.0 on the first tick. `time` is the
+        loop's own: compare ages with `snapshot.time` (ADR-0046).
         """
 
 

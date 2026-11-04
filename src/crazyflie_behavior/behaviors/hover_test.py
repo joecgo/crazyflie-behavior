@@ -57,7 +57,7 @@ class HoverTest(Behavior):
         self._hover_duration = hover_duration
         self._step = _Step.START
         self._step_started_at = 0.0
-        """The tick time the current step started."""
+        """The snapshot time the current step started."""
 
     def tick(self, snapshot: Snapshot, ask_safety_layer: Callable[[CommandRequest], Verdict]) -> bool:
         status = snapshot.drone_status

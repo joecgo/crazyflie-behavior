@@ -64,7 +64,7 @@ class FailsafeTest(Behavior):
         self._take_off_height = take_off_height
         self._step = _Step.START
         self._step_started_at = 0.0
-        """The tick time the current step started."""
+        """The snapshot time the current step started."""
         self._has_failed = False
 
     @property

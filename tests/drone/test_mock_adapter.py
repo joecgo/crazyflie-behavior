@@ -13,7 +13,7 @@ from crazyflie_behavior.timing.clock import SimClock
 
 
 def snapshot_now(drone: MockAdapter, clock: SimClock, dt: float = 0.0) -> Snapshot:
-    return drone.take_snapshot(clock.now(), dt)
+    return drone.take_snapshot(dt)
 
 
 def position_of(snapshot: Snapshot) -> Vector3:

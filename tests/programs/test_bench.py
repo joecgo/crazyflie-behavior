@@ -96,7 +96,7 @@ def test_the_summary_shows_each_value_and_how_old_it_is() -> None:
     drone.stop_telemetry()  # nothing more arrives
     clock.advance(0.125)
 
-    summary = snapshot_summary(drone.take_snapshot(clock.now(), 0.25))
+    summary = snapshot_summary(drone.take_snapshot(0.25))
 
     assert "position 0.00, 0.00, 0.00 m (250 ms old)" in summary
     assert "velocity 0.00, 0.00, 0.00 m/s (250 ms old)" in summary
@@ -128,7 +128,7 @@ def test_the_summary_says_when_a_value_has_not_arrived_yet() -> None:
 def test_the_summary_covers_every_range_direction() -> None:
     clock = SimClock()
 
-    summary = snapshot_summary(connected_mock(clock).take_snapshot(clock.now(), 0.0))
+    summary = snapshot_summary(connected_mock(clock).take_snapshot(0.0))
 
     for direction in RangeDirection:
         assert f"| {direction.value} out of range" in summary
@@ -139,7 +139,7 @@ def test_the_summary_marks_an_invalid_range_reading() -> None:
     drone = connected_mock(clock)
     drone.set_range_reading(RangeDirection.UP, RangeReading.invalid())
 
-    summary = snapshot_summary(drone.take_snapshot(clock.now(), 0.0))
+    summary = snapshot_summary(drone.take_snapshot(0.0))
 
     assert "up invalid" in summary
 

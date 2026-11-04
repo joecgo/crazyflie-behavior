@@ -343,8 +343,8 @@ class CrazyflieAdapter(DroneInterface):
         self._is_streaming_velocity = False
         self._cancel_landing()
 
-    def take_snapshot(self, time: float, dt: float) -> Snapshot:
-        snapshot = self._telemetry.snapshot(time, dt)
+    def take_snapshot(self, dt: float) -> Snapshot:
+        snapshot = self._telemetry.snapshot(dt)
         self._finish_landing(snapshot)
         return snapshot
 
@@ -533,7 +533,7 @@ class CrazyflieAdapter(DroneInterface):
                 return
             self._clock.sleep_until(self._start_landing())
         while self._landing_phase is not _LandingPhase.NOT_LANDING:
-            self._finish_landing(self._telemetry.snapshot(self._clock.now(), 0.0))
+            self._finish_landing(self._telemetry.snapshot(0.0))
             if self._landing_phase is not _LandingPhase.NOT_LANDING:
                 self._clock.sleep_until(self._clock.now() + TOUCHDOWN_POLL_PERIOD)
 

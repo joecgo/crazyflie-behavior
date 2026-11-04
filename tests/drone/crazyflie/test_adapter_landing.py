@@ -85,7 +85,7 @@ def tick(adapter: CrazyflieAdapter, clock: SimClock, down: RangeReading | None =
     clock.advance(TICK)
     if down is not None:
         read_down(adapter, down)
-    adapter.take_snapshot(clock.now(), TICK)
+    adapter.take_snapshot(TICK)
 
 
 def tick_for(adapter: CrazyflieAdapter, clock: SimClock, seconds: float, down: RangeReading) -> None:

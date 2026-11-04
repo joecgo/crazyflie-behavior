@@ -26,9 +26,9 @@ class RecordingDrone(MockAdapter):
         super().__init__(clock)
         self._events = events
 
-    def take_snapshot(self, time: float, dt: float) -> Snapshot:
+    def take_snapshot(self, dt: float) -> Snapshot:
         self._events.append("snapshot")
-        return super().take_snapshot(time, dt)
+        return super().take_snapshot(dt)
 
 
 class RecordingSafetyLayer(SafetyLayer):

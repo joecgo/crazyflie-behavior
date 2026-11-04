@@ -215,7 +215,7 @@ def test_emergency_stop_cuts_the_motors_and_cancels_a_landing(
     adapter.emergency_stop()
     clock.advance(30.0)
     adapter._telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(0.02)}, None)
-    adapter.take_snapshot(clock.now(), 0.05)
+    adapter.take_snapshot(0.05)
 
     fake_link.cf.supervisor.send_emergency_stop.assert_called_once()
     fake_link.cf.high_level_commander.stop.assert_not_called()  # no landing left to finish

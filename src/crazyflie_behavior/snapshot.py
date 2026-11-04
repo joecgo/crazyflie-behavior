@@ -30,12 +30,9 @@ class Stamped[T]:
     source doesn't provide a timestamp."""
 
     def age(self, now: float) -> float:
-        """Seconds since this value arrived on the PC.
+        """Seconds since this value arrived on the PC, never negative in a snapshot (ADR-0046).
 
-        Not clamped: it can be slightly negative (a few milliseconds), meaning
-        the value arrived just after `now`, when the tick's time was read
-        before the snapshot was copied (ADR-0042). That counts as fresh. Test
-        staleness as `age > limit`, and never divide by an age.
+        It can be exactly 0, so never divide by an age. Test staleness as `age > limit`.
         """
         return now - self.arrival_time
 
@@ -121,8 +118,8 @@ class Snapshot:
     """
 
     time: float
-    """The tick's time in seconds. Behaviors read time here, never from a clock
-    (ADR-0009)."""
+    """When the snapshot was taken, in seconds, read after its values are copied (ADR-0046).
+    Behaviors read time here, never from a clock (ADR-0009)."""
     dt: float
     """Seconds since the previous tick."""
     position_estimate: Stamped[Vector3] | None

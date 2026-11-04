@@ -9,7 +9,6 @@ import pytest
 
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.geometry import Vector3
-from crazyflie_behavior.loop.tick_loop import TICK_RATE
 from crazyflie_behavior.safety.requests import (
     Arm,
     CommandRequest,
@@ -22,12 +21,10 @@ from crazyflie_behavior.safety.requests import (
 from crazyflie_behavior.safety.safety_layer import (
     BATTERY_STALE_AFTER,
     LOW_BATTERY_VOLTAGE,
-    MAX_NEGATIVE_AGE,
     STALE_AFTER,
     SafetyLayer,
     judge,
     safety_pre_check,
-    values_from_the_future,
 )
 from crazyflie_behavior.snapshot import (
     DroneStatus,
@@ -188,71 +185,6 @@ def test_every_failure_is_reported_not_just_the_first() -> None:
     failures = safety_pre_check(snapshot(position_age=1.0, battery_voltage=3.0))
 
     assert len(failures) == 2
-
-
-# --- Values from the future (ADR-0042) ---------------------------------------------
-
-
-def test_the_largest_negative_age_that_counts_as_normal_is_one_tick_period() -> None:
-    # A copy of the tick period, not an import (the safety layer doesn't depend on the loop package).
-    assert pytest.approx(1.0 / TICK_RATE) == MAX_NEGATIVE_AGE
-
-
-def test_a_slightly_negative_age_passes_the_pre_check_without_a_warning(caplog: pytest.LogCaptureFixture) -> None:
-    safety_layer = SafetyLayer(RecordingDrone())
-
-    with caplog.at_level(logging.WARNING, logger=SAFETY_LOGGER):
-        results = [safety_layer.pre_check(snapshot(FLYING, position_age=-0.01)) for _ in range(3)]
-
-    assert results == [True, True, True]
-    assert warnings_in(caplog) == []
-
-
-def test_the_warning_starts_just_past_one_tick_period_not_just_inside_it(caplog: pytest.LogCaptureFixture) -> None:
-    safety_layer = SafetyLayer(RecordingDrone())
-
-    with caplog.at_level(logging.WARNING, logger=SAFETY_LOGGER):
-        safety_layer.pre_check(snapshot(FLYING, position_age=-MAX_NEGATIVE_AGE + 0.01))
-        assert warnings_in(caplog) == []
-        safety_layer.pre_check(snapshot(FLYING, position_age=-MAX_NEGATIVE_AGE - 0.01))
-
-    assert len(warnings_in(caplog)) == 1
-
-
-def test_a_large_negative_age_passes_the_pre_check_and_warns_once_per_streak(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    safety_layer = SafetyLayer(RecordingDrone())
-
-    with caplog.at_level(logging.WARNING, logger=SAFETY_LOGGER):
-        streak = [safety_layer.pre_check(snapshot(FLYING, position_age=-1.0)) for _ in range(4)]
-        assert len(warnings_in(caplog)) == 1
-        safety_layer.pre_check(snapshot(FLYING))  # a normal age ends the streak
-        safety_layer.pre_check(snapshot(FLYING, position_age=-1.0))  # and a new one starts
-
-    assert streak == [True, True, True, True]  # the warning never fails the pre-check
-    assert not safety_layer.pre_check_has_failed
-    assert len(warnings_in(caplog)) == 2
-    assert "position estimate arrived 1.00 s after the tick's time" in warnings_in(caplog)[0]
-
-
-def test_each_value_has_its_own_streak(caplog: pytest.LogCaptureFixture) -> None:
-    safety_layer = SafetyLayer(RecordingDrone())
-
-    with caplog.at_level(logging.WARNING, logger=SAFETY_LOGGER):
-        safety_layer.pre_check(snapshot(FLYING, position_age=-1.0))
-        safety_layer.pre_check(snapshot(FLYING, position_age=-1.0, battery_age=-1.0))
-        safety_layer.pre_check(snapshot(FLYING, position_age=-1.0, battery_age=-1.0))
-
-    assert len(warnings_in(caplog)) == 2
-    assert "position estimate" in warnings_in(caplog)[0]
-    assert "battery voltage" in warnings_in(caplog)[1]
-
-
-def test_the_values_from_the_future_are_found_by_name_with_their_ages() -> None:
-    found = values_from_the_future(snapshot(FLYING, position_age=-1.0, down_age=-0.01, status_age=-0.5))
-
-    assert found == {"position estimate": pytest.approx(-1.0), "drone status": pytest.approx(-0.5)}
 
 
 # --- Judging command requests ------------------------------------------------------
