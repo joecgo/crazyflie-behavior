@@ -125,4 +125,5 @@ spec, by their names.
 |---|---|---|
 | 2026-10-22 to 2026-10-27 | `b3bc274` | All the source then (geometry, snapshot, clock, the drone interface, telemetry buffer, mock adapter, conversions, touchdown, the Crazyflie adapter) and the tests, as a spec. Led to ADR-0018 to ADR-0021 and 20 new adapter tests |
 | 2026-10-28 to 2026-11-02 | `366714a` | ADRs 0022 to 0033, the safety layer, the tick loop, behaviors, programs and the drone changes. Led to ADR-0033 and the non-finite-value rule in ADR-0030 |
-| Next | | Everything after `366714a` |
+| 2026-11-04 | `0846826` | Everything after `366714a`: `cd6e156` plus the five commits after it on this branch. The drone interface and snapshot, the safety layer, the Crazyflie adapter (ADR-0037, ADR-0038, ADR-0039, ADR-0045), the mock adapter and start-up, the failsafe and rescue landing programs and behaviors, the emergency stop tool, wording changes, and the tests as a spec. Led to ADR-0046, three coding-style rules, the glossary's *Stale value* and backlog #45(c) |
+| Next | | Everything after `0846826`, starting with this review's fix commits |
