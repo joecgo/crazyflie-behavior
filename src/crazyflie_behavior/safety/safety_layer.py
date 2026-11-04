@@ -1,4 +1,4 @@
-"""The safety layer, minimal for First flight (ADR-0030).
+"""The safety layer (ADR-0030).
 
 Each tick, the tick step calls it in this order (ADR-0025):
 
@@ -11,7 +11,7 @@ Each tick, the tick step calls it in this order (ADR-0025):
 The pre-check and the judging are plain functions of the snapshot. Only the
 SafetyLayer holds state: what it sends, and which warnings it has already given.
 
-Not built yet: the operator's "land now" and "hover" commands (ADR-0027).
+TODO: the operator's "land now" and "hover" commands aren't built yet (ADR-0027).
 Both will fail the pre-check, so behaviors are skipped and no behavior can
 override the operator. "Land now" lands like any failed check; "hover" holds
 the drone instead, so it needs a failed pre-check that doesn't end the flight
@@ -37,7 +37,7 @@ from crazyflie_behavior.snapshot import Snapshot, Stamped
 
 logger = logging.getLogger(__name__)
 
-# --- PLACEHOLDERS, NOT DECISIONS: measure at the bench (ADR-0030) -------------
+# --- PLACEHOLDERS, NOT DECISIONS: measure in the Bench field test (ADR-0030) --
 STALE_AFTER = 0.25
 """Seconds. The position estimate, drone status and down range stream every
 20 ms, so this is about 12 missed values in a row."""
@@ -48,13 +48,6 @@ LOW_BATTERY_VOLTAGE = 3.4
 3.2 V; at 3.0 V for 5 s it shuts the drone down). A battery reads lower under
 load, so this may land a little early, which is the safe direction."""
 # ------------------------------------------------------------------------------
-MAX_NEGATIVE_AGE = 0.05
-"""Seconds: how far after the tick's time a value may have arrived and still be normal.
-It's one tick period, 1 / `TICK_RATE` (20 Hz, ADR-0023, ADR-0042). A value that arrived
-just after the tick's time has a slightly negative age and counts as fresh. A value
-that arrived more than this after it, such as one stamped on the wrong clock, is
-warned about but still counts as fresh. Copied, not imported, so the safety layer
-doesn't depend on the loop package: `test_safety_layer.py` keeps the two equal."""
 
 
 class _CheckedValue(NamedTuple):
@@ -75,24 +68,10 @@ def _checked_values(snapshot: Snapshot) -> list[_CheckedValue]:
     ]
 
 
-def values_from_the_future(snapshot: Snapshot) -> dict[str, float]:
-    """The checked values that arrived more than `MAX_NEGATIVE_AGE` after the tick's time (ADR-0042).
-
-    Maps each one's name to its age, which is negative. They still count as fresh.
-    """
-    ages = {
-        checked.name: checked.stamped.age(snapshot.time)
-        for checked in _checked_values(snapshot)
-        if checked.stamped is not None
-    }
-    return {name: age for name, age in ages.items() if age < -MAX_NEGATIVE_AGE}
-
-
 def safety_pre_check(snapshot: Snapshot) -> list[str]:
     """The safety pre-check (ADR-0025): why it isn't safe to fly on this snapshot.
 
-    An empty list means it passed. Ages count from the tick's time. A value
-    that arrived just after it has a slightly negative age, which is fresh.
+    An empty list means it passed. Ages count from the snapshot's time (ADR-0046).
     """
     now = snapshot.time
     failures = [
@@ -128,14 +107,14 @@ def _staleness(checked: _CheckedValue, now: float) -> str | None:
 
 
 def judge(command_request: CommandRequest, snapshot: Snapshot) -> Verdict:
-    """Approve or refuse a command request by First flight's state rules (ADR-0030, ADR-0039).
+    """Approve or refuse a behavior's command request (ADR-0030, ADR-0039).
 
-    Arming and taking off use the drone status, never what was sent: a command
-    the drone refused leaves its status unchanged. Hover and land are approved
-    whatever the status says (even a missing one): only the adapter knows
-    whether the drone may be flying, and it does nothing, or just stops the
-    motors, for a drone on the floor (ADR-0039).
+    Arm and take off are judged on the drone status. Hover and land are
+    always approved, and the adapter decides whether to act on them.
     """
+    # The drone status lags: it says "not flying" just after a take-off, and
+    # "flying" for a while after the motors stop. Only the adapter, which
+    # knows what it sent, can tell whether the drone may be flying.
     if isinstance(command_request, Hover | Land):
         return Verdict.approved()
     status = snapshot.drone_status
@@ -153,14 +132,15 @@ def judge(command_request: CommandRequest, snapshot: Snapshot) -> Verdict:
                 return Verdict.refused("the drone is already flying")
             return Verdict.approved()
         case SetVelocity() | MoveTo():
+            # TODO: refused until the speed envelope exists (backlog #30).
             return Verdict.refused("steering mode and fast mode wait for the speed envelope (backlog #30)")
 
 
 class SafetyLayer:
     """The only code that sends commands to the drone, apart from the kill switch (ADR-0013).
 
-    Minimal for First flight (ADR-0030): one failsafe, land, and only the
-    movement slot. Once the safety pre-check fails, the flight is over: it
+    TODO: one failsafe (land) and only the movement slot so far (ADR-0030).
+    Once the safety pre-check fails, the flight is over: it
     never resumes, and every later request is refused.
     """
 
@@ -173,9 +153,6 @@ class SafetyLayer:
         self._movement_replaced_this_tick = False
         self._movement_replaced_last_tick = False
         self._pre_check_has_failed = False
-        self._values_from_the_future: set[str] = set()
-        """The values whose age is below `-MAX_NEGATIVE_AGE` on the latest tick: a warning
-        comes once per streak per value (ADR-0042)."""
 
     @property
     def pre_check_has_failed(self) -> bool:
@@ -192,7 +169,6 @@ class SafetyLayer:
         self._snapshot = snapshot
         if self._pre_check_has_failed:
             return False
-        self._warn_about_values_from_the_future(snapshot)
         failures = safety_pre_check(snapshot)
         if not failures:
             return True
@@ -200,22 +176,6 @@ class SafetyLayer:
         self._movement = Land()
         logger.warning("Safety pre-check failed: %s. Landing.", "; ".join(failures))
         return False
-
-    def _warn_about_values_from_the_future(self, snapshot: Snapshot) -> None:
-        """Warn, once per streak per value, about a value that arrived long after the tick's time (ADR-0042).
-
-        The warning never fails the pre-check: the value still counts as fresh.
-        """
-        ages = values_from_the_future(snapshot)
-        for name, age in ages.items():
-            if name not in self._values_from_the_future:
-                logger.warning(
-                    "The %s arrived %.2f s after the tick's time, more than one tick period: a probable "
-                    "clock bug (mixed drone and PC time?). It still counts as fresh. Warned once per streak.",
-                    name,
-                    -age,
-                )
-        self._values_from_the_future = set(ages)
 
     def request(self, command_request: CommandRequest) -> Verdict:
         """Judge a behavior's command request at once (ADR-0025).
@@ -238,7 +198,7 @@ class SafetyLayer:
     def send(self) -> None:
         """Send each command slot's command, if any, then empty the slots for the next tick.
 
-        Only the movement slot exists so far (ADR-0030); buzzer and LED slots come later (ADR-0025).
+        TODO: only the movement slot exists so far (ADR-0030); buzzer and LED slots come later (ADR-0025).
         """
         command, self._movement = self._movement, None
         self._movement_replaced_last_tick = self._movement_replaced_this_tick

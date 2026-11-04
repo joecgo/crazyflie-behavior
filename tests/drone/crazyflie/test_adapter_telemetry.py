@@ -60,7 +60,7 @@ def adapter(clock: SimClock) -> CrazyflieAdapter:
 
 
 def snapshot_of(adapter: CrazyflieAdapter) -> Snapshot:
-    return adapter._telemetry.snapshot(10.0, 0.05)
+    return adapter._telemetry.snapshot(0.05)
 
 
 def test_the_state_block_writes_position_velocity_and_status(adapter: CrazyflieAdapter) -> None:
@@ -101,7 +101,7 @@ def test_an_estimate_that_isnt_finite_is_dropped_and_the_last_finite_one_goes_st
 
     adapter._on_state(2500, {**STATE_SAMPLE, variable: value, "supervisor.info": float(ARMED)}, MagicMock())
 
-    snapshot = adapter._telemetry.snapshot(clock.now(), 0.05)
+    snapshot = adapter._telemetry.snapshot(0.05)
     assert snapshot.position_estimate is not None
     assert snapshot.velocity_estimate is not None
     assert snapshot.drone_status is not None

@@ -11,12 +11,6 @@ from crazyflie_behavior.snapshot import (
 )
 
 
-def test_a_value_that_arrived_after_now_has_a_negative_age_that_isnt_clamped() -> None:
-    stamped = Stamped(1.0, arrival_time=10.01, drone_time=None)
-
-    assert stamped.age(now=10.0) == pytest.approx(-0.01)
-
-
 def test_a_stamped_value_knows_its_age() -> None:
     stamped = Stamped(value=1.25, arrival_time=10.0, drone_time=3.0)
 

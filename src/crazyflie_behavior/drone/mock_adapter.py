@@ -143,12 +143,12 @@ class MockAdapter(DroneInterface):
         self._is_armed = False
         self._drop_to_ground()
 
-    def take_snapshot(self, time: float, dt: float) -> Snapshot:
+    def take_snapshot(self, dt: float) -> Snapshot:
         self._apply_setpoint_timeout()
         if self._is_flying:
             self._position = self._position + self._velocity * dt
         self._publish_state()
-        return self._telemetry.snapshot(time, dt)
+        return self._telemetry.snapshot(dt)
 
     # --- Internals --------------------------------------------------------------
 

@@ -32,6 +32,8 @@ class StandInDrone(DroneInterface):
 
     def __init__(self) -> None:
         self.calls: list[str] = []
+        self.time = 0.0
+        """The time its next snapshot is taken at, as if read from a clock."""
         self.status = FLYING
         self.height = HEIGHT
         self.battery_voltage: Stamped[float] | None = Stamped(3.9, arrival_time=0.0, drone_time=None)
@@ -66,7 +68,9 @@ class StandInDrone(DroneInterface):
     def emergency_stop(self) -> None:
         self.calls.append("emergency_stop")
 
-    def take_snapshot(self, time: float, dt: float) -> Snapshot:
+    def take_snapshot(self, dt: float) -> Snapshot:
+        time = self.time
+
         def fresh[T](value: T) -> Stamped[T]:
             return Stamped(value, arrival_time=time, drone_time=time)
 
@@ -79,6 +83,12 @@ class StandInDrone(DroneInterface):
             battery_voltage=None if self.battery_voltage is None else fresh(self.battery_voltage.value),
             drone_status=fresh(self.status),
         )
+
+
+def snapshot_at(time: float, stand_in: StandInDrone, drone: DroneInterface | None = None) -> Snapshot:
+    """The snapshot `drone` (the stand-in itself if None) returns when the stand-in's clock reads `time`."""
+    stand_in.time = time
+    return (drone if drone is not None else stand_in).take_snapshot(0.05)
 
 
 def forged(snapshot: Snapshot) -> bool:
@@ -94,25 +104,25 @@ def hovered_drone() -> tuple[StandInDrone, ForgedLowBatteryDrone]:
     stand_in = StandInDrone()
     wrapper = ForgedLowBatteryDrone(stand_in)
     wrapper.take_off(HEIGHT)
-    wrapper.take_snapshot(1.0, 0.05)
+    snapshot_at(1.0, stand_in, wrapper)
     return stand_in, wrapper
 
 
 def test_snapshots_are_the_real_ones_until_the_drone_has_hovered_for_the_hover_duration() -> None:
     stand_in, wrapper = hovered_drone()
 
-    just_before = wrapper.take_snapshot(1.0 + HOVER_DURATION_BEFORE_FAULT - 0.05, 0.05)
+    just_before = snapshot_at(1.0 + HOVER_DURATION_BEFORE_FAULT - 0.05, stand_in, wrapper)
 
-    assert just_before == stand_in.take_snapshot(1.0 + HOVER_DURATION_BEFORE_FAULT - 0.05, 0.05)
+    assert just_before == snapshot_at(1.0 + HOVER_DURATION_BEFORE_FAULT - 0.05, stand_in)
     assert not wrapper.has_forged_battery_voltage
 
 
 def test_after_the_hover_duration_the_battery_voltage_is_forged_and_nothing_else() -> None:
     stand_in, wrapper = hovered_drone()
     time = 1.0 + HOVER_DURATION_BEFORE_FAULT
-    real = stand_in.take_snapshot(time, 0.05)
+    real = snapshot_at(time, stand_in)
 
-    snapshot = wrapper.take_snapshot(time, 0.05)
+    snapshot = snapshot_at(time, stand_in, wrapper)
 
     assert wrapper.has_forged_battery_voltage
     assert snapshot.battery_voltage is not None
@@ -128,8 +138,8 @@ def test_the_forged_snapshot_fails_the_real_safety_pre_check_for_the_battery_onl
     stand_in, wrapper = hovered_drone()
     time = 1.0 + HOVER_DURATION_BEFORE_FAULT
 
-    real_failures = safety_pre_check(stand_in.take_snapshot(time, 0.05))
-    forged_failures = safety_pre_check(wrapper.take_snapshot(time, 0.05))
+    real_failures = safety_pre_check(snapshot_at(time, stand_in))
+    forged_failures = safety_pre_check(snapshot_at(time, stand_in, wrapper))
 
     assert real_failures == []
     assert len(forged_failures) == 1
@@ -139,11 +149,11 @@ def test_the_forged_snapshot_fails_the_real_safety_pre_check_for_the_battery_onl
 def test_it_logs_one_warning_when_the_fault_is_injected_not_one_per_snapshot(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    _, wrapper = hovered_drone()
+    stand_in, wrapper = hovered_drone()
 
     with caplog.at_level(logging.WARNING):
         for tick in range(5):
-            wrapper.take_snapshot(1.0 + HOVER_DURATION_BEFORE_FAULT + tick * 0.05, 0.05)
+            snapshot_at(1.0 + HOVER_DURATION_BEFORE_FAULT + tick * 0.05, stand_in, wrapper)
 
     assert [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING] == [
         "FAULT INJECTED: battery voltage forged"
@@ -151,17 +161,18 @@ def test_it_logs_one_warning_when_the_fault_is_injected_not_one_per_snapshot(
 
 
 def test_the_battery_stays_forged_in_every_later_snapshot() -> None:
-    _, wrapper = hovered_drone()
+    stand_in, wrapper = hovered_drone()
 
-    snapshots = [wrapper.take_snapshot(1.0 + HOVER_DURATION_BEFORE_FAULT + tick * 0.05, 0.05) for tick in range(3)]
+    snapshots = [snapshot_at(1.0 + HOVER_DURATION_BEFORE_FAULT + tick * 0.05, stand_in, wrapper) for tick in range(3)]
 
     assert all(forged(snapshot) for snapshot in snapshots)
 
 
 def test_nothing_is_forged_before_a_take_off() -> None:
-    wrapper = ForgedLowBatteryDrone(StandInDrone())
+    stand_in = StandInDrone()
+    wrapper = ForgedLowBatteryDrone(stand_in)
 
-    snapshot = wrapper.take_snapshot(100.0, 0.05)
+    snapshot = snapshot_at(100.0, stand_in, wrapper)
 
     assert not forged(snapshot)
 
@@ -171,13 +182,13 @@ def test_the_hover_is_counted_from_reaching_the_height_not_from_the_take_off() -
     wrapper = ForgedLowBatteryDrone(stand_in)
     wrapper.take_off(HEIGHT)
     stand_in.height = 0.2  # still climbing
-    wrapper.take_snapshot(1.0, 0.05)
-    wrapper.take_snapshot(1.0 + HOVER_DURATION_BEFORE_FAULT, 0.05)
+    snapshot_at(1.0, stand_in, wrapper)
+    snapshot_at(1.0 + HOVER_DURATION_BEFORE_FAULT, stand_in, wrapper)
     stand_in.height = HEIGHT  # arrives at 10 s
-    wrapper.take_snapshot(10.0, 0.05)
+    snapshot_at(10.0, stand_in, wrapper)
 
-    still_real = wrapper.take_snapshot(10.0 + HOVER_DURATION_BEFORE_FAULT - 0.05, 0.05)
-    forged_now = wrapper.take_snapshot(10.0 + HOVER_DURATION_BEFORE_FAULT, 0.05)
+    still_real = snapshot_at(10.0 + HOVER_DURATION_BEFORE_FAULT - 0.05, stand_in, wrapper)
+    forged_now = snapshot_at(10.0 + HOVER_DURATION_BEFORE_FAULT, stand_in, wrapper)
 
     assert not forged(still_real)
     assert forged(forged_now)
@@ -189,7 +200,7 @@ def test_a_drone_the_status_says_is_on_the_floor_is_not_hovering() -> None:
     wrapper = ForgedLowBatteryDrone(stand_in)
     wrapper.take_off(HEIGHT)
 
-    snapshots = [wrapper.take_snapshot(tick * 1.0, 0.05) for tick in range(10)]
+    snapshots = [snapshot_at(tick * 1.0, stand_in, wrapper) for tick in range(10)]
 
     assert not any(forged(snapshot) for snapshot in snapshots)
 
@@ -198,10 +209,10 @@ def test_the_hover_duration_can_be_set() -> None:
     stand_in = StandInDrone()
     wrapper = ForgedLowBatteryDrone(stand_in, hover_duration_before_fault=0.5)
     wrapper.take_off(HEIGHT)
-    wrapper.take_snapshot(1.0, 0.05)
+    snapshot_at(1.0, stand_in, wrapper)
 
-    assert not forged(wrapper.take_snapshot(1.45, 0.05))
-    assert forged(wrapper.take_snapshot(1.5, 0.05))
+    assert not forged(snapshot_at(1.45, stand_in, wrapper))
+    assert forged(snapshot_at(1.5, stand_in, wrapper))
 
 
 def test_a_missing_battery_voltage_is_left_missing_for_the_pre_check_to_fail_on() -> None:
@@ -210,7 +221,7 @@ def test_a_missing_battery_voltage_is_left_missing_for_the_pre_check_to_fail_on(
     wrapper = ForgedLowBatteryDrone(stand_in, hover_duration_before_fault=0.0)
     wrapper.take_off(HEIGHT)
 
-    snapshot = wrapper.take_snapshot(1.0, 0.05)
+    snapshot = snapshot_at(1.0, stand_in, wrapper)
 
     assert snapshot.battery_voltage is None
     assert not wrapper.has_forged_battery_voltage

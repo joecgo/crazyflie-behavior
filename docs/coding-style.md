@@ -91,6 +91,29 @@ Unitless values (counts, ratios, flags) get no suffix.
   a library before writing it. If a decision rests on it, the ADR names the
   file it was checked in; the docstring stays short.
 - Reference ADRs where code exists *because of* a decision (`# See ADR-0003.`).
+- **Log and console messages are short:** one plain sentence saying what
+  happened, plus what the operator should do, if anything. No reasons in
+  parentheses and no lists of cases: the why goes in a comment beside the
+  call, or in the ADR. Write for the operator glancing at the console
+  mid-flight. The exception is an emergency tool's instructions to the
+  operator (`tools/emergency_stop.py`): there, what to do next is worth the
+  extra sentences.
+- **Write what stays true.** Docstrings, comments and messages describe what
+  the code does, not where the project is: no milestone names (First flight)
+  unless the code exists only for that milestone, such as its field-test
+  programs. Name a constant instead of quoting its value ("one tick period",
+  not "0.05 s at 20 Hz"). Wording that will go out of date ("not built yet",
+  "until the speed envelope exists") starts with `TODO:`, so one search finds
+  every spot to come back to.
+- **One source for every value.** A value that follows from another (a period
+  from a rate, a limit from a size) is computed from it or passed in, never
+  copied, even with a test keeping the copy equal. If the import would cross
+  a module boundary, raise it as a design decision instead of copying. The
+  exception is a script whose independence is the point: `tools/emergency_stop.py`
+  imports no project code, so a bug elsewhere can't stop it, and copies the
+  adapter's default URI with a test keeping the two equal. Files that can't
+  import a value, such as PyCharm's run configurations, are kept equal by a
+  test too.
 
 ## Tests
 

@@ -1,6 +1,6 @@
 # 0042: Slightly negative ages count as fresh; a large one is a warning
 
-- **Status:** Accepted
+- **Status:** Superseded by [0046](0046-snapshot-time-read-after-the-copy.md)
 - **Date:** 2026-11-02
 - **Origin:** AI recommendation accepted (option C). Splitting this off from backlog #8: AI suggestion accepted.
 

@@ -121,11 +121,13 @@ class TelemetryBuffer:
                 values[f"{direction.value} range"] = self._range_readings.get(direction)
         return [name for name, value in values.items() if value is None]
 
-    def snapshot(self, time: float, dt: float) -> Snapshot:
+    def snapshot(self, dt: float) -> Snapshot:
         """Copy everything into a read-only snapshot for one tick (ADR-0007).
 
         Stored values are immutable, so copying references under the lock
-        gives a true, consistent copy.
+        gives a true, consistent copy. The snapshot's time is read after the
+        copy, still under the lock (ADR-0046): every value was stamped before
+        it was stored, so none is newer than the snapshot.
         """
         with self._lock:
             position_estimate = self._position_estimate
@@ -133,6 +135,7 @@ class TelemetryBuffer:
             range_readings = dict(self._range_readings)
             battery_voltage = self._battery_voltage
             drone_status = self._drone_status
+            time = self._clock.now()
 
         return Snapshot(
             time=time,

@@ -1,6 +1,6 @@
 """The failsafe program (ADR-0041): runs the Failsafe low or Failsafe high field test once.
 
-Arm, take off to the height (0.1 m for Failsafe low, 0.5 m for Failsafe high),
+Arm, take off to the height (`FAILSAFE_LOW_HEIGHT` or `FAILSAFE_HIGH_HEIGHT`),
 hover, and wait for the safety layer's failsafe to land the drone. The fault
 that makes it fire is a forged low battery: a wrapper around the drone hands
 the safety layer a snapshot with a low battery voltage after a few seconds of
@@ -32,6 +32,7 @@ import argparse
 import sys
 
 from crazyflie_behavior.behaviors.failsafe_test import FailsafeTest
+from crazyflie_behavior.behaviors.hover_test import TAKE_OFF_HEIGHT
 from crazyflie_behavior.loop.tick_step import BehaviorTickStep
 from crazyflie_behavior.programs.failsafe_fault import ForgedLowBatteryDrone
 from crazyflie_behavior.programs.start_up import EXIT_ERROR, EXIT_OK, make_drone, run_program
@@ -40,7 +41,7 @@ from crazyflie_behavior.timing.clock import RealClock
 
 FAILSAFE_LOW_HEIGHT = 0.1
 """Meters: the Failsafe low field test."""
-FAILSAFE_HIGH_HEIGHT = 0.5
+FAILSAFE_HIGH_HEIGHT = TAKE_OFF_HEIGHT
 """Meters: the Failsafe high field test, the Hover test's height."""
 
 

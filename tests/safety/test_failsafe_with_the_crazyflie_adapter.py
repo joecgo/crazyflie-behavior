@@ -38,7 +38,7 @@ def report_everything(adapter: CrazyflieAdapter, status: DroneStatus, battery_vo
 def fail_the_pre_check_and_send(adapter: CrazyflieAdapter, clock: SimClock) -> SafetyLayer:
     safety_layer = SafetyLayer(adapter)
     clock.advance(TICK)
-    safety_layer.pre_check(adapter.take_snapshot(clock.now(), TICK))
+    safety_layer.pre_check(adapter.take_snapshot(TICK))
     safety_layer.send()
     return safety_layer
 

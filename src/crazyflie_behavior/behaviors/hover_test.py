@@ -1,8 +1,8 @@
 """The hover test (ADR-0030): the behavior for the Hover field test.
 
-Arm, take off to 0.5 m, hover, land, then report done. Each step waits until
-the snapshot shows it happened, because commands take effect after they're
-sent (latency), and the waits for arming and taking off have time limits.
+Arm, take off to `TAKE_OFF_HEIGHT`, hover, land, then report done. Each step
+waits until the snapshot shows it happened, because commands take effect after
+they're sent (latency), and the waits for arming and taking off have time limits.
 
 Failure rule (ADR-0033): the first refused request ends the test, since it
 tests the basic sequence and an unexpected state is the finding. So do its
@@ -48,7 +48,7 @@ class _Step(Enum):
 
 
 class HoverTest(Behavior):
-    """Arm, take off to 0.5 m, hover, land, then report done."""
+    """Arm, take off to `TAKE_OFF_HEIGHT`, hover, land, then report done."""
 
     def __init__(self, hover_duration: float = DEFAULT_HOVER_DURATION) -> None:
         """`hover_duration`: seconds to hover once at the take-off height."""
@@ -57,7 +57,7 @@ class HoverTest(Behavior):
         self._hover_duration = hover_duration
         self._step = _Step.START
         self._step_started_at = 0.0
-        """The tick time the current step started."""
+        """The snapshot time the current step started."""
 
     def tick(self, snapshot: Snapshot, ask_safety_layer: Callable[[CommandRequest], Verdict]) -> bool:
         status = snapshot.drone_status

@@ -228,7 +228,7 @@ def test_without_a_multi_ranger_its_directions_read_invalid_never_clear(
 ) -> None:
     adapter.connect()
 
-    readings = adapter._telemetry.snapshot(10.0, 0.0).range_readings
+    readings = adapter._telemetry.snapshot(0.0).range_readings
     for reading in (readings.front, readings.back, readings.left, readings.right, readings.up):
         assert reading is not None
         assert reading.value.status is RangeStatus.INVALID
@@ -474,7 +474,7 @@ def test_connecting_again_drops_a_landing_left_from_the_last_connection(fake_cfl
     fake_cflib.link.cf.high_level_commander.reset_mock()
 
     clock.advance(60.0)  # long past the old landing's time limits
-    adapter.take_snapshot(clock.now(), 0.05)
+    adapter.take_snapshot(0.05)
 
     # The old landing would have stopped the motors or sent a go_to to an armed drone on the floor.
     assert fake_cflib.link.cf.high_level_commander.mock_calls == []
@@ -497,7 +497,7 @@ def test_a_flying_drone_is_refused_before_the_estimate_reset_and_without_a_zero_
 ) -> None:
     fake_cflib.samples["state"]["supervisor.info"] = FLYING
 
-    with pytest.raises(RuntimeError, match=r"still flying: run the rescue landing\..*just landed.*wait"):
+    with pytest.raises(RuntimeError, match=r"still flying: run the rescue landing, or wait .* if it just landed"):
         adapter.connect()
 
     fake_cflib.reset_estimator.assert_not_called()
@@ -539,7 +539,7 @@ def test_telemetry_from_before_the_estimate_reset_is_not_used(adapter: Crazyflie
 
     adapter.connect()
 
-    position_estimate = adapter._telemetry.snapshot(10.0, 0.0).position_estimate
+    position_estimate = adapter._telemetry.snapshot(0.0).position_estimate
     assert position_estimate is not None
     assert position_estimate.value.x == 0.0
 
@@ -570,7 +570,7 @@ def test_taking_over_keeps_the_position_the_drone_already_reported(
 
     taking_over_adapter.connect()
 
-    position_estimate = taking_over_adapter._telemetry.snapshot(10.0, 0.0).position_estimate
+    position_estimate = taking_over_adapter._telemetry.snapshot(0.0).position_estimate
     assert position_estimate is not None
     assert position_estimate.value.z == pytest.approx(0.4)
 

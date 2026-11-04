@@ -19,7 +19,7 @@ from crazyflie_behavior.snapshot import Snapshot
 
 logger = logging.getLogger(__name__)
 
-# --- PLACEHOLDER, NOT A DECISION: tune at the bench ----------------------------
+# --- PLACEHOLDER, NOT A DECISION: tune in the Bench field test ----------------
 LANDING_TIME_LIMIT = 30.0
 """Seconds after the landing was requested that the drone may still report flying."""
 # ------------------------------------------------------------------------------

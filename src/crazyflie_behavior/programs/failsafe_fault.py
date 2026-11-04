@@ -27,8 +27,7 @@ logger = logging.getLogger(__name__)
 HOVER_DURATION_BEFORE_FAULT = 3.0
 """Seconds the drone hovers at the take-off height before the battery voltage is forged."""
 FORGED_BATTERY_VOLTAGE = LOW_BATTERY_VOLTAGE - 0.2
-"""Volts. Below the safety pre-check's limit, and about where the firmware's own low
-battery handling starts."""
+"""Volts. Below the safety pre-check's limit."""
 # ------------------------------------------------------------------------------------------
 
 
@@ -44,7 +43,7 @@ class ForgedLowBatteryDrone(DroneInterface):
         self._take_off_height: float | None = None
         """The height of the latest take-off sent."""
         self._hover_started_at: float | None = None
-        """The tick time of the first snapshot that showed the drone hovering at the take-off height."""
+        """The snapshot time of the first snapshot that showed the drone hovering at the take-off height."""
         self._has_forged = False
 
     @property
@@ -52,8 +51,8 @@ class ForgedLowBatteryDrone(DroneInterface):
         """Whether the fault has been injected: some snapshot went out with a forged battery voltage."""
         return self._has_forged
 
-    def take_snapshot(self, time: float, dt: float) -> Snapshot:
-        snapshot = self._drone.take_snapshot(time, dt)
+    def take_snapshot(self, dt: float) -> Snapshot:
+        snapshot = self._drone.take_snapshot(dt)
         if self._hover_started_at is None and self._is_hovering(snapshot):
             self._hover_started_at = snapshot.time
         if self._hover_started_at is None or snapshot.time - self._hover_started_at < self._hover_duration_before_fault:

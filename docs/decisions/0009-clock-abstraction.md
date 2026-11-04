@@ -1,6 +1,6 @@
 # 0009: Injected clock; behaviors receive time in the snapshot
 
-- **Status:** Accepted. The minimal safety layer holds no clock: it uses the snapshot's time ([ADR-0030](0030-minimal-safety-layer-for-first-flight.md)).
+- **Status:** Accepted. The minimal safety layer holds no clock: it uses the snapshot's time ([ADR-0030](0030-minimal-safety-layer-for-first-flight.md)). Amended by [ADR-0046](0046-snapshot-time-read-after-the-copy.md): the snapshot's time is read after its values are copied, not the tick's time.
 - **Date:** 2026-10-20
 - **Origin:** AI recommendation accepted.
 

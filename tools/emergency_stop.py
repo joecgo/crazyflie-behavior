@@ -11,8 +11,11 @@ something soft under the drone.
 
 It sends both of cflib's emergency stop packets, the supervisor port's and the
 older localization port's, because it doesn't ask the drone which firmware it
-runs (that needs a full connection). NOT YET RUN ON HARDWARE. VERIFY at the bench that a firmware accepts either packet
-without a connection set up first, and ignores the one it doesn't know.
+runs (that needs a full connection).
+
+TODO: not yet run on hardware. VERIFY in the Bench field test that a firmware
+accepts either packet without a connection set up first, and ignores the one
+it doesn't know.
 
 Run from the repository root:
     .venv\\Scripts\\python tools\\emergency_stop.py

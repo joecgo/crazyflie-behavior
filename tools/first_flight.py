@@ -26,7 +26,7 @@ def main() -> None:
     available_drones: list[list[str]] = cflib.crtp.scan_interfaces()
 
     if not available_drones:
-        print("No Crazyflie found (expected until the hardware arrives).")
+        print("No Crazyflie found.")
         return
 
     for uri, description in available_drones:

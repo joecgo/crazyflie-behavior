@@ -408,7 +408,7 @@ def test_make_drone_passes_the_take_over_setting_on_to_either_adapter() -> None:
 
     mock_drone = make_drone(use_crazyflie=False, clock=clock, take_over_flight=True)
     mock_drone.connect()
-    mock_status = mock_drone.take_snapshot(clock.now(), 0.0).drone_status
+    mock_status = mock_drone.take_snapshot(0.0).drone_status
     crazyflie = make_drone(use_crazyflie=True, clock=clock, take_over_flight=True)
 
     assert mock_status is not None

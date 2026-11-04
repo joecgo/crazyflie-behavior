@@ -93,8 +93,9 @@ class DroneInterface(ABC):
     def hover(self) -> None:
         """Stop and hold the current position.
 
-        Does nothing when the drone isn't known to be flying: on the floor, a
-        move to hold the position would spin up an armed drone's motors (ADR-0039).
+        Does nothing unless the drone may be flying (the adapter's judgment, which
+        says flying when unsure): on the floor, a move to hold the position would
+        spin up an armed drone's motors (ADR-0039).
         """
 
     @abstractmethod
@@ -102,9 +103,11 @@ class DroneInterface(ABC):
         """Cut the motors immediately. The drone falls. Critical faults only."""
 
     @abstractmethod
-    def take_snapshot(self, time: float, dt: float) -> Snapshot:
+    def take_snapshot(self, dt: float) -> Snapshot:
         """Called once per tick by the tick step: return this tick's snapshot.
 
+        `dt` is the seconds since the previous tick started. The snapshot's time
+        comes from the adapter's clock, read after its values are copied (ADR-0046).
         Adapters may also use this call to advance their own pending work,
         e.g. the mock adapter moves its fake drone forward by `dt`.
         """

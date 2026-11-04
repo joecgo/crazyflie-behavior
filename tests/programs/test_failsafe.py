@@ -1,5 +1,6 @@
 """The failsafe program (ADR-0041), on the mock adapter and the real clock, with the hovers patched short."""
 
+import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
 import pytest
@@ -10,9 +11,11 @@ from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.programs import failsafe as failsafe_module
 from crazyflie_behavior.programs import failsafe_fault as failsafe_fault_module
-from crazyflie_behavior.programs.failsafe import main
+from crazyflie_behavior.programs.failsafe import FAILSAFE_HIGH_HEIGHT, FAILSAFE_LOW_HEIGHT, main
 from crazyflie_behavior.timing.clock import Clock
 
+RUN_CONFIGS = Path(__file__).resolve().parents[2] / ".run"
+"""PyCharm's shared run configurations."""
 SHORT_HOVER = 0.2
 """Seconds of hovering before the fault, in place of the 3 s a field test uses."""
 
@@ -62,7 +65,7 @@ def the_log_file_text(log_directory: Path) -> str:
 
 
 def assert_landed_with_the_motors_off(mock_adapter: MockAdapter) -> None:
-    snapshot = mock_adapter.take_snapshot(0.0, 0.0)
+    snapshot = mock_adapter.take_snapshot(0.0)
     assert snapshot.drone_status is not None
     assert snapshot.position_estimate is not None
     assert not snapshot.drone_status.value.is_flying
@@ -153,6 +156,29 @@ def test_the_height_is_required(capsys: pytest.CaptureFixture[str]) -> None:
 
     assert stopped.value.code == 2
     assert "--height-meters" in capsys.readouterr().err
+
+
+def run_config_height(run_config: Path) -> float:
+    """The `--height-meters` value a PyCharm run configuration passes."""
+    parameters = ElementTree.parse(run_config).find(".//option[@name='PARAMETERS']")
+    assert parameters is not None
+    arguments = parameters.get("value", "").split()
+    return float(arguments[arguments.index("--height-meters") + 1])
+
+
+def test_each_failsafe_run_config_passes_its_tests_height() -> None:
+    """The run configs can't import the heights, so this keeps them equal: a mismatch fails here, not at launch."""
+    expected_heights = {
+        "failsafe_low.run.xml": FAILSAFE_LOW_HEIGHT,
+        "failsafe_low_crazyflie.run.xml": FAILSAFE_LOW_HEIGHT,
+        "failsafe_high.run.xml": FAILSAFE_HIGH_HEIGHT,
+        "failsafe_high_crazyflie.run.xml": FAILSAFE_HIGH_HEIGHT,
+    }
+    run_configs = sorted(path.name for path in RUN_CONFIGS.glob("failsafe_*.run.xml"))
+
+    assert run_configs == sorted(expected_heights)
+    for name, height in expected_heights.items():
+        assert run_config_height(RUN_CONFIGS / name) == height, name
 
 
 def test_a_landing_that_fails_in_disconnect_makes_the_exit_code_1_even_though_the_failsafe_fired(

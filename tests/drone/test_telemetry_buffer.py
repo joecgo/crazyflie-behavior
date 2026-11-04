@@ -25,7 +25,7 @@ def test_values_are_stamped_with_arrival_time_and_drone_time() -> None:
 
     buffer.write_position_estimate(Vector3(1.0, 2.0, 0.5), drone_time=3.5)
     clock.advance(0.1)
-    snapshot = buffer.snapshot(time=clock.now(), dt=0.1)
+    snapshot = buffer.snapshot(dt=0.1)
 
     position_estimate = snapshot.position_estimate
     assert position_estimate is not None
@@ -33,16 +33,51 @@ def test_values_are_stamped_with_arrival_time_and_drone_time() -> None:
     assert position_estimate.age(snapshot.time) == pytest.approx(0.1)
 
 
-def test_snapshot_carries_the_tick_time_and_dt() -> None:
-    buffer = TelemetryBuffer(SimClock())
+def test_snapshot_carries_its_clocks_time_and_dt() -> None:
+    buffer = TelemetryBuffer(SimClock(start=7.0))
 
-    snapshot = buffer.snapshot(time=7.0, dt=0.05)
+    snapshot = buffer.snapshot(dt=0.05)
 
     assert (snapshot.time, snapshot.dt) == (7.0, 0.05)
 
 
+class ClockThatLetsAValueArrive(SimClock):
+    """A clock that, once armed, stores a newer battery voltage the next time it's read.
+
+    It stands in for cflib's receive thread storing a value at the moment the
+    snapshot's time is read. It bypasses the lock, so it also shows a bug that
+    reads the time before taking the lock.
+    """
+
+    def __init__(self, start: float) -> None:
+        super().__init__(start=start)
+        self.buffer: TelemetryBuffer | None = None
+
+    def now(self) -> float:
+        buffer, self.buffer = self.buffer, None
+        if buffer is not None:
+            self.advance(0.01)
+            late_value = Stamped(3.7, arrival_time=super().now(), drone_time=None)
+            buffer._battery_voltage = late_value  # pyright: ignore[reportPrivateUsage]  # a writer that skips the lock
+        return super().now()
+
+
+def test_the_snapshots_time_is_read_after_its_values_are_copied() -> None:
+    """ADR-0046: no value in a snapshot is newer than the snapshot's time."""
+    clock = ClockThatLetsAValueArrive(start=5.0)
+    buffer = TelemetryBuffer(clock)
+    buffer.write_battery_voltage(3.9, drone_time=None)
+    clock.buffer = buffer
+
+    snapshot = buffer.snapshot(dt=0.05)
+
+    assert snapshot.battery_voltage is not None
+    assert snapshot.battery_voltage.value == 3.9  # copied before the time was read
+    assert snapshot.battery_voltage.age(snapshot.time) >= 0.0
+
+
 def test_nothing_received_yet_shows_as_none() -> None:
-    snapshot = TelemetryBuffer(SimClock()).snapshot(time=0.0, dt=0.0)
+    snapshot = TelemetryBuffer(SimClock()).snapshot(dt=0.0)
 
     assert snapshot.position_estimate is None
     assert snapshot.drone_status is None
@@ -52,7 +87,7 @@ def test_nothing_received_yet_shows_as_none() -> None:
 def test_a_snapshot_does_not_change_when_new_telemetry_arrives() -> None:
     buffer = TelemetryBuffer(SimClock())
     buffer.write_battery_voltage(3.9, drone_time=None)
-    snapshot = buffer.snapshot(time=0.0, dt=0.0)
+    snapshot = buffer.snapshot(dt=0.0)
 
     buffer.write_battery_voltage(3.6, drone_time=None)
 
@@ -63,7 +98,7 @@ def test_a_snapshot_does_not_change_when_new_telemetry_arrives() -> None:
 type BufferOperation = Callable[[TelemetryBuffer], object]
 
 EVERY_OPERATION: dict[str, BufferOperation] = {
-    "snapshot": lambda buffer: buffer.snapshot(time=0.0, dt=0.0),
+    "snapshot": lambda buffer: buffer.snapshot(dt=0.0),
     "latest_position_estimate": lambda buffer: buffer.latest_position_estimate(),
     "latest_drone_status": lambda buffer: buffer.latest_drone_status(),
     "missing_values": lambda buffer: buffer.missing_values(),
@@ -125,7 +160,7 @@ def test_range_readings_written_together_never_appear_split() -> None:
     writer.start()
     try:
         for _ in range(5000):
-            readings = buffer.snapshot(time=0.0, dt=0.0).range_readings
+            readings = buffer.snapshot(dt=0.0).range_readings
             five = [readings.front, readings.back, readings.left, readings.right, readings.up]
             distances = {stamped.value.distance for stamped in five if stamped is not None}
             assert len(distances) <= 1
@@ -139,7 +174,7 @@ def test_estimates_and_status_written_together_share_one_arrival() -> None:
     buffer = TelemetryBuffer(clock)
 
     buffer.write_estimates_and_status(ORIGIN, ORIGIN, LANDED, drone_time=1.25)
-    snapshot = buffer.snapshot(time=3.0, dt=0.0)
+    snapshot = buffer.snapshot(dt=0.0)
 
     assert snapshot.position_estimate == Stamped(ORIGIN, 3.0, 1.25)
     assert snapshot.velocity_estimate == Stamped(ORIGIN, 3.0, 1.25)
@@ -189,4 +224,4 @@ def test_missing_values_covers_every_value_in_the_snapshot() -> None:
     # A snapshot value left out of missing_values would let connect() return before it arrives (ADR-0031).
     buffer = TelemetryBuffer(SimClock())
 
-    assert len(buffer.missing_values()) == count_not_yet_arrived(buffer.snapshot(time=0.0, dt=0.0))
+    assert len(buffer.missing_values()) == count_not_yet_arrived(buffer.snapshot(dt=0.0))
