@@ -1,6 +1,6 @@
 # 0036: Game logic is a state machine per game; a behavior's tick reports an outcome
 
-- **Status:** Accepted. Amends [ADR-0026](0026-tick-loop-calls-one-tick-step.md): the tick step reports an outcome, not only "done".
+- **Status:** Accepted. Amends [ADR-0026](0026-tick-loop-calls-one-tick-step.md): the tick step reports an outcome, not only "done". Amended 2026-11-03: the exit-code rule has an exception for a program that tests a failsafe ([ADR-0041](0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)).
 - **Date:** 2026-11-01
 - **Origin:** Mixed. A state machine now and a behavior tree later: mine. `Behavior` as the shared base instead of a new brain class, and the outcome: AI recommendations accepted.
 

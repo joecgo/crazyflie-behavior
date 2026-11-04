@@ -1,6 +1,6 @@
 # Field testing
 
-> **Status, updated 2026-11-03:** a vertical slice: one room (the living
+> **Status, updated 2026-11-04:** a vertical slice: one room (the living
 > room), working toward hide-and-seek. Pass criteria are light for now. The
 > rescue landing and the emergency-stop script are built
 > ([ADR-0038](../decisions/0038-connecting-to-a-flying-drone.md)) and not yet
@@ -91,13 +91,13 @@ nobody else in the room, no people and no pets.
 ([ADR-0038](../decisions/0038-connecting-to-a-flying-drone.md)): run the
 rescue landing (`crazyflie_behavior.programs.rescue_landing --crazyflie`), not
 the program that was flying: that one refuses to connect to a flying drone.
-Keep the area under the drone clear: if connecting fails partway, cflib itself
-stops the motors and the drone drops (ADR-0038, known risk). If the rescue
-landing says the drone's estimate isn't arriving, it can't land under control
-([ADR-0045](../decisions/0045-rescue-without-an-estimate-points-to-the-emergency-stop.md)):
-go straight to the emergency stop. If the rescue landing can't bring it down, slide something soft under the drone
-and run `tools/emergency_stop.py`: the motors stop at once. Both use the radio
-link, so if the link is why the drone was lost, only the physical backup is
+If the rescue landing can't bring it down, slide something soft under the drone
+and run `tools/emergency_stop.py`: the motors stop at once. The rescue landing
+tells you when it is the estimate: if it fails with "Still missing: position
+estimate" (or "velocity estimate") and "The drone can't land under control
+without its estimate", go straight to the emergency stop
+([ADR-0045](../decisions/0045-rescue-without-an-estimate-points-to-the-emergency-stop.md)).
+Both use the radio link, so if the link is why the drone was lost, only the physical backup is
 left: fly the early sessions low over a soft mat.
 
 ## Sessions and test logs

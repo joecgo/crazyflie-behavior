@@ -11,7 +11,7 @@ Like every connect, it waits up to 3 s for every telemetry value
 ([ADR-0031](0031-connect-waits-for-first-telemetry.md)), and the adapter drops
 an estimate that isn't finite. So when the drone's estimate is NaN, the
 take-over connect times out, and the adapter's landing for "no estimate"
-(straight down) is never reached (backlog #41). Checked in the firmware source
+(it descends straight down from where the drone is) is never reached (backlog #41, closed by this ADR). Checked in the firmware source
 (`master`, 2026-11-03): the Kalman estimator's bounds check
 (`kalman_supervisor.c`) compares against limits, which a NaN passes, and its
 NaN check exists only in debug builds (`kalman_core.c`). The firmware's
@@ -40,8 +40,12 @@ Any other missing value, and any normal connect, keeps the old message.
 
 ## Failure modes
 
-- **Inputs:** an estimate that never arrives is either NaN on the drone or
-  lost on the radio. In both cases no landing our code has would work.
+- **Inputs:** on a take-over, a missing position or velocity estimate means
+  every state packet received had a value for it that isn't finite (NaN on the
+  drone): the status that ended the status wait came in the same packet as the
+  estimates, so the radio was working. No landing our code has would work.
+  (Corrected 2026-11-04: this first said the estimate could also be lost on
+  the radio. That can't happen here, and it wouldn't stop the drone landing.)
 - **Never:** the rescue landing must not claim a landing it can't fly.
 - **Always eventually:** the operator is told which last resort to use.
 
@@ -49,7 +53,8 @@ Any other missing value, and any normal connect, keeps the old message.
 
 - The adapter's straight-down landing with no estimate isn't a rescue path.
   After `connect()`, an estimate that stops being finite leaves the last
-  finite one in place (it goes stale), so that landing remains only a guard.
+  finite one in place (it goes stale), so the straight-down landing can't be reached after a
+  successful `connect()` and remains only as a guard.
 - VERIFY at the Bench: the firmware version on the drone, and that its
   estimator behaves as `master` does.
 - Tests: `test_taking_over_a_drone_with_no_finite_estimate_points_to_the_emergency_stop`
