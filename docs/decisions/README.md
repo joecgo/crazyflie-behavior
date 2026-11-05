@@ -55,5 +55,6 @@ This column is honest about which ideas were mine.
 | [0044](0044-the-bench-is-flown-with-propellers-on.md) | The Bench is flown with the propellers on | My decision, with the AI pushing back on the risk |
 | [0045](0045-rescue-without-an-estimate-points-to-the-emergency-stop.md) | A rescue that gets no estimate points to the emergency stop | AI recommendation accepted |
 | [0046](0046-snapshot-time-read-after-the-copy.md) | The snapshot's time is read after its values are copied | My idea (ADR-0042's option D, which the AI had advised against) |
+| [0047](0047-pinned-firmware-release-warn-on-mismatch.md) | The project pins Crazyflie firmware release 2026.10 (firmware 2026.08); the adapter warns on a mismatch | Mixed: updating first and warning only were mine, over the AI's recommendation to refuse; pinning was the AI's |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
