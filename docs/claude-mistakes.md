@@ -31,14 +31,14 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 4 | 12 |
 | recommendation | 7 | 4 |
 | environment | 4 | 8 |
-| communication | 6 | 13 |
+| communication | 6 | 14 |
 | testing | 0 | 8 |
 | process | 3 | 11 |
-| **Total** | **27** | **70** |
+| **Total** | **27** | **71** |
 
 Of the 27 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 21. So far, 7 of the 11 recommendation
-mistakes needed me, and 6 of the 19 communication mistakes. The first
+mistakes needed me, and 6 of the 20 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -502,6 +502,18 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-04: A go/no-go rule of "the motion flag set in most samples"
+
+- **What happened:** for the pre-flight Flow deck check, Claude said the
+  drone was fit to fly when the motion flag was set in most samples. With a
+  flashlight giving a clear view, the flag read "no motion" in most samples,
+  which is right for a drone sitting still, while the position variance held
+  steady. The flag being set while still had been sensor noise.
+- **How it was caught:** the next check's data, before the flight.
+- **Kind:** communication.
+- **Takeaway:** a go/no-go rule names the quantity that matters (here, the
+  position variance staying small), not a sign that only went with it once.
 
 ### 2026-11-04: A Bench criterion of 0.5 s for a value that streams at 1 Hz
 
