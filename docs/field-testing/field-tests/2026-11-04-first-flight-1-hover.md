@@ -74,6 +74,13 @@
 - It landed about 4 cm from the take-off point (tape measure). It looked like
   it slid maybe 4-8 cm in total.
 
+### Joe (said on 2026-11-05)
+
+- The slide happened before the propellers stopped.
+- He had stopped aiming the flashlight at the floor for the landing.
+- His reading: the flow sensor doesn't work well close to the ground, at
+  least in low light.
+
 ### Computed from the log (Claude)
 
 - **Timeline:** arming at 17:16:29.65, armed 0.05 s later; at 0.41 m 1.85 s
@@ -88,20 +95,43 @@
   of the hover, 3.45 V at its end: 0.05 V above the 3.40 V limit.
 - **Touchdown:** "Landing time is up but touchdown isn't confirmed;
   descending slowly" at 17:17:33.30. The down range read 0.008-0.026 m from
-  17:17:33.35 on, under the 0.05 m placeholder, yet the landing finished only
-  at 17:17:35.65 (backlog #51).
+  17:17:33.35 on, under the 0.05 m placeholder. Replaying the log through the
+  touchdown check confirms touchdown at 17:17:33.60, when the motors were
+  stopped; "landed. Done." came 2.05 s later because the drone status says
+  flying for 2 s after the motors stop (ADR-0032; backlog #51).
 - **The estimate ran away on the floor:** from touchdown on, the estimated
   velocity grew to about 0.6 m/s and the position moved about 0.65 m in 2 s,
-  with the down range steady at about 0.024 m. Joe saw a 4-8 cm slide, so most
-  of it wasn't real; the motors were still running during the final descent,
-  and the controller chasing the estimate may explain the slide (backlog
-  #48, #51).
+  with the down range steady at about 0.024 m and the motors stopped. Joe saw
+  a 4-8 cm slide, so most of it wasn't real (backlog #48).
+- **Just before touchdown,** as the down range fell from 0.09 m to the floor
+  (17:17:33.20-33.40), the estimated horizontal speed rose from 0.07 to
+  0.34 m/s with the motors running; the controller chasing it may explain the
+  slide (backlog #54).
 - **Before the flight,** the Flow deck's surface quality was 56-107 with the
   flashlight, and the position variance held at about 1e-4.
 - **Flight 2,** flown knowing the battery was low (3.88 V at rest): at 0.41 m
   1.85 s after `TakeOff`; held a mean of 0.513 m; the estimate drifted
   5.6 cm in 19 s; battery 3.56 V at the start of the hover, 3.40 V when the
-  pre-check landed it. Touchdown not confirmed again.
+  pre-check landed it. The final descent ran again, then touchdown was
+  confirmed.
+
+#### Flight 1's landing
+
+![Flight 1's landing: landing phase, motors and drone status above the down range and the estimated horizontal speed](figures/2026-11-04-first-flight-1-hover-landing.svg)
+
+Seconds past 17:17. The touchdown time comes from replaying the log through
+the touchdown check.
+
+1. 33.30 s: the planned landing's time is up when the down range has been
+   under the touchdown threshold for only 0.004 s, so the final descent
+   starts and logs its warning.
+2. 33.60 s: the touchdown hold is over, so touchdown is confirmed and the
+   motors stop. Nothing is logged.
+3. 35.65 s: the drone status says not flying 2.05 s later (hysteresis), so
+   the Hover test logs "landed. Done."
+
+The shaded band in the speed panel runs from the first tick above 0.1 m/s
+to the motor stop.
 
 ## Next
 - Code changes: none yet.

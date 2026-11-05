@@ -97,6 +97,9 @@ takeaway applies to reviews, it's added here as a question.
 - Is every new log or console message one short sentence an operator could
   read mid-flight, with the reasons left in a comment or the ADR? Does a
   shortened message still say the outcome (failed, not confirmed, refused)?
+- Does each outcome a test log needs (touchdown confirmed, motors stopped)
+  log its own line, success included? A log that only speaks up on trouble
+  reads as if the good outcome never happened.
 - Does new wording name a milestone, quote a constant's value, or describe
   something temporary without `TODO:`?
 - Is any new constant a copy of a value that follows from another one?

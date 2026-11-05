@@ -67,12 +67,13 @@
 - **Height:** bounced between 0.004 and 0.094 m around the 0.1 m target;
   "hovering" was declared at 0.05-0.06 m (within the 5 cm tolerance).
 - **Touchdown:** "Landing time is up but touchdown isn't confirmed;
-  descending slowly" both times, so the final descent (ADR-0019) ran.
+  descending slowly" both times, so the final descent (ADR-0019) ran; then
+  the down range confirmed touchdown (backlog #51).
 - **Before flight 1,** the Flow deck check showed the motion flag set in every
   sample and the position variance steady at about 1e-4.
 
 ## Next
 - Code changes: none yet.
 - ADRs to write or revisit: backlog #50 (low-battery limit under load), #51
-  (touchdown never confirmed), #52 (height at 0.1 m).
+  (the landing logs and the final descent), #52 (height at 0.1 m).
 - Next session's goal: fly again on a fully charged battery (about 4.2 V).

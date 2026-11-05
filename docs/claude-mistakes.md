@@ -31,14 +31,14 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 4 | 12 |
 | recommendation | 7 | 4 |
 | environment | 4 | 8 |
-| communication | 6 | 14 |
-| testing | 0 | 8 |
+| communication | 7 | 14 |
+| testing | 0 | 9 |
 | process | 3 | 11 |
-| **Total** | **27** | **71** |
+| **Total** | **28** | **72** |
 
-Of the 27 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 21. So far, 7 of the 11 recommendation
-mistakes needed me, and 6 of the 20 communication mistakes. The first
+Of the 28 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 22. So far, 7 of the 11 recommendation
+mistakes needed me, and 7 of the 21 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -49,6 +49,21 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-05: Explaining a finding with words the glossary doesn't have
+
+- **What happened:** explaining why touchdown looked unconfirmed (backlog
+  #51), Claude used words that aren't in the glossary ("replay",
+  "hysteresis", "the hold", "estimate runaway") and "normal landing", which
+  the glossary already uses for something else (the usual landing, in
+  *Rescue landing*). Claude meant a landing whose height estimate was right.
+  I couldn't follow the cause or the options.
+- **Would a later Claude review have caught it?** Probably not: reviews read
+  code and docs, not the conversation.
+- **Kind:** communication.
+- **Takeaway:** before explaining, check each term against the glossary;
+  define a missing one in a sentence and offer it for the glossary. Draw
+  anything that depends on timing.
 
 ### 2026-11-04: The battery placed under the board, from memory
 
@@ -502,6 +517,23 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-05: "Touchdown never confirmed", read from a log line that wasn't there
+
+- **What happened:** analyzing the first flights, Claude wrote in three test
+  logs and backlog #51 that touchdown was never confirmed, and that the
+  motors kept running on the floor for 2 s. The evidence was the final
+  descent's warning and no confirmation line, but the adapter logs nothing
+  when touchdown is confirmed. Replaying the Hover log through the real
+  touchdown check confirms it 0.3 s into the final descent; "landed" came
+  2 s later because the drone status says flying for 2 s after the motors
+  stop, which ADR-0032 already recorded.
+- **How it was caught:** starting on the fix for #51, by replaying the logged
+  snapshots through `TouchdownDetector`.
+- **Kind:** testing.
+- **Takeaway:** a missing log line shows nothing until the code is checked to
+  log that outcome. Before naming a cause from a flight log, replay the
+  recorded data through the real code.
 
 ### 2026-11-04: A go/no-go rule of "the motion flag set in most samples"
 

@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 452" width="680" height="452" role="img">
+<title>Hover test landing, 2026-11-04</title>
+<style>
+.bg{fill:#fcfcfb}.p{fill:#0b0b0b}.s{fill:#52514e}.m{fill:#898781}
+.grid{stroke:#e1e0d9}.ev{stroke:#898781}.down{stroke:#2a78d6}.speed{stroke:#eb6834}
+@media (prefers-color-scheme: dark){
+.bg{fill:#1a1a19}.p{fill:#f0efec}.s{fill:#c3c2b7}.grid{stroke:#2c2c2a}
+.down{stroke:#3987e5}.speed{stroke:#d95926}}
+text{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;dominant-baseline:central}
+</style>
+<rect class="bg" x="0" y="0" width="680" height="452" rx="8"/>
+<rect x="215.7" y="150" width="51.8" height="120" rx="3" fill="#eda100" fill-opacity="0.14"/>
+<rect x="198.2" y="300" width="69.3" height="120" rx="3" fill="#eb6834" fill-opacity="0.14"/>
+<text x="10.0" y="47.0" class="s" text-anchor="start">Landing phase</text>
+<text x="10.0" y="80.0" class="s" text-anchor="start">Motors</text>
+<text x="10.0" y="106.0" class="s" text-anchor="start">Drone status</text>
+<rect x="120.0" y="30" width="95.7" height="34" rx="3" fill="#2a78d6" fill-opacity="0.28"/>
+<text x="167.8" y="47.0" class="p" text-anchor="middle">planned landing</text>
+<rect x="216.7" y="30" width="49.8" height="34" rx="3" fill="#eda100" fill-opacity="0.5"/>
+<text x="241.6" y="40.0" class="p" text-anchor="middle">final</text>
+<text x="241.6" y="55.0" class="p" text-anchor="middle">descent</text>
+<text x="453.8" y="47.0" class="s" text-anchor="middle">not landing</text>
+<rect x="120.0" y="70" width="147.5" height="20" rx="3" fill="#1baf7a" fill-opacity="0.35"/>
+<text x="193.8" y="80.0" class="p" text-anchor="middle">on</text>
+<text x="453.8" y="80.0" class="s" text-anchor="middle">off</text>
+<rect x="120.0" y="96" width="147.5" height="20" rx="3" fill="#6250d6" fill-opacity="0.32"/>
+<text x="193.8" y="106.0" class="p" text-anchor="middle">flying</text>
+<rect x="268.5" y="96" width="354.5" height="20" rx="3" fill="#6250d6" fill-opacity="0.14"/>
+<text x="445.3" y="106.0" class="p" text-anchor="middle">still says flying (hysteresis)</text>
+<text x="120.0" y="138.0" class="p" text-anchor="start" font-weight="500">Down range (m)</text>
+<text x="120.0" y="290.0" class="p" text-anchor="start" font-weight="500">Estimated horizontal speed (m/s)</text>
+<line x1="120.0" x2="640.0" y1="270.0" y2="270.0" class="grid" stroke-width="1"/>
+<text x="112.0" y="270.0" class="m" text-anchor="end">0.0</text>
+<line x1="120.0" x2="640.0" y1="240.0" y2="240.0" class="grid" stroke-width="1"/>
+<text x="112.0" y="240.0" class="m" text-anchor="end">0.1</text>
+<line x1="120.0" x2="640.0" y1="210.0" y2="210.0" class="grid" stroke-width="1"/>
+<text x="112.0" y="210.0" class="m" text-anchor="end">0.2</text>
+<line x1="120.0" x2="640.0" y1="180.0" y2="180.0" class="grid" stroke-width="1"/>
+<text x="112.0" y="180.0" class="m" text-anchor="end">0.3</text>
+<line x1="120.0" x2="640.0" y1="150.0" y2="150.0" class="grid" stroke-width="1"/>
+<text x="112.0" y="150.0" class="m" text-anchor="end">0.4</text>
+<line x1="120.0" x2="640.0" y1="420.0" y2="420.0" class="grid" stroke-width="1"/>
+<text x="112.0" y="420.0" class="m" text-anchor="end">0.0</text>
+<line x1="120.0" x2="640.0" y1="383.1" y2="383.1" class="grid" stroke-width="1"/>
+<text x="112.0" y="383.1" class="m" text-anchor="end">0.2</text>
+<line x1="120.0" x2="640.0" y1="346.2" y2="346.2" class="grid" stroke-width="1"/>
+<text x="112.0" y="346.2" class="m" text-anchor="end">0.4</text>
+<line x1="120.0" x2="640.0" y1="309.2" y2="309.2" class="grid" stroke-width="1"/>
+<text x="112.0" y="309.2" class="m" text-anchor="end">0.6</text>
+<line x1="120.0" x2="640.0" y1="255.0" y2="255.0" stroke="#BA7517" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="636.0" y="245.0" class="s" text-anchor="end">0.05 m: touchdown threshold</text>
+<text x="273.5" y="168.0" class="s" text-anchor="start">touchdown hold</text>
+<text x="232.8" y="312.0" class="p" text-anchor="middle">jump</text>
+<text x="277.5" y="318.0" class="s" text-anchor="start">motors off: estimate runaway</text>
+<path d="M120.3 162.3 L129.0 171.3 L137.5 179.7 L146.2 190.2 L155.0 198.9 L163.5 209.1 L172.2 217.5 L181.0 228.0 L189.7 233.4 L198.2 243.3 L207.0 248.4 L215.7 255.3 L224.3 264.3 L232.8 269.4 L241.5 269.7 L250.2 267.6 L258.8 268.5 L267.5 269.4 L276.3 265.8 L285.0 263.1 L293.7 263.7 L302.3 265.2 L310.8 264.6 L320.7 263.1 L328.3 262.8 L336.8 262.8 L345.5 263.1 L354.3 262.2 L362.8 262.8 L371.7 262.8 L380.3 262.8 L388.8 262.5 L397.5 262.5 L406.3 262.5 L414.8 262.8 L423.5 262.2 L432.2 262.8 L441.0 261.9 L449.7 264.0 L458.2 262.2 L466.8 262.2 L475.7 262.8 L484.2 262.8 L493.0 262.8 L501.7 262.8 L510.2 262.8 L518.8 263.1 L527.7 263.4 L536.3 262.5 L544.8 263.1 L553.5 262.8 L562.2 262.8 L571.0 263.1 L579.5 263.1 L588.3 262.8 L596.8 262.2 L605.5 262.5 L614.3 262.8 L623.0 261.9" fill="none" class="down" stroke-width="2" stroke-linejoin="round"/>
+<path d="M120.3 411.8 L129.0 411.9 L137.5 413.0 L146.2 416.3 L155.0 414.3 L163.5 407.6 L172.2 411.2 L181.0 407.7 L189.7 408.1 L198.2 398.6 L207.0 389.9 L215.7 375.1 L224.3 359.7 L232.8 356.8 L241.5 376.1 L250.2 412.5 L258.8 395.2 L267.5 392.9 L276.3 396.2 L285.0 401.5 L293.7 401.2 L302.3 401.9 L310.8 392.0 L320.7 388.7 L328.3 386.9 L336.8 384.1 L345.5 382.2 L354.3 379.3 L362.8 377.4 L371.7 374.6 L380.3 372.7 L388.8 370.0 L397.5 368.1 L406.3 365.4 L414.8 363.6 L423.5 360.8 L432.2 359.0 L441.0 356.3 L449.7 354.4 L458.2 351.7 L466.8 349.9 L475.7 347.1 L484.2 345.3 L493.0 342.6 L501.7 340.7 L510.2 338.0 L518.8 336.2 L527.7 333.4 L536.3 331.6 L544.8 328.9 L553.5 327.1 L562.2 324.4 L571.0 322.5 L579.5 319.8 L588.3 318.0 L596.8 315.3 L605.5 313.5 L614.3 310.7 L623.0 309.1" fill="none" class="speed" stroke-width="2" stroke-linejoin="round"/>
+<line x1="215.7" x2="215.7" y1="26" y2="420" class="ev" stroke-width="1" stroke-dasharray="3 3"/>
+<circle cx="215.7" cy="14" r="9" fill="none" class="ev" stroke-width="1"/>
+<text x="215.7" y="14.0" class="p" text-anchor="middle">1</text>
+<line x1="267.5" x2="267.5" y1="26" y2="420" class="ev" stroke-width="1" stroke-dasharray="3 3"/>
+<circle cx="267.5" cy="14" r="9" fill="none" class="ev" stroke-width="1"/>
+<text x="267.5" y="14.0" class="p" text-anchor="middle">2</text>
+<line x1="623.0" x2="623.0" y1="26" y2="420" class="ev" stroke-width="1" stroke-dasharray="3 3"/>
+<circle cx="623.0" cy="14" r="9" fill="none" class="ev" stroke-width="1"/>
+<text x="623.0" y="14.0" class="p" text-anchor="middle">3</text>
+<text x="163.3" y="438.0" class="m" text-anchor="middle">33.0 s</text>
+<text x="250.0" y="438.0" class="m" text-anchor="middle">33.5 s</text>
+<text x="336.7" y="438.0" class="m" text-anchor="middle">34.0 s</text>
+<text x="423.3" y="438.0" class="m" text-anchor="middle">34.5 s</text>
+<text x="510.0" y="438.0" class="m" text-anchor="middle">35.0 s</text>
+<text x="596.7" y="438.0" class="m" text-anchor="middle">35.5 s</text>
+</svg>

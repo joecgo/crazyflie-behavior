@@ -65,7 +65,8 @@
 - Battery 4.05 V on the floor, 3.63-3.67 V while climbing and hovering: well
   above 3.40 V on a full charge.
 - Climbed to 0.45 m in about 2 s, then held 0.51-0.54 m.
-- Touchdown not confirmed again: the final descent ran (backlog #51).
+- Touchdown: the final descent ran, then the down range confirmed touchdown
+  (backlog #51).
 - Before it: with the room's own light, the Flow deck's surface quality was
   12-28 and the position variance grew, even when the drone was slid by hand.
   With the flashlight, quality was 87-103 and the variance held at about
@@ -77,7 +78,8 @@
 - **The forged-battery path wasn't exercised, and 0.5 m wasn't reached.**
   The battery read 3.76-3.77 V at rest and 3.37 V 20 ticks after `TakeOff`,
   at 0.06 m, during the climb. The real low-battery failsafe landed it.
-- **Touchdown:** not confirmed by the down range; the final descent ran.
+- **Touchdown:** the final descent ran, then the down range confirmed
+  touchdown.
 - **Before the flight,** the Flow deck's motion flag was set in about two
   thirds of the samples (quality 22-36); the position variance stayed at
   about 1e-4.
@@ -85,6 +87,6 @@
 ## Next
 - Code changes: none yet.
 - ADRs to write or revisit: backlog #50 (low-battery limit under load), #51
-  (touchdown never confirmed).
+  (the landing logs and the final descent).
 - Next session's goal: fly again on a fully charged battery, after Failsafe
   low passes.
