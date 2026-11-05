@@ -108,7 +108,7 @@
   0.34 m/s with the motors running; the controller chasing it may explain the
   slide (backlog #54).
 - **Before the flight,** the Flow deck's surface quality was 56-107 with the
-  flashlight, and the position variance held at about 1e-4.
+  flashlight, and the velocity variance held at about 1e-4.
 - **Flight 2,** flown knowing the battery was low (3.88 V at rest): at 0.41 m
   1.85 s after `TakeOff`; held a mean of 0.513 m; the estimate drifted
   5.6 cm in 19 s; battery 3.56 V at the start of the hover, 3.40 V when the

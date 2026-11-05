@@ -31,14 +31,14 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 4 | 12 |
 | recommendation | 7 | 4 |
 | environment | 4 | 8 |
-| communication | 7 | 14 |
+| communication | 7 | 15 |
 | testing | 0 | 9 |
 | process | 3 | 11 |
-| **Total** | **28** | **72** |
+| **Total** | **28** | **73** |
 
 Of the 28 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 22. So far, 7 of the 11 recommendation
-mistakes needed me, and 7 of the 21 communication mistakes. The first
+mistakes needed me, and 7 of the 22 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -518,6 +518,20 @@ times so far).
 
 ## Mistakes Claude caught itself
 
+### 2026-11-05: `kalman.varPX` called the position variance
+
+- **What happened:** in backlog #48, four test logs of 2026-11-04 and a
+  takeaway below, Claude called `kalman.varPX` the position variance. The
+  firmware logs the velocity variance in the drone's x direction there
+  (`estimator_kalman.c` 471-474, firmware 2026.08). The conclusions held: it
+  grows when the Flow deck gives no flow. But it stays small when flow
+  arrives and is wrong, which ruled it out as the measure for ADR-0048.
+- **How it was caught:** checking the firmware source for ADR-0048.
+- **Kind:** communication.
+- **Takeaway:** name a log variable by what the firmware source says it
+  holds, not by its name. The review checklist's first question already
+  asks for this.
+
 ### 2026-11-05: "Touchdown never confirmed", read from a log line that wasn't there
 
 - **What happened:** analyzing the first flights, Claude wrote in three test
@@ -540,12 +554,12 @@ times so far).
 - **What happened:** for the pre-flight Flow deck check, Claude said the
   drone was fit to fly when the motion flag was set in most samples. With a
   flashlight giving a clear view, the flag read "no motion" in most samples,
-  which is right for a drone sitting still, while the position variance held
+  which is right for a drone sitting still, while the velocity variance held
   steady. The flag being set while still had been sensor noise.
 - **How it was caught:** the next check's data, before the flight.
 - **Kind:** communication.
 - **Takeaway:** a go/no-go rule names the quantity that matters (here, the
-  position variance staying small), not a sign that only went with it once.
+  velocity variance staying small), not a sign that only went with it once.
 
 ### 2026-11-04: A Bench criterion of 0.5 s for a value that streams at 1 Hz
 

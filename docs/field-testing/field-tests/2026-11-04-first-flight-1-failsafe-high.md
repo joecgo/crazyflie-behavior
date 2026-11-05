@@ -68,7 +68,7 @@
 - Touchdown: the final descent ran, then the down range confirmed touchdown
   (backlog #51).
 - Before it: with the room's own light, the Flow deck's surface quality was
-  12-28 and the position variance grew, even when the drone was slid by hand.
+  12-28 and the velocity variance grew, even when the drone was slid by hand.
   With the flashlight, quality was 87-103 and the variance held at about
   2e-4. With a clear view and the drone still, the motion flag reads "no
   motion" in most samples; the variance is the better pre-flight check.
@@ -81,7 +81,7 @@
 - **Touchdown:** the final descent ran, then the down range confirmed
   touchdown.
 - **Before the flight,** the Flow deck's motion flag was set in about two
-  thirds of the samples (quality 22-36); the position variance stayed at
+  thirds of the samples (quality 22-36); the velocity variance stayed at
   about 1e-4.
 
 ## Next

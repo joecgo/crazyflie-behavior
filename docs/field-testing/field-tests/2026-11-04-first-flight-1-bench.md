@@ -108,7 +108,7 @@
   -87 m.
 - **Runs 3 and 4:** the Flow deck's motion flag read 0x30 (no motion) with
   zero deltas and surface quality 12-27, so the firmware fused no flow
-  (`flowdeck_v1v2.c:157` at 2026.08) and the position variance grew without
+  (`flowdeck_v1v2.c:157` at 2026.08) and the velocity variance grew without
   limit (`kalman.varPX` to 12). Before run 5: motion mostly 0xB0, quality
   23-43, variance about 1e-4. The shutter read 8191 in both cases.
 

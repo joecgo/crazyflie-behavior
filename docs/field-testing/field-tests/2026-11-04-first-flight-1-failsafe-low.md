@@ -70,7 +70,7 @@
   descending slowly" both times, so the final descent (ADR-0019) ran; then
   the down range confirmed touchdown (backlog #51).
 - **Before flight 1,** the Flow deck check showed the motion flag set in every
-  sample and the position variance steady at about 1e-4.
+  sample and the velocity variance steady at about 1e-4.
 
 ## Next
 - Code changes: none yet.
