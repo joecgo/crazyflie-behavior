@@ -1,8 +1,9 @@
 # 2026-11-04-first-flight-1
 
-> Started 2026-11-04: Bench, then Failsafe low twice and Failsafe high once,
-> each failsafe flight cut short by the real battery. Hover isn't flown yet.
-> The results below are Joe's to write.
+> Flown 2026-11-04: the Bench; Failsafe low twice and Failsafe high once,
+> each cut short by the real battery; after charging, Failsafe high with the
+> forged fault, and Hover twice (60 s, then 19 s on a low battery). The
+> results below are Joe's to write.
 
 A session is one trip with one or more field tests, flown in order. Each
 field test has its own log in [`../field-tests/`](../field-tests/).

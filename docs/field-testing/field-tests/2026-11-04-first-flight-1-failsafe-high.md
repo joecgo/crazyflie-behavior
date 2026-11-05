@@ -50,14 +50,29 @@
 |---|---|---|---|---|
 | 0 | `failsafe --height-meters 0.5` (mock) | Fault injected, pre-check failed, `Land()`, exit 0 | `logs/2026-11-04_16-27-26_failsafe.log` | |
 | 1 | `failsafe --crazyflie --height-meters 0.5` | The **real** battery (3.37 V) failed the pre-check 1 s after take-off, at 0.06 m; no fault injected | `logs/2026-11-04_16-27-54_failsafe.log` | Joe: landed, motors stopped on their own |
+| 2 | Same, on a charged battery, with a flashlight on the floor aimed at the take-off spot | `FAULT INJECTED` after about 3 s of hover at 0.51-0.54 m; the pre-check failed on the forged 3.20 V; `Land()` | `logs/2026-11-04_17-11-59_failsafe.log` | Joe: landed, motors stopped on their own |
 
 ## Observations
 
 ### Joe (said during the session)
 
-- It landed and the motors stopped on their own.
+- Flights 1 and 2: it landed and the motors stopped on their own.
 
-### Computed from the logs (Claude)
+### Computed from the logs, flight 2 (Claude)
+
+- **All of the log's criteria met:** `FAULT INJECTED`, the battery message,
+  `Land()`, no "Failsafe test failed". The exit code wasn't shown.
+- Battery 4.05 V on the floor, 3.63-3.67 V while climbing and hovering: well
+  above 3.40 V on a full charge.
+- Climbed to 0.45 m in about 2 s, then held 0.51-0.54 m.
+- Touchdown not confirmed again: the final descent ran (backlog #51).
+- Before it: with the room's own light, the Flow deck's surface quality was
+  12-28 and the position variance grew, even when the drone was slid by hand.
+  With the flashlight, quality was 87-103 and the variance held at about
+  2e-4. With a clear view and the drone still, the motion flag reads "no
+  motion" in most samples; the variance is the better pre-flight check.
+
+### Computed from the logs, flight 1 (Claude)
 
 - **The forged-battery path wasn't exercised, and 0.5 m wasn't reached.**
   The battery read 3.76-3.77 V at rest and 3.37 V 20 ticks after `TakeOff`,

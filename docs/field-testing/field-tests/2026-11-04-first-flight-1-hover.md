@@ -1,14 +1,15 @@
 # 2026-11-04-first-flight-1-hover
 
-> **DRAFT.** Date and commit are pending. Nothing below the pre-flight
-> section has been filled in.
+> Flown on 2026-11-04 at 17:16 Pacific. The Flights table and "Computed from
+> the logs" are by Claude, from the recorded log. Pass or fail, and Joe's own
+> observations, are Joe's to write.
 
 - **Session:** [First flight 1](../sessions/2026-11-04-first-flight-1.md)
 - **Test:** Hover (flight)
-- **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point, all lights on. Time of day / sunlight: ___
-- **Git commit:** `<hash>` (must be committed before flying)
-- **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger, battery #
-- **Firmware / cflib:** {firmware version} / {cflib version}
+- **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point, all lights on, plus a flashlight on the floor aimed at the take-off spot. Time of day / sunlight: after dark
+- **Git commit:** `3c59ee7` (must be committed before flying; same code as `de24a7c`)
+- **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger / Buzzer, battery #
+- **Firmware / cflib:** 2026.08, release 2026.10, unmodified ([ADR-0047](../../decisions/0047-pinned-firmware-release-warn-on-mismatch.md)) / 0.1.34
 
 ## Goal and pass criteria
 *Written before flying.*
@@ -62,12 +63,49 @@
 
 | # | What was run | Result | Data file | Notes |
 |---|---|---|---|---|
-| 1 | | | | |
+| 0 | `hover --hover-seconds 60` (mock) | Done, exit 0 | (console only) | |
+| 1 | `hover --crazyflie --hover-seconds 60` | "Hover test: landed. Done."; the final descent ran | `logs/2026-11-04_17-16-20_hover.log` | Joe: landed about 4 cm from the take-off point; slid about 4-8 cm in total |
+| 2 | Same, battery 3.88 V at rest | The **real** battery reached 3.40 V after 19 s of hover; the failsafe landed it; the final descent ran | `logs/2026-11-04_17-21-27_hover.log` | Joe: it landed early |
 
 ## Observations
-What happened, especially anything surprising. Include numbers.
+
+### Joe (said during the session)
+
+- It landed about 4 cm from the take-off point (tape measure). It looked like
+  it slid maybe 4-8 cm in total.
+
+### Computed from the log (Claude)
+
+- **Timeline:** arming at 17:16:29.65, armed 0.05 s later; at 0.41 m 1.85 s
+  after `TakeOff` (within 0.1 m of 0.5 m, within 5 s); hovered 60 s;
+  `Land()` at 17:17:31.60; "landed. Done." at 17:17:35.65. No error logged.
+  1321 ticks, 0 overruns, worst lateness 37 ms.
+- **Height:** mean 0.503 m while above 0.3 m (61.5 s), 0.31-0.55 m including
+  the climb and descent.
+- **Drift by the estimate:** 3.5 cm horizontally over the hover. The tape
+  measure gives the real figure.
+- **Battery:** 4.01 V before take-off (pre-flight check), 3.65 V at the start
+  of the hover, 3.45 V at its end: 0.05 V above the 3.40 V limit.
+- **Touchdown:** "Landing time is up but touchdown isn't confirmed;
+  descending slowly" at 17:17:33.30. The down range read 0.008-0.026 m from
+  17:17:33.35 on, under the 0.05 m placeholder, yet the landing finished only
+  at 17:17:35.65 (backlog #51).
+- **The estimate ran away on the floor:** from touchdown on, the estimated
+  velocity grew to about 0.6 m/s and the position moved about 0.65 m in 2 s,
+  with the down range steady at about 0.024 m. Joe saw a 4-8 cm slide, so most
+  of it wasn't real; the motors were still running during the final descent,
+  and the controller chasing the estimate may explain the slide (backlog
+  #48, #51).
+- **Before the flight,** the Flow deck's surface quality was 56-107 with the
+  flashlight, and the position variance held at about 1e-4.
+- **Flight 2,** flown knowing the battery was low (3.88 V at rest): at 0.41 m
+  1.85 s after `TakeOff`; held a mean of 0.513 m; the estimate drifted
+  5.6 cm in 19 s; battery 3.56 V at the start of the hover, 3.40 V when the
+  pre-check landed it. Touchdown not confirmed again.
 
 ## Next
-- Code changes:
-- ADRs to write or revisit:
-- Next session's goal:
+- Code changes: none yet.
+- ADRs to write or revisit: backlog #48 (the estimate on the floor), #50
+  (battery margin for a 60 s hover), #51 (touchdown).
+- Next session's goal: Joe's call on the pass; then Failsafe low on a charged
+  battery.
