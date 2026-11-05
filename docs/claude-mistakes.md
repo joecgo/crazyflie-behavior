@@ -30,15 +30,17 @@ decisions are recorded), *communication* (how Claude explains things).
 | design | 3 | 14 |
 | safety design | 4 | 12 |
 | recommendation | 7 | 4 |
-| environment | 3 | 5 |
-| communication | 6 | 12 |
-| testing | 0 | 7 |
+| environment | 4 | 8 |
+| communication | 6 | 13 |
+| testing | 0 | 8 |
 | process | 3 | 11 |
-| **Total** | **26** | **65** |
+| **Total** | **27** | **70** |
 
-Of the 26 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 20. So far, 7 of the 11 recommendation
-mistakes needed me, and 6 of the 18 communication mistakes. Claude's own reviews, planted bugs and
+Of the 27 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 21. So far, 7 of the 11 recommendation
+mistakes needed me, and 6 of the 19 communication mistakes. The first
+hardware session (2026-11-04) added four hardware facts said in chat from
+memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
 details and a firmware claim that two ADRs rested on. A repeating
 pattern: an interruption landing between two lines of cleanup code (five
@@ -47,6 +49,19 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-04: The battery placed under the board, from memory
+
+- **What happened:** walking me through the hardware setup, Claude said the
+  battery goes underneath the Crazyflie, between the board and the Flow
+  deck, "fairly sure but not certain". It didn't fit there. Bitcraze's docs
+  put it on top of the board, under the top decks, which hold it down.
+- **Would a Claude review have caught it?** Probably not: reviews read the
+  code and the docs, not what Claude said in the chat.
+- **Kind:** environment.
+- **Takeaway:** for hardware setup steps, look up the maker's docs before
+  answering, not after I find the answer doesn't fit. A hedge doesn't make
+  a guess safe to act on.
 
 ### 2026-11-04: A right understanding "corrected"
 
@@ -487,6 +502,63 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-04: A Bench criterion of 0.5 s for a value that streams at 1 Hz
+
+- **What happened:** the Bench test log's pass criterion said no value may be
+  older than 0.5 s. The battery voltage streams once a second by design
+  (ADR-0023), and the safety layer allows it 3 s, so it failed the criterion
+  on half the ticks of a healthy run.
+- **How it was caught:** computing the oldest age of each value from the
+  Bench logs, then checking the safety layer's limits.
+- **Kind:** testing.
+- **Takeaway:** a pass criterion about telemetry ages takes each value's
+  limit from the code, not one round number.
+
+### 2026-11-04: The Flow deck's maximum shutter read as "too dark"
+
+- **What happened:** analyzing why the estimate wouldn't settle, Claude said
+  `motion.shutter = 8191` (the maximum) meant the Flow deck hardly saw any
+  light. In the next check, with the problem gone, the shutter still read
+  8191. The real difference was the motion flag and the surface quality.
+- **How it was caught:** the next check's data.
+- **Kind:** communication.
+- **Takeaway:** call a reading the cause only after a case where it differs;
+  until then, call it a hypothesis.
+
+### 2026-11-04: "A red LED that keeps blinking means a failed self-test"
+
+- **What happened:** during the first power-on, Claude said a red LED that
+  keeps blinking probably means the self-test failed. Bitcraze's docs say a
+  steadily blinking red LED is the normal heartbeat; a failure is five fast
+  red blinks and a pause.
+- **How it was caught:** looking up the LED sequences when I described the
+  pattern, before telling me what it meant.
+- **Kind:** environment.
+- **Takeaway:** the same as for the battery placement: hardware facts come
+  from the maker's docs, also in chat.
+
+### 2026-11-04: WinUSB for the Crazyradio, and "the README says WinUSB"
+
+- **What happened:** Claude told me to install the WinUSB driver with Zadig,
+  and later said the README asks for WinUSB. It doesn't name a driver. cflib
+  0.1.34 finds the radio through the libusb0 backend on Windows
+  (`crazyradio.py:72`), which needs libusb-win32; with WinUSB cflib wouldn't
+  find the dongle.
+- **How it was caught:** checking the installed cflib source before I picked
+  the driver.
+- **Kind:** environment.
+- **Takeaway:** check the installed cflib source, as CLAUDE.md says, and quote
+  the repo's docs only after reading them.
+
+### 2026-11-04: A battery connector named from memory
+
+- **What happened:** Claude said the Crazyflie's battery connector is a 2-pin
+  JST-PH 2.0 mm. My battery's datasheet says Molex 51005, and it fits.
+- **How it was caught:** the datasheet I pasted.
+- **Kind:** environment.
+- **Takeaway:** for connectors and polarity, the check is the physical fit and
+  the + marking, and the maker's docs; never a part number from memory.
 
 ### 2026-11-04: ADR-0046 applied without searching for the old wording
 
