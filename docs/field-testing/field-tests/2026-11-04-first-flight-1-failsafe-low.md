@@ -1,14 +1,15 @@
-# YYYY-MM-DD-first-flight-1-failsafe-low
+# 2026-11-04-first-flight-1-failsafe-low
 
-> **DRAFT.** Date and commit are pending. Nothing below the pre-flight
-> section has been filled in.
+> Flown twice on 2026-11-04, 16:23 and 16:26 Pacific. The Flights table and
+> "Computed from the logs" are by Claude, from the recorded logs. Pass or
+> fail, and Joe's own observations, are Joe's to write.
 
-- **Session:** [First flight 1](../sessions/YYYY-MM-DD-first-flight-1.md)
+- **Session:** [First flight 1](../sessions/2026-11-04-first-flight-1.md)
 - **Test:** Failsafe low (safety)
 - **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point, all lights on. Time of day / sunlight: ___
-- **Git commit:** `<hash>` (must be committed before flying)
-- **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger, battery #
-- **Firmware / cflib:** {firmware version} / {cflib version}
+- **Git commit:** `de24a7c` (must be committed before flying)
+- **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger / Buzzer, battery #
+- **Firmware / cflib:** 2026.08, release 2026.10, unmodified ([ADR-0047](../../decisions/0047-pinned-firmware-release-warn-on-mismatch.md)) / 0.1.34
 
 ## Goal and pass criteria
 *Written before flying.*
@@ -47,12 +48,31 @@
 
 | # | What was run | Result | Data file | Notes |
 |---|---|---|---|---|
-| 1 | | | | |
+| 0 | `failsafe --height-meters 0.1` (mock) | Fault injected, pre-check failed, `Land()`, exit 0 | `logs/2026-11-04_16-22-02_failsafe.log` | |
+| 1 | `failsafe --crazyflie --height-meters 0.1` | The **real** battery (3.39 V) failed the pre-check about 2 s in; no fault injected | `logs/2026-11-04_16-23-14_failsafe.log` | Joe: landed, motors stopped on their own |
+| 2 | Same | Same, real battery 3.38 V after 41 ticks | `logs/2026-11-04_16-26-02_failsafe.log` | Joe: landed, motors stopped on their own |
 
 ## Observations
-What happened, especially anything surprising. Include numbers.
+
+### Joe (said during the session)
+
+- Both flights landed and the motors stopped on their own.
+
+### Computed from the logs (Claude)
+
+- **The forged-battery path wasn't exercised.** The battery read 3.78-3.79 V
+  at rest and sagged to 3.45 V within 1 s of take-off, then under 3.40 V
+  about 2 s in, before the fault's 3 s of hovering. The real low-battery
+  failsafe landed the drone both times.
+- **Height:** bounced between 0.004 and 0.094 m around the 0.1 m target;
+  "hovering" was declared at 0.05-0.06 m (within the 5 cm tolerance).
+- **Touchdown:** "Landing time is up but touchdown isn't confirmed;
+  descending slowly" both times, so the final descent (ADR-0019) ran.
+- **Before flight 1,** the Flow deck check showed the motion flag set in every
+  sample and the position variance steady at about 1e-4.
 
 ## Next
-- Code changes:
-- ADRs to write or revisit:
-- Next session's goal:
+- Code changes: none yet.
+- ADRs to write or revisit: backlog #50 (low-battery limit under load), #51
+  (touchdown never confirmed), #52 (height at 0.1 m).
+- Next session's goal: fly again on a fully charged battery (about 4.2 V).

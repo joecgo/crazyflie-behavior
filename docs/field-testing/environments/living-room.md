@@ -8,7 +8,7 @@ description (time of day, sunlight) itself.
 
 | Location | Floor surface | Ceiling height | Notes |
 |---|---|---|---|
-| Hide-and-seek launch point | | | |
+| Hide-and-seek launch point | | About 2.3 m (the up range on the floor, 2026-11-04) | Near a wall (Joe, 2026-11-04). The Flow deck gave no flow there once with less light (bench log, 2026-11-04) |
 
 ## Lighting setups
 

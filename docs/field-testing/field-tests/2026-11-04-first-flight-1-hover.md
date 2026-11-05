@@ -1,9 +1,9 @@
-# YYYY-MM-DD-first-flight-1-hover
+# 2026-11-04-first-flight-1-hover
 
 > **DRAFT.** Date and commit are pending. Nothing below the pre-flight
 > section has been filled in.
 
-- **Session:** [First flight 1](../sessions/YYYY-MM-DD-first-flight-1.md)
+- **Session:** [First flight 1](../sessions/2026-11-04-first-flight-1.md)
 - **Test:** Hover (flight)
 - **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point, all lights on. Time of day / sunlight: ___
 - **Git commit:** `<hash>` (must be committed before flying)

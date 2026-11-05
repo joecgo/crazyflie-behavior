@@ -1,8 +1,11 @@
 # Field testing
 
 > **Status, updated 2026-11-04:** a vertical slice: one room (the living
-> room), working toward hide-and-seek. Pass criteria are light for now. The
-> rescue landing and the emergency-stop script are built
+> room), working toward hide-and-seek. Pass criteria are light for now. First
+> hardware session on 2026-11-04 ([First flight 1](sessions/2026-11-04-first-flight-1.md)):
+> the Bench, then three short failsafe flights, each landed by the real
+> low-battery failsafe before the forged fault. The rescue landing and the
+> emergency-stop script are built
 > ([ADR-0038](../decisions/0038-connecting-to-a-flying-drone.md)) and not yet
 > run on hardware.
 
