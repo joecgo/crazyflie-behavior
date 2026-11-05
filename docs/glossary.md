@@ -1,9 +1,7 @@
 # Glossary
 
 The project's shared language. Every term here means exactly one thing, and it
-means the same in conversation, docs and code. The UE5 column gives the
-nearest equivalent, with a note where the analogy breaks, or says "No UE
-analogy" when none fits.
+means the same in conversation, docs and code.
 
 Every term here is approved by the architect. Most describe how the drone
 and robotics world works. Terms in **Architecture** and in the game sections
@@ -19,174 +17,180 @@ this file in the same commit as the code or ADR that uses it.
 
 ## Hardware and platform
 
-| Term | Definition | UE5 analogy |
-|---|---|---|
-| **Crazyflie** | The physical drone: Crazyflie 2.1+, 27 g, about 7 min of flight per battery. | The possessed Pawn. |
-| **Crazyradio** | USB radio dongle the PC uses to talk to the Crazyflie. | The network connection to a remote client. |
-| **Deck** | Plug-in expansion board on the Crazyflie. | A component added to the Pawn. |
-| **Flow deck** | Deck with a downward optical-flow camera and height sensor. Needed to hold position. | Gives the Pawn a sense of its own movement. |
-| **Multi-ranger deck** | Deck with 5 laser distance sensors (front, back, left, right, up). Each sensor sees a cone about 27° wide and reports a single distance for the whole cone. | Like five line traces fired every sample, but each gives back a blurry distance reading from a sensor in the shape of a cone. |
-| **Buzzer deck** | Deck with a small piezo buzzer that plays tones and short melodies, so a sound comes from where the drone is. | A sound component on the Pawn: the sound plays at the Actor's location. |
-| **Firmware** | Code running on the drone itself: stabilization, estimation, motor control at about 1 kHz. | The engine's physics and movement component. You don't rewrite it, you give it inputs. |
-| **cflib** | Bitcraze's official Python library for talking to the Crazyflie. | An engine-provided API module. |
-| **URI** | Address of a specific drone, e.g. `radio://0/80/2M/E7E7E7E7E7`. | A server address to connect to. |
-| **CRTP** | The packet protocol between PC and drone. Everything in cflib is built on it. | The replication wire protocol. You almost never touch it directly. |
+| Term | Definition |
+|---|---|
+| **Crazyflie** | The physical drone: Crazyflie 2.1+, 27 g, about 7 min of flight per battery. |
+| **Crazyradio** | USB radio dongle the PC uses to talk to the Crazyflie. |
+| **Deck** | Plug-in expansion board on the Crazyflie. |
+| **Flow deck** | Deck with a downward optical-flow camera and height sensor. Needed to hold position. |
+| **Multi-ranger deck** | Deck with 5 laser distance sensors (front, back, left, right, up). Each sensor sees a cone about 27° wide and reports a single distance for the whole cone. |
+| **Buzzer deck** | Deck with a small piezo buzzer that plays tones and short melodies, so a sound comes from where the drone is. |
+| **Firmware** | Code running on the drone itself: stabilization, estimation, motor control at about 1 kHz. |
+| **cflib** | Bitcraze's official Python library for talking to the Crazyflie. |
+| **URI** | Address of a specific drone, e.g. `radio://0/80/2M/E7E7E7E7E7`. |
+| **CRTP** | The packet protocol between PC and drone. Everything in cflib is built on it. |
 
 ## Communication
 
-| Term | Definition | UE5 analogy |
-|---|---|---|
-| **Link** | An open connection to one drone. | A net connection for one client. |
-| **TOC** (table of contents) | List of every log variable and parameter the firmware exposes, by name, downloaded on connect. | Reflection data: the set of `UPROPERTY`s you can query by name. |
-| **Telemetry** | Data streamed from the drone to the PC. | Replicated properties arriving from the server. |
-| **Log block** | A cflib `LogConfig`: a named group of variables streamed at a fixed period (max 26 bytes per block). | A replicated struct with its own net update frequency. |
-| **State block** | The Crazyflie adapter's log block that carries the position estimate, velocity estimate and drone status together (6 floats and a 2-byte bitfield: the full 26 bytes), so all three come from the same moment ([ADR-0021](decisions/0021-drone-status-streams-with-the-state.md)). | One replicated struct holding the transform, velocity and state flags, so they always update together. |
-| **Parameter** | Named firmware setting you can read or write at run time, e.g. `kalman.resetEstimation`. | A console variable (CVar). |
-| **Callback** | Function cflib calls when an event or data arrives. Runs on cflib's background thread. | A bound multicast delegate, but fired **off the game thread**. |
+| Term | Definition |
+|---|---|
+| **Link** | An open connection to one drone. |
+| **TOC** (table of contents) | List of every log variable and parameter the firmware exposes, by name, downloaded on connect. |
+| **Telemetry** | Data streamed from the drone to the PC. |
+| **Log block** | A cflib `LogConfig`: a named group of variables streamed at a fixed period (max 26 bytes per block). |
+| **State block** | The Crazyflie adapter's log block that carries the position estimate, velocity estimate and drone status together (6 floats and a 2-byte bitfield: the full 26 bytes), so all three come from the same moment ([ADR-0021](decisions/0021-drone-status-streams-with-the-state.md)). |
+| **Parameter** | Named firmware setting you can read or write at run time, e.g. `kalman.resetEstimation`. |
+| **Callback** | Function cflib calls when an event or data arrives. Runs on cflib's background thread. |
 
 ## Space and motion
 
-| Term | Definition | UE5 analogy |
-|---|---|---|
-| **World frame** | Fixed coordinate frame: meters, +X forward (at takeoff), +Y left, +Z up. Right-handed. Origin at the takeoff point. | World space, **but** UE5 is left-handed, +Y **right**, in **centimeters**. |
-| **Body frame** | Frame attached to the drone: +X out the drone's front, +Y left, +Z up. Rotates with yaw. | Actor local space (with the same handedness caveat). |
-| **Yaw** | Rotation about +Z (heading). cflib uses degrees in some places and radians in others. Always check. | `FRotator::Yaw`. |
-| **Setpoint** | A target the firmware's controller tries to reach: a position, a velocity or a hover height. | A MoveTo goal, or the input vector given to `AddMovementInput`. |
-| **Setpoint stream** | Sending low-level setpoints continuously (≥ every few hundred ms). If they stop, the firmware stops following. | Input you must feed every Tick or the Pawn stops. |
-| **High-level commander** | Firmware feature that plans a smooth trajectory to a goal on the drone itself (`takeoff`, `go_to`, `land`). | `MoveTo` with path following done by the movement component. |
-| **Trajectory** | A planned path through time from the current state to a goal. | A spline the movement component follows. |
+| Term | Definition |
+|---|---|
+| **World frame** | Fixed coordinate frame: meters, +X forward (at takeoff), +Y left, +Z up. Right-handed. Origin at the takeoff point. |
+| **Body frame** | Frame attached to the drone: +X out the drone's front, +Y left, +Z up. Rotates with yaw. |
+| **Yaw** | Rotation about +Z (heading). cflib uses degrees in some places and radians in others. Always check. |
+| **Setpoint** | A target the firmware's controller tries to reach: a position, a velocity or a hover height. |
+| **Setpoint stream** | Sending low-level setpoints continuously (≥ every few hundred ms). If they stop, the firmware stops following. |
+| **High-level commander** | Firmware feature that plans a smooth trajectory to a goal on the drone itself (`takeoff`, `go_to`, `land`). |
+| **Trajectory** | A planned path through time from the current state to a goal. |
 
 ## State and estimation
 
-| Term | Definition | UE5 analogy |
-|---|---|---|
-| **State estimate** | The drone's best guess of its own position, velocity and attitude, fused from sensors (`stateEstimate.*`). Not independent of those sensors: with a Flow deck, height comes mostly from the down range. | The Pawn's transform, **except it is a guess, not ground truth**. |
-| **Estimator** | Firmware algorithm (a Kalman filter) that produces the state estimate. | Client-side smoothing of replicated movement, but for real sensor data. |
-| **Drift** | Slow, growing error in the state estimate over a flight (flow deck has no absolute reference). | No equivalent: in a game, `GetActorLocation()` never lies. |
-| **Sensor noise** | Random error on each reading. | Like adding random jitter to every line trace hit distance. |
-| **Ground truth** | The *actual* position, known only in simulation or with external tracking. | `GetActorLocation()`. |
+| Term | Definition |
+|---|---|
+| **State estimate** | The drone's best guess of its own position, velocity and attitude, fused from sensors (`stateEstimate.*`). Not independent of those sensors: with a Flow deck, height comes mostly from the down range. |
+| **Estimator** | Firmware algorithm (a Kalman filter) that produces the state estimate. |
+| **Drift** | Slow, growing error in the state estimate over a flight (flow deck has no absolute reference). |
+| **Estimate runaway** | The state estimate's position and velocity growing fast and without limit because the estimator gets no usable flow: the Flow deck in low light or right at the floor, or the drone lifted by hand. Unlike drift, it happens in seconds, not over a whole flight. |
+| **Bad-flow zone** | The heights just above the floor where the Flow deck's flow can't be trusted, so the estimated horizontal speed and position go wrong. How high it reaches depends on the light; still to be measured (backlog #54). |
+| **Sensor noise** | Random error on each reading. |
+| **Ground truth** | The *actual* position, known only in simulation or with external tracking. |
+| **Hysteresis** | A deliberate lag in a flag or switch, so a noisy input can't flip it back and forth. The flag changes only after the input has stayed changed for a while, or it switches at different thresholds going up and going down. Example: the drone status keeps saying flying for 2 s after the motors stop. |
 
 ## Safety
 
-| Term | Definition | UE5 analogy |
-|---|---|---|
-| **Arming** | Enabling the motors before flight: the drone ignores flight commands until it's armed. Armed alone doesn't spin the motors. Stock Crazyflie 2.1+ firmware arms itself once its pre-flight checks pass (auto-arming); otherwise an arm request does it (`supervisor.send_arming_request`). | No equivalent; closest is a "can move" gate on the Pawn. |
-| **Emergency stop** (e-stop) | Immediately cut all motors. The drone falls. | Destroying the Pawn's movement component mid-air. |
-| **Supervisor** | Firmware subsystem tracking safety state (armed, flying, tumbled, crashed). | A gameplay state machine guarding what the Pawn may do. |
-| **Failsafe** | The safety layer's automatic response to a failure that makes flying unsafe: hover, land or stop, depending on how serious it is ([ADR-0020](decisions/0020-failures-degrade-gracefully.md)). | A gameplay fallback that ends the match cleanly when a critical system fails, instead of crashing. |
+| Term | Definition |
+|---|---|
+| **Arming** | Enabling the motors before flight: the drone ignores flight commands until it's armed. Armed alone doesn't spin the motors. Stock Crazyflie 2.1+ firmware arms itself once its pre-flight checks pass (auto-arming); otherwise an arm request does it (`supervisor.send_arming_request`). |
+| **Emergency stop** (e-stop) | Immediately cut all motors. The drone falls. |
+| **Supervisor** | Firmware subsystem tracking safety state (armed, flying, tumbled, crashed). |
+| **Failsafe** | The safety layer's automatic response to a failure that makes flying unsafe: hover, land or stop, depending on how serious it is ([ADR-0020](decisions/0020-failures-degrade-gracefully.md)). |
 
 ## Architecture
 
-| Term | Definition | UE5 analogy | ADR |
-|---|---|---|---|
-| **Drone interface** | The abstraction behavior code uses to sense and command a drone, with no knowledge of cflib. | A `UInterface` (`IDroneInterface`) both real and fake Pawns implement. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
-| **Adapter** | An implementation of the drone interface for one backend. | A concrete class implementing the `UInterface`. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
-| **Crazyflie adapter** | Adapter that talks to a physical Crazyflie through cflib. The only module in `src/` allowed to import cflib. | A concrete `UInterface` implementation that wraps a hardware SDK. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
-| **Tool** | A standalone diagnostic script in `tools/` (e.g. `first_flight.py`) that may use cflib directly, bypassing the drone interface. Never imported by project code. | A commandlet or editor utility: useful for debugging, never part of gameplay code. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
-| **Mock adapter** | Adapter that is itself a simple fake drone: it answers commands and makes up telemetry in-process, with no physics, for tests and development. | A dummy Pawn used in an automation test. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md), renamed in [0010](decisions/0010-code-foundations.md) |
-| **Simulator** | A physics-ish model of the drone and room, including noise and drift. | PIE with a simulated world. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
-| **Behavior** | Decision-making logic that turns sensed state into commands. Never imports cflib. | The AIController's brain component: a behavior tree or a state tree. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md), [0036](decisions/0036-game-logic-is-a-state-machine.md) |
-| **Outcome** | What a behavior's tick reports: running, succeeded or failed. Not built yet: today `tick` returns whether the behavior is done, and a behavior reports failure through its own `has_failed`. | `EBTNodeResult` (InProgress, Succeeded, Failed). | [0036](decisions/0036-game-logic-is-a-state-machine.md) |
-| **Failure rule** | What a behavior does when a command request is refused or a step runs out of time: stop, land or retry. Game behaviors follow ADR-0020; a behavior written for a field test chooses its own and says so in its docstring. | A Behavior Tree task's choice to fail its branch or try again. | [0020](decisions/0020-failures-degrade-gracefully.md), [0033](decisions/0033-field-tests-choose-their-failure-rule.md) |
-| **Tick** | One iteration of the behavior update loop. | `Tick(DeltaTime)`. | [0003](decisions/0003-tick-loop-timing-model.md) |
-| **Tick loop** | The loop that runs ticks at the tick rate: it calls the tick step, then waits for the next due time. It keeps time, measures each tick and watches for hangs, but doesn't know what a tick does. | The engine loop with a frame-rate cap. | [0003](decisions/0003-tick-loop-timing-model.md), [0024](decisions/0024-tick-timing-strategy.md), [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
-| **Tick step** | What one tick does, in a fixed order: snapshot, safety pre-check, behaviors, send. The tick loop calls it once per tick. | `UWorld::Tick` running its tick groups in order. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
-| **Stop request** | A request from any thread (the interrupt signal, an operator command) for the tick loop to stop after the current tick. The program then disconnects, which lands the drone. | `RequestExit`: the engine finishes the frame, then shuts down. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
-| **Interrupt signal** | The operating system's request for the program to stop (SIGINT). Ctrl+C in the console sends it, and other tools can too. Python raises it as KeyboardInterrupt on the main thread unless the program handles it. While connecting it stops the program; once connected it makes a stop request. | The OS's "close window" message, which Alt+F4 is one way to send. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md), [0028](decisions/0028-programs-bench-first-plain-logging.md) |
-| **Hang watchdog** | Detects a tick that runs longer than 1 s and writes every thread's stack trace to the log. It only reports; acting on a hang is backlog #26. | UE's hang detector, which dumps the call stack when the game thread stops responding. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
-| **Console** | The text window the program runs in: PyCharm's Run window, or a terminal window. Shows log messages at info level and above; the log file also gets our own debug messages (libraries such as cflib only from info level). | The Output Log window. Not UE's `~` console, where you type commands. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
-| **Log level** | How important a log message is: debug (every detail, such as each tick's timing), info (normal events), warning (something went wrong but the program carries on), error (something failed), critical (the most severe). The console and the log file each show messages at or above a chosen level. | `UE_LOG` verbosity (`Verbose`, `Log`, `Warning`, `Error`). Unlike UE's `Fatal`, critical doesn't stop the program. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
-| **Program** | A runnable entry point, such as the bench program. It sets up logging, the drone and the tick loop, then runs until it's done or stopped. | Like UE's `Source/Programs`: standalone executables built from the same code. | [0028](decisions/0028-programs-bench-first-plain-logging.md) |
-| **Bench program** | The program for the Bench field test. It connects to the drone, runs the tick loop and logs every snapshot, but never commands the drone. | No UE analogy. | [0028](decisions/0028-programs-bench-first-plain-logging.md) |
-| **Hover test** | The behavior for the Hover field test: arm, take off to 0.5 m, hover, land, then report done. | No UE analogy. | [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
-| **Hover program** | The program that runs the hover test, like the bench program but flying. | No UE analogy. | [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
-| **Failsafe test** | The behavior for the Failsafe low and Failsafe high field tests: arm, take off to the height, hover, and wait for the failsafe to land the drone. If the fault never takes effect, it lands the drone itself after a time limit and fails. | No UE analogy. | [0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) |
-| **Failsafe program** | The program that runs the failsafe test on the forged low battery drone, at 0.1 m or 0.5 m. The program, not the behavior, judges whether the test passed. | No UE analogy. | [0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) |
-| **Rescue landing program** | The program that does a rescue landing: it takes over the flight and runs a behavior that only lands. The only program allowed to take over a flight. | No UE analogy. | [0038](decisions/0038-connecting-to-a-flying-drone.md) |
-| **Game program** | A program that plays a game (hide-and-seek, catch the bird), as opposed to running a field test. It never takes over a flight and never uses fault injection; fitness functions enforce both. | The real game mode, as opposed to a test map's. | [0038](decisions/0038-connecting-to-a-flying-drone.md), [0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) |
-| **Test program** | A program that runs a test: the bench, hover and failsafe programs. Only test programs may use fault injection. | A test map, as opposed to the real game mode. | [0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) |
-| **Forged low battery drone** | A wrapper around the drone, used only by the failsafe program. It passes everything on unchanged, but after the drone has hovered a few seconds, it hands out snapshots whose battery voltage is below the safety pre-check's limit. | A debug decorator around a component that fakes one value and leaves the rest real. | [0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) |
-| **Tick rate** | Ticks per second: 20 Hz. | `t.MaxFPS`. | [0023](decisions/0023-tick-rate-20-hz.md) |
-| **Due time** | When a tick should start: the previous due time plus one tick period, or, after an overrun, the moment the late tick ends. | When the next frame is due under a frame cap. | [0024](decisions/0024-tick-timing-strategy.md) |
-| **Overrun** | A tick still working at the next due time. The next tick starts at once; missed ticks are skipped, never caught up. Always logged. | A hitch: a frame that took too long. | [0024](decisions/0024-tick-timing-strategy.md) |
-| **Lateness** | How long after its due time a tick actually started. | Frame start delay. | [0024](decisions/0024-tick-timing-strategy.md) |
-| **Work time** | How long a tick's own work took, not counting the wait. | Game thread time in `stat unit`. | [0024](decisions/0024-tick-timing-strategy.md) |
-| **Telemetry buffer** | Thread-safe store of the latest value of each telemetry variable, written in the background as data arrives (by the Crazyflie adapter, or by the mock or simulator). | The net driver's incoming buffer of replicated values. | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md) |
-| **Snapshot** | Read-only copy of the telemetry buffer, taken at the start of each tick. Every behavior in that tick sees the same snapshot. Each value carries its arrival time (PC clock) and the drone's timestamp. Its time is read after the copy, so no value in it arrived later than that time. | A consistent frame of state that the game thread works from while packets keep arriving. | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md), [0046](decisions/0046-snapshot-time-read-after-the-copy.md) |
-| **Blackboard** | Behavior memory: what behaviors remember across ticks (next waypoint, where an obstacle was last seen). Written by behaviors, persists between ticks. | UE Blackboard (AI memory keys). | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md) |
-| **Safety layer** | The layer between behaviors and the drone interface. It runs the safety pre-check on each snapshot, answers command requests at once, and is the only code that sends commands to the drone, apart from the kill switch ([ADR-0013](decisions/0013-operator-kill-switch.md)) and the forged low battery drone, which only passes them on ([ADR-0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)): it approves, clamps to the speed envelope, or overrides command requests. | Server authority validating client movement requests. | [0008](decisions/0008-drone-interface.md), [0013](decisions/0013-operator-kill-switch.md), [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
-| **Operator** | The person supervising a flight from the PC, who can stop or override the drone at any moment. In hide-and-seek, the adult running the game. | You at the keyboard during PIE, typing console commands while the AI runs. | [0027](decisions/0027-operator-controls.md) |
-| **Operator controls** | The operator's commands during a flight: "land now", "hover" and the kill switch, through Windows hotkeys or an optional PS5 controller. "Land now" and "hover" fail the safety pre-check, so the failsafe lands or holds the drone and no behavior can override them. | Debug keys that work in any game state. | [0027](decisions/0027-operator-controls.md) |
-| **Kill switch** | The operator's command to cut the motors immediately, executed at any moment, like a cheat command. The one thing that bypasses the safety layer; everything else goes through it. | A console cheat command that bypasses the gameplay rules. | [0013](decisions/0013-operator-kill-switch.md) |
-| **Kill latch** | The program's refusal to arm or take off after the kill switch, until the program is restarted. It backs up the drone lock and says why it refuses. | No UE analogy. | [0027](decisions/0027-operator-controls.md) |
-| **Drone lock** | The drone's own state after an emergency stop: its firmware refuses to fly until the drone is restarted (switched off and on). | No UE analogy. | [0027](decisions/0027-operator-controls.md) |
-| **Final descent** | After the planned landing, the slow descent that continues until the down range confirms touchdown, or until a time limit says the drone must be on the floor. Then the motors stop. | A fallback "settle to ground" state when the landing animation ended but the character isn't grounded. | [0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md) |
-| **Landing phase** | Where a landing is: not landing, the planned landing (a high-level move down to the floor, planned from the height estimate, [ADR-0032](decisions/0032-landing-with-a-go-to.md)), or the final descent. The Crazyflie adapter holds it. | The current state of a small landing state machine. | [0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md), [0032](decisions/0032-landing-with-a-go-to.md) |
-| **Touchdown** | The drone resting on the floor, confirmed by the down range, or assumed when the final descent's time limit runs out. Then the motors stop. | The Landed event, when character movement switches from falling to walking. | [0012](decisions/0012-landing-confirms-touchdown.md), [0032](decisions/0032-landing-with-a-go-to.md) |
-| **May be flying** | The Crazyflie adapter's judgment of whether the drone could be in the air, so that stopping it needs a landing, not a motor stop. Not flying if our code hasn't started or taken over a flight since the last motor stop. Otherwise flying, unless a fresh drone status says not flying and the take-off grace is over. | A conservative `IsFalling()` that answers yes when unsure. | [0039](decisions/0039-the-adapter-decides-may-be-flying.md) |
-| **Take-off grace** | The short time after a take-off is sent when the Crazyflie adapter counts the drone as flying, because the drone status shows a take-off only after a delay. | No UE analogy. | [0039](decisions/0039-the-adapter-decides-may-be-flying.md) |
-| **Command request** | What a behavior asks the drone to do this tick (e.g. a velocity, or fast mode to a point). The safety layer answers at once (approved, clamped or refused, with the reason). At the end of the tick, each command slot's approved request is sent. Never goes directly to the drone. | A client asking the server to move. | [0008](decisions/0008-drone-interface.md), [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
-| **Command slot** | A group of commands where only one can be active at a time: movement (arm, take off, land, velocity, move to, hover), buzzer, LEDs. A later approved request in the same tick replaces the earlier one, and the replacement is logged as a warning. Each slot's request is sent at the end of the tick. | An animation montage slot. | [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
-| **Safety pre-check** | The safety layer's check of each snapshot at the start of the tick, before behaviors run (missing or stale values, a value that isn't finite, low battery, a crash or tumble the drone reports; a geofence later). If it passes, behaviors run and their requests are judged against it; if it fails, behaviors are skipped and the failsafe takes over. | A behavior tree root decorator that aborts the tree when its condition fails. | [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
-| **Verdict** | The safety layer's answer to a command request: approved, clamped (approved with changed values) or refused, with the reason. | The server's reply to a client's move: accepted, or corrected (`ClientAdjustPosition`). UE has no "refused". | [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
-| **Stamped value** | A telemetry value together with its arrival time (PC clock) and the drone's timestamp (converted to seconds). Every value in a snapshot is stamped, so its age can always be checked. | A replicated property plus "when the server sent it" and "when we received it". | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md) |
-| **Stale value** | A stamped value older than the age limit of the code reading it, so too old to trust. Each reader sets its own limit: the safety pre-check's `STALE_AFTER` (`BATTERY_STALE_AFTER` for battery voltage), the Crazyflie adapter's `MAX_READING_AGE`. A stale value stays in the snapshot until a newer one arrives. | An AIPerception stimulus older than its max age. Unlike UE, it isn't forgotten: the reader sees it and judges its age. | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md), [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
-| **Range readings** | The set of six range readings in a snapshot, one per named direction (front, back, left, right, up, down). | The results of a fixed set of line traces fired every tick. | [0008](decisions/0008-drone-interface.md) |
-| **Drone status** | Flags describing the drone's state as the drone reports it: armed, flying, crashed, tumbled. Part of the snapshot. Its "flying" lags: it shows a take-off a little late and keeps saying flying for 2 s after the motors stop. | Replicated state flags on the Pawn (alive, ragdolled…). | [0008](decisions/0008-drone-interface.md) |
-| **Range reading** | The distance a range sensor measures in one direction (front, back, left, right, up, down): either a distance, out of range (clear) or invalid (unknown). Named by its direction for short: the down range. | Like a line trace, but instead we get back a blurry distance reading from a sensor in the shape of a cone. | [0008](decisions/0008-drone-interface.md) |
-| **Range status** | Whether a range reading is a *distance* (something detected at a known distance), *out of range* (clear) or *invalid* (unknown). In code: `RangeStatus`, and the reading's field is `status`. Named after the "range status" that the VL53 laser sensors report with each measurement. | Whether a line trace hit, missed, or failed. | [0008](decisions/0008-drone-interface.md) |
-| **Range direction** | One of the six named directions a range reading points: front, back, left, right, up, down. Relative to the drone. In code: `RangeDirection`. | The fixed directions of a Pawn's sensor traces. | [0008](decisions/0008-drone-interface.md) |
-| **Clock** | The source of time for the tick loop and adapters. A *real clock* reads the computer's monotonic time; a *sim clock* only advances when told to, so tests and simulations run faster than real time and repeat exactly. Behaviors and the safety layer don't read the clock: they use the snapshot's time. | World time (game time) rather than OS time: pausable, dilatable and constant within a frame. Behaviors get it like `Tick(DeltaTime)`. | [0009](decisions/0009-clock-abstraction.md), [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
-| **Control mode** | How behaviors command motion at a given moment: either steering mode or fast mode. | Which movement driver is in charge: AI steering or a scripted move. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
-| **Steering mode** | The default control mode: velocity commands with obstacle-avoidance steering, slow and controlled. | `AddMovementInput` each Tick from steering behaviors. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
-| **Fast mode** | Control mode for moving quickly to a target using position commands (`go_to`), with obstacle-avoidance steering disabled. The safety layer stays active and can interrupt it. | A scripted `MoveTo` with steering off, but collision still on. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
-| **Speed envelope** | The maximum speed and acceleration allowed in a control mode. The safety layer may tighten it in the moment but never widen it. | `MaxWalkSpeed` and `MaxAcceleration` on the movement component, clamped by gameplay rules. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
-| **Rescue landing** | Landing a drone a program lost. A new program connects, takes over the flight without resetting the position estimate, and lands it with the normal landing. | Re-possessing a Pawn left hovering after its controller was destroyed, only to bring it down. | [0038](decisions/0038-connecting-to-a-flying-drone.md) |
-| **Take over (a flight)** | Connect to a drone that may be flying, without resetting its position estimate, and treat it as flying until it lands. Only the rescue landing program does it. | Possess on a Pawn already in motion: the new controller keeps the Pawn's state instead of respawning it. | [0038](decisions/0038-connecting-to-a-flying-drone.md) |
-| **Streak** | An unbroken run of the same condition, counted in whatever repeats (ticks, command requests, state packets). It ends the first time the condition doesn't hold. A warning comes once per streak, so a long fault logs once, not every tick. | A `DoOnce` node that resets when the condition clears. | [0020](decisions/0020-failures-degrade-gracefully.md), [0042](decisions/0042-negative-ages-count-as-fresh.md) |
+| Term | Definition | ADR |
+|---|---|---|
+| **Drone interface** | The abstraction behavior code uses to sense and command a drone, with no knowledge of cflib. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
+| **Adapter** | An implementation of the drone interface for one backend. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
+| **Crazyflie adapter** | Adapter that talks to a physical Crazyflie through cflib. The only module in `src/` allowed to import cflib. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
+| **Tool** | A standalone diagnostic script in `tools/` (e.g. `first_flight.py`) that may use cflib directly, bypassing the drone interface. Never imported by project code. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
+| **Mock adapter** | Adapter that is itself a simple fake drone: it answers commands and makes up telemetry in-process, with no physics, for tests and development. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md), renamed in [0010](decisions/0010-code-foundations.md) |
+| **Simulator** | A physics-ish model of the drone and room, including noise and drift. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md) |
+| **Behavior** | Decision-making logic that turns sensed state into commands. Never imports cflib. | [0002](decisions/0002-behavior-depends-only-on-drone-interface.md), [0036](decisions/0036-game-logic-is-a-state-machine.md) |
+| **Outcome** | What a behavior's tick reports: running, succeeded or failed. Not built yet: today `tick` returns whether the behavior is done, and a behavior reports failure through its own `has_failed`. | [0036](decisions/0036-game-logic-is-a-state-machine.md) |
+| **Failure rule** | What a behavior does when a command request is refused or a step runs out of time: stop, land or retry. Game behaviors follow ADR-0020; a behavior written for a field test chooses its own and says so in its docstring. | [0020](decisions/0020-failures-degrade-gracefully.md), [0033](decisions/0033-field-tests-choose-their-failure-rule.md) |
+| **Tick** | One iteration of the behavior update loop. | [0003](decisions/0003-tick-loop-timing-model.md) |
+| **Tick loop** | The loop that runs ticks at the tick rate: it calls the tick step, then waits for the next due time. It keeps time, measures each tick and watches for hangs, but doesn't know what a tick does. | [0003](decisions/0003-tick-loop-timing-model.md), [0024](decisions/0024-tick-timing-strategy.md), [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
+| **Tick step** | What one tick does, in a fixed order: snapshot, safety pre-check, behaviors, send. The tick loop calls it once per tick. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
+| **Stop request** | A request from any thread (the interrupt signal, an operator command) for the tick loop to stop after the current tick. The program then disconnects, which lands the drone. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
+| **Interrupt signal** | The operating system's request for the program to stop (SIGINT). Ctrl+C in the console sends it, and other tools can too. Python raises it as KeyboardInterrupt on the main thread unless the program handles it. While connecting it stops the program; once connected it makes a stop request. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md), [0028](decisions/0028-programs-bench-first-plain-logging.md) |
+| **Hang watchdog** | Detects a tick that runs longer than 1 s and writes every thread's stack trace to the log. It only reports; acting on a hang is backlog #26. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
+| **Console** | The text window the program runs in: PyCharm's Run window, or a terminal window. Shows log messages at info level and above; the log file also gets our own debug messages (libraries such as cflib only from info level). | [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
+| **Log level** | How important a log message is: debug (every detail, such as each tick's timing), info (normal events), warning (something went wrong but the program carries on), error (something failed), critical (the most severe). The console and the log file each show messages at or above a chosen level. | [0026](decisions/0026-tick-loop-calls-one-tick-step.md) |
+| **Program** | A runnable entry point, such as the bench program. It sets up logging, the drone and the tick loop, then runs until it's done or stopped. | [0028](decisions/0028-programs-bench-first-plain-logging.md) |
+| **Bench program** | The program for the Bench field test. It connects to the drone, runs the tick loop and logs every snapshot, but never commands the drone. | [0028](decisions/0028-programs-bench-first-plain-logging.md) |
+| **Hover test** | The behavior for the Hover field test: arm, take off to 0.5 m, hover, land, then report done. | [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
+| **Hover program** | The program that runs the hover test, like the bench program but flying. | [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
+| **Failsafe test** | The behavior for the Failsafe low and Failsafe high field tests: arm, take off to the height, hover, and wait for the failsafe to land the drone. If the fault never takes effect, it lands the drone itself after a time limit and fails. | [0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) |
+| **Failsafe program** | The program that runs the failsafe test on the forged low battery drone, at 0.1 m or 0.5 m. The program, not the behavior, judges whether the test passed. | [0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) |
+| **Rescue landing program** | The program that does a rescue landing: it takes over the flight and runs a behavior that only lands. The only program allowed to take over a flight. | [0038](decisions/0038-connecting-to-a-flying-drone.md) |
+| **Game program** | A program that plays a game (hide-and-seek, catch the bird), as opposed to running a field test. It never takes over a flight and never uses fault injection; fitness functions enforce both. | [0038](decisions/0038-connecting-to-a-flying-drone.md), [0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) |
+| **Test program** | A program that runs a test: the bench, hover and failsafe programs. Only test programs may use fault injection. | [0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) |
+| **Forged low battery drone** | A wrapper around the drone, used only by the failsafe program. It passes everything on unchanged, but after the drone has hovered a few seconds, it hands out snapshots whose battery voltage is below the safety pre-check's limit. | [0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md) |
+| **Tick rate** | Ticks per second: 20 Hz. | [0023](decisions/0023-tick-rate-20-hz.md) |
+| **Due time** | When a tick should start: the previous due time plus one tick period, or, after an overrun, the moment the late tick ends. | [0024](decisions/0024-tick-timing-strategy.md) |
+| **Overrun** | A tick still working at the next due time. The next tick starts at once; missed ticks are skipped, never caught up. Always logged. | [0024](decisions/0024-tick-timing-strategy.md) |
+| **Lateness** | How long after its due time a tick actually started. | [0024](decisions/0024-tick-timing-strategy.md) |
+| **Work time** | How long a tick's own work took, not counting the wait. | [0024](decisions/0024-tick-timing-strategy.md) |
+| **Telemetry buffer** | Thread-safe store of the latest value of each telemetry variable, written in the background as data arrives (by the Crazyflie adapter, or by the mock or simulator). | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md) |
+| **Snapshot** | Read-only copy of the telemetry buffer, taken at the start of each tick. Every behavior in that tick sees the same snapshot. Each value carries its arrival time (PC clock) and the drone's timestamp. Its time is read after the copy, so no value in it arrived later than that time. | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md), [0046](decisions/0046-snapshot-time-read-after-the-copy.md) |
+| **Blackboard** | Behavior memory: what behaviors remember across ticks (next waypoint, where an obstacle was last seen). Written by behaviors, persists between ticks. | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md) |
+| **Safety layer** | The layer between behaviors and the drone interface. It runs the safety pre-check on each snapshot, answers command requests at once, and is the only code that sends commands to the drone, apart from the kill switch ([ADR-0013](decisions/0013-operator-kill-switch.md)) and the forged low battery drone, which only passes them on ([ADR-0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)): it approves, clamps to the speed envelope, or overrides command requests. | [0008](decisions/0008-drone-interface.md), [0013](decisions/0013-operator-kill-switch.md), [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
+| **Operator** | The person supervising a flight from the PC, who can stop or override the drone at any moment. In hide-and-seek, the adult running the game. | [0027](decisions/0027-operator-controls.md) |
+| **Operator controls** | The operator's commands during a flight: "land now", "hover" and the kill switch, through Windows hotkeys or an optional PS5 controller. "Land now" and "hover" fail the safety pre-check, so the failsafe lands or holds the drone and no behavior can override them. | [0027](decisions/0027-operator-controls.md) |
+| **Kill switch** | The operator's command to cut the motors immediately, executed at any moment, like a cheat command. The one thing that bypasses the safety layer; everything else goes through it. | [0013](decisions/0013-operator-kill-switch.md) |
+| **Kill latch** | The program's refusal to arm or take off after the kill switch, until the program is restarted. It backs up the drone lock and says why it refuses. | [0027](decisions/0027-operator-controls.md) |
+| **Drone lock** | The drone's own state after an emergency stop: its firmware refuses to fly until the drone is restarted (switched off and on). | [0027](decisions/0027-operator-controls.md) |
+| **Planned landing** | The first landing phase: a high-level move straight down to the floor at the estimated position, timed from the height estimate. When its time is up, the motors stop if touchdown is already confirmed; otherwise the final descent starts. | [0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md), [0032](decisions/0032-landing-with-a-go-to.md) |
+| **Final descent** | After the planned landing, the slow descent that continues until the down range confirms touchdown, or until a time limit says the drone must be on the floor. Then the motors stop. | [0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md) |
+| **Landing phase** | Where a landing is: not landing, the planned landing (a high-level move down to the floor, planned from the height estimate, [ADR-0032](decisions/0032-landing-with-a-go-to.md)), or the final descent. The Crazyflie adapter holds it. | [0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md), [0032](decisions/0032-landing-with-a-go-to.md) |
+| **Touchdown** | The drone resting on the floor, confirmed by the down range, or assumed when the final descent's time limit runs out. Then the motors stop. | [0012](decisions/0012-landing-confirms-touchdown.md), [0032](decisions/0032-landing-with-a-go-to.md) |
+| **Touchdown hold** | How long the down range must stay at or below the touchdown threshold before touchdown is confirmed, so one noisy reading can't confirm it. A higher, missing or stale reading starts it over. | [0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md) |
+| **May be flying** | The Crazyflie adapter's judgment of whether the drone could be in the air, so that stopping it needs a landing, not a motor stop. Not flying if our code hasn't started or taken over a flight since the last motor stop. Otherwise flying, unless a fresh drone status says not flying and the take-off grace is over. | [0039](decisions/0039-the-adapter-decides-may-be-flying.md) |
+| **Take-off grace** | The short time after a take-off is sent when the Crazyflie adapter counts the drone as flying, because the drone status shows a take-off only after a delay. | [0039](decisions/0039-the-adapter-decides-may-be-flying.md) |
+| **Command request** | What a behavior asks the drone to do this tick (e.g. a velocity, or fast mode to a point). The safety layer answers at once (approved, clamped or refused, with the reason). At the end of the tick, each command slot's approved request is sent. Never goes directly to the drone. | [0008](decisions/0008-drone-interface.md), [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
+| **Command slot** | A group of commands where only one can be active at a time: movement (arm, take off, land, velocity, move to, hover), buzzer, LEDs. A later approved request in the same tick replaces the earlier one, and the replacement is logged as a warning. Each slot's request is sent at the end of the tick. | [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
+| **Safety pre-check** | The safety layer's check of each snapshot at the start of the tick, before behaviors run (missing or stale values, a value that isn't finite, low battery, a crash or tumble the drone reports; a geofence later). If it passes, behaviors run and their requests are judged against it; if it fails, behaviors are skipped and the failsafe takes over. | [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
+| **Verdict** | The safety layer's answer to a command request: approved, clamped (approved with changed values) or refused, with the reason. | [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
+| **Stamped value** | A telemetry value together with its arrival time (PC clock) and the drone's timestamp (converted to seconds). Every value in a snapshot is stamped, so its age can always be checked. | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md) |
+| **Stale value** | A stamped value older than the age limit of the code reading it, so too old to trust. Each reader sets its own limit: the safety pre-check's `STALE_AFTER` (`BATTERY_STALE_AFTER` for battery voltage), the Crazyflie adapter's `MAX_READING_AGE`. A stale value stays in the snapshot until a newer one arrives. | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md), [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
+| **Range readings** | The set of six range readings in a snapshot, one per named direction (front, back, left, right, up, down). | [0008](decisions/0008-drone-interface.md) |
+| **Drone status** | Flags describing the drone's state as the drone reports it: armed, flying, crashed, tumbled. Part of the snapshot. Its "flying" lags: it shows a take-off a little late and keeps saying flying for 2 s after the motors stop. | [0008](decisions/0008-drone-interface.md) |
+| **Range reading** | The distance a range sensor measures in one direction (front, back, left, right, up, down): either a distance, out of range (clear) or invalid (unknown). Named by its direction for short: the down range. | [0008](decisions/0008-drone-interface.md) |
+| **Range status** | Whether a range reading is a *distance* (something detected at a known distance), *out of range* (clear) or *invalid* (unknown). In code: `RangeStatus`, and the reading's field is `status`. Named after the "range status" that the VL53 laser sensors report with each measurement. | [0008](decisions/0008-drone-interface.md) |
+| **Range direction** | One of the six named directions a range reading points: front, back, left, right, up, down. Relative to the drone. In code: `RangeDirection`. | [0008](decisions/0008-drone-interface.md) |
+| **Clock** | The source of time for the tick loop and adapters. A *real clock* reads the computer's monotonic time; a *sim clock* only advances when told to, so tests and simulations run faster than real time and repeat exactly. Behaviors and the safety layer don't read the clock: they use the snapshot's time. | [0009](decisions/0009-clock-abstraction.md), [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
+| **Control mode** | How behaviors command motion at a given moment: either steering mode or fast mode. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
+| **Steering mode** | The default control mode: velocity commands with obstacle-avoidance steering, slow and controlled. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
+| **Fast mode** | Control mode for moving quickly to a target using position commands (`go_to`), with obstacle-avoidance steering disabled. The safety layer stays active and can interrupt it. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
+| **Speed envelope** | The maximum speed and acceleration allowed in a control mode. The safety layer may tighten it in the moment but never widen it. | [0005](decisions/0005-control-modes-steering-and-fast.md) |
+| **Rescue landing** | Landing a drone a program lost. A new program connects, takes over the flight without resetting the position estimate, and lands it with the normal landing. | [0038](decisions/0038-connecting-to-a-flying-drone.md) |
+| **Take over (a flight)** | Connect to a drone that may be flying, without resetting its position estimate, and treat it as flying until it lands. Only the rescue landing program does it. | [0038](decisions/0038-connecting-to-a-flying-drone.md) |
+| **Streak** | An unbroken run of the same condition, counted in whatever repeats (ticks, command requests, state packets). It ends the first time the condition doesn't hold. A warning comes once per streak, so a long fault logs once, not every tick. | [0020](decisions/0020-failures-degrade-gracefully.md), [0042](decisions/0042-negative-ages-count-as-fresh.md) |
 
 ## Testing
 
-| Term | Definition | UE5 analogy |
-|---|---|---|
-| **Fitness function** | A test that enforces a structural rule from an ADR, such as "only the Crazyflie adapter imports cflib". It reads the code, for example its imports, instead of running it, and fails continuous integration when the rule is broken. Fitness functions live in `tests/architecture/`. | No UE analogy. |
-| **Field test** | One test of the real drone (Bench, Failsafe low, Hover, ...), with a goal and pass criteria, planned and recorded in a test log as [docs/field-testing/](field-testing/README.md) describes ([ADR-0033](decisions/0033-field-tests-choose-their-failure-rule.md), [ADR-0043](decisions/0043-how-field-tests-are-organized.md)). | A playtest with a test plan and a bug report afterwards. |
-| **Session** | One trip with one or more field tests, flown in order (for example Bench, Failsafe low, Failsafe high, Hover). Its session doc has the planned order, links to its test logs, and what the next session depends on ([ADR-0043](decisions/0043-how-field-tests-are-organized.md)). | A playtest day: several test plans run in one sitting, with one summary afterwards. |
-| **Test log** | The record of one field test: goal, pass criteria, checklist, observations and analysis, tied to the git commit that flew. Observations come from the operator or recorded data, never from an AI. | The bug report filed for one playtest. |
-| **Failsafe low / Failsafe high** | The field tests that fly the failsafe program: it takes off to 0.1 m (low) or 0.5 m (high, the Hover test's height), then the program forges a low battery so the safety layer's failsafe lands the drone ([ADR-0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)). | A cheat command that fakes a low-health state to test the death flow. |
-| **Fault injection** | Causing a failure on purpose in a test, to check how the unchanged safety layer responds. The one kind built so far forges a value: it replaces one value in the snapshot (the forged low battery drone, [ADR-0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)). | A cheat or debug command that breaks one system on purpose to test the failure flow. |
-| **Recording** | A file of one run: a header (the git commit, the program, the adapter, the settings, the format version), then each tick's snapshot, command requests and verdicts, events and timing, as JSON Lines. Kept in `recordings/`; chosen ones are committed ([ADR-0034](decisions/0034-recorded-flights-as-json-lines.md)). | A demo recording: everything needed to play a session back. |
-| **Bug planting** | Deliberately breaking the code a test guards, to check that the test fails. One small change at a time, always removed afterwards and never committed. A test that still passes has a gap. A hand-made form of mutation testing. | No UE analogy. |
+| Term | Definition |
+|---|---|
+| **Fitness function** | A test that enforces a structural rule from an ADR, such as "only the Crazyflie adapter imports cflib". It reads the code, for example its imports, instead of running it, and fails continuous integration when the rule is broken. Fitness functions live in `tests/architecture/`. |
+| **Field test** | One test of the real drone (Bench, Failsafe low, Hover, ...), with a goal and pass criteria, planned and recorded in a test log as [docs/field-testing/](field-testing/README.md) describes ([ADR-0033](decisions/0033-field-tests-choose-their-failure-rule.md), [ADR-0043](decisions/0043-how-field-tests-are-organized.md)). |
+| **Session** | One trip with one or more field tests, flown in order (for example Bench, Failsafe low, Failsafe high, Hover). Its session doc has the planned order, links to its test logs, and what the next session depends on ([ADR-0043](decisions/0043-how-field-tests-are-organized.md)). |
+| **Test log** | The record of one field test: goal, pass criteria, checklist, observations and analysis, tied to the git commit that flew. Observations come from the operator or recorded data, never from an AI. |
+| **Failsafe low / Failsafe high** | The field tests that fly the failsafe program: it takes off to 0.1 m (low) or 0.5 m (high, the Hover test's height), then the program forges a low battery so the safety layer's failsafe lands the drone ([ADR-0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)). |
+| **Fault injection** | Causing a failure on purpose in a test, to check how the unchanged safety layer responds. The one kind built so far forges a value: it replaces one value in the snapshot (the forged low battery drone, [ADR-0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)). |
+| **Recording** | A file of one run: a header (the git commit, the program, the adapter, the settings, the format version), then each tick's snapshot, command requests and verdicts, events and timing, as JSON Lines. Kept in `recordings/`; chosen ones are committed ([ADR-0034](decisions/0034-recorded-flights-as-json-lines.md)). |
+| **Replay** | Feeding a real run's snapshots, tick by tick, through the project's real code without a drone, to see what the code decides and when. Replay tests will do this automatically from recordings ([ADR-0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md), [ADR-0034](decisions/0034-recorded-flights-as-json-lines.md)). |
+| **Bug planting** | Deliberately breaking the code a test guards, to check that the test fails. One small change at a time, always removed afterwards and never committed. A test that still passes has a gap. A hand-made form of mutation testing. |
 
 ## Milestones
 
-| Term | Definition | UE5 analogy |
-|---|---|---|
-| **First flight** | The project's first milestone: everything up to the drone's first hover through the project's own code (the Hover field test). Code "minimal for First flight" does only what that hover needs. | Like a game's "first playable" milestone (a production term, not a UE feature). |
+| Term | Definition |
+|---|---|
+| **First flight** | The project's first milestone: everything up to the drone's first hover through the project's own code (the Hover field test). Code "minimal for First flight" does only what that hover needs. |
 
 ## Hide-and-seek
 
 Terms for the first game ([ADR-0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)).
 
-| Term | Definition | UE5 analogy | ADR |
-|---|---|---|---|
-| **Launch point** | The marked spot every round starts from. The drone takes off from it facing a fixed direction, the map is stored relative to it, and it stands in for the waiting area. | PlayerStart: every round spawns here. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
-| **Waiting area** | Where the player waits during a hiding flight: right behind the launch point, with a safety gate between it and the play area. | A pre-round lobby the player can't leave until the round starts. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
-| **Play area** | The space the drone flies and hides in. Nobody is in it while the drone flies. | The playable level, locked during the setup phase. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
-| **Mapping run** | A flight before play, with the play area clear, that builds the map the hiding flights use. Up to about 5 minutes. | Building the navmesh before play, except the drone has to fly the level to see it. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
-| **Hiding spot** | A place on the floor where the drone lands to hide, with at least one wall between it and the launch point. | An EQS result: a point that fails the line-of-sight test from the PlayerStart. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
-| **Found** | The player picks up the hidden drone, which shows as the down reading jumping and the motion sensors spiking. The drone lights its LEDs and the PC plays a fanfare. | An interact event on a hidden collectible. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
-| **Hint** | Every 15 s until the drone is found, it flashes its LEDs and chirps, so the player can find it. | A ping that reveals where an objective is. | [0017](decisions/0017-hint-chirps-from-buzzer-deck.md) |
+| Term | Definition | ADR |
+|---|---|---|
+| **Launch point** | The marked spot every round starts from. The drone takes off from it facing a fixed direction, the map is stored relative to it, and it stands in for the waiting area. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
+| **Waiting area** | Where the player waits during a hiding flight: right behind the launch point, with a safety gate between it and the play area. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
+| **Play area** | The space the drone flies and hides in. Nobody is in it while the drone flies. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
+| **Mapping run** | A flight before play, with the play area clear, that builds the map the hiding flights use. Up to about 5 minutes. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
+| **Hiding spot** | A place on the floor where the drone lands to hide, with at least one wall between it and the launch point. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
+| **Found** | The player picks up the hidden drone, which shows as the down reading jumping and the motion sensors spiking. The drone lights its LEDs and the PC plays a fanfare. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
+| **Hint** | Every 15 s until the drone is found, it flashes its LEDs and chirps, so the player can find it. | [0017](decisions/0017-hint-chirps-from-buzzer-deck.md) |
 
 ## Catch the bird
 
 Terms for the second game ([ADR-0015](decisions/0015-first-game-catch-the-bird.md), [rules](catch-the-bird.md)).
 
-| Term | Definition | UE5 analogy | ADR |
-|---|---|---|---|
-| **Sky layer** | The height band the drone plays in: above a child's reach, below the ceiling with a margin (about 1.5-2.0 m in a room with a 2.4 m ceiling). | A nav volume restricted to a height range, like flying units that keep to an air layer. | [0015](decisions/0015-first-game-catch-the-bird.md) |
-| **Clearance rule** | The drone always keeps about 1 m of clearance below. If something rises toward it, it moves away sideways. | A keep-out radius enforced by the movement component, regardless of what the AI wants. | [0015](decisions/0015-first-game-catch-the-bird.md) |
-| **Catch** | Scored when the child gets directly under the bird, as seen by the down sensor. The bird reacts and flies to a new spot. | An overlap trigger under the Pawn that scores a point. | [0015](decisions/0015-first-game-catch-the-bird.md) |
+| Term | Definition | ADR |
+|---|---|---|
+| **Sky layer** | The height band the drone plays in: above a child's reach, below the ceiling with a margin (about 1.5-2.0 m in a room with a 2.4 m ceiling). | [0015](decisions/0015-first-game-catch-the-bird.md) |
+| **Clearance rule** | The drone always keeps about 1 m of clearance below. If something rises toward it, it moves away sideways. | [0015](decisions/0015-first-game-catch-the-bird.md) |
+| **Catch** | Scored when the child gets directly under the bird, as seen by the down sensor. The bird reacts and flies to a new spot. | [0015](decisions/0015-first-game-catch-the-bird.md) |
 
 ## Deprecated terms
 
@@ -194,10 +198,10 @@ Terms for the second game ([ADR-0015](decisions/0015-first-game-catch-the-bird.m
 > older ADRs and commits still make sense. Each one links to the decision
 > that replaced it.
 
-| Term | Definition (as it was) | UE5 analogy | Replaced by |
-|---|---|---|---|
-| **Safety query** | A read-only question a behavior asks the safety layer during its decision, e.g. "can I enter fast mode?" It's answered immediately and has no side effects. | A BT decorator checking a condition. | [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
-| **Negative age** | The age of a value that arrived just after the tick's time, so it's slightly below zero. It counts as fresh. One more negative than a tick period can only be a clock bug, so it's logged as a warning. | No UE analogy. | [0046](decisions/0046-snapshot-time-read-after-the-copy.md) |
+| Term | Definition (as it was) | Replaced by |
+|---|---|---|
+| **Safety query** | A read-only question a behavior asks the safety layer during its decision, e.g. "can I enter fast mode?" It's answered immediately and has no side effects. | [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
+| **Negative age** | The age of a value that arrived just after the tick's time, so it's slightly below zero. It counts as fresh. One more negative than a tick period can only be a clock bug, so it's logged as a warning. | [0046](decisions/0046-snapshot-time-read-after-the-copy.md) |
 
 <!-- Terms still to define as decisions land: command,
-     geofence, recording/replay, ... -->
+     geofence, ... -->

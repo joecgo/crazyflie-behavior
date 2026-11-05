@@ -20,8 +20,6 @@ types are checked by **pyright** in strict mode. Both run in continuous integrat
 - **Modern syntax** (Python 3.12): `list[str]`, `int | None`, not `List[str]`
   or `Optional[int]`.
 
-UE5 analogy: think `USTRUCT` rather than `TArray<TArray<FString>>`.
-
 ## Units
 
 ([ADR-0004](decisions/0004-strict-typing-ruff-and-units-in-names.md))
@@ -125,4 +123,4 @@ Unitless values (counts, ratios, flags) get no suffix.
 - **Compare computed floats with `pytest.approx`**, never `==`: most decimals
   (0.1, 0.3) aren't exact in binary, so `0.1 + 0.2 == 0.3` is false. `==` is
   fine for a value passed through unchanged, or for exact values (whole
-  numbers, halves, quarters). Like UE's `FMath::IsNearlyEqual`.
+  numbers, halves, quarters).
