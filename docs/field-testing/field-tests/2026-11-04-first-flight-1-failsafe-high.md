@@ -6,7 +6,7 @@
 
 - **Session:** [First flight 1](../sessions/2026-11-04-first-flight-1.md)
 - **Test:** Failsafe high (safety)
-- **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point, all lights on. Time of day / sunlight: ___
+- **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point, night
 - **Git commit:** `de24a7c` (must be committed before flying)
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger / Buzzer, battery #
 - **Firmware / cflib:** 2026.08, release 2026.10, unmodified ([ADR-0047](../../decisions/0047-pinned-firmware-release-warn-on-mismatch.md)) / 0.1.34

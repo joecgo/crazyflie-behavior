@@ -14,7 +14,7 @@ description (time of day, sunlight) itself.
 
 | Setup | Description |
 |---|---|
-| All lights on | All the room's lights switched on. |
+| All lights on | All the room's lights switched on. Assumed unless a log says otherwise. |
 
 ## Obstacles and reflective surfaces
 

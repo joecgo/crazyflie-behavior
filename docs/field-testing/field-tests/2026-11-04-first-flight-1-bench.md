@@ -6,7 +6,7 @@
 
 - **Session:** [First flight 1](../sessions/2026-11-04-first-flight-1.md)
 - **Test:** Bench (calibration)
-- **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point, all lights on. Time of day / sunlight: ___
+- **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point, night
 - **Git commit:** `65665e4` (must be committed before flying)
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger / Buzzer, battery #
 - **Firmware / cflib:** 2026.08, release 2026.10, unmodified ([ADR-0047](../../decisions/0047-pinned-firmware-release-warn-on-mismatch.md)) / 0.1.34
@@ -116,4 +116,19 @@
 - Code changes: the failed-connect cleanup gap (backlog #53) and the
   firmware warning (ADR-0047).
 - ADRs to write or revisit: backlog #47 to #53.
-- Next session's goal: Failsafe low and Failsafe high on a full battery.
+- Next session's goal: session 2 flies all four tests again, and the Bench
+  collects all the data its criteria ask for. Still missing from session 1:
+  - A 60 s run with the drone still, away from the wall, with the Flow deck
+    working (run 2 was near a wall and ended with a lift; run 5 was 20 s).
+    Session 2 flies this as its own run (Run A): the drone sits still on the
+    floor for 60 s or more and nobody touches it, so the drift baseline is
+    clean.
+  - The range-error tests the criteria list: a black or glass surface, and
+    something within 2 cm. The log doesn't show whether they were done.
+    Session 2 flies these as a second run (Run B), kept apart from Run A
+    because lifting the drone ruins the drift baseline: at a window, with a
+    mirror and something black, and with something within 2 cm. The drone
+    can be held or lifted in this run.
+  - The staleness criterion's 0.5 s doesn't fit the battery's 1 s period;
+    the criterion needs a decision before it can pass.
+  - Header blanks: battery number and battery voltage.
