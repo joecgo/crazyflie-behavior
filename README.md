@@ -146,19 +146,33 @@ drops, so slide something soft under it first.
 .venv\Scripts\python tools\emergency_stop.py
 ```
 
-## Hardware (planned)
+## Hardware
 
-- Crazyflie 2.1+ (about 7 minutes of flight per battery) and Crazyradio USB dongle
+- Crazyflie 2.1+ (about 7 minutes of flight per battery) and Crazyradio 2.0 USB dongle
 - Flow deck (needed for stable autonomous hover)
 - Multi-ranger deck (obstacle sensing and mapping)
 - Buzzer deck (hint chirps)
-- Long pins (19+2+4 mm) to stack three decks: two on top, the Flow deck underneath
+- Long pins (19+2+4 mm) to stack three decks. Bottom to top: Flow deck,
+  Crazyflie, battery, Buzzer deck, Multi-ranger. Check each deck's arrow
+  points forward: a Flow deck on backwards isn't detected.
 - PS5 controller (DualSense), optional, for the operator controls
   ([ADR-0027](docs/decisions/0027-operator-controls.md)). A USB cable is safer
   than Bluetooth for flights: an unplugged cable is noticed at once.
 
-On Windows the Crazyradio needs a USB driver installed with Zadig. Follow the
-Bitcraze docs for the current steps.
+Setting up on Windows (first done 2026-11-04):
+
+- **Crazyradio 2.0:** a new one may hold only its bootloader (Zadig shows
+  "nRF UF2", and a drive appears). Drag the Crazyradio PA emulation `.uf2`
+  from the [crazyradio2-firmware releases](https://github.com/bitcraze/crazyradio2-firmware/releases)
+  onto that drive.
+- **USB driver:** in Zadig (Options > List All Devices), install
+  **libusb-win32** on the Crazyradio (USB ID 1915 7777). cflib finds the radio
+  through the libusb0 backend on Windows, so WinUSB doesn't work.
+- **Drone firmware:** the pinned release
+  ([ADR-0047](docs/decisions/0047-pinned-firmware-release-warn-on-mismatch.md)),
+  flashed with Bitcraze's `cfclient` from its own virtual environment outside
+  this repo (for example `C:\Users\<you>\.venvs\cfclient`), so it can't
+  change the project's cflib version.
 
 ## Layout
 
