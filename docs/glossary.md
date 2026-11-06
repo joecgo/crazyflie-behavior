@@ -19,7 +19,9 @@ this file in the same commit as the code or ADR that uses it.
 
 | Term | Definition |
 |---|---|
-| **Crazyflie** | The physical drone: Crazyflie 2.1+, 27 g, about 7 min of flight per battery. |
+| **Crazyflie** | The physical drone: Crazyflie 2.1+, 29 g, about 7 min of flight per battery (Bitcraze's figure; our decks add 5.7 g). |
+| **Sag** | The drop in battery voltage while the motors draw current. Most of it goes within a second after they stop. On 2026-11-04: 0.32-0.42 V one second after take-off, up to 0.51 V after 20 s ([ADR-0051](decisions/0051-battery-flight-limit-and-take-off-limit.md)). |
+| **Resting voltage** | The battery voltage with the motors off. It keeps rising for minutes after a flight ([ADR-0051](decisions/0051-battery-flight-limit-and-take-off-limit.md)). |
 | **Crazyradio** | USB radio dongle the PC uses to talk to the Crazyflie. |
 | **Deck** | Plug-in expansion board on the Crazyflie. |
 | **Flow deck** | Deck with a downward optical-flow camera and height sensor. Needed to hold position. |
@@ -135,6 +137,8 @@ this file in the same commit as the code or ADR that uses it.
 | **Command request** | What a behavior asks the drone to do this tick (e.g. a velocity, or fast mode to a point). The safety layer answers at once (approved, clamped or refused, with the reason). At the end of the tick, each command slot's approved request is sent. Never goes directly to the drone. | [0008](decisions/0008-drone-interface.md), [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
 | **Command slot** | A group of commands where only one can be active at a time: movement (arm, take off, land, velocity, move to, hover), buzzer, LEDs. A later approved request in the same tick replaces the earlier one, and the replacement is logged as a warning. Each slot's request is sent at the end of the tick. | [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
 | **Safety pre-check** | The safety layer's check of each snapshot at the start of the tick, before behaviors run (missing or stale values, a value that isn't finite, low battery, a crash or tumble the drone reports; a geofence later). If it passes, behaviors run and their requests are judged against it; if it fails, behaviors are skipped and the failsafe takes over. | [0025](decisions/0025-safety-pre-check-and-command-slots.md) |
+| **Low-battery limit** | The battery voltage below which the safety pre-check fails and the drone lands: 3.2 V. In flight, the reading includes the sag. | [0051](decisions/0051-battery-flight-limit-and-take-off-limit.md) |
+| **Take-off limit** | The lowest resting voltage at which the safety layer approves a take-off: the low-battery limit plus a sag value, 3.62 V. | [0051](decisions/0051-battery-flight-limit-and-take-off-limit.md) |
 | **Verdict** | The safety layer's answer to a command request: approved, clamped (approved with changed values) or refused, with the reason. | [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
 | **Stamped value** | A telemetry value together with its arrival time (PC clock) and the drone's timestamp (converted to seconds). Every value in a snapshot is stamped, so its age can always be checked. | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md) |
 | **Stale value** | A stamped value older than the age limit of the code reading it, so too old to trust. Each reader sets its own limit: the safety pre-check's `STALE_AFTER` (`BATTERY_STALE_AFTER` for battery voltage), the Crazyflie adapter's `MAX_READING_AGE`. A stale value stays in the snapshot until a newer one arrives. | [0007](decisions/0007-snapshot-blackboard-telemetry-buffer.md), [0030](decisions/0030-minimal-safety-layer-for-first-flight.md) |
