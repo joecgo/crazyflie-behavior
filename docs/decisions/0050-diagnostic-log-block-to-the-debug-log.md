@@ -1,6 +1,6 @@
 # 0050: A diagnostic log block streams attitude, motor power and flow quality to the debug log only
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended by [ADR-0053](0053-buzzer-commands-and-a-chirp-hover-test.md) (2026-11-06): the block also carries the battery voltage (`pm.vbatMV`), 25 of 26 bytes.
 - **Date:** 2026-11-05
 - **Origin:** AI recommendation accepted (the values, and the debug log only).
 
