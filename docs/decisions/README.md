@@ -59,5 +59,6 @@ This column is honest about which ideas were mine.
 | [0048](0048-level-through-the-bad-flow-zone.md) | Take-off and landing cross the bad-flow zone level, above a height found during take-off | Mixed: moving only vertically, a speed, measuring the zone on take-off and the 5 cm margin were mine; the level setpoint, the speed estimate as the measure, the cap and 15 cm were the AI's |
 | [0049](0049-failsafe-low-fires-its-fault-during-the-initial-climb.md) | Failsafe low forges its battery fault during the initial climb; a landing during the climb is a final descent | AI recommendation accepted; keeping the name, a new ADR and the climb-landing rule were mine |
 | [0050](0050-diagnostic-log-block-to-the-debug-log.md) | A diagnostic log block streams attitude, motor power and flow quality to the debug log only | AI recommendation accepted |
+| [0051](0051-battery-flight-limit-and-take-off-limit.md) | Land below 3.2 V in flight; take off only above 3.2 V plus the sag (3.62 V) | Mixed: 3.2 V, a take-off limit and the 0.42 V sag value were mine, over the AI's recommendations; judging it on the take-off request was the AI's |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
