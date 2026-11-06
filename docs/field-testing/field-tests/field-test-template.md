@@ -18,7 +18,7 @@
 
 - [ ] Code committed, hash recorded above
 - [ ] Mock adapter run of this exact code passed (and the simulator's, if used)
-- [ ] Propellers undamaged, battery charged (voltage: ___)
+- [ ] Propellers undamaged, battery at 3.62 V or above, or the take-off is refused ([ADR-0051](../../decisions/0051-battery-flight-limit-and-take-off-limit.md)) (voltage: ___)
 - [ ] Flight area clear of people and pets
 - [ ] E-stop tested on the ground this session
 - [ ] Geofence configured for this space
