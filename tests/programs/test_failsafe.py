@@ -37,9 +37,8 @@ class MockAdapterMaker:
         self.adapter_class: type[MockAdapter] = MockAdapter
         self.battery_voltage: float | None = None
         """If set, the mock drone starts with this battery voltage in place of a charged one."""
-        self.down_range: float | None = 0.5
-        """The mock drone's down range, in meters; None leaves it out of range. The mock takes off at once,
-        so a fixed reading stands in for the climb."""
+        self.down_range: float | None = None
+        """If set, the mock drone's down range is fixed at this, in meters, instead of following its height."""
 
     def __call__(self, use_crazyflie: bool, clock: Clock) -> DroneInterface:
         assert not use_crazyflie

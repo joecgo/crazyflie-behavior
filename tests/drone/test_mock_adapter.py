@@ -1,6 +1,6 @@
 import pytest
 
-from crazyflie_behavior.drone.mock_adapter import TAKEN_OVER_HEIGHT, MockAdapter
+from crazyflie_behavior.drone.mock_adapter import FLOOR_DOWN_RANGE, TAKEN_OVER_HEIGHT, MockAdapter
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import (
     DroneStatus,
@@ -288,3 +288,100 @@ def test_without_the_take_over_setting_a_connected_drone_is_on_the_floor() -> No
     drone.connect()
 
     assert not status_of(snapshot_now(drone, clock)).is_flying
+
+
+# --- The down range follows the height (ADR-0052) ----------------------------------
+
+
+def down_range_of(snapshot: Snapshot) -> float | None:
+    assert snapshot.range_readings.down is not None
+    return snapshot.range_readings.down.value.distance
+
+
+def test_on_the_floor_the_down_range_reads_the_floor_reading() -> None:
+    clock = SimClock()
+    drone = MockAdapter(clock)
+    drone.connect()
+
+    assert down_range_of(snapshot_now(drone, clock)) == FLOOR_DOWN_RANGE
+
+
+def test_after_a_take_off_the_down_range_reads_the_height() -> None:
+    clock = SimClock()
+
+    drone = flying_drone(clock, height=0.8)
+
+    assert down_range_of(snapshot_now(drone, clock)) == 0.8
+
+
+def test_the_down_range_follows_a_move_and_a_velocity() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock, height=0.5)
+
+    drone.move_to(Vector3(0.0, 0.0, 1.2), duration=2.0)
+    after_move = down_range_of(snapshot_now(drone, clock))
+    drone.set_velocity(Vector3(0.0, 0.0, -0.5))
+    clock.advance(0.4)
+    after_velocity = down_range_of(snapshot_now(drone, clock, dt=0.4))
+
+    assert after_move == 1.2
+    assert after_velocity == pytest.approx(1.0)
+
+
+def test_after_landing_the_down_range_reads_the_floor_again() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock)
+
+    drone.land()
+
+    assert down_range_of(snapshot_now(drone, clock)) == FLOOR_DOWN_RANGE
+
+
+def test_the_down_range_never_reads_less_than_the_floor_reading() -> None:
+    """The mock has no floor to stop it: a velocity can take its height below 0, the reading can't follow."""
+    clock = SimClock()
+    drone = flying_drone(clock, height=0.1)
+
+    drone.set_velocity(Vector3(0.0, 0.0, -0.5))
+    clock.advance(0.4)  # 0.2 m down from 0.1 m
+    snapshot = snapshot_now(drone, clock, dt=0.4)
+
+    assert position_of(snapshot).z < 0.0
+    assert down_range_of(snapshot) == FLOOR_DOWN_RANGE
+
+
+def test_a_down_range_a_test_sets_stays_as_set_whatever_the_height() -> None:
+    clock = SimClock()
+    drone = MockAdapter(clock)
+    drone.connect()
+    drone.set_range_reading(RangeDirection.DOWN, RangeReading.invalid())
+    drone.arm()
+
+    drone.take_off(0.5)
+    snapshot = snapshot_now(drone, clock)
+
+    assert snapshot.range_readings.down is not None
+    assert snapshot.range_readings.down.value == RangeReading.invalid()
+
+
+def test_setting_another_direction_leaves_the_down_range_following_the_height() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock, height=0.6)
+
+    drone.set_range_reading(RangeDirection.FRONT, RangeReading.at_distance(0.3))
+
+    assert down_range_of(snapshot_now(drone, clock)) == 0.6
+
+
+def test_a_taken_over_flight_reads_its_height_below() -> None:
+    clock = SimClock()
+    drone = MockAdapter(clock, take_over_flight=True)
+
+    drone.connect()
+
+    assert down_range_of(snapshot_now(drone, clock)) == TAKEN_OVER_HEIGHT
+
+
+def test_the_floor_reading_is_a_distance_the_real_drone_reads_at_rest() -> None:
+    # 0.019-0.024 m at rest on 2026-11-04: above zero, and far below any flying height.
+    assert 0.0 < FLOOR_DOWN_RANGE < 0.05

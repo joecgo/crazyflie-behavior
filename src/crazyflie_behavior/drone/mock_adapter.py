@@ -11,8 +11,10 @@ Also like real hardware, it stops following velocity setpoints that stop
 arriving (ADR-0011): a stream someone forgot to send every tick fails in tests
 the way it would in the air.
 
-The room is empty: every range reading is out of range (clear) unless a test
-sets it with `set_range_reading`. Like a real drone, it streams every value
+The room is empty: every range reading but the down one is out of range
+(clear) unless a test sets it with `set_range_reading`. The floor is flat at
+height 0, so the down range reads the drone's height, never less than its
+reading on the floor (ADR-0052). Like a real drone, it streams every value
 again with each snapshot, until a test makes it go quiet with `stop_telemetry`.
 """
 
@@ -27,6 +29,9 @@ CHARGED_BATTERY_VOLTAGE = 4.0
 
 TAKEN_OVER_HEIGHT = 0.5
 """Meters. How high the mock drone hovers when a rescue landing takes over its flight."""
+
+FLOOR_DOWN_RANGE = 0.02
+"""Meters: the down range on the floor. The real drone read 0.019-0.024 m at rest (Bench, 2026-11-04)."""
 
 # From the firmware source. VERIFY at the bench that the drone's firmware
 # matches (ADR-0011).
@@ -56,6 +61,8 @@ class MockAdapter(DroneInterface):
         # When the last set_velocity arrived; None when not in steering mode.
         self._last_setpoint_time: float | None = None
         self._range_readings = dict.fromkeys(RangeDirection, RangeReading.out_of_range())
+        self._is_down_range_set_by_test = False
+        """Once a test sets the down range, it stays as set instead of following the height."""
         self._battery_voltage = CHARGED_BATTERY_VOLTAGE
         self._is_streaming = True
 
@@ -63,7 +70,10 @@ class MockAdapter(DroneInterface):
     # A value set here arrives at once, so a test can set it and then stop the telemetry.
 
     def set_range_reading(self, direction: RangeDirection, reading: RangeReading) -> None:
+        """Fixes one reading from now on. For the down range, that replaces following the height."""
         self._range_readings[direction] = reading
+        if direction is RangeDirection.DOWN:
+            self._is_down_range_set_by_test = True
         if self._is_streaming:
             self._telemetry.write_range_readings({direction: reading}, self._clock.now())
 
@@ -171,6 +181,9 @@ class MockAdapter(DroneInterface):
         if not self._is_streaming:
             return
         drone_time = self._clock.now()
+        if not self._is_down_range_set_by_test:
+            down_range = max(self._position.z, FLOOR_DOWN_RANGE)
+            self._range_readings[RangeDirection.DOWN] = RangeReading.at_distance(down_range)
         self._telemetry.write_range_readings(self._range_readings, drone_time)
         self._telemetry.write_battery_voltage(self._battery_voltage, drone_time)
         self._telemetry.write_position_estimate(self._position, drone_time)

@@ -131,7 +131,8 @@ def test_the_summary_covers_every_range_direction() -> None:
     summary = snapshot_summary(connected_mock(clock).take_snapshot(0.0))
 
     for direction in RangeDirection:
-        assert f"| {direction.value} out of range" in summary
+        assert f"| {direction.value} " in summary
+    assert "| down 0.02 m" in summary  # the mock's floor reading (ADR-0052); the others are clear
 
 
 def test_the_summary_marks_an_invalid_range_reading() -> None:
