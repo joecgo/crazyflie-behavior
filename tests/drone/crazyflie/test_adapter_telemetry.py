@@ -13,7 +13,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from crazyflie_behavior.drone.crazyflie.adapter import _STATE_VARIABLES, CrazyflieAdapter
+from crazyflie_behavior.drone.crazyflie.adapter import _DIAGNOSTIC_VARIABLES, _STATE_VARIABLES, CrazyflieAdapter
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import DroneStatus, RangeReading, Snapshot
 from crazyflie_behavior.timing.clock import SimClock
@@ -32,8 +32,17 @@ VARIABLE_SIZES_BYTES = {
     "stateEstimate.vy": 4,
     "stateEstimate.vz": 4,
     "supervisor.info": 2,
+    "stateEstimate.roll": 4,
+    "stateEstimate.pitch": 4,
+    "stateEstimate.yaw": 4,
+    "motor.m1": 2,
+    "motor.m2": 2,
+    "motor.m3": 2,
+    "motor.m4": 2,
+    "motion.squal": 1,
+    "motion.shutter": 2,
 }
-"""Sizes as the firmware stores them (floats; the bitfield is a uint16)."""
+"""Sizes as the firmware 2026.08 stores them (ADR-0047)."""
 
 STATE_SAMPLE = {
     "stateEstimate.x": 1.0,
@@ -139,6 +148,39 @@ def test_the_state_block_fits_in_one_log_block() -> None:
     size = sum(VARIABLE_SIZES_BYTES[variable] for variable in _STATE_VARIABLES)
 
     assert size <= LOG_BLOCK_LIMIT_BYTES
+
+
+def test_the_diagnostic_block_fits_in_one_log_block() -> None:
+    size = sum(VARIABLE_SIZES_BYTES[variable] for variable in _DIAGNOSTIC_VARIABLES)
+
+    assert size <= LOG_BLOCK_LIMIT_BYTES
+
+
+def test_a_diagnostic_sample_is_one_debug_line_and_never_telemetry(
+    adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture
+) -> None:
+    sample = {
+        "stateEstimate.roll": 1.5,
+        "stateEstimate.pitch": -2.25,
+        "stateEstimate.yaw": 10.0,
+        "motor.m1": 40000.0,
+        "motor.m2": 41000.0,
+        "motor.m3": 42000.0,
+        "motor.m4": 43000.0,
+        "motion.squal": 90.0,
+        "motion.shutter": 2500.0,
+    }
+    before = snapshot_of(adapter)
+
+    with caplog.at_level(logging.DEBUG, logger=ADAPTER_LOGGER):
+        adapter._on_diagnostic(3000, sample, MagicMock())
+
+    assert [r.getMessage() for r in caplog.records] == [
+        "Diagnostic: drone_time=3.000 roll_deg=1.50 pitch_deg=-2.25 yaw_deg=10.00 "
+        "motors=[40000, 41000, 42000, 43000] squal=90 shutter=2500"
+    ]
+    assert caplog.records[0].levelno == logging.DEBUG
+    assert snapshot_of(adapter) == before
 
 
 def test_the_down_range_arrives_in_meters(adapter: CrazyflieAdapter) -> None:

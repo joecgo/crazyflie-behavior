@@ -39,6 +39,7 @@ this file in the same commit as the code or ADR that uses it.
 | **Telemetry** | Data streamed from the drone to the PC. |
 | **Log block** | A cflib `LogConfig`: a named group of variables streamed at a fixed period (max 26 bytes per block). |
 | **State block** | The Crazyflie adapter's log block that carries the position estimate, velocity estimate and drone status together (6 floats and a 2-byte bitfield: the full 26 bytes), so all three come from the same moment ([ADR-0021](decisions/0021-drone-status-streams-with-the-state.md)). |
+| **Diagnostic block** | The Crazyflie adapter's log block for the debug log only: attitude, motor power and Flow deck quality at 10 Hz, never in the snapshot ([ADR-0050](decisions/0050-diagnostic-log-block-to-the-debug-log.md)). |
 | **Parameter** | Named firmware setting you can read or write at run time, e.g. `kalman.resetEstimation`. |
 | **Callback** | Function cflib calls when an event or data arrives. Runs on cflib's background thread. |
 

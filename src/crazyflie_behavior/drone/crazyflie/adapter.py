@@ -72,6 +72,8 @@ DOWN_RANGE_PERIOD_MS = 20
 MULTIRANGER_PERIOD_MS = 100
 """The firmware reads the Multi-ranger every 100 ms (ADR-0022); faster only repeats."""
 BATTERY_PERIOD_MS = 1000
+DIAGNOSTIC_PERIOD_MS = 100
+"""Attitude, motor power and flow quality, for the debug log only (ADR-0050)."""
 
 # --- PLACEHOLDERS, NOT DECISIONS ---------------------------------------------
 # Flight parameters wait on speed envelopes (ADR-0005) and the safety layer.
@@ -108,6 +110,14 @@ _MULTIRANGER_VARIABLES = {
     RangeDirection.UP: "range.up",
 }
 _DOWN_RANGE_VARIABLE = "range.zrange"  # on the Flow deck
+# The diagnostic block (ADR-0050): 3 floats, 4 uint16, a uint8 and a uint16, 23 bytes.
+_ATTITUDE_VARIABLES = ("stateEstimate.roll", "stateEstimate.pitch", "stateEstimate.yaw")
+"""Degrees. The firmware logs pitch with the legacy inverted sign."""
+_MOTOR_VARIABLES = ("motor.m1", "motor.m2", "motor.m3", "motor.m4")
+"""Motor power, 0-65535."""
+_FLOW_QUALITY_VARIABLES = ("motion.squal", "motion.shutter")
+"""Surface features seen, and shutter time (longer in low light)."""
+_DIAGNOSTIC_VARIABLES = (*_ATTITUDE_VARIABLES, *_MOTOR_VARIABLES, *_FLOW_QUALITY_VARIABLES)
 _STATUS_VARIABLE = "supervisor.info"  # the supervisor's state bitfield
 _POSITION_VARIABLES = ("stateEstimate.x", "stateEstimate.y", "stateEstimate.z")
 _VELOCITY_VARIABLES = ("stateEstimate.vx", "stateEstimate.vy", "stateEstimate.vz")
@@ -544,6 +554,7 @@ class CrazyflieAdapter(DroneInterface):
     def _start_remaining_logging(self, has_multiranger: bool) -> None:
         self._add_log_block("battery", BATTERY_PERIOD_MS, ["pm.vbat"], self._on_battery)
         self._add_log_block("down", DOWN_RANGE_PERIOD_MS, [_DOWN_RANGE_VARIABLE], self._on_down_range)
+        self._add_log_block("diagnostic", DIAGNOSTIC_PERIOD_MS, list(_DIAGNOSTIC_VARIABLES), self._on_diagnostic)
         if has_multiranger:
             self._add_log_block(
                 "multiranger",
@@ -718,6 +729,21 @@ class CrazyflieAdapter(DroneInterface):
     def _on_down_range(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
         reading = range_reading_from_mm(int(data[_DOWN_RANGE_VARIABLE]))
         self._telemetry.write_range_readings({RangeDirection.DOWN: reading}, self._drone_time(timestamp))
+
+    def _on_diagnostic(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
+        """One debug line, nothing in the telemetry buffer (ADR-0050)."""
+        roll_deg, pitch_deg, yaw_deg = (data[variable] for variable in _ATTITUDE_VARIABLES)
+        squal, shutter = (int(data[variable]) for variable in _FLOW_QUALITY_VARIABLES)
+        logger.debug(
+            "Diagnostic: drone_time=%.3f roll_deg=%.2f pitch_deg=%.2f yaw_deg=%.2f motors=%s squal=%d shutter=%d",
+            self._drone_time(timestamp),
+            roll_deg,
+            pitch_deg,
+            yaw_deg,
+            [int(data[variable]) for variable in _MOTOR_VARIABLES],
+            squal,
+            shutter,
+        )
 
     def _on_multiranger(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
         readings = {

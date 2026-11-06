@@ -35,6 +35,17 @@ FIRST_SAMPLES: dict[str, dict[str, float]] = {
     },
     "battery": {"pm.vbat": 4.0},
     "down": {"range.zrange": 20.0},
+    "diagnostic": {
+        "stateEstimate.roll": 0.0,
+        "stateEstimate.pitch": 0.0,
+        "stateEstimate.yaw": 0.0,
+        "motor.m1": 0.0,
+        "motor.m2": 0.0,
+        "motor.m3": 0.0,
+        "motor.m4": 0.0,
+        "motion.squal": 80.0,
+        "motion.shutter": 3000.0,
+    },
     "multiranger": {
         "range.front": 8000.0,
         "range.back": 8000.0,
@@ -172,7 +183,7 @@ def test_connecting_resets_the_estimate_and_starts_telemetry(adapter: CrazyflieA
     adapter.connect()
 
     fake_cflib.reset_estimator.assert_called_once_with(fake_cflib.link)
-    assert fake_cflib.log_block_names == ["state", "battery", "down"]
+    assert fake_cflib.log_block_names == ["state", "battery", "down", "diagnostic"]
     fake_cflib.link.close_link.assert_not_called()
 
 
@@ -209,6 +220,16 @@ def test_a_multi_ranger_adds_its_own_log_block(adapter: CrazyflieAdapter, fake_c
     adapter.connect()
 
     assert "multiranger" in fake_cflib.log_block_names
+
+
+def test_connect_does_not_wait_for_the_diagnostic_block(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
+    # It's for the debug log only, not telemetry (ADR-0050).
+    fake_cflib.silent_blocks.add("diagnostic")
+
+    adapter.connect()
+
+    assert adapter._telemetry.missing_values() == []
+    assert fake_cflib.log_block_periods_ms["diagnostic"] == 100
 
 
 def test_log_periods_are_ones_the_firmware_accepts(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
