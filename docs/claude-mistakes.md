@@ -28,13 +28,13 @@ decisions are recorded), *communication* (how Claude explains things).
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 3 | 14 |
-| safety design | 4 | 12 |
+| safety design | 4 | 13 |
 | recommendation | 7 | 4 |
-| environment | 4 | 8 |
+| environment | 4 | 9 |
 | communication | 7 | 15 |
 | testing | 0 | 9 |
 | process | 3 | 11 |
-| **Total** | **28** | **73** |
+| **Total** | **28** | **75** |
 
 Of the 28 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 22. So far, 7 of the 11 recommendation
@@ -517,6 +517,35 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-05: The Crazyflie's weight in the glossary, with no source
+
+- **What happened:** the glossary's first version (2026-10-18) gives the
+  Crazyflie 2.1+ as 27 g. Bitcraze's product page and datasheet for the 2.1+
+  give a take-off weight of 29 g.
+- **How it was caught:** reading Bitcraze's specs for backlog #50.
+- **Kind:** environment.
+- **Takeaway:** the review checklist's first rule already covers it: hardware
+  facts are checked, not recalled, glossary entries included.
+
+### 2026-11-05: A firmware shutdown at 3.0 V that the default build leaves out
+
+- **What happened:** ADR-0030 lists a firmware backup, and the docstring of
+  `LOW_BATTERY_VOLTAGE` repeats it: after 5 s at 3.0 V the firmware shuts
+  the drone down. That branch does call `pmSystemShutdown()`, but the
+  function's body is inside `#ifdef CONFIG_PM_AUTO_SHUTDOWN`. That option is
+  off by default (`src/hal/src/Kconfig`), and `cf2_defconfig` doesn't turn it
+  on (firmware 2026.08 and `master`). On a default build nothing happens at
+  3.0 V. The firmware's only reaction to a low battery is its low state at
+  3.2 V for 5 s: a red M1 LED and a sound. The check read the call, not
+  the function.
+- **How it was caught:** checking the firmware's battery handling at 2026.08
+  for backlog #50.
+- **Kind:** safety design.
+- **Takeaway:** a claim that the firmware "does X" needs the body of the
+  function called, and any `#ifdef` or build option around it, checked
+  against the build flashed. The review checklist's question about the
+  guarding `if` now covers build options.
 
 ### 2026-11-05: `kalman.varPX` called the position variance
 

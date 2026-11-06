@@ -16,7 +16,8 @@ takeaway applies to reviews, it's added here as a question.
   not "every path fails" unless the other paths were checked too.
 - For each library call the code relies on: what does it do on a timeout or
   an error? Is that checked in the source, including the `if` that guards the
-  call (not only what the function does when it runs)?
+  call (not only what the function does when it runs)? For firmware, also the
+  `#ifdef` or build option around the function's body, in the build flashed.
 - Windows-only code: is it checked against Windows' documented behavior, and
   is every Windows call's result checked? Continuous integration runs on
   Linux.
