@@ -4,7 +4,8 @@ A behavior makes a command request; the safety layer answers it at once with
 a verdict (ADR-0025) and is the only code that sends commands (ADR-0008).
 Behaviors import this module, never the safety layer itself.
 
-The safety layer approves only arm, take off, hover and land (ADR-0030).
+The safety layer approves only arm, take off, hover and land (ADR-0030), and
+the buzzer requests: chirp, tone and silence (ADR-0053).
 TODO: it refuses velocity and fast-mode requests until the speed envelope
 exists (backlog #30).
 """
@@ -13,6 +14,11 @@ import math
 from dataclasses import dataclass
 
 from crazyflie_behavior.geometry import Vector3
+
+MIN_TONE_PITCH = 20.0
+"""Hertz. The lowest pitch people hear."""
+MAX_TONE_PITCH = 20_000.0
+"""Hertz. The highest pitch people hear."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,7 +66,36 @@ class MoveTo:
     """Seconds."""
 
 
-type CommandRequest = Arm | TakeOff | Hover | Land | SetVelocity | MoveTo
+@dataclass(frozen=True, slots=True)
+class Chirp:
+    """One chirp from the buzzer: a short sound that stops by itself (ADR-0053)."""
+
+
+@dataclass(frozen=True, slots=True)
+class Tone:
+    """A steady tone from the buzzer at `pitch`, until a silence (ADR-0053)."""
+
+    pitch: float
+    """Hertz."""
+
+    def __post_init__(self) -> None:
+        # The comparison is false for NaN too.
+        if not MIN_TONE_PITCH <= self.pitch <= MAX_TONE_PITCH:
+            raise ValueError(f"Tone pitch must be {MIN_TONE_PITCH:g}-{MAX_TONE_PITCH:g} Hz: {self.pitch}")
+
+
+@dataclass(frozen=True, slots=True)
+class Silence:
+    """Stop the buzzer (ADR-0053)."""
+
+
+type MovementRequest = Arm | TakeOff | Hover | Land | SetVelocity | MoveTo
+"""The command requests that share the movement slot (ADR-0025)."""
+
+type BuzzerRequest = Chirp | Tone | Silence
+"""The command requests that share the buzzer slot (ADR-0025, ADR-0053)."""
+
+type CommandRequest = MovementRequest | BuzzerRequest
 """What a behavior can ask the drone to do (glossary: Command request)."""
 
 

@@ -165,3 +165,12 @@ class ForgedLowBatteryDrone(DroneInterface):
 
     def emergency_stop(self) -> None:
         self._drone.emergency_stop()
+
+    def chirp(self) -> None:
+        self._drone.chirp()
+
+    def play_tone(self, pitch: float) -> None:
+        self._drone.play_tone(pitch)
+
+    def silence(self) -> None:
+        self._drone.silence()

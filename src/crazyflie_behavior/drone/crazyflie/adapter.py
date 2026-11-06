@@ -36,9 +36,11 @@ from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.utils.reset_estimator import reset_estimator
 
 from crazyflie_behavior.drone.crazyflie.conversions import (
+    battery_voltage_from_mv,
     drone_time_from_timestamp,
     move_duration,
     range_reading_from_mm,
+    sound_frequency_from_pitch,
     yaw_rate_deg_per_s,
 )
 from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE, run_with_time_limit
@@ -110,14 +112,30 @@ _MULTIRANGER_VARIABLES = {
     RangeDirection.UP: "range.up",
 }
 _DOWN_RANGE_VARIABLE = "range.zrange"  # on the Flow deck
-# The diagnostic block (ADR-0050): 3 floats, 4 uint16, a uint8 and a uint16, 23 bytes.
+# The diagnostic block (ADR-0050, ADR-0053): 3 floats, 4 uint16, a uint8 and two uint16, 25 bytes.
 _ATTITUDE_VARIABLES = ("stateEstimate.roll", "stateEstimate.pitch", "stateEstimate.yaw")
 """Degrees. The firmware logs pitch with the legacy inverted sign."""
 _MOTOR_VARIABLES = ("motor.m1", "motor.m2", "motor.m3", "motor.m4")
 """Motor power, 0-65535."""
 _FLOW_QUALITY_VARIABLES = ("motion.squal", "motion.shutter")
 """Surface features seen, and shutter time (longer in low light)."""
-_DIAGNOSTIC_VARIABLES = (*_ATTITUDE_VARIABLES, *_MOTOR_VARIABLES, *_FLOW_QUALITY_VARIABLES)
+_DIAGNOSTIC_BATTERY_VARIABLE = "pm.vbatMV"
+"""Millivolts: the battery voltage, faster than the battery block's once a second."""
+_DIAGNOSTIC_VARIABLES = (
+    *_ATTITUDE_VARIABLES,
+    *_MOTOR_VARIABLES,
+    *_FLOW_QUALITY_VARIABLES,
+    _DIAGNOSTIC_BATTERY_VARIABLE,
+)
+# Buzzer parameters (ADR-0053). `sound.effect` picks an entry in the firmware's effects table.
+_SOUND_EFFECT_PARAMETER = "sound.effect"
+_SOUND_FREQUENCY_PARAMETER = "sound.freq"
+"""The steady tone's pitch, in whole hertz."""
+_SOUND_EFFECT_OFF = 0
+_SOUND_EFFECT_CHIRP = 4
+"""The firmware's "charging done" tune: two notes, then it switches itself off."""
+_SOUND_EFFECT_TONE = 12
+"""A steady tone at `sound.freq`. The parameter's own description numbers it wrongly."""
 _STATUS_VARIABLE = "supervisor.info"  # the supervisor's state bitfield
 _POSITION_VARIABLES = ("stateEstimate.x", "stateEstimate.y", "stateEstimate.z")
 _VELOCITY_VARIABLES = ("stateEstimate.vx", "stateEstimate.vy", "stateEstimate.vz")
@@ -211,6 +229,9 @@ class CrazyflieAdapter(DroneInterface):
         self._latest_status_bitfield: int | None = None
         """The supervisor bitfield of the latest state packet, for bits `DroneStatus`
         doesn't carry (auto-arming, ADR-0037). Written on cflib's receive thread."""
+        self._is_skipping_buzzer_commands = False
+        """The latest buzzer command was skipped because the link is closed: the warning for it
+        comes once per streak."""
 
     # --- Connection ---------------------------------------------------------
 
@@ -221,6 +242,7 @@ class CrazyflieAdapter(DroneInterface):
         self._latest_status_bitfield = None
         self._is_airborne = False  # a new session learns what the drone is doing from the drone
         self._is_ignoring_hover = False
+        self._is_skipping_buzzer_commands = False
         self._is_drone_state_unknown = True
         self._cancel_landing()  # nor does it carry on a landing from an earlier session
         # A new session starts with no values, so the wait for the first telemetry
@@ -258,6 +280,7 @@ class CrazyflieAdapter(DroneInterface):
             self._start_remaining_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
             self._wait_for_first_telemetry()
             self._log_whether_the_drone_arms_itself()
+            self._log_whether_the_buzzer_deck_is_attached()
         except BaseException:
             self._close_link()
             raise
@@ -352,6 +375,20 @@ class CrazyflieAdapter(DroneInterface):
         self._is_streaming_velocity = False
         self._cancel_landing()
 
+    def chirp(self) -> None:
+        # A chirp that a silence or a tone cuts short leaves the firmware partway through its
+        # tune, so the next chirp plays only the rest.
+        self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_CHIRP)
+
+    def play_tone(self, pitch: float) -> None:
+        frequency = sound_frequency_from_pitch(pitch)
+        # The pitch first: the tone plays whatever `sound.freq` holds when it starts.
+        self._write_buzzer_parameter(_SOUND_FREQUENCY_PARAMETER, frequency)
+        self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_TONE)
+
+    def silence(self) -> None:
+        self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_OFF)
+
     def take_snapshot(self, dt: float) -> Snapshot:
         snapshot = self._telemetry.snapshot(dt)
         self._finish_landing(snapshot)
@@ -410,6 +447,18 @@ class CrazyflieAdapter(DroneInterface):
             except KeyError:
                 pass  # this firmware doesn't know the parameter: not attached
         return False
+
+    def _write_buzzer_parameter(self, name: str, value: int) -> None:
+        """Queue one parameter write, or skip it with a warning while the link is closed (ADR-0053)."""
+        # Once the link is lost, cflib forgets the parameter list and a write raises, while a
+        # movement command is only dropped.
+        if self._crazyflie.link is None:
+            if not self._is_skipping_buzzer_commands:
+                logger.warning("Buzzer command not sent: the link is closed. Warned once per streak.")
+                self._is_skipping_buzzer_commands = True
+            return
+        self._is_skipping_buzzer_commands = False  # this write goes through: the streak is over
+        self._crazyflie.param.set_value(name, value)
 
     def _latest_height(self, if_unknown: float) -> float:
         position_estimate = self._telemetry.latest_position_estimate()
@@ -670,6 +719,13 @@ class CrazyflieAdapter(DroneInterface):
         else:
             logger.info("The drone doesn't arm itself: it needs an arm request before it can fly.")
 
+    def _log_whether_the_buzzer_deck_is_attached(self) -> None:
+        """Log once whether the Buzzer deck is attached (ADR-0053). Flying doesn't need it."""
+        if self._deck_attached("deck.bcBuzzer"):
+            logger.info("Buzzer deck detected.")
+        else:
+            logger.info("No Buzzer deck: buzzer commands will make no sound.")
+
     def _add_log_block(self, name: str, period_ms: int, variables: list[str], on_data: _LogCallback) -> None:
         log_config = LogConfig(name=name, period_in_ms=period_ms)
         for variable in variables:
@@ -734,8 +790,10 @@ class CrazyflieAdapter(DroneInterface):
         """One debug line, nothing in the telemetry buffer (ADR-0050)."""
         roll_deg, pitch_deg, yaw_deg = (data[variable] for variable in _ATTITUDE_VARIABLES)
         squal, shutter = (int(data[variable]) for variable in _FLOW_QUALITY_VARIABLES)
+        battery_voltage = battery_voltage_from_mv(int(data[_DIAGNOSTIC_BATTERY_VARIABLE]))
         logger.debug(
-            "Diagnostic: drone_time=%.3f roll_deg=%.2f pitch_deg=%.2f yaw_deg=%.2f motors=%s squal=%d shutter=%d",
+            "Diagnostic: drone_time=%.3f roll_deg=%.2f pitch_deg=%.2f yaw_deg=%.2f motors=%s squal=%d shutter=%d "
+            "battery_voltage=%.3f",
             self._drone_time(timestamp),
             roll_deg,
             pitch_deg,
@@ -743,6 +801,7 @@ class CrazyflieAdapter(DroneInterface):
             [int(data[variable]) for variable in _MOTOR_VARIABLES],
             squal,
             shutter,
+            battery_voltage,
         )
 
     def _on_multiranger(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:

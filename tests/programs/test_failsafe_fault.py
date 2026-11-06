@@ -75,6 +75,15 @@ class StandInDrone(DroneInterface):
     def emergency_stop(self) -> None:
         self.calls.append("emergency_stop")
 
+    def chirp(self) -> None:
+        self.calls.append("chirp")
+
+    def play_tone(self, pitch: float) -> None:
+        self.calls.append(f"play_tone {pitch}")
+
+    def silence(self) -> None:
+        self.calls.append("silence")
+
     def take_snapshot(self, dt: float) -> Snapshot:
         time = self.time
 
@@ -252,6 +261,9 @@ def test_every_command_goes_to_the_real_drone_unchanged() -> None:
     wrapper.land()
     wrapper.disarm()
     wrapper.emergency_stop()
+    wrapper.chirp()
+    wrapper.play_tone(523.25)
+    wrapper.silence()
     wrapper.disconnect()
 
     assert stand_in.calls == [
@@ -264,6 +276,9 @@ def test_every_command_goes_to_the_real_drone_unchanged() -> None:
         "land",
         "disarm",
         "emergency_stop",
+        "chirp",
+        "play_tone 523.25",
+        "silence",
         "disconnect",
     ]
 

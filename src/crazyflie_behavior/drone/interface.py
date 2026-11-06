@@ -103,6 +103,18 @@ class DroneInterface(ABC):
         """Cut the motors immediately. The drone falls. Critical faults only."""
 
     @abstractmethod
+    def chirp(self) -> None:
+        """Play one chirp on the buzzer: a short sound that stops by itself (ADR-0053)."""
+
+    @abstractmethod
+    def play_tone(self, pitch: float) -> None:
+        """Play a steady tone at `pitch` hertz on the buzzer, until `silence()` (ADR-0053)."""
+
+    @abstractmethod
+    def silence(self) -> None:
+        """Stop the buzzer (ADR-0053)."""
+
+    @abstractmethod
     def take_snapshot(self, dt: float) -> Snapshot:
         """Called once per tick by the tick step: return this tick's snapshot.
 

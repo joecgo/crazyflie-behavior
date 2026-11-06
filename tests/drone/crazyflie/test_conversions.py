@@ -4,9 +4,12 @@ import pytest
 
 from crazyflie_behavior.drone.crazyflie.conversions import (
     LOG_TIMESTAMP_RANGE_MS,
+    SOUND_FREQUENCY_LIMIT,
+    battery_voltage_from_mv,
     drone_time_from_timestamp,
     move_duration,
     range_reading_from_mm,
+    sound_frequency_from_pitch,
     yaw_rate_deg_per_s,
 )
 from crazyflie_behavior.snapshot import RangeReading
@@ -66,3 +69,23 @@ def test_move_duration_uses_distance_either_way() -> None:
 def test_move_duration_rejects_a_non_positive_speed() -> None:
     with pytest.raises(ValueError, match="Speed"):
         move_duration(distance=1.0, speed=0.0, minimum=0.5)
+
+
+def test_battery_millivolts_become_volts() -> None:
+    assert battery_voltage_from_mv(3871) == pytest.approx(3.871)
+
+
+def test_a_tone_pitch_becomes_whole_hertz_for_the_firmware() -> None:
+    assert sound_frequency_from_pitch(391.995) == 392
+    assert sound_frequency_from_pitch(523.25) == 523
+
+
+def test_the_lowest_and_highest_whole_hertz_the_firmware_holds_are_allowed() -> None:
+    assert sound_frequency_from_pitch(1.0) == 1
+    assert sound_frequency_from_pitch(SOUND_FREQUENCY_LIMIT) == 65535
+
+
+@pytest.mark.parametrize("pitch", [0.5, SOUND_FREQUENCY_LIMIT + 0.5, math.nan, math.inf])
+def test_a_pitch_the_firmware_cant_hold_is_a_bug(pitch: float) -> None:
+    with pytest.raises(ValueError, match="The buzzer can't play"):
+        sound_frequency_from_pitch(pitch)

@@ -41,6 +41,7 @@ VARIABLE_SIZES_BYTES = {
     "motor.m4": 2,
     "motion.squal": 1,
     "motion.shutter": 2,
+    "pm.vbatMV": 2,
 }
 """Sizes as the firmware 2026.08 stores them (ADR-0047)."""
 
@@ -169,6 +170,7 @@ def test_a_diagnostic_sample_is_one_debug_line_and_never_telemetry(
         "motor.m4": 43000.0,
         "motion.squal": 90.0,
         "motion.shutter": 2500.0,
+        "pm.vbatMV": 3871.0,
     }
     before = snapshot_of(adapter)
 
@@ -177,7 +179,7 @@ def test_a_diagnostic_sample_is_one_debug_line_and_never_telemetry(
 
     assert [r.getMessage() for r in caplog.records] == [
         "Diagnostic: drone_time=3.000 roll_deg=1.50 pitch_deg=-2.25 yaw_deg=10.00 "
-        "motors=[40000, 41000, 42000, 43000] squal=90 shutter=2500"
+        "motors=[40000, 41000, 42000, 43000] squal=90 shutter=2500 battery_voltage=3.871"
     ]
     assert caplog.records[0].levelno == logging.DEBUG
     assert snapshot_of(adapter) == before

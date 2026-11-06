@@ -49,6 +49,22 @@ def drone_time_from_timestamp(timestamp_ms: int, previous_drone_time: float | No
     return drone_time_ms / 1000.0
 
 
+def battery_voltage_from_mv(voltage_mv: int) -> float:
+    """Convert a battery voltage in millivolts into volts."""
+    return voltage_mv / 1000.0
+
+
+SOUND_FREQUENCY_LIMIT = 0xFFFF
+"""Hertz: the highest pitch the firmware's tone parameter holds (16 bits)."""
+
+
+def sound_frequency_from_pitch(pitch: float) -> int:
+    """Convert a tone's pitch in hertz into the firmware's whole hertz."""
+    if not 1.0 <= pitch <= SOUND_FREQUENCY_LIMIT:  # false for NaN too
+        raise ValueError(f"The buzzer can't play a pitch of {pitch} Hz")
+    return round(pitch)
+
+
 def yaw_rate_deg_per_s(yaw_rate_rad_per_s: float) -> float:
     """cflib's velocity setpoints take yaw rate in degrees per second."""
     return math.degrees(yaw_rate_rad_per_s)

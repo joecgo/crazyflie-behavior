@@ -18,6 +18,8 @@ reading on the floor (ADR-0052). Like a real drone, it streams every value
 again with each snapshot, until a test makes it go quiet with `stop_telemetry`.
 """
 
+import math
+
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.telemetry_buffer import TelemetryBuffer
 from crazyflie_behavior.geometry import Vector3
@@ -53,6 +55,8 @@ class MockAdapter(DroneInterface):
         self._telemetry = TelemetryBuffer(clock)
         # Names of the commands received, in order, for tests to check.
         self.command_log: list[str] = []
+        self.tone_pitches: list[float] = []
+        """Hertz: the pitch of each tone received, in order, for tests to check. The buzzer makes no sound."""
         self._is_connected = False
         self._is_armed = False
         self._is_flying = False
@@ -152,6 +156,18 @@ class MockAdapter(DroneInterface):
         self.command_log.append("emergency_stop")
         self._is_armed = False
         self._drop_to_ground()
+
+    def chirp(self) -> None:
+        self.command_log.append("chirp")
+
+    def play_tone(self, pitch: float) -> None:
+        self.command_log.append("play_tone")
+        if not (math.isfinite(pitch) and pitch > 0.0):
+            raise ValueError(f"Tone pitch must be positive: {pitch}")
+        self.tone_pitches.append(pitch)
+
+    def silence(self) -> None:
+        self.command_log.append("silence")
 
     def take_snapshot(self, dt: float) -> Snapshot:
         self._apply_setpoint_timeout()

@@ -45,6 +45,7 @@ FIRST_SAMPLES: dict[str, dict[str, float]] = {
         "motor.m4": 0.0,
         "motion.squal": 80.0,
         "motion.shutter": 3000.0,
+        "pm.vbatMV": 4000.0,
     },
     "multiranger": {
         "range.front": 8000.0,
@@ -214,6 +215,55 @@ def test_connecting_logs_that_the_drone_does_not_arm_itself(
     ]
 
 
+def buzzer_deck_logs(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [r.getMessage() for r in caplog.records if "Buzzer deck" in r.getMessage()]
+
+
+def test_connecting_logs_a_buzzer_deck(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -> None:
+    fake_cflib.parameters["deck.bcBuzzer"] = "1"
+
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+        adapter.connect()
+
+    assert buzzer_deck_logs(caplog) == ["Buzzer deck detected."]
+
+
+@pytest.mark.parametrize("deck_parameter", ["0", None], ids=["not attached", "unknown to the firmware"])
+def test_connecting_without_a_buzzer_deck_logs_that_buzzer_commands_make_no_sound(
+    deck_parameter: str | None, adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Flying doesn't need the buzzer, so the connect goes on (ADR-0053)."""
+    if deck_parameter is not None:
+        fake_cflib.parameters["deck.bcBuzzer"] = deck_parameter
+
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+        adapter.connect()
+
+    assert buzzer_deck_logs(caplog) == ["No Buzzer deck: buzzer commands will make no sound."]
+    fake_cflib.link.close_link.assert_not_called()
+
+
+def test_connecting_again_warns_again_about_a_buzzer_command_on_a_closed_link(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The once-per-streak warning starts over with each connection."""
+    caplog.set_level(logging.WARNING, logger=adapter_module.logger.name)
+    adapter.connect()
+    fake_cflib.link.cf.link = None  # the link is lost
+    adapter.chirp()
+    fake_cflib.link.cf.link = fake_cflib.radio_link
+    adapter.connect()
+    fake_cflib.link.cf.link = None  # and lost again before any buzzer command
+
+    adapter.chirp()
+
+    assert [r.getMessage() for r in caplog.records if "Buzzer command" in r.getMessage()] == [
+        "Buzzer command not sent: the link is closed. Warned once per streak."
+    ] * 2
+
+
 def test_a_multi_ranger_adds_its_own_log_block(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
     fake_cflib.parameters["deck.bcMultiranger"] = "1"
 
@@ -230,6 +280,15 @@ def test_connect_does_not_wait_for_the_diagnostic_block(adapter: CrazyflieAdapte
 
     assert adapter._telemetry.missing_values() == []
     assert fake_cflib.log_block_periods_ms["diagnostic"] == 100
+
+
+def test_the_diagnostic_block_carries_the_battery_voltage(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
+    """10 times a second, for the debug log only (ADR-0053)."""
+    adapter.connect()
+
+    diagnostic_block = adapter._log_configs[fake_cflib.log_block_names.index("diagnostic")]
+    variables = [added.args[0] for added in diagnostic_block.add_variable.call_args_list]
+    assert "pm.vbatMV" in variables
 
 
 def test_log_periods_are_ones_the_firmware_accepts(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:

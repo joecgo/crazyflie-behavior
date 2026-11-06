@@ -226,3 +226,75 @@ def test_commands_before_connect_say_so(clock: SimClock) -> None:
 
     with pytest.raises(RuntimeError, match="Not connected"):
         adapter.arm()
+
+
+# --- Buzzer (ADR-0053) --------------------------------------------------------------
+
+
+def parameter_writes(fake_link: MagicMock) -> list[tuple[str, int]]:
+    """Each parameter write the adapter queued, in order: (name, value)."""
+    return [(write.args[0], write.args[1]) for write in fake_link.cf.param.set_value.call_args_list]
+
+
+def test_a_chirp_plays_the_firmwares_two_note_tune(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
+    adapter.chirp()
+
+    assert parameter_writes(fake_link) == [("sound.effect", 4)]
+
+
+def test_a_tone_sets_its_pitch_in_whole_hertz_before_starting_the_steady_tone(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    adapter.play_tone(391.995)
+
+    assert parameter_writes(fake_link) == [("sound.freq", 392), ("sound.effect", 12)]
+
+
+def test_a_silence_switches_the_sound_off(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
+    adapter.silence()
+
+    assert parameter_writes(fake_link) == [("sound.effect", 0)]
+
+
+def test_a_tone_the_firmware_cant_hold_is_a_bug_and_writes_nothing(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    with pytest.raises(ValueError, match="can't play"):
+        adapter.play_tone(70_000.0)
+
+    assert parameter_writes(fake_link) == []
+
+
+def buzzer_warnings(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING and "Buzzer" in r.getMessage()]
+
+
+def test_buzzer_commands_on_a_closed_link_are_skipped_with_a_warning_once_per_streak(
+    adapter: CrazyflieAdapter, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    """cflib's parameter write raises once the link is lost, unlike a movement command (ADR-0053)."""
+    fake_link.cf.link = None
+
+    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+        adapter.chirp()
+        adapter.play_tone(523.25)
+        adapter.silence()
+
+    assert parameter_writes(fake_link) == []
+    assert buzzer_warnings(caplog) == ["Buzzer command not sent: the link is closed. Warned once per streak."]
+
+
+def test_a_buzzer_command_that_goes_through_ends_the_streak(
+    adapter: CrazyflieAdapter, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    radio_link = fake_link.cf.link
+    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+        fake_link.cf.link = None
+        adapter.chirp()  # a streak starts: one warning
+        fake_link.cf.link = radio_link
+        adapter.chirp()  # written: the streak ends
+        fake_link.cf.link = None
+        adapter.chirp()  # a new streak: a new warning
+
+    assert parameter_writes(fake_link) == [("sound.effect", 4)]
+    assert len(buzzer_warnings(caplog)) == 2

@@ -11,12 +11,15 @@ from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.safety.requests import (
     Arm,
+    Chirp,
     CommandRequest,
     Hover,
     Land,
     MoveTo,
     SetVelocity,
+    Silence,
     TakeOff,
+    Tone,
 )
 from crazyflie_behavior.safety.safety_layer import (
     BATTERY_STALE_AFTER,
@@ -371,6 +374,136 @@ def test_replacements_warn_once_per_streak_and_every_one_is_logged_at_debug(
     debug_lines = [r for r in caplog.records if r.levelno == logging.DEBUG]
     assert len(warnings_in(caplog)) == 2
     assert len([r for r in debug_lines if "replaces" in r.getMessage()]) == 4
+
+
+# --- The buzzer slot (ADR-0053) -----------------------------------------------------
+
+BUZZER_REQUESTS: list[CommandRequest] = [Chirp(), Tone(440.0), Silence()]
+
+
+@pytest.mark.parametrize("command_request", BUZZER_REQUESTS)
+@pytest.mark.parametrize("status", [ON_THE_FLOOR, ARMED, FLYING], ids=["on the floor", "armed", "flying"])
+def test_buzzer_requests_are_approved_whatever_the_drone_status_says(
+    command_request: CommandRequest, status: DroneStatus
+) -> None:
+    """Nothing in the buzzer path moves the drone."""
+    assert judge(command_request, snapshot(status)).is_approved
+
+
+@pytest.mark.parametrize("command_request", BUZZER_REQUESTS)
+def test_buzzer_requests_are_approved_without_a_drone_status_or_a_charged_battery(
+    command_request: CommandRequest,
+) -> None:
+    low_battery_and_no_status = replace(snapshot(battery_voltage=LOW_BATTERY_VOLTAGE - 0.5), drone_status=None)
+
+    assert judge(command_request, low_battery_and_no_status).is_approved
+
+
+class BuzzerRecordingDrone(RecordingDrone):
+    """Also records every command in one list, buzzer commands with their pitch."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.commands: list[str] = []
+
+    def land(self) -> None:
+        self.commands.append("land")
+        super().land()
+
+    def chirp(self) -> None:
+        self.commands.append("chirp")
+        super().chirp()
+
+    def play_tone(self, pitch: float) -> None:
+        self.commands.append(f"play_tone {pitch}")
+        super().play_tone(pitch)
+
+    def silence(self) -> None:
+        self.commands.append("silence")
+        super().silence()
+
+
+@pytest.mark.parametrize(
+    ("command_request", "command"),
+    [(Chirp(), "chirp"), (Tone(523.25), "play_tone 523.25"), (Silence(), "silence")],
+)
+def test_a_buzzer_request_is_sent_at_the_end_of_the_tick(command_request: CommandRequest, command: str) -> None:
+    drone = BuzzerRecordingDrone()
+    safety_layer = SafetyLayer(drone)
+    safety_layer.pre_check(snapshot(FLYING))
+
+    assert safety_layer.request(command_request).is_approved
+    assert drone.commands == []
+    safety_layer.send()
+
+    assert drone.commands == [command]
+
+
+def test_a_movement_and_a_buzzer_request_in_one_tick_are_both_sent_movement_first(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    drone = BuzzerRecordingDrone()
+    safety_layer = SafetyLayer(drone)
+    safety_layer.pre_check(snapshot(FLYING))
+
+    safety_layer.request(Chirp())
+    safety_layer.request(Land())
+    safety_layer.send()
+
+    assert drone.commands == ["land", "chirp"]
+    assert warnings_in(caplog) == []
+
+
+def test_a_later_buzzer_request_in_the_same_tick_replaces_the_earlier_with_a_warning(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG, logger=SAFETY_LOGGER)
+    drone = BuzzerRecordingDrone()
+    safety_layer = SafetyLayer(drone)
+    safety_layer.pre_check(snapshot(ON_THE_FLOOR))
+
+    safety_layer.request(Tone(440.0))
+    safety_layer.request(Silence())
+    safety_layer.send()
+
+    assert drone.commands == ["silence"]
+    assert len(warnings_in(caplog)) == 1
+    assert "Two buzzer requests in one tick: Silence() replaces Tone(pitch=440.0)" in warnings_in(caplog)[0]
+
+
+def test_each_slot_has_its_own_replacement_streak(caplog: pytest.LogCaptureFixture) -> None:
+    """A movement streak going on doesn't hide the start of a buzzer streak."""
+    safety_layer = SafetyLayer(BuzzerRecordingDrone())
+
+    safety_layer.pre_check(snapshot(FLYING))
+    safety_layer.request(Hover())
+    safety_layer.request(Hover())  # a movement streak starts
+    safety_layer.send()
+    safety_layer.pre_check(snapshot(FLYING))
+    safety_layer.request(Hover())
+    safety_layer.request(Hover())  # the movement streak goes on
+    safety_layer.request(Chirp())
+    safety_layer.request(Chirp())  # a buzzer streak starts
+    safety_layer.send()
+
+    assert [message.split(":")[0] for message in warnings_in(caplog)] == [
+        "Two movement requests in one tick",
+        "Two buzzer requests in one tick",
+    ]
+
+
+def test_after_the_failsafe_buzzer_requests_are_refused_too() -> None:
+    drone = BuzzerRecordingDrone()
+    safety_layer = SafetyLayer(drone)
+    safety_layer.pre_check(snapshot(FLYING, position_age=1.0))
+    safety_layer.send()
+
+    safety_layer.pre_check(snapshot(FLYING))
+    verdict = safety_layer.request(Chirp())
+    safety_layer.send()
+
+    assert verdict.reason == "the flight is over: the safety pre-check failed"
+    assert drone.commands == ["land"]
 
 
 # --- The failsafe ------------------------------------------------------------------

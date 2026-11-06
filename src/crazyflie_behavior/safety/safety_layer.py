@@ -5,8 +5,8 @@ Each tick, the tick step calls it in this order (ADR-0025):
 1. `pre_check`: the safety pre-check on the tick's snapshot. If it fails, the
    failsafe lands the drone and the flight is over.
 2. `request`: behaviors' command requests, each judged at once. An approved
-   request fills the movement slot.
-3. `send`: the movement slot's command goes to the drone.
+   request fills its command slot: movement or buzzer.
+3. `send`: each slot's command goes to the drone.
 
 The pre-check and the judging are plain functions of the snapshot. Only the
 SafetyLayer holds state: what it sends, and which warnings it has already given.
@@ -25,12 +25,17 @@ from typing import NamedTuple
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.safety.requests import (
     Arm,
+    BuzzerRequest,
+    Chirp,
     CommandRequest,
     Hover,
     Land,
+    MovementRequest,
     MoveTo,
     SetVelocity,
+    Silence,
     TakeOff,
+    Tone,
     Verdict,
 )
 from crazyflie_behavior.snapshot import Snapshot, Stamped
@@ -111,16 +116,19 @@ def _staleness(checked: _CheckedValue, now: float) -> str | None:
 
 
 def judge(command_request: CommandRequest, snapshot: Snapshot) -> Verdict:
-    """Approve or refuse a behavior's command request (ADR-0030, ADR-0039, ADR-0051).
+    """Approve or refuse a behavior's command request (ADR-0030, ADR-0039, ADR-0051, ADR-0053).
 
     Arm is judged on the drone status, and take off on the drone status and
     the take-off limit. Hover and land are always approved, and the adapter
-    decides whether to act on them.
+    decides whether to act on them. Buzzer requests are always approved.
     """
     # The drone status lags: it says "not flying" just after a take-off, and
     # "flying" for a while after the motors stop. Only the adapter, which
     # knows what it sent, can tell whether the drone may be flying.
     if isinstance(command_request, Hover | Land):
+        return Verdict.approved()
+    # Nothing in the buzzer path moves the drone (ADR-0053).
+    if isinstance(command_request, Chirp | Tone | Silence):
         return Verdict.approved()
     status = snapshot.drone_status
     if status is None:
@@ -157,10 +165,44 @@ def _judge_take_off_battery(snapshot: Snapshot) -> Verdict:
     return Verdict.approved()
 
 
+class _CommandSlot[T]:
+    """One command slot (ADR-0025): the request to send at the end of this tick."""
+
+    def __init__(self, name: str) -> None:
+        self._name = name
+        self._request: T | None = None
+        self._replaced_this_tick = False
+        self._replaced_last_tick = False
+
+    def fill(self, request: T) -> None:
+        """Hold `request` for this tick. One already held is replaced, with a warning once per streak (ADR-0020)."""
+        replaced = self._request
+        self._request = request
+        if replaced is None:
+            return
+        logger.debug("%s replaces %s in the %s slot", request, replaced, self._name)
+        if not (self._replaced_this_tick or self._replaced_last_tick):
+            logger.warning(
+                "Two %s requests in one tick: %s replaces %s. "
+                "Warned once per streak; every replacement is logged at debug level.",
+                self._name,
+                request,
+                replaced,
+            )
+        self._replaced_this_tick = True
+
+    def take(self) -> T | None:
+        """The request to send this tick, if any. Empties the slot for the next tick."""
+        request, self._request = self._request, None
+        self._replaced_last_tick = self._replaced_this_tick
+        self._replaced_this_tick = False
+        return request
+
+
 class SafetyLayer:
     """The only code that sends commands to the drone, apart from the kill switch (ADR-0013).
 
-    TODO: one failsafe (land) and only the movement slot so far (ADR-0030).
+    TODO: one failsafe (land) so far (ADR-0030), and no LED slot (ADR-0025).
     Once the safety pre-check fails, the flight is over: it
     never resumes, and every later request is refused.
     """
@@ -169,10 +211,8 @@ class SafetyLayer:
         self._drone = drone
         self._snapshot: Snapshot | None = None
         """This tick's snapshot: requests are judged against it."""
-        self._movement: CommandRequest | None = None
-        """The movement slot: the command to send at the end of this tick."""
-        self._movement_replaced_this_tick = False
-        self._movement_replaced_last_tick = False
+        self._movement_slot = _CommandSlot[MovementRequest]("movement")
+        self._buzzer_slot = _CommandSlot[BuzzerRequest]("buzzer")
         self._pre_check_has_failed = False
 
     @property
@@ -194,15 +234,15 @@ class SafetyLayer:
         if not failures:
             return True
         self._pre_check_has_failed = True
-        self._movement = Land()
+        self._movement_slot.fill(Land())
         logger.warning("Safety pre-check failed: %s. Landing.", "; ".join(failures))
         return False
 
     def request(self, command_request: CommandRequest) -> Verdict:
         """Judge a behavior's command request at once (ADR-0025).
 
-        An approved request fills the movement slot. A later one in the same
-        tick replaces it, with a warning once per streak (ADR-0020).
+        An approved request fills its command slot, movement or buzzer. A later
+        one in the same slot and tick replaces it, with a warning once per streak (ADR-0020).
         """
         if self._pre_check_has_failed:
             verdict = Verdict.refused("the flight is over: the safety pre-check failed")
@@ -210,22 +250,27 @@ class SafetyLayer:
             verdict = Verdict.refused("no safety pre-check yet")
         else:
             verdict = judge(command_request, self._snapshot)
-        if verdict.is_approved:
-            self._fill_movement_slot(command_request)
-        else:
+        if not verdict.is_approved:
             logger.debug("Refused %s: %s", command_request, verdict.reason)
+        elif isinstance(command_request, Chirp | Tone | Silence):
+            self._buzzer_slot.fill(command_request)
+        else:
+            self._movement_slot.fill(command_request)
         return verdict
 
     def send(self) -> None:
         """Send each command slot's command, if any, then empty the slots for the next tick.
 
-        TODO: only the movement slot exists so far (ADR-0030); buzzer and LED slots come later (ADR-0025).
+        Movement first. TODO: the LED slot comes later (ADR-0025).
         """
-        command, self._movement = self._movement, None
-        self._movement_replaced_last_tick = self._movement_replaced_this_tick
-        self._movement_replaced_this_tick = False
-        if command is None:
-            return
+        movement = self._movement_slot.take()
+        buzzer = self._buzzer_slot.take()
+        if movement is not None:
+            self._send_movement(movement)
+        if buzzer is not None:
+            self._send_buzzer(buzzer)
+
+    def _send_movement(self, command: MovementRequest) -> None:
         logger.info("Sending %s", command)
         match command:
             case Arm():
@@ -240,17 +285,12 @@ class SafetyLayer:
                 # judge() never approves these: a bug if it ever happens.
                 raise RuntimeError(f"{command} reached the movement slot before the speed envelope")
 
-    def _fill_movement_slot(self, command_request: CommandRequest) -> None:
-        replaced = self._movement
-        self._movement = command_request
-        if replaced is None:
-            return
-        logger.debug("%s replaces %s in the movement slot", command_request, replaced)
-        if not (self._movement_replaced_this_tick or self._movement_replaced_last_tick):
-            logger.warning(
-                "Two movement requests in one tick: %s replaces %s. "
-                "Warned once per streak; every replacement is logged at debug level.",
-                command_request,
-                replaced,
-            )
-        self._movement_replaced_this_tick = True
+    def _send_buzzer(self, command: BuzzerRequest) -> None:
+        logger.info("Sending %s", command)
+        match command:
+            case Chirp():
+                self._drone.chirp()
+            case Tone(pitch=pitch):
+                self._drone.play_tone(pitch)
+            case Silence():
+                self._drone.silence()

@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from crazyflie_behavior.drone.mock_adapter import FLOOR_DOWN_RANGE, TAKEN_OVER_HEIGHT, MockAdapter
@@ -385,3 +387,26 @@ def test_a_taken_over_flight_reads_its_height_below() -> None:
 def test_the_floor_reading_is_a_distance_the_real_drone_reads_at_rest() -> None:
     # 0.019-0.024 m at rest on 2026-11-04: above zero, and far below any flying height.
     assert 0.0 < FLOOR_DOWN_RANGE < 0.05
+
+
+def test_buzzer_commands_are_recorded_with_each_tones_pitch() -> None:
+    drone = MockAdapter(SimClock())
+    drone.connect()
+
+    drone.chirp()
+    drone.play_tone(392.0)
+    drone.play_tone(523.25)
+    drone.silence()
+
+    assert drone.command_log == ["connect", "chirp", "play_tone", "play_tone", "silence"]
+    assert drone.tone_pitches == [392.0, 523.25]
+
+
+@pytest.mark.parametrize("pitch", [0.0, -440.0, math.nan, math.inf])
+def test_a_tone_pitch_that_isnt_positive_is_a_bug(pitch: float) -> None:
+    drone = MockAdapter(SimClock())
+
+    with pytest.raises(ValueError, match="pitch"):
+        drone.play_tone(pitch)
+
+    assert drone.tone_pitches == []

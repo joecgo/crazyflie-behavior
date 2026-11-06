@@ -29,8 +29,19 @@ TAKE_OVER_SETTING = "take_over_flight"
 
 CLOCK_MODULES = ["time", "datetime", "crazyflie_behavior.timing"]
 
-DRONE_COMMANDS = {"arm", "disarm", "take_off", "land", "hover", "set_velocity", "move_to"}
-"""The drone interface's commands that only the safety layer sends (ADR-0008). Not
+DRONE_COMMANDS = {
+    "arm",
+    "disarm",
+    "take_off",
+    "land",
+    "hover",
+    "set_velocity",
+    "move_to",
+    "chirp",
+    "play_tone",
+    "silence",
+}
+"""The drone interface's commands that only the safety layer sends (ADR-0008, ADR-0053). Not
 `emergency_stop`: the kill switch bypasses the safety layer (ADR-0013)."""
 
 
@@ -233,7 +244,7 @@ def test_the_import_scanner_sees_real_imports() -> None:
     assert imports_any(PACKAGE_ROOT / "drone" / "mock_adapter.py", ["crazyflie_behavior.drone"])
     assert imports_any(TICK_LOOP, ["crazyflie_behavior.timing"])
     assert imports_any(BEHAVIORS_ROOT / "hover_test.py", ["crazyflie_behavior.safety"])
-    assert drone_commands_called(SAFETY_ROOT / "safety_layer.py") >= {"arm", "take_off", "land"}
+    assert drone_commands_called(SAFETY_ROOT / "safety_layer.py") >= {"arm", "take_off", "land", "chirp", "silence"}
     assert drone_commands_called(FORGED_BATTERY_FILE) >= {"arm", "take_off", "land"}  # why it needs its exemption
     assert imports_module_in_any_form(FAILSAFE_PROGRAM, FORGED_BATTERY_WRAPPER)
     assert not imports_module_in_any_form(PROGRAMS_ROOT / "hover.py", FORGED_BATTERY_WRAPPER)
