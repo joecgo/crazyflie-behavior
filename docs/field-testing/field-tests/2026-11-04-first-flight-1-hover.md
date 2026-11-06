@@ -80,6 +80,8 @@
 - He had stopped aiming the flashlight at the floor for the landing.
 - His reading: the flow sensor doesn't work well close to the ground, at
   least in low light.
+- Flight 1, from his video: "it oscillates the entire time, side to side,
+  and back to front. 1-2cm".
 
 ### Computed from the log (Claude)
 
@@ -107,6 +109,15 @@
   (17:17:33.20-33.40), the estimated horizontal speed rose from 0.07 to
   0.34 m/s with the motors running; the controller chasing it may explain the
   slide (backlog #54).
+- **Mid-air swing (flight 1):** one frequency, 0.85 Hz (a period of 1.18 s),
+  in x and y, 1.2 cm each way, through the whole hover. The y swing lags x by
+  about 90°, a small circle, counterclockwise seen from above (Joe to confirm
+  from the video). Height swings 0.13 cm at that frequency. The Multi-ranger's
+  front and left ranges show the same frequency, mirroring the estimate, so
+  the motion was real and the estimate followed it. The size stayed the same
+  while the battery fell. Only `Arm`, `TakeOff` and `Land` were sent. The log
+  keeps one state sample per 20 Hz tick, so it shows up to 10 Hz (5 Hz for the
+  Multi-ranger).
 - **Before the flight,** the Flow deck's surface quality was 56-107 with the
   flashlight, and the velocity variance held at about 1e-4.
 - **Flight 2,** flown knowing the battery was low (3.88 V at rest): at 0.41 m

@@ -14,6 +14,11 @@
   landing ([ADR-0048](../../decisions/0048-level-through-the-bad-flow-zone.md)):
   arm, take off to 0.5 m, hover 60 s, land. Land closer to the take-off point
   than in [session 1](2026-11-04-first-flight-1-hover.md) (about 4 cm).
+- Also measure (not passed or failed): the mid-air swing from session 1, a
+  0.85 Hz circle about 1.2 cm in radius. Compare it with the diagnostic
+  block's debug lines ([ADR-0050](../../decisions/0050-diagnostic-log-block-to-the-debug-log.md)):
+  attitude (roll, pitch, yaw), the four motor outputs, and the Flow deck's
+  surface quality and shutter time.
 - Pass if:
   - [ ] The hover test reports done: armed within 2 s, reached 0.5 m (within
         0.1 m) within 5 s, hovered, landed, no error logged.
@@ -46,6 +51,7 @@
 - [ ] After landing, measure from the take-off mark to the drone with a tape measure
 - [ ] Note whether the landing needed the final descent (the log says so)
 - [ ] Note whether the drone slid, and whether before or after the propellers stopped
+- [ ] Note whether it swings mid-air, and which way it circles seen from above
 
 ## Flights
 
