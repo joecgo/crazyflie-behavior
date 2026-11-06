@@ -156,6 +156,13 @@ this file in the same commit as the code or ADR that uses it.
 | **Take over (a flight)** | Connect to a drone that may be flying, without resetting its position estimate, and treat it as flying until it lands. Only the rescue landing program does it. | [0038](decisions/0038-connecting-to-a-flying-drone.md) |
 | **Streak** | An unbroken run of the same condition, counted in whatever repeats (ticks, command requests, state packets). It ends the first time the condition doesn't hold. A warning comes once per streak, so a long fault logs once, not every tick. | [0020](decisions/0020-failures-degrade-gracefully.md), [0042](decisions/0042-negative-ages-count-as-fresh.md) |
 
+## Buzzer deck
+
+| Term | Definition | ADR |
+|---|---|---|
+| **Chirp** | One short sound from the Buzzer deck, about 1 s: the firmware's built-in two-note tune, which stops by itself. A buzzer command, like tone and silence. | [0053](decisions/0053-buzzer-commands-and-a-chirp-hover-test.md) |
+| **Tone** | A steady sound from the Buzzer deck at a chosen pitch, until a silence command stops it. | [0053](decisions/0053-buzzer-commands-and-a-chirp-hover-test.md) |
+
 ## Testing
 
 | Term | Definition |
