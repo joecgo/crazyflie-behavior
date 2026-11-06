@@ -31,10 +31,10 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 4 | 13 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
-| communication | 7 | 15 |
+| communication | 7 | 16 |
 | testing | 0 | 9 |
 | process | 3 | 12 |
-| **Total** | **28** | **76** |
+| **Total** | **28** | **77** |
 
 Of the 28 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 22. So far, 7 of the 11 recommendation
@@ -517,6 +517,19 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-06: A sound effect's number read from an out-of-date comment
+
+- **What happened:** Claude told me that `sound.effect` 11 plays the steady
+  tone at `sound.freq`. That number came from the parameter's doc comment in
+  `sound_cf2.c` (firmware 2026.08), which lists 11 as "Bypass". The effects
+  table the number indexes has "Ride of the Valkyries" at 11, so the steady
+  tone is 12, and the comment is out of date. No code or ADR used it.
+- **How it was caught:** reading the effects table to choose the end-of-test
+  tune.
+- **Kind:** communication.
+- **Takeaway:** a number that indexes a table is read from the table, not
+  from a comment that describes it.
 
 ### 2026-11-06: ADR-0041 amended twice without its status line saying so
 
