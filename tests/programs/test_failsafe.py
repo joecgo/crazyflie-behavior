@@ -97,7 +97,7 @@ def test_the_failsafe_lands_the_drone_after_the_forged_low_battery(
     assert f"Failsafe program, the mock adapter, {test_name} (0.5 m)" in log_text
     assert "Sending TakeOff(height=0.5)" in log_text
     assert log_text.count("FAULT INJECTED: battery voltage forged") == 1
-    assert "Safety pre-check failed: battery at 3.20 V (land below 3.40 V). Landing." in log_text
+    assert "Safety pre-check failed: battery at 3.00 V (land below 3.20 V). Landing." in log_text
     assert "Sending Land()" in log_text
     assert "Failsafe test failed" not in log_text
     assert mock_adapter_maker.adapter.command_log.count("land") >= 1
@@ -171,13 +171,30 @@ def test_a_real_fault_before_the_forged_one_does_not_pass_the_test(
 ) -> None:
     """The failsafe fires, but not for the injected fault, so it proves nothing about that one."""
     monkeypatch.chdir(tmp_path)
-    mock_adapter_maker.battery_voltage = 3.0  # really low from the start
+    mock_adapter_maker.battery_voltage = 3.1  # really low from the start, and not the forged value
 
     exit_code = main(["--fault-at", "hover"])
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")
-    assert "Safety pre-check failed: battery at 3.00 V" in log_text
+    assert "Safety pre-check failed: battery at 3.10 V" in log_text
+    assert "FAULT INJECTED" not in log_text
+
+
+def test_a_battery_below_the_take_off_voltage_is_refused_on_the_floor_and_fails_the_test(
+    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Above the pre-check's limit, so only the take-off judgment stops it (ADR-0051)."""
+    monkeypatch.chdir(tmp_path)
+    mock_adapter_maker.battery_voltage = 3.5
+
+    exit_code = main(["--fault-at", "climb"])
+
+    assert exit_code == 1
+    log_text = the_log_file_text(tmp_path / "logs")
+    assert "TakeOff(height=0.5) was refused: battery at 3.50 V (take off from 3.62 V)" in log_text
+    assert "Sending TakeOff" not in log_text
+    assert "take_off" not in mock_adapter_maker.adapter.command_log
     assert "FAULT INJECTED" not in log_text
 
 

@@ -22,6 +22,7 @@ from crazyflie_behavior.safety.safety_layer import (
     BATTERY_STALE_AFTER,
     LOW_BATTERY_VOLTAGE,
     STALE_AFTER,
+    TAKE_OFF_BATTERY_VOLTAGE,
     SafetyLayer,
     judge,
     safety_pre_check,
@@ -150,7 +151,7 @@ def test_a_value_that_arrived_just_after_the_tick_time_is_fresh() -> None:
 def test_a_battery_below_the_landing_voltage_fails() -> None:
     assert safety_pre_check(snapshot(battery_voltage=LOW_BATTERY_VOLTAGE)) == []
     assert safety_pre_check(snapshot(battery_voltage=LOW_BATTERY_VOLTAGE - 0.01)) == [
-        "battery at 3.39 V (land below 3.40 V)"
+        "battery at 3.19 V (land below 3.20 V)"
     ]
 
 
@@ -199,6 +200,34 @@ def test_taking_off_needs_an_armed_drone_on_the_floor() -> None:
     assert judge(TakeOff(0.5), snapshot(ARMED)).is_approved
     assert judge(TakeOff(0.5), snapshot(ON_THE_FLOOR)).reason == "the drone isn't armed"
     assert judge(TakeOff(0.5), snapshot(FLYING)).reason == "the drone is already flying"
+
+
+def test_a_take_off_is_approved_at_the_take_off_voltage_and_refused_below_it() -> None:
+    assert judge(TakeOff(0.5), snapshot(ARMED, battery_voltage=TAKE_OFF_BATTERY_VOLTAGE)).is_approved
+    assert judge(TakeOff(0.5), snapshot(ARMED, battery_voltage=TAKE_OFF_BATTERY_VOLTAGE - 0.01)).reason == (
+        "battery at 3.61 V (take off from 3.62 V)"
+    )
+
+
+def test_a_take_off_is_refused_without_a_battery_voltage() -> None:
+    no_battery = replace(snapshot(ARMED), battery_voltage=None)
+
+    assert judge(TakeOff(0.5), no_battery).reason == "no battery voltage yet"
+
+
+@pytest.mark.parametrize("voltage", [math.nan, math.inf])
+def test_a_take_off_is_refused_on_a_battery_voltage_that_isnt_finite(voltage: float) -> None:
+    assert judge(TakeOff(0.5), snapshot(ARMED, battery_voltage=voltage)).reason == (
+        f"battery voltage isn't finite: {voltage} V"
+    )
+
+
+@pytest.mark.parametrize("command_request", [Arm(), Hover(), Land()])
+def test_only_a_take_off_is_judged_on_the_battery_voltage(command_request: CommandRequest) -> None:
+    """A landing must never wait for a charged battery."""
+    status = ON_THE_FLOOR if isinstance(command_request, Arm) else FLYING
+
+    assert judge(command_request, snapshot(status, battery_voltage=LOW_BATTERY_VOLTAGE - 0.5)).is_approved
 
 
 @pytest.mark.parametrize("command_request", [Hover(), Land()])
@@ -353,13 +382,13 @@ def test_a_failed_pre_check_lands_a_flying_drone_and_skips_behaviors(
     drone = RecordingDrone()
     safety_layer = SafetyLayer(drone)
 
-    behaviors_may_run = safety_layer.pre_check(snapshot(FLYING, battery_voltage=3.3))
+    behaviors_may_run = safety_layer.pre_check(snapshot(FLYING, battery_voltage=3.1))
     safety_layer.send()
 
     assert not behaviors_may_run
     assert drone.command_log == ["land"]
     assert safety_layer.pre_check_has_failed
-    assert warnings_in(caplog) == ["Safety pre-check failed: battery at 3.30 V (land below 3.40 V). Landing."]
+    assert warnings_in(caplog) == ["Safety pre-check failed: battery at 3.10 V (land below 3.20 V). Landing."]
 
 
 def test_the_failsafe_lands_on_a_stale_drone_status_that_says_flying() -> None:

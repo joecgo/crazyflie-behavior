@@ -148,12 +148,12 @@ def test_a_low_battery_mid_hover_lands_the_drone_and_ends_the_flight(
         tick_step.run(clock.now(), TICK_PERIOD)
         clock.advance(TICK_PERIOD)
 
-    drone.set_battery_voltage(3.3)
+    drone.set_battery_voltage(3.1)
     is_done = tick_step.run(clock.now(), TICK_PERIOD)
 
     assert is_done
     assert drone.command_log == ["connect", "arm", "take_off", "land"]
-    assert "battery at 3.30 V" in caplog.text
+    assert "battery at 3.10 V" in caplog.text
 
 
 def test_a_link_gone_quiet_mid_hover_lands_the_drone() -> None:

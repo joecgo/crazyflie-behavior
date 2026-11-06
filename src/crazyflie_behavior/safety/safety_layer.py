@@ -43,11 +43,15 @@ STALE_AFTER = 0.25
 20 ms, so this is about 12 missed values in a row."""
 BATTERY_STALE_AFTER = 3.0
 """Seconds. The battery voltage streams once a second."""
-LOW_BATTERY_VOLTAGE = 3.4
-"""Volts. Land below this: well before the firmware's own handling (low at
-3.2 V; at 3.0 V for 5 s it shuts the drone down). A battery reads lower under
-load, so this may land a little early, which is the safe direction."""
 # ------------------------------------------------------------------------------
+
+# Battery limits (ADR-0051). TODO: revisit after the first flight down to the limit (backlog #57).
+LOW_BATTERY_VOLTAGE = 3.2
+"""Volts. The safety pre-check fails below this."""
+BATTERY_SAG_VOLTAGE = 0.42
+"""Volts. How far the battery voltage drops once the drone takes off."""
+TAKE_OFF_BATTERY_VOLTAGE = LOW_BATTERY_VOLTAGE + BATTERY_SAG_VOLTAGE
+"""Volts. A take-off is refused below this, so the drop doesn't fail the safety pre-check at once."""
 
 
 class _CheckedValue(NamedTuple):
@@ -107,10 +111,11 @@ def _staleness(checked: _CheckedValue, now: float) -> str | None:
 
 
 def judge(command_request: CommandRequest, snapshot: Snapshot) -> Verdict:
-    """Approve or refuse a behavior's command request (ADR-0030, ADR-0039).
+    """Approve or refuse a behavior's command request (ADR-0030, ADR-0039, ADR-0051).
 
-    Arm and take off are judged on the drone status. Hover and land are
-    always approved, and the adapter decides whether to act on them.
+    Arm is judged on the drone status, and take off on the drone status and
+    the battery voltage. Hover and land are always approved, and the adapter
+    decides whether to act on them.
     """
     # The drone status lags: it says "not flying" just after a take-off, and
     # "flying" for a while after the motors stop. Only the adapter, which
@@ -130,10 +135,26 @@ def judge(command_request: CommandRequest, snapshot: Snapshot) -> Verdict:
                 return Verdict.refused("the drone isn't armed")
             if status.value.is_flying:
                 return Verdict.refused("the drone is already flying")
-            return Verdict.approved()
+            return _judge_take_off_battery(snapshot)
         case SetVelocity() | MoveTo():
             # TODO: refused until the speed envelope exists (backlog #30).
             return Verdict.refused("steering mode and fast mode wait for the speed envelope (backlog #30)")
+
+
+def _judge_take_off_battery(snapshot: Snapshot) -> Verdict:
+    # Judged here, on a reading from before the motors spin, and not in the
+    # pre-check by drone status: the status still says "not flying" just after
+    # a take-off, so the pre-check would hold the loaded voltage to this limit
+    # and land every flight (ADR-0051).
+    battery = snapshot.battery_voltage
+    if battery is None:
+        return Verdict.refused("no battery voltage yet")
+    # A value that isn't finite counts as missing (ADR-0030).
+    if not math.isfinite(battery.value):
+        return Verdict.refused(f"battery voltage isn't finite: {battery.value} V")
+    if battery.value < TAKE_OFF_BATTERY_VOLTAGE:
+        return Verdict.refused(f"battery at {battery.value:.2f} V (take off from {TAKE_OFF_BATTERY_VOLTAGE:.2f} V)")
+    return Verdict.approved()
 
 
 class SafetyLayer:

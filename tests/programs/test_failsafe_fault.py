@@ -155,7 +155,7 @@ def test_the_forged_snapshot_fails_the_real_safety_pre_check_for_the_battery_onl
 
     assert real_failures == []
     assert len(forged_failures) == 1
-    assert forged_failures[0].startswith("battery at 3.20 V")
+    assert forged_failures[0].startswith("battery at 3.00 V")
 
 
 def test_it_logs_one_warning_when_the_fault_is_injected_not_one_per_snapshot(
