@@ -57,6 +57,7 @@ This column is honest about which ideas were mine.
 | [0046](0046-snapshot-time-read-after-the-copy.md) | The snapshot's time is read after its values are copied | My idea (ADR-0042's option D, which the AI had advised against) |
 | [0047](0047-pinned-firmware-release-warn-on-mismatch.md) | The project pins Crazyflie firmware release 2026.10 (firmware 2026.08); the adapter warns on a mismatch | Mixed: updating first and warning only were mine, over the AI's recommendation to refuse; pinning was the AI's |
 | [0048](0048-level-through-the-bad-flow-zone.md) | Take-off and landing cross the bad-flow zone level, above a height found during take-off | Mixed: moving only vertically, a speed, measuring the zone on take-off and the 5 cm margin were mine; the level setpoint, the speed estimate as the measure, the cap and 15 cm were the AI's |
+| [0049](0049-failsafe-low-fires-its-fault-during-the-initial-climb.md) | Failsafe low forges its battery fault during the initial climb; a landing during the climb is a final descent | AI recommendation accepted; keeping the name, a new ADR and the climb-landing rule were mine |
 | [0050](0050-diagnostic-log-block-to-the-debug-log.md) | A diagnostic log block streams attitude, motor power and flow quality to the debug log only | AI recommendation accepted |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

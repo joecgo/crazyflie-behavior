@@ -1,12 +1,16 @@
 # Field testing
 
-> **Status, updated 2026-11-04:** a vertical slice: one room (the living
+> **Status, updated 2026-11-05:** a vertical slice: one room (the living
 > room), working toward hide-and-seek. Pass criteria are light for now. First
 > hardware session on 2026-11-04 ([First flight 1](sessions/2026-11-04-first-flight-1.md)):
 > the Bench; Failsafe high with the forged fault; a 60 s Hover through the
-> project's own code. Every landing needed the final descent (backlog #51),
-> and after dark the Flow deck needed a flashlight. Failsafe low still needs a
-> run on a charged battery. The rescue landing and the
+> project's own code. Touchdown was confirmed in every landing, but the drone
+> slid near the floor, where the Flow deck's flow goes bad: take-off and
+> landing now cross that bad-flow zone level
+> ([ADR-0048](../decisions/0048-level-through-the-bad-flow-zone.md), not built
+> yet). After dark the Flow deck needed a flashlight. Failsafe low still needs
+> a run on a charged battery, and now fires its fault during the initial climb, not at 0.1 m
+> ([ADR-0049](../decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md)). The rescue landing and the
 > emergency-stop script are built
 > ([ADR-0038](../decisions/0038-connecting-to-a-flying-drone.md)) and not yet
 > run on hardware.
@@ -55,8 +59,8 @@ records how the tests are organized, and why there is no gate between them.
 
 | Test | Goal | Passed when |
 |---|---|---|
-| **Failsafe low** | A program takes off to 0.1 m and injects a fault into the safety pre-check, so the failsafe lands the drone ([ADR-0041](../decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)). | The drone lands and its motors stop. |
-| **Failsafe high** | The same program, from 0.5 m (the Hover test's height). | The drone lands and its motors stop. |
+| **Failsafe low** | A program takes off to 0.5 m and injects a fault into the safety pre-check during the initial climb (the down range at least 0.10 m for two readings in a row), so the failsafe lands the drone from the climb ([ADR-0041](../decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md), [ADR-0049](../decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md)). | The drone stops climbing, descends and lands, and its motors stop. |
+| **Failsafe high** | The same program, with the fault injected after a hover of about 3 s at 0.5 m (the Hover test's height). | The drone lands and its motors stop. |
 | **Safety validation** | Deliberately trigger each failsafe: geofence breach, link loss, low battery, stale data, e-stop. | Every failsafe behaves as designed, in flight. |
 
 ### Flight tests

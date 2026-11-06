@@ -12,7 +12,7 @@
 
 - Goal: Prove the real failsafe lands the drone, now with the new take-off
   and landing ([ADR-0048](../../decisions/0048-level-through-the-bad-flow-zone.md)).
-  The failsafe program (`programs.failsafe --crazyflie --height-meters 0.5`,
+  The failsafe program (`programs.failsafe --crazyflie --fault-at hover`,
   ADR-0041) takes off to 0.5 m, hovers about 3 s, then a wrapper forges a low
   battery reading. The real pre-check fails and the failsafe lands the drone.
 - Pass if: *Session 1's criteria; to be revised with backlog #50 (the battery
@@ -30,7 +30,7 @@
 
 - [ ] Bench and Failsafe low passed
 - [ ] Code committed, hash recorded above
-- [ ] Mock adapter run of this exact code passed (`programs.failsafe --height-meters 0.5`)
+- [ ] Mock adapter run of this exact code passed (`programs.failsafe --fault-at hover`)
 - [ ] Propellers undamaged, battery fully charged (voltage: ___)
 - [ ] Soft landing patch under the drone, flight area clear of people and pets
 - [ ] Geofence configured for this space
@@ -38,7 +38,7 @@
 
 ## During the test
 
-- [ ] Start: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --crazyflie --height-meters 0.5`
+- [ ] Start: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --crazyflie --fault-at hover`
 - [ ] Watch the take-off and hover, then the landing; note anything unexpected while it happens
 - [ ] Note whether the drone landed by the failsafe or by the time limit (the log says which)
 - [ ] Note whether touchdown was confirmed (the log warns if it wasn't)
