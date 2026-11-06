@@ -33,8 +33,8 @@ decisions are recorded), *communication* (how Claude explains things).
 | environment | 4 | 9 |
 | communication | 7 | 15 |
 | testing | 0 | 9 |
-| process | 3 | 11 |
-| **Total** | **28** | **75** |
+| process | 3 | 12 |
+| **Total** | **28** | **76** |
 
 Of the 28 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 22. So far, 7 of the 11 recommendation
@@ -517,6 +517,19 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-06: ADR-0041 amended twice without its status line saying so
+
+- **What happened:** ADR-0049 (Failsafe low forges its fault during the
+  climb, and the program takes `--fault-at` instead of a height) and ADR-0051
+  (the forged battery voltage becomes 3.0 V) both amend ADR-0041, and say so
+  themselves. ADR-0041's status line mentioned neither, so it still read as
+  if both tests flew to a height argument with a forged 3.2 V.
+- **How it was caught:** Claude, building ADR-0051 (the forged value) and
+  then marking the status line (ADR-0049).
+- **Kind:** process.
+- **Takeaway:** none new: the checklist already asks whether the older ADR's
+  status line is marked. Mark it in the same commit as the new ADR.
 
 ### 2026-11-05: The Crazyflie's weight in the glossary, with no source
 
