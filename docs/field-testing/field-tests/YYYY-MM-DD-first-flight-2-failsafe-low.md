@@ -17,10 +17,10 @@
   readings in a row, a wrapper forges a low battery reading. The
   real pre-check fails, the climb stops and the final descent lands the
   drone. Fully charged battery (about 4.2 V): session 1's real battery
-  tripped before the forged fault both times (backlog #50).
+  tripped before the forged fault both times ([ADR-0051](../../decisions/0051-battery-flight-limit-and-take-off-limit.md)).
 - Pass if:
   - [ ] The log shows `FAULT INJECTED: battery voltage forged`, and the
-        battery that tripped the pre-check is the forged 3.20 V, not the real one.
+        battery that tripped the pre-check is the forged 3.00 V, not the real one.
   - [ ] The pre-check fails with the battery message, and a landing is sent.
   - [ ] The climb stops and the final descent starts from where the drone is,
         with no landing approach (the log says so).
@@ -35,7 +35,7 @@
 - [ ] Bench passed
 - [ ] Code committed, hash recorded above
 - [ ] Mock adapter run of this exact code passed (`programs.failsafe --fault-at climb`; needs the mock's down range, backlog #34)
-- [ ] Propellers undamaged, battery charged (voltage: ___)
+- [ ] Propellers undamaged, battery charged (voltage: ___; below 3.62 V the take-off is refused, [ADR-0051](../../decisions/0051-battery-flight-limit-and-take-off-limit.md))
 - [ ] Soft landing patch under the drone, flight area clear of people and pets
 - [ ] Geofence configured for this space
 - [ ] Video recording on

@@ -15,8 +15,8 @@
   The failsafe program (`programs.failsafe --crazyflie --fault-at hover`,
   ADR-0041) takes off to 0.5 m, hovers about 3 s, then a wrapper forges a low
   battery reading. The real pre-check fails and the failsafe lands the drone.
-- Pass if: *Session 1's criteria; to be revised with backlog #50 (the battery
-  limit under load) and #51 (the landing logs).*
+- Pass if: *Session 1's criteria; to be revised with backlog #51 (the landing
+  logs).*
   - [ ] The log shows `FAULT INJECTED: battery voltage forged`.
   - [ ] The pre-check fails with the battery message, and a landing is sent.
   - [ ] The drone lands and its motors stop (seen by the operator: the exit
@@ -31,7 +31,7 @@
 - [ ] Bench and Failsafe low passed
 - [ ] Code committed, hash recorded above
 - [ ] Mock adapter run of this exact code passed (`programs.failsafe --fault-at hover`)
-- [ ] Propellers undamaged, battery fully charged (voltage: ___)
+- [ ] Propellers undamaged, battery fully charged (voltage: ___; below 3.62 V the take-off is refused, [ADR-0051](../../decisions/0051-battery-flight-limit-and-take-off-limit.md))
 - [ ] Soft landing patch under the drone, flight area clear of people and pets
 - [ ] Geofence configured for this space
 - [ ] Video recording on

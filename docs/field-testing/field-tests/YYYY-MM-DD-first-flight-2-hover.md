@@ -38,7 +38,7 @@
 - [ ] Bench, Failsafe low and Failsafe high passed
 - [ ] Code committed, hash recorded above
 - [ ] Mock adapter run of this exact code passed
-- [ ] Propellers undamaged, battery fully charged (voltage: ___)
+- [ ] Propellers undamaged, battery fully charged (voltage: ___; below 3.62 V the take-off is refused, [ADR-0051](../../decisions/0051-battery-flight-limit-and-take-off-limit.md))
 - [ ] Soft landing patch under the drone, flight area clear of people and pets
 - [ ] Geofence configured for this space
 - [ ] Video recording on
