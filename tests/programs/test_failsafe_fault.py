@@ -1,4 +1,4 @@
-"""The forged low battery wrapper (ADR-0041), around a stand-in drone."""
+"""The forged low battery wrapper (ADR-0041, ADR-0049), around a stand-in drone."""
 
 import logging
 from dataclasses import replace
@@ -9,8 +9,11 @@ from crazyflie_behavior.behaviors.failsafe_test import HOVER_TIME_LIMIT
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.programs.failsafe_fault import (
+    CLIMB_FAULT_DOWN_RANGE,
+    CLIMB_FAULT_READINGS,
     FORGED_BATTERY_VOLTAGE,
     HOVER_DURATION_BEFORE_FAULT,
+    FaultTrigger,
     ForgedLowBatteryDrone,
 )
 from crazyflie_behavior.safety.safety_layer import LOW_BATTERY_VOLTAGE, safety_pre_check
@@ -37,6 +40,10 @@ class StandInDrone(DroneInterface):
         self.status = FLYING
         self.height = HEIGHT
         self.battery_voltage: Stamped[float] | None = Stamped(3.9, arrival_time=0.0, drone_time=None)
+        self.down: RangeReading | None = None
+        """The down range reading; None means a distance equal to the height."""
+        self.down_arrival_time: float | None = None
+        """When the down range reading arrived; None means at the snapshot's time (a new reading each time)."""
 
     def connect(self) -> None:
         self.calls.append("connect")
@@ -79,10 +86,15 @@ class StandInDrone(DroneInterface):
             dt=dt,
             position_estimate=fresh(Vector3(0.1, 0.2, self.height)),
             velocity_estimate=fresh(Vector3.ZERO),
-            range_readings=RangeReadings(None, None, None, None, None, fresh(RangeReading.at_distance(self.height))),
+            range_readings=RangeReadings(None, None, None, None, None, self._down_reading(time)),
             battery_voltage=None if self.battery_voltage is None else fresh(self.battery_voltage.value),
             drone_status=fresh(self.status),
         )
+
+    def _down_reading(self, time: float) -> Stamped[RangeReading]:
+        reading = RangeReading.at_distance(self.height) if self.down is None else self.down
+        arrival_time = time if self.down_arrival_time is None else self.down_arrival_time
+        return Stamped(reading, arrival_time=arrival_time, drone_time=arrival_time)
 
 
 def snapshot_at(time: float, stand_in: StandInDrone, drone: DroneInterface | None = None) -> Snapshot:
@@ -259,3 +271,119 @@ def test_every_command_goes_to_the_real_drone_unchanged() -> None:
 def test_the_failsafe_test_waits_longer_than_the_hover_before_the_fault() -> None:
     # Otherwise the failsafe test gives up and lands before the fault is ever injected (ADR-0041).
     assert HOVER_TIME_LIMIT > HOVER_DURATION_BEFORE_FAULT
+
+
+# --- The climb trigger (Failsafe low, ADR-0049) ---------------------------------------
+
+
+def climbing_drone(height: float = 0.05) -> tuple[StandInDrone, ForgedLowBatteryDrone]:
+    """A wrapped drone with the climb trigger, a take-off sent, flying at `height` (meters)."""
+    stand_in = StandInDrone()
+    stand_in.height = height
+    wrapper = ForgedLowBatteryDrone(stand_in, FaultTrigger.CLIMB)
+    wrapper.take_off(HEIGHT)
+    return stand_in, wrapper
+
+
+def test_the_climb_trigger_forges_once_the_down_range_has_cleared_the_floor_for_the_readings_in_a_row() -> None:
+    stand_in, wrapper = climbing_drone()
+    snapshot_at(1.0, stand_in, wrapper)
+    stand_in.height = CLIMB_FAULT_DOWN_RANGE
+
+    in_a_row = [snapshot_at(1.0 + tick * 0.05, stand_in, wrapper) for tick in range(1, CLIMB_FAULT_READINGS + 1)]
+
+    assert not any(forged(snapshot) for snapshot in in_a_row[:-1])
+    assert forged(in_a_row[-1])
+    assert wrapper.has_forged_battery_voltage
+
+
+def test_the_climb_trigger_does_not_wait_for_the_take_off_height_or_a_hover() -> None:
+    stand_in, wrapper = climbing_drone(height=0.12)  # far below the 0.5 m take-off height
+
+    snapshots = [snapshot_at(1.0 + tick * 0.05, stand_in, wrapper) for tick in range(CLIMB_FAULT_READINGS)]
+
+    assert forged(snapshots[-1])
+
+
+def test_one_reading_below_the_floor_limit_starts_the_count_again() -> None:
+    stand_in, wrapper = climbing_drone(height=0.2)
+    snapshot_at(1.0, stand_in, wrapper)
+    stand_in.height = CLIMB_FAULT_DOWN_RANGE - 0.01  # one low reading breaks the run
+    snapshot_at(1.05, stand_in, wrapper)
+    stand_in.height = 0.2
+
+    snapshots = [snapshot_at(1.05 + tick * 0.05, stand_in, wrapper) for tick in range(1, CLIMB_FAULT_READINGS + 1)]
+
+    assert not any(forged(snapshot) for snapshot in snapshots[:-1])
+    assert forged(snapshots[-1])
+
+
+def test_a_reading_repeated_in_later_snapshots_counts_once() -> None:
+    """A late reading can show up in two snapshots: it is still one sample."""
+    stand_in, wrapper = climbing_drone(height=0.2)
+    stand_in.down_arrival_time = 1.0
+
+    snapshots = [snapshot_at(1.0 + tick * 0.05, stand_in, wrapper) for tick in range(5)]
+
+    assert not any(forged(snapshot) for snapshot in snapshots)
+
+
+@pytest.mark.parametrize(
+    "down",
+    [RangeReading.out_of_range(), RangeReading.invalid(), RangeReading.at_distance(CLIMB_FAULT_DOWN_RANGE - 0.001)],
+    ids=["out of range", "invalid", "just below the limit"],
+)
+def test_a_down_range_that_isnt_clear_of_the_floor_never_fires_it(down: RangeReading) -> None:
+    stand_in, wrapper = climbing_drone(height=0.2)
+    stand_in.down = down
+
+    snapshots = [snapshot_at(1.0 + tick * 0.05, stand_in, wrapper) for tick in range(10)]
+
+    assert not any(forged(snapshot) for snapshot in snapshots)
+
+
+def test_the_climb_trigger_needs_a_take_off_sent() -> None:
+    stand_in = StandInDrone()
+    stand_in.height = 0.2
+    wrapper = ForgedLowBatteryDrone(stand_in, FaultTrigger.CLIMB)
+
+    snapshots = [snapshot_at(1.0 + tick * 0.05, stand_in, wrapper) for tick in range(10)]
+
+    assert not any(forged(snapshot) for snapshot in snapshots)
+
+
+def test_the_climb_trigger_needs_the_status_to_say_flying() -> None:
+    stand_in, wrapper = climbing_drone(height=0.2)
+    stand_in.status = ON_THE_FLOOR
+
+    snapshots = [snapshot_at(1.0 + tick * 0.05, stand_in, wrapper) for tick in range(10)]
+
+    assert not any(forged(snapshot) for snapshot in snapshots)
+
+
+def test_once_the_climb_trigger_fires_the_battery_stays_forged_even_back_near_the_floor() -> None:
+    """The landing comes back down through 0.10 m: the trigger must not let the real battery back in."""
+    stand_in, wrapper = climbing_drone(height=0.2)
+    for tick in range(CLIMB_FAULT_READINGS):
+        snapshot_at(1.0 + tick * 0.05, stand_in, wrapper)
+    stand_in.height = 0.02
+
+    later = snapshot_at(2.0, stand_in, wrapper)
+
+    assert forged(later)
+
+
+def test_the_hover_trigger_ignores_the_down_range_while_climbing() -> None:
+    stand_in = StandInDrone()
+    stand_in.height = 0.2  # clear of the floor, below the take-off height
+    wrapper = ForgedLowBatteryDrone(stand_in, FaultTrigger.HOVER)
+    wrapper.take_off(HEIGHT)
+
+    snapshots = [snapshot_at(1.0 + tick * 0.05, stand_in, wrapper) for tick in range(10)]
+
+    assert not any(forged(snapshot) for snapshot in snapshots)
+
+
+def test_the_climb_trigger_needs_more_than_one_reading() -> None:
+    # One reading is one possibly bad sample (ADR-0049).
+    assert CLIMB_FAULT_READINGS >= 2

@@ -1,15 +1,15 @@
-"""The failsafe program (ADR-0041): runs the Failsafe low or Failsafe high field test once.
+"""The failsafe program (ADR-0041, ADR-0049): runs the Failsafe low or Failsafe high field test once.
 
-Arm, take off to the height (`FAILSAFE_LOW_HEIGHT` or `FAILSAFE_HIGH_HEIGHT`),
-hover, and wait for the safety layer's failsafe to land the drone. The fault
-that makes it fire is a forged low battery: a wrapper around the drone hands
-the safety layer a snapshot with a low battery voltage after a few seconds of
-hovering (`HOVER_DURATION_BEFORE_FAULT` in `failsafe_fault.py`), and logs
-"FAULT INJECTED". The safety layer itself is unmodified.
+Arm, take off to `FAILSAFE_TAKE_OFF_HEIGHT` and wait for the safety layer's
+failsafe to land the drone. The fault that makes it fire is a forged low
+battery: a wrapper around the drone hands the safety layer a snapshot with a
+low battery voltage, and logs "FAULT INJECTED". `--fault-at climb` (Failsafe
+low) forges it during the initial climb; `--fault-at hover` (Failsafe high)
+after a few seconds of hovering. The safety layer itself is unmodified.
 It uses the mock adapter unless it's run with --crazyflie:
 
-    .venv\\Scripts\\python -m crazyflie_behavior.programs.failsafe --height-meters 0.1
-    .venv\\Scripts\\python -m crazyflie_behavior.programs.failsafe --crazyflie --height-meters 0.5
+    .venv\\Scripts\\python -m crazyflie_behavior.programs.failsafe --fault-at climb
+    .venv\\Scripts\\python -m crazyflie_behavior.programs.failsafe --crazyflie --fault-at hover
 
 If the fault never takes effect, the failsafe test lands the drone normally
 after a time limit and has failed. The exit code is 0 only if the fault was
@@ -34,15 +34,15 @@ import sys
 from crazyflie_behavior.behaviors.failsafe_test import FailsafeTest
 from crazyflie_behavior.behaviors.hover_test import TAKE_OFF_HEIGHT
 from crazyflie_behavior.loop.tick_step import BehaviorTickStep
-from crazyflie_behavior.programs.failsafe_fault import ForgedLowBatteryDrone
+from crazyflie_behavior.programs.failsafe_fault import FaultTrigger, ForgedLowBatteryDrone
 from crazyflie_behavior.programs.start_up import EXIT_ERROR, EXIT_OK, make_drone, run_program
 from crazyflie_behavior.safety.safety_layer import SafetyLayer
 from crazyflie_behavior.timing.clock import RealClock
 
-FAILSAFE_LOW_HEIGHT = 0.1
-"""Meters: the Failsafe low field test."""
-FAILSAFE_HIGH_HEIGHT = TAKE_OFF_HEIGHT
-"""Meters: the Failsafe high field test, the Hover test's height."""
+FAILSAFE_TAKE_OFF_HEIGHT = TAKE_OFF_HEIGHT
+"""Meters: both tests' take-off height, the Hover test's (ADR-0049). Failsafe low's fault fires
+during the initial climb, so the drone gets there only if the fault never fires."""
+TEST_NAMES = {FaultTrigger.CLIMB: "Failsafe low", FaultTrigger.HOVER: "Failsafe high"}
 
 
 def main(arguments: list[str] | None = None) -> int:
@@ -60,23 +60,22 @@ def main(arguments: list[str] | None = None) -> int:
         help="fly the real Crazyflie instead of the mock adapter",
     )
     parser.add_argument(
-        "--height-meters",
-        type=float,
+        "--fault-at",
         required=True,
-        choices=[FAILSAFE_LOW_HEIGHT, FAILSAFE_HIGH_HEIGHT],
-        metavar="METERS",
-        help=f"the take-off height: {FAILSAFE_LOW_HEIGHT:g} (Failsafe low) or {FAILSAFE_HIGH_HEIGHT:g} (Failsafe high)",
+        choices=[trigger.value for trigger in FaultTrigger],
+        help="when the battery is forged: during the initial climb (Failsafe low) or after a hover (Failsafe high)",
     )
     parsed_arguments = parser.parse_args(arguments)
     use_crazyflie: bool = parsed_arguments.crazyflie
-    height: float = parsed_arguments.height_meters
+    trigger = FaultTrigger(parsed_arguments.fault_at)
+    height = FAILSAFE_TAKE_OFF_HEIGHT
     clock = RealClock()
-    drone = ForgedLowBatteryDrone(make_drone(use_crazyflie, clock))
+    drone = ForgedLowBatteryDrone(make_drone(use_crazyflie, clock), trigger)
     safety_layer = SafetyLayer(drone)
     failsafe_test = FailsafeTest(height)
     tick_step = BehaviorTickStep(drone, safety_layer, failsafe_test)
     adapter_name = "the Crazyflie" if use_crazyflie else "the mock adapter"
-    test_name = "Failsafe low" if height == FAILSAFE_LOW_HEIGHT else "Failsafe high"
+    test_name = TEST_NAMES[trigger]
     description = f"Failsafe program, {adapter_name}, {test_name} ({height:g} m)"
     exit_code = run_program("failsafe", description, drone, tick_step, clock)
     if exit_code != EXIT_OK:

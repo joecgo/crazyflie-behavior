@@ -110,15 +110,19 @@ controls come first ([ADR-0027](docs/decisions/0027-operator-controls.md)).
 ## Failsafe program
 
 ```powershell
-.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --height-meters 0.1
-.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --crazyflie --height-meters 0.5
+.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at climb
+.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --crazyflie --fault-at hover
 ```
 
-It runs the Failsafe low (0.1 m) or Failsafe high (0.5 m) field test: arm, take
-off to the height and hover. After about 3 s of hovering, a wrapper around the
-drone forges a low battery voltage ("FAULT INJECTED" in the log), so the
-safety layer's real pre-check fails and its real failsafe lands the drone
+It runs the Failsafe low or Failsafe high field test: arm and take off to
+0.5 m. A wrapper around the drone forges a low battery voltage ("FAULT
+INJECTED" in the log), so the safety layer's real pre-check fails and its real
+failsafe lands the drone
 ([ADR-0041](docs/decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)).
+`--fault-at climb` (Failsafe low) forges it during the initial climb, once the
+down range is at least 0.10 m; `--fault-at hover` (Failsafe high) after about
+3 s of hovering
+([ADR-0049](docs/decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md)).
 Without `--crazyflie` it uses the mock adapter. The exit code is 0 only if the
 failsafe landed the drone; if the fault never takes effect, the program lands the
 drone normally after a time limit and the test has failed. In PyCharm, use the
