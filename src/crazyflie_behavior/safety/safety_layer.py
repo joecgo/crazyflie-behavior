@@ -47,11 +47,11 @@ BATTERY_STALE_AFTER = 3.0
 
 # Battery limits (ADR-0051). TODO: revisit after the first flight down to the limit (backlog #57).
 LOW_BATTERY_VOLTAGE = 3.2
-"""Volts. The safety pre-check fails below this."""
+"""Volts. The low-battery limit: the safety pre-check fails below this."""
 BATTERY_SAG_VOLTAGE = 0.42
-"""Volts. How far the battery voltage drops once the drone takes off."""
+"""Volts. The sag value the take-off limit allows for."""
 TAKE_OFF_BATTERY_VOLTAGE = LOW_BATTERY_VOLTAGE + BATTERY_SAG_VOLTAGE
-"""Volts. A take-off is refused below this, so the drop doesn't fail the safety pre-check at once."""
+"""Volts. The take-off limit: a take-off is refused below this, so the sag doesn't fail the safety pre-check at once."""
 
 
 class _CheckedValue(NamedTuple):
@@ -114,7 +114,7 @@ def judge(command_request: CommandRequest, snapshot: Snapshot) -> Verdict:
     """Approve or refuse a behavior's command request (ADR-0030, ADR-0039, ADR-0051).
 
     Arm is judged on the drone status, and take off on the drone status and
-    the battery voltage. Hover and land are always approved, and the adapter
+    the take-off limit. Hover and land are always approved, and the adapter
     decides whether to act on them.
     """
     # The drone status lags: it says "not flying" just after a take-off, and
@@ -144,8 +144,8 @@ def judge(command_request: CommandRequest, snapshot: Snapshot) -> Verdict:
 def _judge_take_off_battery(snapshot: Snapshot) -> Verdict:
     # Judged here, on a reading from before the motors spin, and not in the
     # pre-check by drone status: the status still says "not flying" just after
-    # a take-off, so the pre-check would hold the loaded voltage to this limit
-    # and land every flight (ADR-0051).
+    # a take-off, so the pre-check would hold the voltage, sag included, to the
+    # take-off limit and land every flight (ADR-0051).
     battery = snapshot.battery_voltage
     if battery is None:
         return Verdict.refused("no battery voltage yet")
