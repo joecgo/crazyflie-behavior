@@ -34,7 +34,7 @@
 
 - [ ] Bench passed
 - [ ] Code committed, hash recorded above
-- [ ] Mock adapter run of this exact code passed (`programs.failsafe --fault-at climb`; needs the mock's down range, backlog #34)
+- [ ] Mock adapter run of this exact code passed (`programs.failsafe --fault-at climb`)
 - [ ] Propellers undamaged, battery charged (voltage: ___; below 3.62 V the take-off is refused, [ADR-0051](../../decisions/0051-battery-flight-limit-and-take-off-limit.md))
 - [ ] Soft landing patch under the drone, flight area clear of people and pets
 - [ ] Geofence configured for this space
