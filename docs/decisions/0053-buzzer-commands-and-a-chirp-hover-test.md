@@ -2,7 +2,7 @@
 
 - **Status:** Accepted. Amends [ADR-0050](0050-diagnostic-log-block-to-the-debug-log.md): the diagnostic block also carries the battery voltage.
 - **Date:** 2026-11-06
-- **Origin:** Mixed. Testing the buzzer in the hover (over the AI's recommendation of a floor test), the chirp schedule and the "Charge" fanfare at the end: mine. A chirp command in a buzzer command slot, the firmware's one-shot tune, 10 Hz voltage in the diagnostic block, an option that's off by default, and notes timed by the behavior's ticks: AI recommendations accepted.
+- **Origin:** Mixed. Testing the buzzer in the hover (over the AI's recommendation of a floor test), the chirp schedule and the "Charge" fanfare at the end: mine. A chirp command in a buzzer command slot, the firmware's one-shot tune, 10 Hz voltage in the diagnostic block, an option that's off by default, and notes timed by the behavior's ticks: AI recommendations accepted. The "As built" choices (2026-11-06, while coding): AI recommendations accepted.
 
 ## Context
 
@@ -44,6 +44,21 @@ The parameter's doc comment numbers them wrongly (mistakes log, 2026-11-06).
   with the octave a constant. The Hover test behavior requests each note on
   its tick, then silence, so the adapter needs no timer. Placeholders: the
   lengths and the octave, tuned by ear.
+- **As built (2026-11-06):**
+  - The safety layer approves every chirp, tone and silence while the
+    pre-check passes; after a failed one they're refused like every request. A
+    tone's pitch must be 20 Hz-20 kHz, checked when the request is made (a
+    bug otherwise, like a take-off height of 0).
+  - The first chirp in flight comes 5 s after the take-off request, so it
+    doesn't overlap the take-off's own sag.
+  - After its silence, the Hover test waits 1 s before it's done: closing the
+    link empties cflib's queue of parameter writes (`param.py`, cflib 0.1.34),
+    so a silence sent on the last tick could be lost.
+  - With the link closed, the Crazyflie adapter skips a buzzer write with a
+    warning once per streak: cflib's parameter write then raises, because it
+    forgets the parameter list, while a movement command is only dropped.
+  - Connecting logs whether a Buzzer deck is attached (`deck.bcBuzzer`); it
+    never fails the connect.
 
 ## Failure modes
 
@@ -53,16 +68,18 @@ The parameter's doc comment numbers them wrongly (mistakes log, 2026-11-06).
 - **Backups:** none needed: nothing in the buzzer path moves the drone.
 - **Never:** a buzzer command reaching the drone without the safety layer.
 - **Always eventually:** the buzzer goes silent (the chirp ends itself; a
-  tone needs the silence to arrive).
+  tone needs the silence to arrive). Not when the program ends during
+  "Charge" (a stop request, an error, a failed pre-check): the tone stays on
+  until power-off (backlog #59).
 
 ## Consequences
 
 - **Risks I accept knowingly:** a lost silence leaves the tone on, with the
   drone landed and its motors off; radio delays make the notes a little
   uneven; a chirp's effect may still be too small to see.
-- Each chirp or note is one parameter write to the drone: about 8 for
-  "Charge", 1 per 5 s for chirps. Backlog #47 (the drone's receive queue)
-  applies.
+- Each chirp and silence is one parameter write to the drone, and each note
+  two (pitch, then effect): 13 for "Charge", 1 per 5 s for chirps. Backlog
+  #47 (the drone's receive queue) applies.
 - The first `--chirp` run also does ADR-0017's check: how loud the deck is
   under the Multi-ranger, and that the PC can start and stop a chirp.
 - Code (drone interface, safety layer, Crazyflie and mock adapters, the

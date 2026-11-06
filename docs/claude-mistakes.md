@@ -31,14 +31,14 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 4 | 13 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
-| communication | 7 | 16 |
+| communication | 7 | 17 |
 | testing | 0 | 9 |
 | process | 3 | 12 |
-| **Total** | **28** | **77** |
+| **Total** | **28** | **78** |
 
 Of the 28 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 22. So far, 7 of the 11 recommendation
-mistakes needed me, and 7 of the 22 communication mistakes. The first
+mistakes needed me, and 7 of the 24 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -517,6 +517,17 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-06: "About 8" parameter writes for "Charge", counted one per note
+
+- **What happened:** ADR-0053 said each chirp or note is one parameter write,
+  about 8 for "Charge". A tone writes the pitch and then the effect, as the
+  same ADR decides, so "Charge" is 13 writes: two for each of its 6 notes,
+  and the silence. Fixed in the ADR before any code ran on the drone.
+- **How it was caught:** writing the Crazyflie adapter's tone command.
+- **Kind:** communication.
+- **Takeaway:** a count of writes or packets is taken from the calls the
+  code makes for each event, not from the number of events.
 
 ### 2026-11-06: A sound effect's number read from an out-of-date comment
 
