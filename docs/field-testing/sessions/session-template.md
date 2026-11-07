@@ -11,6 +11,13 @@ field test has its own log in [`../field-tests/`](../field-tests/).
 
 1. [{test}](../field-tests/YYYY-MM-DD-{milestone}-{session#}-{test-name}.md)
 
+## Before the session
+*Done at the desk, not at the session. If any code changes after these runs, run them again.*
+
+- **Commit to fly:** `<hash>`
+- [ ] Mock adapter run of each test's program on that commit passed:
+  - [ ] `{program command, without --crazyflie}`
+
 ## Results
 *From the operator or the recordings, never from an AI. One line per test: passed, failed or not flown.*
 

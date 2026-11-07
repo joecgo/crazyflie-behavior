@@ -1,6 +1,6 @@
 # Field testing
 
-> **Status, updated 2026-11-05:** a vertical slice: one room (the living
+> **Status, updated 2026-11-07:** a vertical slice: one room (the living
 > room), working toward hide-and-seek. Pass criteria are light for now. First
 > hardware session on 2026-11-04 ([First flight 1](sessions/2026-11-04-first-flight-1.md)):
 > the Bench; Failsafe high with the forged fault; a 60 s Hover through the
@@ -33,7 +33,10 @@ room", is the portfolio story.
 
 1. **Plan.** Write the test log's *Goal* and *Pass criteria* before flying.
 2. **Rehearse.** The same code runs on the mock adapter first, so a plain bug
-   fails on the desk, not in the air. A simulator run is optional.
+   fails on the desk, not in the air. These runs are done before the session,
+   on the commit that will fly, and listed in the session doc's *Before the
+   session*; if any code changes after them, they run again. A simulator run
+   is optional.
 3. **Fly.** Follow the pre-flight checklist. One variable changes per session.
 4. **Record.** Telemetry logs, video, and notes written during the session, not after.
 5. **Analyze.** Compare with what was predicted. When the simulator was used,

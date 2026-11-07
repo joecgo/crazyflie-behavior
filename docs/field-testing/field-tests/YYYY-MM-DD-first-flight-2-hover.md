@@ -31,13 +31,12 @@
         the final descent still passes, but is recorded as a finding.
   - [ ] Each `VERIFY` item still open is confirmed or turned into a code change
         or backlog item. *List to be written from the First flight 1 findings.*
-- Simulator prediction (or, if not simulated, the mock adapter run): ___
+- Simulator prediction, if simulated: ___
 
 ## Pre-flight checklist
 
 - [ ] Bench, Failsafe low and Failsafe high passed
-- [ ] Code committed, hash recorded above
-- [ ] Mock adapter run of this exact code passed
+- [ ] Code committed, hash recorded above, the same commit as the session doc's mock runs
 - [ ] Propellers undamaged, battery fully charged (voltage: ___; below 3.62 V the take-off is refused, [ADR-0051](../../decisions/0051-battery-flight-limit-and-take-off-limit.md))
 - [ ] Soft landing patch under the drone, flight area clear of people and pets
 - [ ] Geofence configured for this space

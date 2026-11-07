@@ -24,13 +24,12 @@
   - [ ] The log has no "Failsafe test failed" error (the time limit landing
         the drone is a failed test).
   - [ ] The landing needed no help from the kill switch or rescue landing.
-- Simulator prediction (or, if not simulated, the mock adapter run): ___
+- Simulator prediction, if simulated: ___
 
 ## Pre-flight checklist
 
 - [ ] Bench and Failsafe low passed
-- [ ] Code committed, hash recorded above
-- [ ] Mock adapter run of this exact code passed (`programs.failsafe --fault-at hover`)
+- [ ] Code committed, hash recorded above, the same commit as the session doc's mock runs
 - [ ] Propellers undamaged, battery fully charged (voltage: ___; below 3.62 V the take-off is refused, [ADR-0051](../../decisions/0051-battery-flight-limit-and-take-off-limit.md))
 - [ ] Soft landing patch under the drone, flight area clear of people and pets
 - [ ] Geofence configured for this space

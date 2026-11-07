@@ -35,12 +35,11 @@
         range" (clear) instead of "invalid" (unknown) is the danger.
   - [ ] Each `VERIFY` item still open is confirmed or turned into a code change
         or backlog item. *List to be written from the First flight 1 findings.*
-- Simulator prediction (or, if not simulated, the mock adapter run): ___
+- Simulator prediction, if simulated: ___
 
 ## Pre-flight checklist
 
-- [ ] Code committed, hash recorded above
-- [ ] Mock adapter run of this exact code passed
+- [ ] Code committed, hash recorded above, the same commit as the session doc's mock runs
 - [ ] Battery charged (voltage: ___)
 - [ ] Flow deck (the right way round) and Multi-ranger deck seated
 - [ ] Crazyradio plugged in, drone on the radio address the bench program uses:

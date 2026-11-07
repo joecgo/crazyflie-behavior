@@ -12,12 +12,11 @@
 
 - Goal:
 - Pass if:
-- Simulator prediction (or, if not simulated, the mock adapter run):
+- Simulator prediction, if simulated:
 
 ## Pre-flight checklist
 
-- [ ] Code committed, hash recorded above
-- [ ] Mock adapter run of this exact code passed (and the simulator's, if used)
+- [ ] Code committed, hash recorded above, the same commit as the session doc's mock runs
 - [ ] Propellers undamaged, battery charged (voltage: ___; below 3.62 V the take-off is refused, [ADR-0051](../../decisions/0051-battery-flight-limit-and-take-off-limit.md))
 - [ ] Flight area clear of people and pets
 - [ ] E-stop tested on the ground this session
