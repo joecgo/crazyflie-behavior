@@ -62,7 +62,7 @@ records how the tests are organized, and why there is no gate between them.
 
 | Test | Goal | Passed when |
 |---|---|---|
-| **Failsafe low** | A program takes off to 0.5 m and injects a fault into the safety pre-check during the initial climb (the down range at least 0.10 m for two readings in a row), so the failsafe lands the drone from the climb ([ADR-0041](../decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md), [ADR-0049](../decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md)). | The drone stops climbing, descends and lands, and its motors stop. |
+| **Failsafe low** | A program takes off to 0.5 m and injects a fault into the safety pre-check during the initial climb (the down range at least 0.05 m for two readings in a row), so the failsafe lands the drone from the climb ([ADR-0041](../decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md), [ADR-0049](../decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md), [ADR-0057](../decisions/0057-failsafe-low-fires-at-5-cm.md)). | The drone stops climbing, descends and lands, and its motors stop. |
 | **Failsafe high** | The same program, with the fault injected after a hover of about 3 s at 0.5 m (the Hover test's height). | The drone lands and its motors stop. |
 | **Safety validation** | Deliberately trigger each failsafe: geofence breach, link loss, low battery, stale data, e-stop. | Every failsafe behaves as designed, in flight. |
 

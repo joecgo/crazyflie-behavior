@@ -120,9 +120,10 @@ INJECTED" in the log), so the safety layer's real pre-check fails and its real
 failsafe lands the drone
 ([ADR-0041](docs/decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md)).
 `--fault-at climb` (Failsafe low) forges it during the initial climb, once the
-down range is at least 0.10 m; `--fault-at hover` (Failsafe high) after about
+down range is at least 0.05 m; `--fault-at hover` (Failsafe high) after about
 3 s of hovering
-([ADR-0049](docs/decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md)).
+([ADR-0049](docs/decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md),
+[ADR-0057](docs/decisions/0057-failsafe-low-fires-at-5-cm.md)).
 Without `--crazyflie` it uses the mock adapter. The exit code is 0 only if the
 failsafe landed the drone; if the fault never takes effect, the program lands the
 drone normally after a time limit and the test has failed. In PyCharm, use the

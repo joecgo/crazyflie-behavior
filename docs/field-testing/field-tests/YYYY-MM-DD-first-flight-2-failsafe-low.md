@@ -10,10 +10,12 @@
 ## Goal and pass criteria
 *Written before flying.*
 
-- Goal: Prove the real failsafe lands the drone from the initial climb
-  ([ADR-0049](../../decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md)).
+- Goal: Prove the drone switches from the take-off state into the landing
+  state: the real failsafe lands it from the initial climb
+  ([ADR-0049](../../decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md),
+  [ADR-0057](../../decisions/0057-failsafe-low-fires-at-5-cm.md)).
   The failsafe program (`programs.failsafe --crazyflie --fault-at climb`)
-  takes off to 0.5 m; once the down range has been at least 0.10 m for two
+  takes off to 0.5 m; once the down range has been at least 0.05 m for two
   readings in a row, a wrapper forges a low battery reading. The
   real pre-check fails, the climb stops and the final descent lands the
   drone. Fully charged battery (about 4.2 V): session 1's real battery
