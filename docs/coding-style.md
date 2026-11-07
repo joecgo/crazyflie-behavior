@@ -52,6 +52,11 @@ Unitless values (counts, ratios, flags) get no suffix.
   `available_drones`, not `found` or `result`; `position_estimate`, not
   `latest`. Local variables too: a short function is still read by someone
   who doesn't know what was fetched two lines up.
+- **A function does what its name says, and nothing else.** A query such as
+  `take_snapshot` or `is_flying` returns an answer and changes nothing. A
+  function that sends commands or changes state says so in its name. Work
+  that has to run every tick gets its own call, decided like any interface
+  change, not hidden in a function that already runs each tick.
 - **Name what the code receives, not the raw input that usually sends it:**
   the interrupt signal, not Ctrl+C; a command, not its key. Only instructions
   for the operator name the key to press.

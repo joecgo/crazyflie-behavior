@@ -27,17 +27,17 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 3 | 14 |
+| design | 4 | 14 |
 | safety design | 4 | 13 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
 | communication | 7 | 17 |
 | testing | 0 | 9 |
 | process | 3 | 12 |
-| **Total** | **28** | **78** |
+| **Total** | **29** | **78** |
 
-Of the 28 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 22. So far, 7 of the 11 recommendation
+Of the 29 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 23. So far, 7 of the 11 recommendation
 mistakes needed me, and 7 of the 24 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
@@ -49,6 +49,23 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-07: Landing work hidden in take_snapshot, never decided
+
+- **What happened:** the first code (2026-10-20) made `take_snapshot` move
+  the landing on: it stopped the motors when the landing was due, and later
+  also started the final descent. ADR-0008 says `take_snapshot()` copies the
+  telemetry buffer into a snapshot, and no ADR decided the extra work.
+  ADR-0040 (2026-11-02) only asked whether to keep it there for First
+  flight. It called a separate per-tick call cleaner, but didn't say the
+  placement had never been decided. On 2026-11-07 Claude recommended putting
+  ADR-0048's level climb and descent there too.
+- **Would a later Claude review have caught it?** Probably not: writing
+  ADR-0040, Claude looked straight at it and didn't flag it.
+- **Kind:** design.
+- **Takeaway:** a function does what its name and its ADR say. Extra work
+  that needs a place to run (here, every tick) is a design decision to
+  raise, not a reason to hide it in a function that already runs.
 
 ### 2026-11-05: Explaining a finding with words the glossary doesn't have
 

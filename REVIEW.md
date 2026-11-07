@@ -85,6 +85,9 @@ takeaway applies to reviews, it's added here as a question.
   real file? Is each form its scanner handles exercised by a test?
 - A decision that makes an exception to an older ADR: is the older ADR's
   status line marked?
+- Does each function do only what its name and its ADR say? Extra work in a
+  query (a snapshot that moves the landing on) is a design decision: which
+  ADR approved it?
 - A change to what a value or term means: was the old wording searched for
   across the code, the glossary and the ADRs?
 - An ADR amendment that changes how a test passes: do the test log drafts'
