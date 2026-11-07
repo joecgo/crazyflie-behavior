@@ -1,4 +1,4 @@
-"""The tick step for flying (ADR-0026): its order, and whole hover tests on the mock adapter."""
+"""The tick step for flying (ADR-0026, ADR-0055): its order, and whole hover tests on the mock adapter."""
 
 import logging
 from collections.abc import Callable
@@ -7,6 +7,7 @@ import pytest
 
 from crazyflie_behavior.behaviors.behavior import Behavior
 from crazyflie_behavior.behaviors.hover_test import TAKE_OFF_HEIGHT, HoverTest
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import MIN_FINAL_DESCENT_HEIGHT
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_step import BehaviorTickStep
 from crazyflie_behavior.safety.requests import CommandRequest, Hover, Verdict
@@ -29,6 +30,10 @@ class RecordingDrone(MockAdapter):
     def take_snapshot(self, dt: float) -> Snapshot:
         self._events.append("snapshot")
         return super().take_snapshot(dt)
+
+    def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
+        self._events.append("take-off and landing")
+        super().update_take_off_and_landing(snapshot)
 
 
 class RecordingSafetyLayer(SafetyLayer):
@@ -80,7 +85,7 @@ def hover_flight(drone: MockAdapter) -> BehaviorTickStep:
 # --- The order --------------------------------------------------------------------
 
 
-def test_a_tick_runs_snapshot_pre_check_behavior_send_in_that_order() -> None:
+def test_a_tick_runs_snapshot_pre_check_take_off_and_landing_behavior_send_in_that_order() -> None:
     clock = SimClock()
     events: list[str] = []
     drone = RecordingDrone(clock, events)
@@ -89,10 +94,10 @@ def test_a_tick_runs_snapshot_pre_check_behavior_send_in_that_order() -> None:
 
     tick_step.run(clock.now(), TICK_PERIOD)
 
-    assert events == ["snapshot", "pre-check", "behavior", "send"]
+    assert events == ["snapshot", "pre-check", "take-off and landing", "behavior", "send"]
 
 
-def test_a_failed_pre_check_skips_the_behavior_and_ends_the_flight() -> None:
+def test_a_failed_pre_check_skips_the_behavior_but_not_take_off_and_landing_and_ends_the_flight() -> None:
     clock = SimClock()
     events: list[str] = []
     drone = RecordingDrone(clock, events)
@@ -102,7 +107,8 @@ def test_a_failed_pre_check_skips_the_behavior_and_ends_the_flight() -> None:
 
     is_done = tick_step.run(clock.now(), TICK_PERIOD)
 
-    assert events == ["snapshot", "pre-check", "send"]
+    # Take-off and landing still update: a level part's setpoint stream must not stop (ADR-0055).
+    assert events == ["snapshot", "pre-check", "take-off and landing", "send"]
     assert is_done
 
 
@@ -132,8 +138,16 @@ def test_the_hover_test_arms_takes_off_hovers_and_lands() -> None:
     tick_count = fly(BehaviorTickStep(drone, SafetyLayer(drone), HeightRecorder(HOVER_DURATION)), clock)
 
     assert drone.command_log == ["connect", "arm", "take_off", "land"]
-    # Arm, take off, then at the height for the hover duration, then landed.
-    assert heights.count(TAKE_OFF_HEIGHT) * TICK_PERIOD == HOVER_DURATION + TICK_PERIOD
+    # Arm, the level initial climb, at the height for the hover duration, then the level final descent.
+    # Each snapshot shows the end of the previous tick (ADR-0055), so the landing shows a tick late.
+    first_at_height = heights.index(TAKE_OFF_HEIGHT)
+    ticks_at_height = heights.count(TAKE_OFF_HEIGHT)
+    climb, descent = heights[:first_at_height], heights[first_at_height + ticks_at_height :]
+    assert climb == sorted(climb)
+    assert max(climb) < MIN_FINAL_DESCENT_HEIGHT
+    assert ticks_at_height * TICK_PERIOD == HOVER_DURATION + 2 * TICK_PERIOD
+    assert descent == sorted(descent, reverse=True)
+    assert descent[0] < MIN_FINAL_DESCENT_HEIGHT
     assert heights[-1] == 0.0
     assert tick_count == len(heights)
 

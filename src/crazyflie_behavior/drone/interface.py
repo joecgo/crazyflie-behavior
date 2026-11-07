@@ -1,7 +1,7 @@
 """The drone interface: how the safety layer commands a drone (ADR-0008).
 
-The safety layer sends the commands and the tick step takes the snapshots;
-a program connects and disconnects. Behaviors never use it:
+The safety layer sends the commands; the tick step takes the snapshots and
+updates take-off and landing; a program connects and disconnects. Behaviors never use it:
 they send command requests to the safety layer.
 
 Rules every adapter follows:
@@ -120,6 +120,12 @@ class DroneInterface(ABC):
 
         `dt` is the seconds since the previous tick started. The snapshot's time
         comes from the adapter's clock, read after its values are copied (ADR-0046).
-        Adapters may also use this call to advance their own pending work,
-        e.g. the mock adapter moves its fake drone forward by `dt`.
+        It only copies the telemetry: it sends nothing to the drone (ADR-0055).
+        """
+
+    @abstractmethod
+    def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
+        """Called once per tick by the tick step, after the safety pre-check, even a failed one (ADR-0055).
+
+        Moves a take-off or landing under way on by one tick, deciding from `snapshot`.
         """

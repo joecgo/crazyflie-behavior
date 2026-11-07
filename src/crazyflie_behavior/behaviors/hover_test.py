@@ -43,8 +43,8 @@ HEIGHT_TOLERANCE = 0.1
 ARM_TIME_LIMIT = 2.0
 """Seconds for the drone status to show armed."""
 TAKE_OFF_TIME_LIMIT = 5.0
-"""Seconds to reach the take-off height, with a margin over the time the Crazyflie
-adapter plans for the take-off (its `VERTICAL_SPEED`)."""
+"""Seconds to reach the take-off height, with a margin over the take-off's worst case of
+about 3.7 s (the level climb, then the high-level climb)."""
 # ------------------------------------------------------------------------------
 
 # The chirp schedule (ADR-0053).

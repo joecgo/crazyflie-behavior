@@ -2,15 +2,20 @@
 
 The safety layer decides to land from a failed pre-check alone; the adapter
 decides what a landing means. Right after a take-off the drone status doesn't
-show flying yet, and the landing must still go out.
+show flying yet, and the landing must still go out. During the initial climb,
+it goes out as the final descent, level from where the drone is (ADR-0049).
 """
 
 # The adapter has no seam for a fake connection, so the tests set its private fields directly.
 # pyright: reportPrivateUsage=false
 
+import struct
 from unittest.mock import MagicMock
 
+import pytest
+
 from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_STATUS_GRACE, CrazyflieAdapter
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import LEVEL_VERTICAL_SPEED
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.safety.safety_layer import LOW_BATTERY_VOLTAGE, SafetyLayer
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
@@ -35,6 +40,11 @@ def report_everything(adapter: CrazyflieAdapter, status: DroneStatus, battery_vo
     telemetry.write_battery_voltage(battery_voltage, None)
 
 
+def level_setpoints(fake_link: MagicMock) -> list[float]:
+    """The vertical speed of each level setpoint sent, in order (meters per second, up)."""
+    return [struct.unpack("<Bffff", call.args[0].data)[4] for call in fake_link.cf.send_packet.call_args_list]
+
+
 def fail_the_pre_check_and_send(adapter: CrazyflieAdapter, clock: SimClock) -> SafetyLayer:
     safety_layer = SafetyLayer(adapter)
     clock.advance(TICK)
@@ -52,7 +62,8 @@ def test_the_failsafe_lands_during_the_take_off_grace_period_though_the_status_s
     safety_layer = fail_the_pre_check_and_send(adapter, clock)
 
     assert safety_layer.pre_check_has_failed
-    fake_link.cf.high_level_commander.go_to.assert_called_once()  # the landing, down to the floor
+    # The climb's setpoint, then the final descent's.
+    assert level_setpoints(fake_link) == [pytest.approx(LEVEL_VERTICAL_SPEED), pytest.approx(-LEVEL_VERTICAL_SPEED)]
     fake_link.cf.high_level_commander.stop.assert_not_called()  # the motors keep running until touchdown
 
 
@@ -78,4 +89,5 @@ def test_the_failsafe_lands_a_flying_drone() -> None:
 
     fail_the_pre_check_and_send(adapter, clock)
 
-    fake_link.cf.high_level_commander.go_to.assert_called_once()
+    assert level_setpoints(fake_link)[-1] == pytest.approx(-LEVEL_VERTICAL_SPEED)  # the final descent
+    fake_link.cf.high_level_commander.stop.assert_not_called()

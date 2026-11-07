@@ -2,9 +2,8 @@
 
 The Crazyflie adapter stops the motors only once touchdown is confirmed, so a
 landing planned from a stale or drifted height estimate can't cut the motors
-in mid-air. If touchdown isn't confirmed when the planned landing is over, the
-drone keeps descending slowly (the final descent) until it is, or until a time
-limit says it must be on the floor. This module doesn't import cflib, so it's
+in mid-air. The final descent goes on until it is, or until a time limit says
+the drone must be on the floor. This module doesn't import cflib, so it's
 type-checked strictly and unit-tested without a drone.
 """
 
@@ -20,8 +19,9 @@ MAX_READING_AGE = 0.5
 """Seconds. Older telemetry doesn't count."""
 RECENT_WINDOW = 1.0
 """Seconds of down range history used to set the final descent's time limit."""
-FINAL_DESCENT_SPEED = 0.1
-"""Meters per second, downward, while touchdown isn't confirmed."""
+SLOW_DESCENT_SPEED = 0.1
+"""Meters per second, downward: the final descent's slow high-level descent, when the down
+range isn't usable (ADR-0019, ADR-0048)."""
 FINAL_DESCENT_MARGIN = 2.0
 """Seconds added to the final descent's time limit."""
 HEIGHT_IF_UNKNOWN = 2.0
@@ -42,14 +42,15 @@ def fresh_down_distance(snapshot: Snapshot, now: float) -> Stamped[float] | None
     return Stamped(down.value.distance, down.arrival_time, down.drone_time)
 
 
-def final_descent_deadline(start: float, highest_recent_distance: float | None) -> float:
+def final_descent_deadline(start: float, highest_recent_distance: float | None, speed: float) -> float:
     """When the final descent must be over: by then the drone is on the floor.
 
     Set once, when the final descent starts, from the highest recent down range
-    (so a short outlier can't shorten it), or HEIGHT_IF_UNKNOWN without one.
+    (so a short outlier can't shorten it), or HEIGHT_IF_UNKNOWN without one, at
+    the descent's `speed` in meters per second.
     """
     height = HEIGHT_IF_UNKNOWN if highest_recent_distance is None else highest_recent_distance
-    return start + height / FINAL_DESCENT_SPEED + FINAL_DESCENT_MARGIN
+    return start + height / speed + FINAL_DESCENT_MARGIN
 
 
 class TouchdownDetector:

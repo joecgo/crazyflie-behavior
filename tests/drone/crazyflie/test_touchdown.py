@@ -2,9 +2,9 @@ import pytest
 
 from crazyflie_behavior.drone.crazyflie.touchdown import (
     FINAL_DESCENT_MARGIN,
-    FINAL_DESCENT_SPEED,
     HEIGHT_IF_UNKNOWN,
     RECENT_WINDOW,
+    SLOW_DESCENT_SPEED,
     TOUCHDOWN_HOLD,
     TouchdownDetector,
     final_descent_deadline,
@@ -135,13 +135,13 @@ def test_no_readings_means_no_recent_distance() -> None:
     assert TouchdownDetector().highest_recent_distance() is None
 
 
-def test_the_final_descent_deadline_comes_from_the_recent_distance() -> None:
-    expected = NOW + 0.6 / FINAL_DESCENT_SPEED + FINAL_DESCENT_MARGIN
+def test_the_final_descent_deadline_comes_from_the_recent_distance_at_the_descent_speed() -> None:
+    expected = NOW + 0.6 / 0.25 + FINAL_DESCENT_MARGIN
 
-    assert final_descent_deadline(NOW, 0.6) == pytest.approx(expected)
+    assert final_descent_deadline(NOW, 0.6, speed=0.25) == pytest.approx(expected)
 
 
 def test_without_a_recent_distance_the_deadline_assumes_the_highest_height() -> None:
-    expected = NOW + HEIGHT_IF_UNKNOWN / FINAL_DESCENT_SPEED + FINAL_DESCENT_MARGIN
+    expected = NOW + HEIGHT_IF_UNKNOWN / SLOW_DESCENT_SPEED + FINAL_DESCENT_MARGIN
 
-    assert final_descent_deadline(NOW, None) == pytest.approx(expected)
+    assert final_descent_deadline(NOW, None, SLOW_DESCENT_SPEED) == pytest.approx(expected)

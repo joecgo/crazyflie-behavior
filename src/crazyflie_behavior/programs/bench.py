@@ -29,7 +29,10 @@ SUMMARY_PERIOD = 1.0
 
 
 class BenchTickStep(TickStep):
-    """Takes a snapshot each tick and logs it. Never commands the drone."""
+    """Takes a snapshot each tick and logs it. Never commands the drone.
+
+    It still updates take-off and landing each tick (ADR-0055), as every tick step does.
+    """
 
     def __init__(self, drone: DroneInterface) -> None:
         self._drone = drone
@@ -38,6 +41,7 @@ class BenchTickStep(TickStep):
     def run(self, time: float, dt: float) -> bool:
         snapshot = self._drone.take_snapshot(dt)
         logger.debug("Snapshot: %s", snapshot)
+        self._drone.update_take_off_and_landing(snapshot)
         if self._next_summary_time is None or time >= self._next_summary_time:
             logger.info("%s", snapshot_summary(snapshot))
             self._next_summary_time = time + SUMMARY_PERIOD

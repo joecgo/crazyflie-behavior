@@ -44,12 +44,17 @@ class StandInDrone(DroneInterface):
         """The down range reading; None means a distance equal to the height."""
         self.down_arrival_time: float | None = None
         """When the down range reading arrived; None means at the snapshot's time (a new reading each time)."""
+        self.updated_with: list[Snapshot] = []
+        """The snapshot of each take-off and landing update, in order."""
 
     def connect(self) -> None:
         self.calls.append("connect")
 
     def disconnect(self) -> None:
         self.calls.append("disconnect")
+
+    def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
+        self.updated_with.append(snapshot)
 
     def arm(self) -> None:
         self.calls.append("arm")
@@ -281,6 +286,16 @@ def test_every_command_goes_to_the_real_drone_unchanged() -> None:
         "silence",
         "disconnect",
     ]
+
+
+def test_the_take_off_and_landing_update_goes_to_the_real_drone_with_the_snapshot_it_was_given() -> None:
+    stand_in, wrapper = hovered_drone()
+    forged_snapshot = snapshot_at(1.0 + HOVER_DURATION_BEFORE_FAULT, stand_in, wrapper)
+    assert forged(forged_snapshot)
+
+    wrapper.update_take_off_and_landing(forged_snapshot)
+
+    assert stand_in.updated_with == [forged_snapshot]
 
 
 def test_the_failsafe_test_waits_longer_than_the_hover_before_the_fault() -> None:

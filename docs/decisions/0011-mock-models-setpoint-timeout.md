@@ -1,6 +1,6 @@
 # 0011: The mock adapter models the setpoint timeout
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended by [ADR-0048](0048-level-through-the-bad-flow-zone.md): take-off and landing stream setpoints in their level parts. Amended by [ADR-0055](0055-take-off-and-landing-update-each-tick.md) (2026-11-07): the mock moves its fake drone in `update_take_off_and_landing`, not `take_snapshot`.
 - **Date:** 2026-10-20
 - **Origin:** AI recommendation accepted (from code review).
 

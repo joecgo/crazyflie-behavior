@@ -17,9 +17,9 @@ from crazyflie_behavior.drone.crazyflie.adapter import (
     HOVER_SETTLE_DURATION,
     MIN_MOVE_DURATION,
     TAKE_OFF_STATUS_GRACE,
-    VERTICAL_SPEED,
     CrazyflieAdapter,
 )
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import LEVEL_VERTICAL_SPEED, MAX_FINAL_DESCENT_HEIGHT
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
 from crazyflie_behavior.timing.clock import SimClock
@@ -47,19 +47,43 @@ def call_names(fake_link: MagicMock) -> list[str]:
     return [name for name, _, _ in fake_link.mock_calls]
 
 
-def test_take_off_climbs_at_the_vertical_speed_with_the_default_yaw(
-    adapter: CrazyflieAdapter, fake_link: MagicMock
+ON_THE_FLOOR = DroneStatus(is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False)
+FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False)
+TICK = 0.05
+
+
+def fly_above_the_bad_flow_zone(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock, *, with_position: bool = True
 ) -> None:
-    adapter.take_off(1.2)
+    """Take off to 1.0 m and tick the initial climb with good flow until it hands over (ADR-0048).
 
-    fake_link.cf.high_level_commander.takeoff.assert_called_once_with(
-        1.2, pytest.approx(1.2 / VERTICAL_SPEED), yaw=DEFAULT_YAW_RAD
-    )
+    Then forget the calls it made. `with_position`: whether the position estimate streams too.
+    """
+    adapter.take_off(1.0)
+    height = 0.0
+    while adapter._is_in_initial_climb:
+        if height > 1.0:
+            pytest.fail("the initial climb never handed over")
+        clock.advance(TICK)
+        height += LEVEL_VERTICAL_SPEED * TICK
+        telemetry = adapter._telemetry
+        if with_position:
+            telemetry.write_position_estimate(Vector3(0.5, -0.25, height), None)
+        telemetry.write_velocity_estimate(Vector3(0.0, 0.0, LEVEL_VERTICAL_SPEED), None)
+        telemetry.write_drone_status(FLYING, None)
+        telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(height)}, None)
+        adapter.update_take_off_and_landing(adapter.take_snapshot(TICK))
+    fake_link.reset_mock()
 
 
-def test_take_off_rejects_a_non_positive_height(adapter: CrazyflieAdapter) -> None:
-    with pytest.raises(ValueError, match="height"):
-        adapter.take_off(0.0)
+@pytest.mark.parametrize("height", [0.0, 0.1, MAX_FINAL_DESCENT_HEIGHT])
+def test_take_off_to_the_final_descent_heights_cap_or_below_is_a_bug_and_sends_nothing(
+    adapter: CrazyflieAdapter, fake_link: MagicMock, height: float
+) -> None:
+    with pytest.raises(ValueError, match="cap"):
+        adapter.take_off(height)
+
+    assert call_names(fake_link) == []
 
 
 def test_move_to_never_asks_for_a_move_shorter_than_the_minimum(
@@ -75,8 +99,10 @@ def test_move_to_rejects_a_non_positive_duration(adapter: CrazyflieAdapter) -> N
         adapter.move_to(Vector3(1.0, 0.0, 0.5), duration=0.0)
 
 
-def test_hover_holds_the_latest_position_estimate(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
-    adapter.take_off(1.0)
+def test_hover_holds_the_latest_position_estimate(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    fly_above_the_bad_flow_zone(adapter, clock, fake_link)
     adapter._telemetry.write_position_estimate(Vector3(0.5, -0.25, 1.0), None)
 
     adapter.hover()
@@ -86,18 +112,16 @@ def test_hover_holds_the_latest_position_estimate(adapter: CrazyflieAdapter, fak
     )
 
 
-def test_hover_without_an_estimate_holds_where_it_is(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
-    adapter.take_off(1.0)
+def test_hover_without_an_estimate_holds_where_it_is(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    fly_above_the_bad_flow_zone(adapter, clock, fake_link, with_position=False)
 
     adapter.hover()
 
     fake_link.cf.high_level_commander.go_to.assert_called_once_with(
         0.0, 0.0, 0.0, DEFAULT_YAW_RAD, HOVER_SETTLE_DURATION, relative=True
     )
-
-
-ON_THE_FLOOR = DroneStatus(is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False)
-FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False)
 
 
 def test_hover_on_the_floor_does_nothing(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
@@ -133,10 +157,11 @@ def test_hover_after_a_take_off_that_never_flew_does_nothing(
     assert call_names(fake_link) == []
 
 
-def test_hover_right_after_a_take_off_still_flies_before_the_status_shows_flying(
-    adapter: CrazyflieAdapter, fake_link: MagicMock
+def test_hover_right_after_the_initial_climb_still_flies_before_the_status_shows_flying(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
 ) -> None:
-    adapter.take_off(1.0)
+    fly_above_the_bad_flow_zone(adapter, clock, fake_link)
+    adapter._take_off_sent_at = clock.now()  # a climb quicker than the status: still in the take-off grace
     adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)
 
     adapter.hover()
@@ -165,7 +190,7 @@ def test_a_hover_that_goes_through_ends_the_streak_of_ignored_ones(
 ) -> None:
     # After the rescue landing takes over a flight, no take-off is ever sent, so a hover that goes
     # through is the only thing that can end a streak of ignored ones (ADR-0038, ADR-0039).
-    adapter.take_off(1.0)
+    fly_above_the_bad_flow_zone(adapter, clock, fake_link)
     clock.advance(TAKE_OFF_STATUS_GRACE + 0.5)
     with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
         adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)
@@ -186,16 +211,37 @@ def test_set_velocity_sends_the_yaw_rate_in_degrees(adapter: CrazyflieAdapter, f
     fake_link.cf.commander.send_velocity_world_setpoint.assert_called_once_with(0.2, 0.0, -0.1, pytest.approx(180.0))
 
 
-def test_after_steering_mode_a_high_level_command_first_hands_control_back(
-    adapter: CrazyflieAdapter, fake_link: MagicMock
+def test_after_steering_mode_a_hover_goes_out_before_the_stream_is_released(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
 ) -> None:
-    adapter.take_off(1.0)
+    # Released first, the high-level planner, stopped by the stream, would command the motors off (ADR-0048).
+    fly_above_the_bad_flow_zone(adapter, clock, fake_link)
     adapter.set_velocity(Vector3(0.2, 0.0, 0.0))
 
     adapter.hover()
 
-    calls = call_names(fake_link)
-    assert calls.index("cf.commander.send_notify_setpoint_stop") < calls.index("cf.high_level_commander.go_to")
+    assert call_names(fake_link)[-2:] == ["cf.high_level_commander.go_to", "cf.commander.send_notify_setpoint_stop"]
+
+
+def test_after_steering_mode_a_move_to_goes_out_before_the_stream_is_released(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    fly_above_the_bad_flow_zone(adapter, clock, fake_link)
+    adapter.set_velocity(Vector3(0.2, 0.0, 0.0))
+
+    adapter.move_to(Vector3(1.0, 0.0, 1.0), duration=2.0)
+
+    assert call_names(fake_link)[-2:] == ["cf.high_level_commander.go_to", "cf.commander.send_notify_setpoint_stop"]
+
+
+def test_without_a_stream_a_high_level_command_releases_nothing(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    fly_above_the_bad_flow_zone(adapter, clock, fake_link)
+
+    adapter.hover()
+
+    assert call_names(fake_link) == ["cf.high_level_commander.go_to"]
 
 
 def test_disarm_stops_the_motors_before_disarming(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
@@ -215,7 +261,7 @@ def test_emergency_stop_cuts_the_motors_and_cancels_a_landing(
     adapter.emergency_stop()
     clock.advance(30.0)
     adapter._telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(0.02)}, None)
-    adapter.take_snapshot(0.05)
+    adapter.update_take_off_and_landing(adapter.take_snapshot(0.05))
 
     fake_link.cf.supervisor.send_emergency_stop.assert_called_once()
     fake_link.cf.high_level_commander.stop.assert_not_called()  # no landing left to finish

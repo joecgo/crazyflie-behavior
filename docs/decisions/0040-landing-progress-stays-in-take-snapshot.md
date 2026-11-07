@@ -1,6 +1,6 @@
 # 0040: Landing progress stays in take_snapshot for First flight
 
-- **Status:** Accepted
+- **Status:** Superseded by [0055](0055-take-off-and-landing-update-each-tick.md) (2026-11-07): landing progress moves to a per-tick drone call; the hang risk below stays.
 - **Date:** 2026-11-02
 - **Origin:** Mixed. Option A for First flight and keeping D as the alternative to try: mine, against the AI's recommendation of D. Splitting this off from backlog #8: AI suggestion accepted.
 

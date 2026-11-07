@@ -13,12 +13,14 @@ import signal
 import threading
 import time
 from collections.abc import Callable, Generator
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
 
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
 from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import MAX_FINAL_DESCENT_HEIGHT
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import RangeStatus
 from crazyflie_behavior.timing.clock import RealClock, SimClock
@@ -287,7 +289,8 @@ def test_the_diagnostic_block_carries_the_battery_voltage(adapter: CrazyflieAdap
     adapter.connect()
 
     diagnostic_block = adapter._log_configs[fake_cflib.log_block_names.index("diagnostic")]
-    variables = [added.args[0] for added in diagnostic_block.add_variable.call_args_list]
+    add_variable = cast(MagicMock, cast(MagicMock, diagnostic_block).add_variable)
+    variables: list[str] = [added.args[0] for added in add_variable.call_args_list]
     assert "pm.vbatMV" in variables
 
 
@@ -554,7 +557,7 @@ def test_connecting_again_drops_a_landing_left_from_the_last_connection(fake_cfl
     fake_cflib.link.cf.high_level_commander.reset_mock()
 
     clock.advance(60.0)  # long past the old landing's time limits
-    adapter.take_snapshot(0.05)
+    adapter.update_take_off_and_landing(adapter.take_snapshot(0.05))
 
     # The old landing would have stopped the motors or sent a go_to to an armed drone on the floor.
     assert fake_cflib.link.cf.high_level_commander.mock_calls == []
@@ -655,18 +658,24 @@ def test_taking_over_keeps_the_position_the_drone_already_reported(
     assert position_estimate.value.z == pytest.approx(0.4)
 
 
-def test_after_taking_over_land_runs_the_normal_landing_not_just_a_motor_stop(
+def test_after_taking_over_land_runs_the_normal_landing_to_the_cap_not_just_a_motor_stop(
     taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
 ) -> None:
-    fake_cflib.samples["state"]["stateEstimate.z"] = 0.4
+    # No take-off of ours, so no settle height: the final descent height is the cap (ADR-0056).
+    fake_cflib.samples["state"]["stateEstimate.z"] = 0.6
     fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    fake_cflib.samples["down"]["range.zrange"] = 600.0
     taking_over_adapter.connect()
 
     taking_over_adapter.land()
 
     commander = fake_cflib.link.cf.high_level_commander
     commander.go_to.assert_called_once_with(
-        0.0, 0.0, 0.0, adapter_module.DEFAULT_YAW_RAD, pytest.approx(0.4 / adapter_module.VERTICAL_SPEED)
+        0.0,
+        0.0,
+        MAX_FINAL_DESCENT_HEIGHT,
+        adapter_module.DEFAULT_YAW_RAD,
+        pytest.approx((0.6 - MAX_FINAL_DESCENT_HEIGHT) / adapter_module.VERTICAL_SPEED),
     )
     commander.stop.assert_not_called()
 
@@ -690,13 +699,14 @@ def test_disconnecting_after_taking_over_lands_the_drone_then_closes_the_link(
 ) -> None:
     fake_cflib.samples["state"]["stateEstimate.z"] = 0.4
     fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    fake_cflib.samples["down"]["range.zrange"] = 400.0
     taking_over_adapter.connect()
 
     taking_over_adapter.disconnect()
 
     commander = fake_cflib.link.cf.high_level_commander
-    commander.go_to.assert_called()  # the landing
-    commander.stop.assert_called()  # the motors, once touchdown was confirmed
+    commander.go_to.assert_called()  # the landing approach
+    commander.stop.assert_called()  # the motors, at the final descent's time limit: the fake's down range never changes
     fake_cflib.link.close_link.assert_called_once()
 
 

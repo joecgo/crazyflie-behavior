@@ -1,8 +1,20 @@
 """The mock adapter: a simple fake drone for tests and development.
 
-It answers commands instantly with no physics: `take_off` and `move_to`
-teleport, and `set_velocity` moves the drone exactly. It writes its made-up
-telemetry through the same `TelemetryBuffer` as every other adapter.
+It answers commands instantly with no physics: `move_to` teleports, and
+`set_velocity` moves the drone exactly. It writes its made-up telemetry
+through the same `TelemetryBuffer` as every other adapter.
+
+It mocks the Crazyflie adapter, so it uses that adapter's numbers for the
+bad-flow zone (ADR-0048, ADR-0055). A take-off climbs level at
+`LEVEL_VERTICAL_SPEED` to the lowest final descent height, then teleports to
+its height: the mock's flow is perfect, so it settles at once and the final descent height is the lowest. A
+landing teleports down to the final descent height, then descends level at
+`LEVEL_VERTICAL_SPEED` to the floor. During those level parts it ignores every
+command but land and the motor stops, as the Crazyflie adapter does (ADR-0056).
+
+`update_take_off_and_landing` moves the fake drone by the snapshot's `dt`, for
+every command, and streams every value again. So a snapshot shows the drone as
+it was at the end of the previous tick (ADR-0055).
 
 Like real hardware, it ignores commands it can't carry out (e.g. taking off
 while disarmed) instead of raising; the outcome shows up in the snapshot.
@@ -15,11 +27,16 @@ The room is empty: every range reading but the down one is out of range
 (clear) unless a test sets it with `set_range_reading`. The floor is flat at
 height 0, so the down range reads the drone's height, never less than its
 reading on the floor (ADR-0052). Like a real drone, it streams every value
-again with each snapshot, until a test makes it go quiet with `stop_telemetry`.
+again each tick, until a test makes it go quiet with `stop_telemetry`.
 """
 
 import math
 
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
+    LEVEL_VERTICAL_SPEED,
+    MAX_FINAL_DESCENT_HEIGHT,
+    MIN_FINAL_DESCENT_HEIGHT,
+)
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.telemetry_buffer import TelemetryBuffer
 from crazyflie_behavior.geometry import Vector3
@@ -40,7 +57,8 @@ FLOOR_DOWN_RANGE = 0.02
 SETPOINT_STOP_FOLLOWING_AFTER = 0.5
 """Seconds without a set_velocity before the drone stops following it."""
 SETPOINT_CUT_MOTORS_AFTER = 2.0
-"""Seconds without a set_velocity before the motors are cut and the drone drops."""
+"""Seconds without a setpoint (set_velocity, or a level part's update) before the motors are cut
+and the drone drops."""
 
 
 class MockAdapter(DroneInterface):
@@ -64,6 +82,13 @@ class MockAdapter(DroneInterface):
         self._velocity = Vector3.ZERO
         # When the last set_velocity arrived; None when not in steering mode.
         self._last_setpoint_time: float | None = None
+        self._climb_height: float | None = None
+        """Meters: the take-off's height, during the initial climb."""
+        self._is_in_final_descent = False
+        self._final_descent_height = MAX_FINAL_DESCENT_HEIGHT
+        """Meters: the lowest after its own take-off, the cap after a take-over (ADR-0056)."""
+        self._last_level_setpoint_time: float | None = None
+        """When the last level setpoint went out; None outside the level parts."""
         self._range_readings = dict.fromkeys(RangeDirection, RangeReading.out_of_range())
         self._is_down_range_set_by_test = False
         """Once a test sets the down range, it stays as set instead of following the height."""
@@ -95,6 +120,7 @@ class MockAdapter(DroneInterface):
     def connect(self) -> None:
         self.command_log.append("connect")
         self._is_connected = True
+        self._final_descent_height = MAX_FINAL_DESCENT_HEIGHT  # a new session knows no settle height
         if self._take_over_flight:
             self._is_armed = True
             self._is_flying = True
@@ -105,6 +131,8 @@ class MockAdapter(DroneInterface):
         self.command_log.append("disconnect")
         if self._is_flying:
             self.land()
+            self._drop_to_ground()  # the Crazyflie adapter waits for touchdown; the mock lands at once
+            self._publish_state()  # the last telemetry, so a test can see where the drone ended up
         self._is_connected = False
 
     def arm(self) -> None:
@@ -119,22 +147,33 @@ class MockAdapter(DroneInterface):
 
     def take_off(self, height: float) -> None:
         self.command_log.append("take_off")
-        if height <= 0.0:
-            raise ValueError(f"Take-off height must be positive: {height}")
+        if height <= MAX_FINAL_DESCENT_HEIGHT:
+            cap = MAX_FINAL_DESCENT_HEIGHT
+            raise ValueError(f"Take-off height must be above the final descent height's cap, {cap:g} m: {height}")
         if self._is_armed and not self._is_flying:
             self._is_flying = True
-            self._position = Vector3(self._position.x, self._position.y, height)
-            self._velocity = Vector3.ZERO
-            self._last_setpoint_time = None
+            self._final_descent_height = MIN_FINAL_DESCENT_HEIGHT
+            self._climb_height = height
+            self._start_level_part(LEVEL_VERTICAL_SPEED)
 
     def land(self) -> None:
         self.command_log.append("land")
-        self._drop_to_ground()
+        if not self._is_flying:
+            self._drop_to_ground()
+        elif not self._is_in_final_descent:
+            # The landing approach, teleported. During the initial climb the drone is still below
+            # the final descent height, so the final descent starts from where it is (ADR-0049).
+            self._position = Vector3(
+                self._position.x, self._position.y, min(self._position.z, self._final_descent_height)
+            )
+            self._climb_height = None
+            self._is_in_final_descent = True
+            self._start_level_part(-LEVEL_VERTICAL_SPEED)
 
     def set_velocity(self, velocity: Vector3, yaw_rate_rad_per_s: float = 0.0) -> None:
         self.command_log.append("set_velocity")
         # Yaw is held fixed (ADR-0008), so the mock ignores the yaw rate.
-        if self._is_flying:
+        if self._is_flying and not self._is_in_level_part():
             self._velocity = velocity
             self._last_setpoint_time = self._clock.now()
 
@@ -142,15 +181,16 @@ class MockAdapter(DroneInterface):
         self.command_log.append("move_to")
         if duration <= 0.0:
             raise ValueError(f"Move duration must be positive: {duration}")
-        if self._is_flying:
+        if self._is_flying and not self._is_in_level_part():
             self._position = position
             self._velocity = Vector3.ZERO
             self._last_setpoint_time = None
 
     def hover(self) -> None:
         self.command_log.append("hover")
-        self._velocity = Vector3.ZERO
-        self._last_setpoint_time = None
+        if not self._is_in_level_part():
+            self._velocity = Vector3.ZERO
+            self._last_setpoint_time = None
 
     def emergency_stop(self) -> None:
         self.command_log.append("emergency_stop")
@@ -170,18 +210,45 @@ class MockAdapter(DroneInterface):
         self.command_log.append("silence")
 
     def take_snapshot(self, dt: float) -> Snapshot:
+        return self._telemetry.snapshot(dt)
+
+    def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
+        """Also moves the fake drone by the snapshot's `dt`, for every command, and streams every value (ADR-0055)."""
         self._apply_setpoint_timeout()
         if self._is_flying:
-            self._position = self._position + self._velocity * dt
+            self._position = self._position + self._velocity * snapshot.dt
+        if self._climb_height is not None and self._position.z >= self._final_descent_height:
+            # The initial climb is over: the high-level climb to the height, teleported.
+            self._position = Vector3(self._position.x, self._position.y, self._climb_height)
+            self._velocity = Vector3.ZERO
+            self._climb_height = None
+            self._last_level_setpoint_time = None
+        elif self._is_in_final_descent and self._position.z <= 0.0:
+            self._drop_to_ground()  # touchdown: the motors stop
+        elif self._is_in_level_part():
+            self._last_level_setpoint_time = self._clock.now()  # this tick's level setpoint
         self._publish_state()
-        return self._telemetry.snapshot(dt)
 
     # --- Internals --------------------------------------------------------------
 
+    def _is_in_level_part(self) -> bool:
+        return self._climb_height is not None or self._is_in_final_descent
+
+    def _start_level_part(self, vertical_speed: float) -> None:
+        self._velocity = Vector3(0.0, 0.0, vertical_speed)
+        self._last_setpoint_time = None
+        self._last_level_setpoint_time = self._clock.now()
+
     def _apply_setpoint_timeout(self) -> None:
+        now = self._clock.now()
+        if self._last_level_setpoint_time is not None:
+            # A level part's setpoint keeps its vertical speed when the drone levels out after 0.5 s.
+            if now - self._last_level_setpoint_time > SETPOINT_CUT_MOTORS_AFTER:
+                self._drop_to_ground()
+            return
         if self._last_setpoint_time is None:
             return
-        silence = self._clock.now() - self._last_setpoint_time
+        silence = now - self._last_setpoint_time
         if silence > SETPOINT_CUT_MOTORS_AFTER:
             self._drop_to_ground()
         elif silence > SETPOINT_STOP_FOLLOWING_AFTER:
@@ -192,6 +259,9 @@ class MockAdapter(DroneInterface):
         self._position = Vector3(self._position.x, self._position.y, 0.0)
         self._velocity = Vector3.ZERO
         self._last_setpoint_time = None
+        self._climb_height = None
+        self._is_in_final_descent = False
+        self._last_level_setpoint_time = None
 
     def _publish_state(self) -> None:
         if not self._is_streaming:

@@ -1,6 +1,6 @@
 # 0026: The tick loop keeps time and calls one tick step; hangs are detected; every tick is logged
 
-- **Status:** Accepted. Amended by [ADR-0036](0036-game-logic-is-a-state-machine.md): the tick step reports an outcome.
+- **Status:** Accepted. Amended by [ADR-0036](0036-game-logic-is-a-state-machine.md): the tick step reports an outcome. Amended by [ADR-0055](0055-take-off-and-landing-update-each-tick.md) (2026-11-07): after the safety pre-check, the tick step always calls the drone's `update_take_off_and_landing`.
 - **Date:** 2026-10-29
 - **Origin:** Mixed. Splitting the tick loop from the tick step, and stopping through the `with drone:` block: AI recommendations accepted after my questions. Detecting hangs (as UE does), logging every tick immediately, and a warning for every overrun: mine. The `faulthandler` watchdog and its 1 s limit, and Ctrl+C as a stop request with later presses ignored: the AI's (it found the first draft described Ctrl+C two ways).
 

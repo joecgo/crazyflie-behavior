@@ -7,6 +7,7 @@ cflib, so it's type-checked strictly.
 """
 
 import math
+import struct
 
 from crazyflie_behavior.snapshot import RangeReading
 
@@ -68,6 +69,19 @@ def sound_frequency_from_pitch(pitch: float) -> int:
 def yaw_rate_deg_per_s(yaw_rate_rad_per_s: float) -> float:
     """cflib's velocity setpoints take yaw rate in degrees per second."""
     return math.degrees(yaw_rate_rad_per_s)
+
+
+ALT_HOLD_SETPOINT_TYPE = 4
+"""The firmware's altHold setpoint type (ADR-0056)."""
+
+
+def alt_hold_packet_data(vertical_speed: float) -> bytes:
+    """A level altHold setpoint's packet data: roll and pitch 0, no yaw rate (ADR-0048).
+
+    `vertical_speed` is in meters per second, up. cflib has no method for this setpoint;
+    the layout is the firmware's (ADR-0056).
+    """
+    return struct.pack("<Bffff", ALT_HOLD_SETPOINT_TYPE, 0.0, 0.0, 0.0, vertical_speed)
 
 
 def move_duration(distance: float, speed: float, minimum: float) -> float:

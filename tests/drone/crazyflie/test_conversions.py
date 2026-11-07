@@ -5,6 +5,7 @@ import pytest
 from crazyflie_behavior.drone.crazyflie.conversions import (
     LOG_TIMESTAMP_RANGE_MS,
     SOUND_FREQUENCY_LIMIT,
+    alt_hold_packet_data,
     battery_voltage_from_mv,
     drone_time_from_timestamp,
     move_duration,
@@ -89,3 +90,11 @@ def test_the_lowest_and_highest_whole_hertz_the_firmware_holds_are_allowed() -> 
 def test_a_pitch_the_firmware_cant_hold_is_a_bug(pitch: float) -> None:
     with pytest.raises(ValueError, match="The buzzer can't play"):
         sound_frequency_from_pitch(pitch)
+
+
+def test_the_alt_hold_setpoint_has_the_firmwares_layout() -> None:
+    # Firmware 2026.08 (ADR-0047), crtp_commander_generic.c: type 4 (line 70), then packed
+    # little-endian floats roll, pitch, yaw rate and vertical speed (lines 364-369).
+    down = bytes.fromhex("04" + "00000000" * 3 + "cdcc4cbe")  # -0.2 m/s as a float32
+
+    assert alt_hold_packet_data(-0.2) == down

@@ -64,6 +64,33 @@ def test_the_bench_tick_step_never_commands_the_drone() -> None:
     assert drone.command_log == ["connect"]
 
 
+class UpdateRecordingMock(MockAdapter):
+    def __init__(self, clock: SimClock) -> None:
+        super().__init__(clock)
+        self.updated_with: list[Snapshot] = []
+        self.snapshots: list[Snapshot] = []
+
+    def take_snapshot(self, dt: float) -> Snapshot:
+        self.snapshots.append(super().take_snapshot(dt))
+        return self.snapshots[-1]
+
+    def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
+        self.updated_with.append(snapshot)
+        super().update_take_off_and_landing(snapshot)
+
+
+def test_the_bench_tick_step_updates_take_off_and_landing_with_each_snapshot() -> None:
+    # As every tick step does (ADR-0055); on the bench there is nothing to update.
+    clock = SimClock()
+    drone = UpdateRecordingMock(clock)
+    drone.connect()
+
+    run_ticks(BenchTickStep(drone), clock, tick_count=3)
+
+    assert len(drone.updated_with) == 3
+    assert drone.updated_with == drone.snapshots
+
+
 def test_every_snapshot_goes_to_the_log_at_debug_level(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger=BENCH_LOGGER)
     clock = SimClock()

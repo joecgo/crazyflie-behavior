@@ -141,6 +141,9 @@ class ForgedLowBatteryDrone(DroneInterface):
     def disconnect(self) -> None:
         self._drone.disconnect()
 
+    def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
+        self._drone.update_take_off_and_landing(snapshot)
+
     def arm(self) -> None:
         self._drone.arm()
 
