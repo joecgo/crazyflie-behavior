@@ -28,17 +28,17 @@ decisions are recorded), *communication* (how Claude explains things).
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 4 | 14 |
-| safety design | 4 | 13 |
+| safety design | 4 | 14 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
-| communication | 7 | 17 |
+| communication | 7 | 18 |
 | testing | 0 | 9 |
 | process | 3 | 12 |
-| **Total** | **29** | **78** |
+| **Total** | **29** | **80** |
 
 Of the 29 I pointed out, a later Claude review would probably have caught
 none, maybe 6, and probably not 23. So far, 7 of the 11 recommendation
-mistakes needed me, and 7 of the 24 communication mistakes. The first
+mistakes needed me, and 7 of the 25 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -535,6 +535,19 @@ times so far).
 
 ## Mistakes Claude caught itself
 
+### 2026-11-07: "About 4.5 s" for the no-flow uncertainty, read from an upper bound
+
+- **What happened:** explaining ADR-0054's 5 s wait, Claude told me a no-flow
+  drone's velocity uncertainty takes about 4.5 s to pass 0.03 m/s. Bench run
+  3 shows only that it passed about 0.03 m/s within about 5 s of the reset:
+  cflib's settle check compares 10 samples, 500 ms apart, so a failed settle
+  is an upper bound. It may pass much sooner. Corrected in chat before
+  anything was decided on it.
+- **How it was caught:** answering my question whether the 5 s can be shorter.
+- **Kind:** communication.
+- **Takeaway:** when a number comes from a pass/fail check, say whether it's a
+  bound or a measurement.
+
 ### 2026-11-06: "About 8" parameter writes for "Charge", counted one per note
 
 - **What happened:** ADR-0053 said each chirp or note is one parameter write,
@@ -545,6 +558,20 @@ times so far).
 - **Kind:** communication.
 - **Takeaway:** a count of writes or packets is taken from the calls the
   code makes for each event, not from the number of events.
+
+### 2026-11-06: A pre-check rule that would end the game at a dark hiding spot
+
+- **What happened:** for backlog #48, Claude recommended that a high
+  velocity uncertainty fail the safety pre-check, without saying what it does
+  on the floor. A failed pre-check ends the flight for good (ADR-0030), and a
+  drone landed at a dark hiding spot gets no flow, so the check would have
+  ended every hide-and-seek round. Fixed before the ADR: the pre-check checks
+  it only in flight, and the take-off rule on the floor (ADR-0054).
+- **How it was caught:** answering my question about when the two checks run.
+- **Kind:** safety design.
+- **Takeaway:** for each new pre-check condition, ask what it does on a
+  landed drone. A condition that can fail on the floor belongs in the
+  take-off rule.
 
 ### 2026-11-06: A sound effect's number read from an out-of-date comment
 

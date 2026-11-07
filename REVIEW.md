@@ -59,6 +59,10 @@ takeaway applies to reviews, it's added here as a question.
   source on 2026-11-04).
 - A safety gap that's deferred: does an accepted ADR plan a feature that
   would open it first?
+- A new safety pre-check condition: what does it do on a landed drone? A
+  failed pre-check ends the flight for good (ADR-0030), so a condition that
+  can fail on the floor (a drone landed in the dark) belongs in the take-off
+  rule.
 
 ## Time
 
