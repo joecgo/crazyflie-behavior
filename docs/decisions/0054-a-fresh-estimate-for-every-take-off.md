@@ -1,8 +1,8 @@
 # 0054: Behaviors request estimate resets on the floor; the velocity uncertainty is checked at take-off and in flight
 
-- **Status:** Accepted. Amends [ADR-0030](0030-minimal-safety-layer-for-first-flight.md): the safety pre-check also checks the velocity uncertainty while flying, and the take-off rule checks the estimate. Amends [ADR-0025](0025-safety-pre-check-and-command-slots.md): the estimate reset request has no command slot. Closes backlog #48. Amended 2026-11-07, before its code: behaviors request a reset when they want a clean launch, with no command slot and no wait after it; the reset command is built now, not with the round start; the adapter ignores a reset while the drone may be flying.
+- **Status:** Accepted. Amends [ADR-0030](0030-minimal-safety-layer-for-first-flight.md): the safety pre-check also checks the velocity uncertainty while flying, and the take-off rule checks the estimate. Amends [ADR-0025](0025-safety-pre-check-and-command-slots.md): the estimate reset request has no command slot. Closes backlog #48. Amended 2026-11-07, before its code: behaviors request a reset when they want a clean launch, with no command slot and no wait after it; the reset command is built now, not with the round start; the adapter ignores a reset while the drone may be flying; the take-off rule's floor threshold moves to the drone interface module.
 - **Date:** 2026-11-06
-- **Origin:** Mixed. The velocity uncertainty and the landed-drone check, a reset command, landing on a high uncertainty in flight, and no hold or bad-flow-zone exemption: AI recommendations accepted. Proving it by cutting the flow in software, in its own test program: mine. On 2026-11-07, all mine: building the reset now, for a clean launch without restarting the program; behaviors deciding when to reset; no slot (over the AI's movement slot); no wait after a reset (over the AI's 5 s wait in the take-off rule). The adapter ignoring a reset while the drone may be flying: AI recommendation accepted.
+- **Origin:** Mixed. The velocity uncertainty and the landed-drone check, a reset command, landing on a high uncertainty in flight, and no hold or bad-flow-zone exemption: AI recommendations accepted. Proving it by cutting the flow in software, in its own test program: mine. On 2026-11-07, all mine: building the reset now, for a clean launch without restarting the program; behaviors deciding when to reset; no slot (over the AI's movement slot); no wait after a reset (over the AI's 5 s wait in the take-off rule). The adapter ignoring a reset while the drone may be flying, and moving the floor threshold to the drone interface module: AI recommendations accepted.
 
 ## Context
 
@@ -60,8 +60,10 @@ A and B, and an estimate reset that behaviors request.
 - **Take-off rule:** approved only with the velocity uncertainty under
   0.03 m/s, the estimated speed under 0.05 m/s, the estimated position within
   0.05 m of the reset point, and the down range reading the floor
-  (`TOUCHDOWN_DOWN_RANGE`). The first launch is also checked by `connect()`'s
-  own settle: cflib waits at least 5 s for the velocity variances to settle,
+  (`TOUCHDOWN_DOWN_RANGE`). That constant moves from the Crazyflie adapter's
+  touchdown module to the drone interface module, so the safety layer doesn't
+  import the adapter package. The first launch is also checked by
+  `connect()`'s own settle: cflib waits at least 5 s for the velocity variances to settle,
   and a drone without flow doesn't settle (Bench run 3).
 - **In flight:** while the drone status says flying, a velocity uncertainty
   over 0.03 m/s, missing or stale fails the pre-check, and the failsafe lands.
