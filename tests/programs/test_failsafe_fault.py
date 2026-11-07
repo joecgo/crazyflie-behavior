@@ -306,7 +306,7 @@ def test_the_failsafe_test_waits_longer_than_the_hover_before_the_fault() -> Non
 # --- The climb trigger (Failsafe low, ADR-0049) ---------------------------------------
 
 
-def climbing_drone(height: float = 0.05) -> tuple[StandInDrone, ForgedLowBatteryDrone]:
+def climbing_drone(height: float = 0.02)-> tuple[StandInDrone, ForgedLowBatteryDrone]:
     """A wrapped drone with the climb trigger, a take-off sent, flying at `height` (meters)."""
     stand_in = StandInDrone()
     stand_in.height = height
@@ -392,7 +392,7 @@ def test_the_climb_trigger_needs_the_status_to_say_flying() -> None:
 
 
 def test_once_the_climb_trigger_fires_the_battery_stays_forged_even_back_near_the_floor() -> None:
-    """The landing comes back down through 0.10 m: the trigger must not let the real battery back in."""
+    """The landing comes back down through the trigger's range: the trigger must not let the real battery back in."""
     stand_in, wrapper = climbing_drone(height=0.2)
     for tick in range(CLIMB_FAULT_READINGS):
         snapshot_at(1.0 + tick * 0.05, stand_in, wrapper)

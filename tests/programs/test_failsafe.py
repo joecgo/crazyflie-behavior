@@ -154,7 +154,7 @@ def test_failsafe_low_with_a_down_range_that_never_clears_the_floor_lands_normal
     """A climb trigger that never fires must fail the test: the time limit lands the drone (ADR-0049)."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(failsafe_test_module, "HOVER_TIME_LIMIT", 0.3)
-    mock_adapter_maker.down_range = 0.05
+    mock_adapter_maker.down_range = failsafe_fault_module.CLIMB_FAULT_DOWN_RANGE - 0.01
 
     exit_code = main(["--fault-at", "climb"])
 

@@ -30,8 +30,8 @@ HOVER_DURATION_BEFORE_FAULT = 3.0
 """Seconds the drone hovers at the take-off height before the battery voltage is forged."""
 FORGED_BATTERY_VOLTAGE = LOW_BATTERY_VOLTAGE - 0.2
 """Volts. Below the safety pre-check's limit."""
-CLIMB_FAULT_DOWN_RANGE = 0.10
-"""Meters: the climb trigger needs the down range at least this far (ADR-0049). The reading dips
+CLIMB_FAULT_DOWN_RANGE = 0.05
+"""Meters: the climb trigger needs the down range at least this far (ADR-0049, ADR-0057). The reading dips
 to 0.000-0.003 m at spin-up, so the floor itself never counts."""
 CLIMB_FAULT_READINGS = 2
 """Down range readings in a row that must be at least `CLIMB_FAULT_DOWN_RANGE`, so one bad sample doesn't
