@@ -279,7 +279,6 @@ class CrazyflieAdapter(DroneInterface):
         self._cancel_landing()
         self._is_streaming = False
         self._level_vertical_speed = None
-        self._is_ignoring_commands = False
         self._final_descent_height = final_descent_height(None)
         # A new session starts with no values, so the wait for the first telemetry
         # can't pass on values left from an earlier one (ADR-0031).

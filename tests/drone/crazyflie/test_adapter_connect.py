@@ -830,3 +830,87 @@ def test_connecting_again_waits_for_a_new_status_not_the_last_connections(
 
     with pytest.raises(TimeoutError, match="Waiting for the drone's status"):
         second_adapter.connect()
+
+
+# --- What a new connection drops from the last one --------------------------------
+
+
+def reconnect_after_a_session_that_ends_unfinished(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
+    """The link goes down mid-flight and a drone on the floor is connected again; calls so far are forgotten."""
+    adapter._shut_down_link()
+    adapter.connect()
+    fake_cflib.link.cf.reset_mock()
+
+
+def test_connecting_again_drops_an_initial_climb_left_from_the_last_connection(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    """A velocity command isn't ignored as if the old take-off were still climbing."""
+    adapter.connect()
+    adapter.take_off(0.5)  # an initial climb under way
+    reconnect_after_a_session_that_ends_unfinished(adapter, fake_cflib)
+
+    adapter.set_velocity(Vector3(0.1, 0.0, 0.0))
+
+    fake_cflib.link.cf.commander.send_velocity_world_setpoint.assert_called_once()
+
+
+def test_connecting_again_stops_the_old_initial_climb_sending_level_setpoints(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    adapter.connect()
+    adapter.take_off(0.5)
+    reconnect_after_a_session_that_ends_unfinished(adapter, fake_cflib)
+
+    adapter.update_take_off_and_landing(adapter.take_snapshot(0.05))
+
+    fake_cflib.link.cf.send_packet.assert_not_called()
+    assert fake_cflib.link.cf.high_level_commander.mock_calls == []
+
+
+def test_connecting_again_does_not_hand_over_from_a_setpoint_stream_of_the_last_connection(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    """A high-level command then needs no release of a stream the new connection never started."""
+    adapter.connect()
+    adapter.set_velocity(Vector3(0.1, 0.0, 0.0))  # a velocity stream
+    reconnect_after_a_session_that_ends_unfinished(adapter, fake_cflib)
+
+    adapter.move_to(Vector3(0.0, 0.0, 1.0), duration=2.0)
+
+    fake_cflib.link.cf.commander.send_notify_setpoint_stop.assert_not_called()
+
+
+def test_connecting_again_does_not_send_the_old_level_setpoint_before_a_high_level_command(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    adapter.connect()
+    adapter.take_off(0.5)  # a level stream
+    reconnect_after_a_session_that_ends_unfinished(adapter, fake_cflib)
+
+    adapter.move_to(Vector3(0.0, 0.0, 1.0), duration=2.0)
+
+    fake_cflib.link.cf.send_packet.assert_not_called()
+
+
+def test_connecting_again_drops_the_final_descent_height_of_the_last_connection(
+    fake_cflib: FakeCflib,
+) -> None:
+    """A taken-over flight has no settle height, so its landing goes down to the cap (ADR-0056)."""
+    fake_cflib.samples["state"]["stateEstimate.z"] = 0.6
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    fake_cflib.samples["down"]["range.zrange"] = 600.0
+    adapter = CrazyflieAdapter(StreamingSimClock(fake_cflib, start=10.0), take_over_flight=True)
+    adapter.connect()
+    adapter._final_descent_height = 0.1  # as if set by an earlier take-off's initial climb
+    reconnect_after_a_session_that_ends_unfinished(adapter, fake_cflib)
+
+    adapter.land()
+
+    fake_cflib.link.cf.high_level_commander.go_to.assert_called_once_with(
+        0.0,
+        0.0,
+        MAX_FINAL_DESCENT_HEIGHT,
+        adapter_module.DEFAULT_YAW_RAD,
+        pytest.approx(0.3 / adapter_module.VERTICAL_SPEED),
+    )
