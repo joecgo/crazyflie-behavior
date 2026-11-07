@@ -44,6 +44,17 @@ at the boundary.
 
 Unitless values (counts, ratios, flags) get no suffix.
 
+## Time
+
+**Code that has a snapshot takes "now" from `snapshot.time`**, not from the
+clock. Every decision in a tick then sees the same time, and replaying a
+recorded snapshot gives the same result. Pass the snapshot down; don't also
+pass a separate `now`.
+
+Read the clock directly only when there is no snapshot to take the time from,
+or when the time is the thing being measured, such as how long a step inside
+one tick took.
+
 ## Names
 
 - Use **glossary terms** exactly (`docs/glossary.md`). A concept without a
