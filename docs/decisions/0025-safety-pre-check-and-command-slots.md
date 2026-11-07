@@ -1,6 +1,6 @@
 # 0025: Safety pre-check, requests answered at once, one command per slot per tick
 
-- **Status:** Accepted. Supersedes decision 6 of [ADR-0008](0008-drone-interface.md) (safety queries).
+- **Status:** Accepted. Supersedes decision 6 of [ADR-0008](0008-drone-interface.md) (safety queries). Amended by [ADR-0054](0054-a-fresh-estimate-for-every-take-off.md) (2026-11-07): the estimate reset request has no command slot; it's sent at the end of the tick, after the slots' commands.
 - **Date:** 2026-10-29
 - **Origin:** Mixed. One request function that answers at once, the pre-check before behaviors run, and slots where a later request replaces the earlier one with a warning: mine (slots grew from the AI's "channels"). Sending once at the end of the tick, and logging replacements once per streak: AI recommendations accepted.
 

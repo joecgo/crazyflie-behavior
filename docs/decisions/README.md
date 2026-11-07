@@ -62,5 +62,6 @@ This column is honest about which ideas were mine.
 | [0051](0051-battery-flight-limit-and-take-off-limit.md) | Land below 3.2 V in flight; take off only above 3.2 V plus the sag (3.62 V) | Mixed: 3.2 V, a take-off limit and the 0.42 V sag value were mine, over the AI's recommendations; judging it on the take-off request was the AI's |
 | [0052](0052-the-mock-down-range-follows-its-height.md) | The mock adapter's down range follows its height | AI recommendation accepted |
 | [0053](0053-buzzer-commands-and-a-chirp-hover-test.md) | Buzzer commands (chirp, tone, silence) go through the safety layer; the Hover test can chirp and ends with "Charge" | Mixed: testing in the hover, the schedule and "Charge" were mine; the commands, the one-shot chirp, 10 Hz voltage, the option and tick-timed notes were the AI's |
+| [0054](0054-a-fresh-estimate-for-every-take-off.md) | Behaviors request estimate resets on the floor; the velocity uncertainty is checked at take-off and in flight; amended 2026-11-07 | Mixed: the checks, the reset command and landing in flight were the AI's; the software flow cut test, and (amended) behaviors deciding when to reset with no slot and no wait, were mine |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
