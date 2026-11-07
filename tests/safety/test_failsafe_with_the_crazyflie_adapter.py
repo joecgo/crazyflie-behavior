@@ -16,6 +16,7 @@ import pytest
 
 from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_STATUS_GRACE, CrazyflieAdapter
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import LEVEL_VERTICAL_SPEED
+from crazyflie_behavior.drone.crazyflie.touchdown import TOUCHDOWN_HOLD
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.safety.safety_layer import LOW_BATTERY_VOLTAGE, SafetyLayer
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
@@ -38,6 +39,27 @@ def report_everything(adapter: CrazyflieAdapter, status: DroneStatus, battery_vo
     telemetry.write_estimates_and_status(Vector3(0.0, 0.0, 0.3), Vector3.ZERO, status, None)
     telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(0.3)}, None)
     telemetry.write_battery_voltage(battery_voltage, None)
+
+
+def adapter_flying_above_the_bad_flow_zone(clock: SimClock, fake_link: MagicMock) -> CrazyflieAdapter:
+    """Take off to 1.0 m and tick the initial climb with good flow until it hands over (ADR-0048)."""
+    adapter = CrazyflieAdapter(clock)
+    adapter._sync_crazyflie = fake_link
+    adapter.take_off(1.0)
+    height = 0.0
+    while adapter._is_in_initial_climb:
+        if height > 1.0:
+            pytest.fail("the initial climb never handed over")
+        clock.advance(TICK)
+        height += LEVEL_VERTICAL_SPEED * TICK
+        telemetry = adapter._telemetry
+        telemetry.write_position_estimate(Vector3(0.5, -0.25, height), None)
+        telemetry.write_velocity_estimate(Vector3(0.0, 0.0, LEVEL_VERTICAL_SPEED), None)
+        telemetry.write_drone_status(FLYING, None)
+        telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(height)}, None)
+        adapter.update_take_off_and_landing(adapter.take_snapshot(TICK))
+    fake_link.reset_mock()
+    return adapter
 
 
 def level_setpoints(fake_link: MagicMock) -> list[float]:
@@ -80,7 +102,7 @@ def test_the_failsafe_on_a_drone_that_never_flew_just_stops_the_motors() -> None
     fake_link.cf.high_level_commander.stop.assert_called_once()
 
 
-def test_the_failsafe_lands_a_flying_drone() -> None:
+def test_the_failsafe_lands_during_the_initial_climb_though_the_status_says_flying() -> None:
     clock = SimClock(start=10.0)
     fake_link = MagicMock()
     adapter = adapter_after_a_take_off(clock, fake_link)
@@ -91,3 +113,29 @@ def test_the_failsafe_lands_a_flying_drone() -> None:
 
     assert level_setpoints(fake_link)[-1] == pytest.approx(-LEVEL_VERTICAL_SPEED)  # the final descent
     fake_link.cf.high_level_commander.stop.assert_not_called()
+
+
+def test_the_failsafe_lands_a_drone_above_the_bad_flow_zone_with_the_landing_approach_then_the_final_descent() -> None:
+    clock = SimClock(start=10.0)
+    fake_link = MagicMock()
+    adapter = adapter_flying_above_the_bad_flow_zone(clock, fake_link)
+    adapter._telemetry.write_estimates_and_status(Vector3(0.5, -0.25, 1.0), Vector3.ZERO, FLYING, None)
+    adapter._telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(1.0)}, None)
+    adapter._telemetry.write_battery_voltage(LOW_BATTERY_VOLTAGE - 0.1, None)
+
+    fail_the_pre_check_and_send(adapter, clock)
+
+    go_to = fake_link.cf.high_level_commander.go_to
+    go_to.assert_called_once()  # the landing approach, down to the final descent height
+    assert go_to.call_args.args[2] < 1.0
+    fake_link.cf.high_level_commander.land.assert_not_called()
+    fake_link.cf.high_level_commander.stop.assert_not_called()
+
+    # The tick loop keeps updating the landing: the final descent, then touchdown.
+    for _ in range(round((TOUCHDOWN_HOLD + 2.0) / TICK)):
+        clock.advance(TICK)
+        adapter._telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(0.02)}, None)
+        adapter.update_take_off_and_landing(adapter.take_snapshot(TICK))
+
+    assert level_setpoints(fake_link)[0] == pytest.approx(-LEVEL_VERTICAL_SPEED)
+    fake_link.cf.high_level_commander.stop.assert_called_once()
