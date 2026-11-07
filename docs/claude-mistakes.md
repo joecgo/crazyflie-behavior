@@ -28,16 +28,16 @@ decisions are recorded), *communication* (how Claude explains things).
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 4 | 14 |
-| safety design | 4 | 14 |
+| safety design | 4 | 15 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
 | communication | 7 | 18 |
 | testing | 0 | 9 |
-| process | 3 | 12 |
-| **Total** | **29** | **80** |
+| process | 4 | 12 |
+| **Total** | **30** | **81** |
 
-Of the 29 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 23. So far, 7 of the 11 recommendation
+Of the 30 I pointed out, a later Claude review would probably have caught
+none, maybe 6, and probably not 24. So far, 7 of the 11 recommendation
 mistakes needed me, and 7 of the 25 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
@@ -49,6 +49,21 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-07: Extra usage spent without a cost estimate or a usage check
+
+- **What happened:** the project review's brief said to check `get_usage`
+  now and then and stop if a limit got tight. With the 5-hour limit used up,
+  Claude recommended waiting but gave no cost estimate in dollars. When I
+  said continue, it ran about 40 tool calls on Opus without checking usage
+  again, each one re-reading a context of 100k to 200k tokens: about $8 of
+  extra usage in 10 minutes (my figure), until I stopped it.
+- **Would a later Claude review have caught it?** No: it isn't in the code
+  or the docs.
+- **Kind:** process.
+- **Takeaway:** before working on extra usage, give a cost estimate in
+  dollars, then check usage every few steps. Every step re-reads the whole
+  context, so fewer, bigger steps cost less.
 
 ### 2026-11-07: Landing work hidden in take_snapshot, never decided
 
@@ -585,6 +600,23 @@ times so far).
 - **Kind:** communication.
 - **Takeaway:** a number that indexes a table is read from the table, not
   from a comment that describes it.
+
+### 2026-11-06: A hand-over order justified by a cflib call it doesn't match
+
+- **What happened:** since the first adapter code (2026-10-20),
+  `_release_velocity_streaming()` has released the setpoint stream before
+  the high-level command, with a comment saying cflib's `MotionCommander`
+  does the same before landing. It doesn't: `MotionCommander.land()`
+  releases after its stop setpoint, with the motors already off. In flight,
+  the firmware commands the motors off from the release until the high-level
+  command arrives (backlog #56). Nothing streams in flight yet, so it never
+  flew.
+- **How it was caught:** checking cflib's `motion_commander.py` while
+  explaining backlog #56.
+- **Kind:** safety design.
+- **Takeaway:** when code cites a library as precedent, check that the
+  library does it in the same situation. The review checklist's first two
+  questions already ask for this.
 
 ### 2026-11-06: ADR-0041 amended twice without its status line saying so
 

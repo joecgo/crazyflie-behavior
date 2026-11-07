@@ -1,6 +1,6 @@
 ---
 name: project-review
-description: "Code review for the crazyflie-behavior repo: runs /code-review for bugs, then this project's own checks (its ADRs, glossary, failure-handling rules and REVIEW.md checklist) and reports one ranked list. Use it instead of a plain /code-review whenever you review changes in this repo, and always before committing changes to the safety layer, the Crazyflie adapter or the tick loop. Arguments: a level (default high), fresh for a fresh-context clarity read, and an optional target (a commit, range or path)."
+description: "Code review for the crazyflie-behavior repo: runs /code-review for bugs, then this project's own checks (its ADRs, glossary, failure-handling rules and REVIEW.md checklist) and reports one ranked list. Use it instead of a plain /code-review whenever you review changes in this repo, and always before committing changes to the safety layer, the Crazyflie adapter or the tick loop. Arguments: a level (default high), fresh for a fresh-context clarity read, a step budget (default 20), and an optional target (a commit, range or path)."
 ---
 
 # Project review
@@ -14,7 +14,7 @@ then the project's own checks, and reports them together.
 
 ## Arguments
 
-`/project-review [level] [fresh] [target]`, in any order:
+`/project-review [level] [fresh] [budget N] [target]`, in any order:
 
 - **level:** low, medium, high, xhigh or max, passed to `/code-review`.
   Default high, which CLAUDE.md asks for on safety code.
@@ -22,6 +22,26 @@ then the project's own checks, and reports them together.
   because it starts a separate agent and costs more.
 - **target:** a commit, a range or a path, passed to `/code-review`. Default:
   the uncommitted changes, since reviews here run before committing.
+- **budget N:** the most steps the review takes, where a step is one round
+  of tool calls. Default 20. Check `get_usage` halfway through. At the
+  budget, stop and report what you have.
+
+## Keeping it cheap
+
+Every step re-reads the whole conversation, so each one costs more than the
+last.
+
+- **Batch reads.** One shell call that prints every diff and function the
+  review needs, not one call per file. Read the functions around each hunk,
+  not whole unrelated files.
+- **Verify only safety and correctness.** Spend steps confirming a finding
+  (reading a path to its end, planting a bug, checking a library's source)
+  only when it could affect safety or correctness. Report the rest as found:
+  verified if the diff itself shows it, plausible otherwise.
+- **Ask before subagents.** At xhigh or max, `/code-review` starts subagents
+  that the step budget doesn't count. Before running it at those levels, tell
+  the user and wait for a yes. Seven of them used up the 5-hour limit on the
+  first review of the unpushed ADR-0048 work.
 
 ## Steps
 
@@ -66,7 +86,8 @@ file, a line, the claim, and what it costs if it stays.
    is a reader without the author's context, which is what the user brings.
 8. **Report.** Merge everything into one list, most severe first: safety and
    correctness, then ADR conflicts, then names, comments and the rest. Drop
-   duplicates. Call `ReportFindings` once with the full list, including the
+   duplicates, and mark each one verified or plausible. Call `ReportFindings`
+   once with the full list, including the
    `/code-review` findings, using categories such as `correctness`, `adr`,
    `glossary`, `failure-handling`, `review-checklist` and `clarity`. Don't fix
    anything unless asked: design findings are the user's call.
