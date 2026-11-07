@@ -19,7 +19,13 @@
   block's debug lines ([ADR-0050](../../decisions/0050-diagnostic-log-block-to-the-debug-log.md)):
   attitude (roll, pitch, yaw), the four motor outputs, and the Flow deck's
   surface quality and shutter time.
+- Also record the take-off: the settle height and the final descent height
+  from the log, whether the cap tripped, and the sideways shift at take-off.
+  Compare them with Failsafe high's.
 - Pass if:
+  - [ ] The initial climb ends normally: the log shows `Initial climb done:
+        settle height ___ m, final descent height ___ m`, with no warning that
+        the speed hasn't settled (the cap) or that the climb ran out of time.
   - [ ] The hover test reports done: armed within 2 s, reached 0.5 m (within
         0.1 m) within 5 s, hovered, landed, no error logged.
   - [ ] A 60 s hover is flown, and the drift over it is measured from the
@@ -27,8 +33,10 @@
   - [ ] **The landing is within 3 cm of the take-off point**, measured with a
         tape measure from the take-off mark to the drone (the drone's own
         estimate drifts).
-  - [ ] Motors stop only after touchdown is confirmed. A landing that needed
-        the final descent still passes, but is recorded as a finding.
+  - [ ] Motors stop only after touchdown is confirmed, at the end of a level
+        final descent (`Final descent: level, from ___ m by the down range`).
+        The slow descent or the final descent's time limit still passes, but
+        is recorded as a finding.
   - [ ] Each `VERIFY` item still open is confirmed or turned into a code change
         or backlog item. *List to be written from the First flight 1 findings.*
 - Simulator prediction, if simulated: ___
@@ -48,7 +56,8 @@
 - [ ] Start: `.venv\Scripts\python -m crazyflie_behavior.programs.hover --crazyflie --hover-seconds 60`
 - [ ] Watch the flight; note anything unexpected while it happens
 - [ ] After landing, measure from the take-off mark to the drone with a tape measure
-- [ ] Note whether the landing needed the final descent (the log says so)
+- [ ] Note how far the drone shifted sideways during the take-off: from the take-off mark to below the drone at 0.5 m (the video helps)
+- [ ] Note whether the final descent was level or the slow descent (the log says so)
 - [ ] Note whether the drone slid, and whether before or after the propellers stopped
 - [ ] Note whether it swings mid-air, and which way it circles seen from above
 

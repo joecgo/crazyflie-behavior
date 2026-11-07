@@ -15,8 +15,14 @@
   The failsafe program (`programs.failsafe --crazyflie --fault-at hover`,
   ADR-0041) takes off to 0.5 m, hovers about 3 s, then a wrapper forges a low
   battery reading. The real pre-check fails and the failsafe lands the drone.
-- Pass if: *Session 1's criteria; to be revised with backlog #51 (the landing
-  logs).*
+- Also check the take-off: this is the first full initial climb (Failsafe low
+  lands during it, [ADR-0056](../../decisions/0056-adr-0048-as-built.md)).
+  Record the settle height and the final descent height from the log, whether
+  the cap tripped, and the sideways shift at take-off.
+- Pass if:
+  - [ ] The initial climb ends normally: the log shows `Initial climb done:
+        settle height ___ m, final descent height ___ m`, with no warning that
+        the speed hasn't settled (the cap) or that the climb ran out of time.
   - [ ] The log shows `FAULT INJECTED: battery voltage forged`.
   - [ ] The pre-check fails with the battery message, and a landing is sent.
   - [ ] The drone lands and its motors stop (seen by the operator: the exit
@@ -24,6 +30,9 @@
   - [ ] The log has no "Failsafe test failed" error (the time limit landing
         the drone is a failed test).
   - [ ] The landing needed no help from the kill switch or rescue landing.
+  - [ ] The final descent was level (`Final descent: level, from ___ m by the
+        down range`) and ended with `Touchdown confirmed`. The slow descent or
+        the final descent's time limit still passes, but is recorded as a finding.
 - Simulator prediction, if simulated: ___
 
 ## Pre-flight checklist
@@ -37,8 +46,10 @@
 
 ## During the test
 
+- [ ] Mark the take-off point on the floor
 - [ ] Start: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --crazyflie --fault-at hover`
 - [ ] Watch the take-off and hover, then the landing; note anything unexpected while it happens
+- [ ] Note how far the drone shifted sideways during the take-off: from the take-off mark to below the drone at 0.5 m (the video helps)
 - [ ] Note whether the drone landed by the failsafe or by the time limit (the log says which)
 - [ ] Note whether touchdown was confirmed (the log warns if it wasn't)
 

@@ -43,7 +43,7 @@
 
 - [ ] Start: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --crazyflie --fault-at climb`
 - [ ] Watch the climb and the landing; note anything unexpected while it happens (sideways drift during the climb, where it stopped climbing)
-- [ ] Note whether the drone landed by the failsafe or by the time limit (the log says which)
+- [ ] Note whether the drone landed by the failsafe, or by the climb's time limit or settle cap (the log says which)
 - [ ] Note whether touchdown was confirmed or the final descent ran out its time limit
 
 ## Flights
