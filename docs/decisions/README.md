@@ -66,5 +66,6 @@ This column is honest about which ideas were mine.
 | [0055](0055-take-off-and-landing-update-each-tick.md) | Take-off and landing run in a per-tick drone call after the safety pre-check; take_snapshot only copies; supersedes 0040 | Mixed: the separate call (over the AI's take_snapshot), its place and name were mine; keeping it below behaviors and the mock's part were the AI's |
 | [0056](0056-adr-0048-as-built.md) | ADR-0048 as built: low take-off targets are a bug, the initial climb has a time limit, commands wait out the level parts | Mixed: the rules were AI recommendations accepted; no separate climb test and no flashlight were mine |
 | [0057](0057-failsafe-low-fires-at-5-cm.md) | Failsafe low forges its fault at a down range of 0.05 m (was 0.10 m), two readings; amends 0049 | My idea; the AI first recommended keeping 0.10 m, then agreed once the goal (take-off to landing switch) was stated |
+| [0058](0058-release-setpoint-priority-after-motor-stop.md) | After a motor stop, release the setpoint priority; close the link only once the drone isn't flying; the drone status decodes can-arm and locked | Mixed: keeping the Crazyflie term "locked" was mine; the rest were AI recommendations accepted |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
