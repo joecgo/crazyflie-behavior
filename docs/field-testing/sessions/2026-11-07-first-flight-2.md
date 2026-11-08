@@ -28,7 +28,7 @@ geofence was set up.
 ## Before the session
 *Done at the desk, not at the session. If any code changes after these runs, run them again.*
 
-- **Commit to fly:** `<hash>`
+- **Commit to fly:** `189a0e1`
 - [ ] Mock adapter run of each test's program on that commit passed:
   - [ ] Failsafe low: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at climb`
   - [ ] Failsafe high: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at hover`
