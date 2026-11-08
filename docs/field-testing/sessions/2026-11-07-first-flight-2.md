@@ -37,7 +37,14 @@ geofence was set up.
 ## Results
 *From the operator or the recordings, never from an AI. One line per test: passed, failed or not flown.*
 
--
+Joe's verdict, said on 2026-11-08: all the flights in this session failed,
+because of the launch failures and the massive drifting on take-off.
+
+- Failsafe low: failed. Findings: backlog #67 (arm refused after a flight),
+  #68 (sideways drift during the initial climb).
+- Failsafe high: failed. Findings: backlog #67-#69.
+- Hover: failed. Findings: backlog #53, #67-#72.
+- Bench: not flown. Moves to the next session.
 
 ## Next session
 *What the results decide: another session, or the milestone is done.*
