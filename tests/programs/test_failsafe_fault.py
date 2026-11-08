@@ -306,7 +306,7 @@ def test_the_failsafe_test_waits_longer_than_the_hover_before_the_fault() -> Non
 # --- The climb trigger (Failsafe low, ADR-0049) ---------------------------------------
 
 
-def climbing_drone(height: float = 0.02)-> tuple[StandInDrone, ForgedLowBatteryDrone]:
+def climbing_drone(height: float = 0.02) -> tuple[StandInDrone, ForgedLowBatteryDrone]:
     """A wrapped drone with the climb trigger, a take-off sent, flying at `height` (meters)."""
     stand_in = StandInDrone()
     stand_in.height = height
