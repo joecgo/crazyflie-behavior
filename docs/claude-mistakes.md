@@ -28,17 +28,17 @@ decisions are recorded), *communication* (how Claude explains things).
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 4 | 14 |
-| safety design | 4 | 15 |
+| safety design | 5 | 15 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
-| communication | 7 | 18 |
+| communication | 7 | 19 |
 | testing | 0 | 9 |
 | process | 4 | 12 |
-| **Total** | **30** | **81** |
+| **Total** | **31** | **82** |
 
-Of the 30 I pointed out, a later Claude review would probably have caught
-none, maybe 6, and probably not 24. So far, 7 of the 11 recommendation
-mistakes needed me, and 7 of the 25 communication mistakes. The first
+Of the 31 I pointed out, a later Claude review would probably have caught
+none, maybe 7, and probably not 24. So far, 7 of the 11 recommendation
+mistakes needed me, and 7 of the 26 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -49,6 +49,23 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-08: The level final descent's motor stop locks the drone
+
+- **What happened:** the level final descent (ADR-0048, ADR-0056) ends with
+  `send_stop_setpoint`, which keeps the firmware's setpoint priority above
+  the high-level planner's, and the link closes about 10 ms later. With no
+  fresh setpoint while the supervisor still counts the drone as flying, the
+  2026.08 firmware moves to Locked, which needs a reboot. In First flight 2
+  every arm after a flight was refused until a power cycle (backlog #67).
+  Nobody checked the supervisor's state machine for what follows a motor
+  stop, and backlog #62 assumed the firmware source couldn't be checked,
+  though it is one download away. Fixed by ADR-0058.
+- **Would a later Claude review have caught it?** Maybe: only a review that
+  read the firmware's supervisor for "what state does the drone end in".
+- **Kind:** safety design.
+- **Takeaway:** for every way a flight ends, check in the firmware source
+  which supervisor state the drone ends in, and that it can arm again.
 
 ### 2026-11-07: Extra usage spent without a cost estimate or a usage check
 
@@ -549,6 +566,19 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-08: "First flight 1 didn't hit it", with cflib's close unchecked
+
+- **What happened:** explaining the lock behind backlog #67, Claude said
+  First flight 1's landings couldn't have locked the drone. It hadn't read
+  cflib's `close_link()`, which sends a zero-thrust setpoint that can lock it
+  the same way. Whether those flights locked isn't known. The same message
+  said the firmware files answer the second half of backlog #62, which
+  wasn't checked. Corrected in chat before the ADR was written.
+- **How it was caught:** reading `close_link()` while writing ADR-0058.
+- **Kind:** communication.
+- **Takeaway:** before explaining why an earlier case worked, check every
+  call on its path, the library's close and cleanup included.
 
 ### 2026-11-07: "About 4.5 s" for the no-flow uncertainty, read from an upper bound
 

@@ -21,6 +21,9 @@ takeaway applies to reviews, it's added here as a question.
 - Windows-only code: is it checked against Windows' documented behavior, and
   is every Windows call's result checked? Continuous integration runs on
   Linux.
+- For each way a flight ends (landing, failsafe, disarm, link close): which
+  firmware supervisor state does the drone end in, checked in the source, and
+  can it arm again without a reboot?
 
 ## Fakes and the real drone
 
