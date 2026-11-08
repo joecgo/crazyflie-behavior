@@ -7,7 +7,7 @@ Autonomous behavior experiments for the [Bitcraze Crazyflie 2.1+](https://www.bi
 **The goal: a drone that plays hide-and-seek with a small child.** While the
 child waits behind a gate, the drone flies off, hides behind a wall, lands and
 turns its motors off. The child hunts for it, and when they pick it up, it
-lights up and the computer plays a fanfare. Game-AI techniques (a map of the
+lights up and the drone plays a fanfare. Game-AI techniques (a map of the
 room, choosing hiding spots, line-of-sight checks) on a real robot, where
 sensors are noisy and positions drift. The game is safe by design: the drone
 flies only when the play area is empty. See [the rules](docs/hide-and-seek.md).
