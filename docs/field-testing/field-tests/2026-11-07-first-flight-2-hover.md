@@ -3,7 +3,7 @@
 - **Session:** [First flight 2](../sessions/2026-11-07-first-flight-2.md)
 - **Test:** Hover (flight)
 - **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point, night
-- **Git commit:** `<hash>` (must be committed before flying)
+- **Git commit:** `189a0e1`
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger / Buzzer, battery #
 - **Firmware / cflib:** 2026.08, release 2026.10, unmodified ([ADR-0047](../../decisions/0047-pinned-firmware-release-warn-on-mismatch.md)) / 0.1.34
 
