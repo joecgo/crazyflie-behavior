@@ -104,9 +104,6 @@ The console shows each step and each command sent, and the log file gets
 every snapshot. In a terminal, Ctrl+C lands the drone. In PyCharm, use the **hover** or
 **hover (Crazyflie)** run configuration.
 
-**Not for the real drone yet:** the kill switch and the other operator
-controls come first ([ADR-0027](docs/decisions/0027-operator-controls.md)).
-
 ## Failsafe program
 
 ```powershell

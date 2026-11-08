@@ -1,8 +1,8 @@
-# YYYY-MM-DD-first-flight-2-failsafe-high
+# 2026-11-07-first-flight-2-failsafe-high
 
-- **Session:** [First flight 2](../sessions/YYYY-MM-DD-first-flight-2.md)
+- **Session:** [First flight 2](../sessions/2026-11-07-first-flight-2.md)
 - **Test:** Failsafe high (safety)
-- **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point, ___ (time of day)
+- **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point, night
 - **Git commit:** `<hash>` (must be committed before flying)
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger / Buzzer, battery #
 - **Firmware / cflib:** 2026.08, release 2026.10, unmodified ([ADR-0047](../../decisions/0047-pinned-firmware-release-warn-on-mismatch.md)) / 0.1.34
@@ -68,7 +68,7 @@ Flown 2026-11-07, after Failsafe low and before the Bench. No geofence.
 
 - Flight 2: it worked, but it moved 18 cm to the right and bounced slightly
   on the landing.
-- Battery voltage, time of day, video: not recorded yet.
+- Battery voltage, video: not recorded yet.
 
 ### Computed from the logs (Claude)
 
