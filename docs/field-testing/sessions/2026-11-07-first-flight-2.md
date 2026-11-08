@@ -12,27 +12,24 @@ field test has its own log in [`../field-tests/`](../field-tests/).
 Session 1 ([First flight 1](2026-11-04-first-flight-1.md)) flew all four
 tests. Session 2 flies them again after the code changes, to test the new
 take-off and landing
-([ADR-0048](../../decisions/0048-level-through-the-bad-flow-zone.md)), to
-collect the Bench data session 1 missed, and to land within 3 cm of the
-take-off point.
+([ADR-0048](../../decisions/0048-level-through-the-bad-flow-zone.md)) and to
+land within 3 cm of the take-off point.
 
-1. [Bench](../field-tests/2026-11-07-first-flight-2-bench.md) (Run A, then Run B)
-2. [Failsafe low](../field-tests/2026-11-07-first-flight-2-failsafe-low.md)
-3. [Failsafe high](../field-tests/2026-11-07-first-flight-2-failsafe-high.md)
-4. [Hover](../field-tests/2026-11-07-first-flight-2-hover.md)
+1. [Failsafe low](../field-tests/2026-11-07-first-flight-2-failsafe-low.md)
+2. [Failsafe high](../field-tests/2026-11-07-first-flight-2-failsafe-high.md)
+3. [Hover](../field-tests/2026-11-07-first-flight-2-hover.md)
 
 Each test needs the ones before it to pass. If one fails, stop and write it
 up before flying the next (README, "Sessions and test logs").
 
-Flown on 2026-11-07 in a changed order, Joe's call: Failsafe low, Failsafe
-high and Hover first, the Bench last. No geofence was set up.
+The Bench was dropped from this session: it moves to the next one. No
+geofence was set up.
 
 ## Before the session
 *Done at the desk, not at the session. If any code changes after these runs, run them again.*
 
 - **Commit to fly:** `<hash>`
 - [ ] Mock adapter run of each test's program on that commit passed:
-  - [ ] Bench: `.venv\Scripts\python -m crazyflie_behavior.programs.bench`
   - [ ] Failsafe low: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at climb`
   - [ ] Failsafe high: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at hover`
   - [ ] Hover: `.venv\Scripts\python -m crazyflie_behavior.programs.hover --hover-seconds 60`
@@ -44,4 +41,11 @@ high and Hover first, the Bench last. No geofence was set up.
 
 ## Next session
 *What the results decide: another session, or the milestone is done.*
+
+Plan: fly all four tests again, in this order:
+
+1. Bench
+2. Failsafe low
+3. Failsafe high
+4. Hover, with chirps (`--chirp`)
 
