@@ -30,10 +30,12 @@ from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.commander import SET_SETPOINT_CHANNEL
 from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.supervisor import (
+    BIT_CAN_BE_ARMED,
     BIT_IS_ARMED,
     BIT_IS_AUTO_ARMED,
     BIT_IS_CRASHED,
     BIT_IS_FLYING,
+    BIT_IS_LOCKED,
     BIT_IS_TUMBLED,
 )
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
@@ -117,6 +119,9 @@ POSITION_ESTIMATE_TIME_LIMIT = 20.0
 FIRST_TELEMETRY_TIME_LIMIT = 3.0
 """Seconds for every telemetry value to arrive once (ADR-0031). The battery,
 streamed once a second, is the slowest."""
+NOT_FLYING_TIME_LIMIT = 3.0
+"""Seconds that closing the link waits, after a motor stop, for the drone to report not flying
+(ADR-0058). Its status keeps saying flying for 2 s after the motors stop."""
 # ------------------------------------------------------------------------------
 
 _MULTIRANGER_VARIABLES = {
@@ -186,6 +191,10 @@ def _init_drivers_once() -> None:
         _drivers_initialized = True
 
 
+def _yes_no(flag: bool) -> str:
+    return "yes" if flag else "no"
+
+
 def drone_status_from_bitfield(bitfield: int) -> DroneStatus:
     """Decode the supervisor's state bitfield (bit positions from cflib)."""
 
@@ -197,6 +206,8 @@ def drone_status_from_bitfield(bitfield: int) -> DroneStatus:
         is_flying=bit(BIT_IS_FLYING),
         is_crashed=bit(BIT_IS_CRASHED),
         is_tumbled=bit(BIT_IS_TUMBLED),
+        can_arm=bit(BIT_CAN_BE_ARMED),
+        is_locked=bit(BIT_IS_LOCKED),
     )
 
 
@@ -227,6 +238,8 @@ class CrazyflieAdapter(DroneInterface):
         """Meters per second, up: the latest level setpoint's, while the stream is level."""
         self._is_airborne = False
         """A take-off was sent (or the flight was taken over) and the motors haven't been stopped since."""
+        self._has_stopped_motors = False
+        """A motor stop was sent this session, so closing the link waits for not flying (ADR-0058)."""
         self._is_ignoring_hover = False
         """The latest hover was ignored because the drone isn't one that may be flying: the log line for
         it comes once per streak."""
@@ -271,6 +284,7 @@ class CrazyflieAdapter(DroneInterface):
         self._dropped_state_count = 0
         self._latest_status_bitfield = None
         self._is_airborne = False  # a new session learns what the drone is doing from the drone
+        self._has_stopped_motors = False
         self._is_ignoring_hover = False
         self._is_skipping_buzzer_commands = False
         self._is_drone_state_unknown = True
@@ -330,6 +344,9 @@ class CrazyflieAdapter(DroneInterface):
         try:
             if self._is_airborne:
                 self._land_and_wait_for_touchdown()
+            if self._has_stopped_motors:
+                # That setpoint also locks a drone that still reports flying (ADR-0058).
+                self._wait_for_not_flying()
         finally:
             # Clean up even if landing failed, e.g. because the link dropped.
             self._shut_down_link()
@@ -337,6 +354,17 @@ class CrazyflieAdapter(DroneInterface):
     # --- Commands -----------------------------------------------------------
 
     def arm(self) -> None:
+        status = self._telemetry.latest_drone_status()
+        if status is not None:
+            # The drone answers an arm request with only "refused", never why (ADR-0058).
+            level = logging.WARNING if status.value.is_locked else logging.INFO
+            logger.log(
+                level,
+                "Arm requested. The drone reports: armed %s, can arm %s, locked %s.",
+                _yes_no(status.value.is_armed),
+                _yes_no(status.value.can_arm),
+                _yes_no(status.value.is_locked),
+            )
         self._crazyflie.supervisor.send_arming_request(True)
 
     def disarm(self) -> None:
@@ -578,11 +606,20 @@ class CrazyflieAdapter(DroneInterface):
         commander.go_to(here.x, here.y, height, DEFAULT_YAW_RAD, duration)
 
     def _stop_motors(self) -> None:
+        """Stop the motors, then release the setpoint priority (ADR-0058).
+
+        Without the release, the stopped planner's motors-off setpoints are refused, and a
+        drone that still counts as flying locks once its setpoint is 2 s old.
+        """
+        commander = self._crazyflie.commander
         if self._is_streaming:
-            self._crazyflie.commander.send_stop_setpoint()
+            commander.send_stop_setpoint()
             self._is_streaming = False
             self._level_vertical_speed = None
         self._crazyflie.high_level_commander.stop()  # stops the trajectory and the motors
+        # The release hands the motors to the planner, so it comes after the planner's stop.
+        commander.send_notify_setpoint_stop()
+        self._has_stopped_motors = True
         self._is_airborne = False
         self._is_in_initial_climb = False
         self._cancel_landing()
@@ -804,6 +841,7 @@ class CrazyflieAdapter(DroneInterface):
         """
         self._wait_until(
             lambda: self._latest_status_bitfield is not None,
+            FIRST_TELEMETRY_TIME_LIMIT,
             lambda: (
                 f"Waiting for the drone's status took longer than {FIRST_TELEMETRY_TIME_LIMIT:g} s. "
                 "Check the Crazyflie is in range, and that its firmware logs its status."
@@ -856,7 +894,11 @@ class CrazyflieAdapter(DroneInterface):
 
         # The message uses the list from the check that timed out: a value arriving just after
         # it can't change what the message says.
-        self._wait_until(has_every_value, lambda: self._first_telemetry_time_limit_message(missing_values))
+        self._wait_until(
+            has_every_value,
+            FIRST_TELEMETRY_TIME_LIMIT,
+            lambda: self._first_telemetry_time_limit_message(missing_values),
+        )
 
     def _first_telemetry_time_limit_message(self, missing_values: list[str]) -> str:
         message = (
@@ -874,13 +916,47 @@ class CrazyflieAdapter(DroneInterface):
             )
         return message + "Check the Crazyflie is in range, and that its firmware logs these values."
 
-    def _wait_until(self, is_done: Callable[[], bool], time_limit_message: Callable[[], str]) -> None:
-        """Wait up to `FIRST_TELEMETRY_TIME_LIMIT` for `is_done()`, or raise a TimeoutError.
+    def _wait_for_not_flying(self) -> None:
+        """Wait until a fresh drone status says not flying, so the link close can't lock the drone (ADR-0058).
+
+        At the time limit, warns and returns: the link closes anyway.
+        """
+
+        def is_not_flying() -> bool:
+            status = self._telemetry.latest_drone_status()
+            if status is None or status.age(self._clock.now()) > MAX_READING_AGE:
+                return False
+            return not status.value.is_flying
+
+        try:
+            self._wait_until(
+                is_not_flying,
+                NOT_FLYING_TIME_LIMIT,
+                lambda: (
+                    f"The drone still didn't report not flying after {NOT_FLYING_TIME_LIMIT:g} s of waiting. "
+                    "Closing the link anyway: if it still counts as flying, it may lock and need a power cycle."
+                ),
+            )
+        except TimeoutError as error:
+            logger.warning("%s", error)
+            return
+        status = self._telemetry.latest_drone_status()
+        if status is None:
+            return  # can't happen: the wait just saw it, and the buffer never clears a value
+        if status.value.is_locked:
+            logger.warning("The drone reports it's locked: it refuses to arm until it's power cycled.")
+        else:
+            logger.info("The drone reports not flying and isn't locked. Can arm: %s.", _yes_no(status.value.can_arm))
+
+    def _wait_until(
+        self, is_done: Callable[[], bool], time_limit: float, time_limit_message: Callable[[], str]
+    ) -> None:
+        """Wait up to `time_limit` seconds for `is_done()`, or raise a TimeoutError.
 
         Checks every wait slice. Unlike cflib's waits (ADR-0029), a plain sleep
         ends at once on the interrupt signal, so this needs no helper thread.
         """
-        deadline = self._clock.now() + FIRST_TELEMETRY_TIME_LIMIT
+        deadline = self._clock.now() + time_limit
         while not is_done():
             now = self._clock.now()
             if now >= deadline:

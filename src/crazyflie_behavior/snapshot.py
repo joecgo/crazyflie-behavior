@@ -108,6 +108,10 @@ class DroneStatus:
     is_flying: bool
     is_crashed: bool
     is_tumbled: bool
+    can_arm: bool
+    """An arm request would be accepted now. False while armed."""
+    is_locked: bool
+    """The drone refuses to arm until it's power cycled (the Crazyflie's term)."""
 
 
 @dataclass(frozen=True, slots=True)

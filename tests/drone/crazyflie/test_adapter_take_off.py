@@ -37,8 +37,10 @@ from crazyflie_behavior.timing.clock import SimClock
 TICK = 0.05
 CLIMB_STEP = LEVEL_VERTICAL_SPEED * TICK
 """Meters climbed per tick."""
-FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False)
-ON_THE_FLOOR = DroneStatus(is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False)
+FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=False)
+ON_THE_FLOOR = DroneStatus(
+    is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=False
+)
 FAST = 2 * SETTLE_SPEED
 """Meters per second: a horizontal speed estimate that never counts as settled."""
 START = 10.0

@@ -43,7 +43,9 @@ SAFETY_LOGGER = "crazyflie_behavior.safety.safety_layer"
 NOW = 10.0
 """The tick's time in every hand-built snapshot."""
 
-ON_THE_FLOOR = DroneStatus(is_armed=False, is_flying=False, is_crashed=False, is_tumbled=False)
+ON_THE_FLOOR = DroneStatus(
+    is_armed=False, is_flying=False, is_crashed=False, is_tumbled=False, can_arm=True, is_locked=False
+)
 ARMED = replace(ON_THE_FLOOR, is_armed=True)
 FLYING = replace(ARMED, is_flying=True)
 

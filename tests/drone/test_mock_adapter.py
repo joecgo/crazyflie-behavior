@@ -316,6 +316,22 @@ def test_move_to_rejects_a_non_positive_duration_as_a_bug() -> None:
         drone.move_to(Vector3(1.0, 0.0, 0.5), duration=0.0)
 
 
+def test_the_mock_can_arm_only_on_the_floor_while_disarmed_and_never_locks() -> None:
+    clock = SimClock()
+    drone = MockAdapter(clock)
+    drone.connect()
+    on_the_floor = status_of(snapshot_now(drone))
+    drone.arm()
+    tick(drone, clock)
+    armed = status_of(snapshot_now(drone))
+    drone.emergency_stop()  # locks a real Crazyflie
+    tick(drone, clock)
+    after_the_emergency_stop = status_of(snapshot_now(drone))
+
+    assert [on_the_floor.can_arm, armed.can_arm, after_the_emergency_stop.can_arm] == [True, False, True]
+    assert not any(status.is_locked for status in (on_the_floor, armed, after_the_emergency_stop))
+
+
 def test_emergency_stop_drops_and_disarms() -> None:
     clock = SimClock()
     drone = flying_drone(clock)

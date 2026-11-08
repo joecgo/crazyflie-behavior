@@ -47,8 +47,10 @@ def call_names(fake_link: MagicMock) -> list[str]:
     return [name for name, _, _ in fake_link.mock_calls]
 
 
-ON_THE_FLOOR = DroneStatus(is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False)
-FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False)
+ON_THE_FLOOR = DroneStatus(
+    is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=False
+)
+FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=False)
 TICK = 0.05
 
 
@@ -250,6 +252,60 @@ def test_disarm_stops_the_motors_before_disarming(adapter: CrazyflieAdapter, fak
     calls = call_names(fake_link)
     assert calls.index("cf.high_level_commander.stop") < calls.index("cf.supervisor.send_arming_request")
     fake_link.cf.supervisor.send_arming_request.assert_called_once_with(False)
+
+
+def test_a_motor_stop_releases_the_setpoint_priority_after_both_stops(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    # Without the release, the firmware refuses the stopped planner's setpoints and locks (ADR-0058).
+    adapter.take_off(1.0)  # the initial climb streams setpoints
+
+    adapter.disarm()
+
+    calls = call_names(fake_link)
+    release = calls.index("cf.commander.send_notify_setpoint_stop")
+    assert calls.index("cf.commander.send_stop_setpoint") < release
+    assert calls.index("cf.high_level_commander.stop") < release
+
+
+def test_a_motor_stop_without_a_stream_still_releases_the_setpoint_priority(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    adapter.land()  # on the floor: just a motor stop
+
+    calls = call_names(fake_link)
+    assert "cf.commander.send_stop_setpoint" not in calls
+    assert calls.index("cf.high_level_commander.stop") < calls.index("cf.commander.send_notify_setpoint_stop")
+
+
+def test_an_arm_request_logs_what_the_drone_reports(
+    adapter: CrazyflieAdapter, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)
+
+    with caplog.at_level(logging.INFO, logger=adapter_module.__name__):
+        adapter.arm()
+
+    assert [(record.levelno, record.getMessage()) for record in caplog.records] == [
+        (logging.INFO, "Arm requested. The drone reports: armed yes, can arm no, locked no.")
+    ]
+    fake_link.cf.supervisor.send_arming_request.assert_called_once_with(True)
+
+
+def test_an_arm_request_to_a_locked_drone_warns_and_is_still_sent(
+    adapter: CrazyflieAdapter, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    locked = DroneStatus(
+        is_armed=False, is_flying=False, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=True
+    )
+    adapter._telemetry.write_drone_status(locked, None)
+
+    with caplog.at_level(logging.INFO, logger=adapter_module.__name__):
+        adapter.arm()
+
+    assert [record.levelno for record in caplog.records] == [logging.WARNING]
+    assert "locked yes" in caplog.text
+    fake_link.cf.supervisor.send_arming_request.assert_called_once_with(True)
 
 
 def test_emergency_stop_cuts_the_motors_and_cancels_a_landing(

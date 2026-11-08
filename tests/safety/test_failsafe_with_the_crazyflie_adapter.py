@@ -21,8 +21,10 @@ from crazyflie_behavior.safety.safety_layer import LOW_BATTERY_VOLTAGE, SafetyLa
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
 from crazyflie_behavior.timing.clock import SimClock
 
-ON_THE_FLOOR = DroneStatus(is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False)
-FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False)
+ON_THE_FLOOR = DroneStatus(
+    is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=False
+)
+FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=False)
 TICK = 0.05
 
 

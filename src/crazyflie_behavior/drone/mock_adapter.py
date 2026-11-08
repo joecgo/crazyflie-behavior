@@ -280,6 +280,8 @@ class MockAdapter(DroneInterface):
                 is_flying=self._is_flying,
                 is_crashed=False,
                 is_tumbled=False,
+                can_arm=self._is_connected and not self._is_armed and not self._is_flying,
+                is_locked=False,  # the mock never locks (ADR-0058)
             ),
             drone_time,
         )

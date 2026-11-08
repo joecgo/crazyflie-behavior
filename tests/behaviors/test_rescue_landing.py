@@ -10,7 +10,9 @@ from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.safety.requests import CommandRequest, Land, Verdict
 from crazyflie_behavior.snapshot import DroneStatus, RangeReading, RangeReadings, Snapshot, Stamped
 
-ON_THE_FLOOR = DroneStatus(is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False)
+ON_THE_FLOOR = DroneStatus(
+    is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=False
+)
 FLYING = replace(ON_THE_FLOOR, is_flying=True)
 
 

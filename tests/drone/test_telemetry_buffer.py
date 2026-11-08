@@ -16,7 +16,7 @@ from crazyflie_behavior.snapshot import (
 from crazyflie_behavior.timing.clock import RealClock, SimClock
 
 ORIGIN = Vector3.ZERO
-LANDED = DroneStatus(is_armed=False, is_flying=False, is_crashed=False, is_tumbled=False)
+LANDED = DroneStatus(is_armed=False, is_flying=False, is_crashed=False, is_tumbled=False, can_arm=True, is_locked=False)
 
 
 def test_values_are_stamped_with_arrival_time_and_drone_time() -> None:

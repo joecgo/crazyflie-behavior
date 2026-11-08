@@ -19,7 +19,9 @@ from crazyflie_behavior.snapshot import DroneStatus, RangeReading, RangeReadings
 
 HEIGHT = 0.5
 
-ON_THE_FLOOR = DroneStatus(is_armed=False, is_flying=False, is_crashed=False, is_tumbled=False)
+ON_THE_FLOOR = DroneStatus(
+    is_armed=False, is_flying=False, is_crashed=False, is_tumbled=False, can_arm=True, is_locked=False
+)
 ARMED = replace(ON_THE_FLOOR, is_armed=True)
 FLYING = replace(ARMED, is_flying=True)
 

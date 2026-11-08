@@ -18,14 +18,17 @@ import pytest
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
 from crazyflie_behavior.drone.crazyflie.adapter import (
     DEFAULT_YAW_RAD,
+    NOT_FLYING_TIME_LIMIT,
     TAKE_OFF_STATUS_GRACE,
     VERTICAL_SPEED,
     CrazyflieAdapter,
 )
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import LEVEL_VERTICAL_SPEED
+from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE
 from crazyflie_behavior.drone.crazyflie.touchdown import (
     FINAL_DESCENT_MARGIN,
     HEIGHT_IF_UNKNOWN,
+    MAX_READING_AGE,
     SLOW_DESCENT_SPEED,
     TOUCHDOWN_HOLD,
 )
@@ -58,8 +61,10 @@ def fake_link() -> MagicMock:
     return MagicMock()
 
 
-FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False)
-ON_THE_FLOOR = DroneStatus(is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False)
+FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=False)
+ON_THE_FLOOR = DroneStatus(
+    is_armed=True, is_flying=False, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=False
+)
 
 
 def fly_above_the_bad_flow_zone(
@@ -492,6 +497,126 @@ def test_shutdown_after_our_own_stop_does_not_land_again(
 
     assert len(landing_approach_moves(fake_link)) == 1  # only the first landing
     fake_link.close_link.assert_called_once()
+
+
+# --- Closing the link after a motor stop (ADR-0058) -------------------------------------
+
+LOCKED = DroneStatus(is_armed=False, is_flying=False, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=True)
+
+
+def land_until_the_motors_stop(adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock) -> float:
+    """Land and tick until touchdown stops the motors. Returns when they stopped."""
+    land_and_wait_for_the_landing_approach(adapter, clock)
+    tick_for(adapter, clock, TOUCHDOWN_HOLD + TICK, RangeReading.at_distance(0.02))
+    assert motors_stopped(fake_link)
+    return clock.now()
+
+
+def stream_status_while_waiting(
+    adapter: CrazyflieAdapter, clock: SimClock, monkeypatch: pytest.MonkeyPatch, *, after: float, status: DroneStatus
+) -> None:
+    """From now on, every wait ends with a fresh status: flying, then `status` from `after` seconds on."""
+    changes_at = clock.now() + after
+    sleep_until = clock.sleep_until
+
+    def sleep_and_report(deadline: float) -> None:
+        sleep_until(deadline)
+        report_status(adapter, FLYING if clock.now() < changes_at else status)
+
+    monkeypatch.setattr(clock, "sleep_until", sleep_and_report)
+
+
+def record_link_close_time(clock: SimClock, fake_link: MagicMock) -> list[float]:
+    closed_at: list[float] = []
+    fake_link.close_link.side_effect = lambda: closed_at.append(clock.now())
+    return closed_at
+
+
+def test_the_motor_stop_at_touchdown_releases_the_setpoint_priority_last(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    # First flight 2's lock: the level final descent's stop setpoint, never released.
+    land_until_the_motors_stop(adapter, clock, fake_link)
+
+    calls = [name for name, _, _ in fake_link.mock_calls]
+    release = calls.index("cf.commander.send_notify_setpoint_stop")
+    assert calls.index("cf.commander.send_stop_setpoint") < release
+    assert calls.index("cf.high_level_commander.stop") < release
+
+
+def test_shutdown_after_a_motor_stop_waits_until_the_drone_reports_not_flying(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # cflib's close sends a zero-thrust setpoint, which locks a drone that still counts as flying.
+    stopped_at = land_until_the_motors_stop(adapter, clock, fake_link)
+    stream_status_while_waiting(adapter, clock, monkeypatch, after=2.0, status=ON_THE_FLOOR)
+    closed_at = record_link_close_time(clock, fake_link)
+
+    adapter.disconnect()
+
+    assert closed_at == [pytest.approx(stopped_at + 2.0, abs=WAIT_SLICE)]
+
+
+def test_shutdown_waits_no_longer_than_its_time_limit_and_warns(
+    adapter: CrazyflieAdapter,
+    clock: SimClock,
+    fake_link: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    stopped_at = land_until_the_motors_stop(adapter, clock, fake_link)
+    stream_status_while_waiting(adapter, clock, monkeypatch, after=math.inf, status=ON_THE_FLOOR)
+    closed_at = record_link_close_time(clock, fake_link)
+
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__name__):
+        adapter.disconnect()
+
+    assert closed_at == [pytest.approx(stopped_at + NOT_FLYING_TIME_LIMIT)]
+    assert "didn't report not flying" in caplog.text
+
+
+def test_an_old_not_flying_status_does_not_end_the_wait(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    # Sent once, never refreshed: the link may have gone quiet.
+    land_until_the_motors_stop(adapter, clock, fake_link)
+    report_status(adapter, ON_THE_FLOOR)
+    clock.advance(MAX_READING_AGE + TICK)
+    closed_at = record_link_close_time(clock, fake_link)
+    started_at = clock.now()
+
+    adapter.disconnect()
+
+    assert closed_at == [pytest.approx(started_at + NOT_FLYING_TIME_LIMIT)]
+
+
+def test_shutdown_reports_a_locked_drone(
+    adapter: CrazyflieAdapter,
+    clock: SimClock,
+    fake_link: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    land_until_the_motors_stop(adapter, clock, fake_link)
+    stream_status_while_waiting(adapter, clock, monkeypatch, after=2.0, status=LOCKED)
+
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__name__):
+        adapter.disconnect()
+
+    assert "locked" in caplog.text
+    fake_link.close_link.assert_called_once()
+
+
+def test_shutdown_without_a_motor_stop_does_not_wait(clock: SimClock, fake_link: MagicMock) -> None:
+    # Never flown, and no status at all: a wait would run out its whole time limit.
+    adapter = CrazyflieAdapter(clock)
+    adapter._sync_crazyflie = fake_link
+    closed_at = record_link_close_time(clock, fake_link)
+    started_at = clock.now()
+
+    adapter.disconnect()
+
+    assert closed_at == [started_at]
 
 
 # --- Whether the drone may be flying (ADR-0039) ---------------------------------------
