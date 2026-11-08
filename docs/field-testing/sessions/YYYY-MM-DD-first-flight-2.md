@@ -24,6 +24,9 @@ take-off point.
 Each test needs the ones before it to pass. If one fails, stop and write it
 up before flying the next (README, "Sessions and test logs").
 
+Flown on 2026-11-07 in a changed order, Joe's call: Failsafe low, Failsafe
+high and Hover first, the Bench last. No geofence was set up.
+
 ## Before the session
 *Done at the desk, not at the session. If any code changes after these runs, run them again.*
 

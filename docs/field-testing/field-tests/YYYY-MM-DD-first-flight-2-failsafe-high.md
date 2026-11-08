@@ -55,21 +55,45 @@
 
 ## Flights
 
+Flown 2026-11-07, after Failsafe low and before the Bench. No geofence.
+
 | # | What was run | Result | Data file | Notes |
 |---|---|---|---|---|
-| 1 | | | | |
+| 1 | `failsafe --crazyflie --fault-at hover`, no restart since Failsafe low | Arm refused, exit 1, motors never ran | `logs/2026-11-07_16-38-10_failsafe.log` | |
+| 2 | Same, after a power cycle | Landed by the failsafe, exit 0 | `logs/2026-11-07_16-40-06_failsafe.log` | |
 
 ## Observations
 
 ### Joe
 
--
+- Flight 2: it worked, but it moved 18 cm to the right and bounced slightly
+  on the landing.
+- Battery voltage, time of day, video: not recorded yet.
 
 ### Computed from the logs (Claude)
 
--
+- **Flight 2:** `Initial climb done: settle height 0.113 m, final descent
+  height 0.163 m`, with no cap or time-limit warning. At 0.46 m 4.0 s after
+  the take-off; fault forged 3 s later; the pre-check failed with the battery
+  message and a landing was sent. `Final descent: level, from 0.288 m by the
+  down range`, then `Touchdown confirmed`. No "Failsafe test failed" error,
+  exit 0. 142 ticks, 0 overruns.
+- **Sideways shift by the estimate:** 19.7 cm right by the end of the initial
+  climb (2.45 s), 21.2 cm right at the hover, 1.5 cm back. It held within
+  about 1 cm of that until the fault. Close to the 18 cm Joe saw.
+- **How it drifted:** as the motors spun up (0.35-0.55 s after the take-off),
+  the down range read 0.000 and the estimate moved about 4 cm right. After
+  that the estimate moved right at a nearly steady 0.1 m/s through the whole
+  initial climb. Analysis, not observed: a sideways push at lift-off that
+  nothing corrects while roll and pitch are held level (backlog #68).
+- **Dip after the initial climb:** the height estimate rose to 0.178 m, then
+  fell to 0.115 m within 0.45 s of the switch to the high-level climb, then
+  climbed to 0.5 m. An earlier, smaller sag during the initial climb: 0.089 m
+  down to 0.069 m at 1.0-1.45 s (backlog #69).
+- **Battery** (diagnostic block): 4.022 V at rest before the take-off.
+- **Flight 1:** refused to arm (`success=False, is_armed=False`) right after
+  Failsafe low's flight, with no restart (backlog #67).
 
 ## Next
-- Code changes:
-- ADRs to write or revisit:
+- Code changes and ADRs: backlog #67-#69.
 - Next session's goal:

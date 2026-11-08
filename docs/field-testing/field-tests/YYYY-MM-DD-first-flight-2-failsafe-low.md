@@ -50,21 +50,46 @@
 
 ## Flights
 
+Flown 2026-11-07, before the Bench (the order was Joe's call). No geofence.
+
 | # | What was run | Result | Data file | Notes |
 |---|---|---|---|---|
-| 1 | | | | |
+| 1 | `failsafe --crazyflie --fault-at climb` | Landed by the failsafe, exit 0 | `logs/2026-11-07_16-32-12_failsafe.log` | |
+| 2 | Same, no restart since flight 1 | Arm refused, exit 1, motors never ran | `logs/2026-11-07_16-33-42_failsafe.log` | |
+| 3 | Same, drone moved, no restart | Arm refused, exit 1, motors never ran | `logs/2026-11-07_16-34-41_failsafe.log` | |
+| 4 | Same, after a power cycle | Landed by the failsafe, exit 0 | `logs/2026-11-07_16-35-54_failsafe.log` | |
 
 ## Observations
 
 ### Joe
 
--
+- Set-up: everything on the checklist set up except the geofence (there isn't one).
+- Flight 1: took off and landed after about 5 cm. No side-to-side movement seen.
+- Flight 4: lifted about 5 cm, then landed. It bounced off the ground and
+  moved about 6 cm to the right overall.
+- Battery voltage, time of day, video: not recorded yet.
 
 ### Computed from the logs (Claude)
 
--
+- **Flights 1 and 4:** the forged 3.00 V tripped the pre-check ("land below
+  3.20 V") 0.75 s after the take-off, a landing was sent, and the log says
+  "Landing during the initial climb: no landing approach". The final descent
+  was level, from 0.069 m (flight 1) and 0.072 m (flight 4) by the down
+  range, and ended with `Touchdown confirmed`. No "Failsafe test failed"
+  error, exit 0.
+- **Sideways shift by the estimate, take-off to fault:** flight 1, 6.6 cm
+  right and 3.2 cm forward; flight 4, 4.6 cm right and 1.2 cm back. The log
+  has no estimate after the tick loop stops, so the shift during the final
+  descent isn't in it.
+- **Battery** (diagnostic block): 4.069 V (flight 1) and 4.053 V (flight 4)
+  at rest before the take-off.
+- **Arm refusals (flights 2 and 3):** `Arm response: success=False,
+  is_armed=False`, battery 4.06 V, no tumbled or crashed flag. Each came
+  right after a completed flight with no restart; flight 4, after a power
+  cycle, armed. The log can't say why: the drone's locked bit isn't logged
+  (backlog #67).
 
 ## Next
-- Code changes:
-- ADRs to write or revisit:
+- Code changes and ADRs: backlog #67 (arm refused after a flight), #68
+  (sideways drift during the initial climb).
 - Next session's goal:
