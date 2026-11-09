@@ -11,6 +11,7 @@ from crazyflie_behavior.drone.crazyflie.conversions import (
     move_duration,
     range_reading_from_mm,
     sound_frequency_from_pitch,
+    velocity_uncertainty_from_variances,
     yaw_rate_deg_per_s,
 )
 from crazyflie_behavior.snapshot import RangeReading
@@ -98,3 +99,13 @@ def test_the_alt_hold_setpoint_has_the_firmwares_layout() -> None:
     down = bytes.fromhex("04" + "00000000" * 3 + "cdcc4cbe")  # -0.2 m/s as a float32
 
     assert alt_hold_packet_data(-0.2) == down
+
+
+def test_the_velocity_uncertainty_is_the_larger_standard_deviation() -> None:
+    assert velocity_uncertainty_from_variances(1e-4, 9e-4) == pytest.approx(0.03)
+    assert velocity_uncertainty_from_variances(0.25, 1e-4) == pytest.approx(0.5)
+
+
+@pytest.mark.parametrize("variances", [(math.nan, 1e-4), (1e-4, math.inf), (-1e-4, 1e-4)])
+def test_a_variance_that_isnt_finite_or_is_negative_gives_nan(variances: tuple[float, float]) -> None:
+    assert math.isnan(velocity_uncertainty_from_variances(*variances))

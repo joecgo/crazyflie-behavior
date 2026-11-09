@@ -80,6 +80,9 @@ class StandInDrone(DroneInterface):
     def emergency_stop(self) -> None:
         self.calls.append("emergency_stop")
 
+    def reset_estimate(self) -> None:
+        self.calls.append("reset_estimate")
+
     def chirp(self) -> None:
         self.calls.append("chirp")
 
@@ -100,9 +103,11 @@ class StandInDrone(DroneInterface):
             dt=dt,
             position_estimate=fresh(Vector3(0.1, 0.2, self.height)),
             velocity_estimate=fresh(Vector3.ZERO),
+            velocity_uncertainty=fresh(0.01),
             range_readings=RangeReadings(None, None, None, None, None, self._down_reading(time)),
             battery_voltage=None if self.battery_voltage is None else fresh(self.battery_voltage.value),
             drone_status=fresh(self.status),
+            is_in_initial_climb=False,
         )
 
     def _down_reading(self, time: float) -> Stamped[RangeReading]:

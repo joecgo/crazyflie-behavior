@@ -22,7 +22,7 @@ import logging
 import math
 from typing import NamedTuple
 
-from crazyflie_behavior.drone.interface import DroneInterface
+from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY, TOUCHDOWN_DOWN_RANGE, DroneInterface
 from crazyflie_behavior.safety.requests import (
     Arm,
     BuzzerRequest,
@@ -32,13 +32,14 @@ from crazyflie_behavior.safety.requests import (
     Land,
     MovementRequest,
     MoveTo,
+    ResetEstimate,
     SetVelocity,
     Silence,
     TakeOff,
     Tone,
     Verdict,
 )
-from crazyflie_behavior.snapshot import Snapshot, Stamped
+from crazyflie_behavior.snapshot import RangeStatus, Snapshot, Stamped
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,12 @@ BATTERY_SAG_VOLTAGE = 0.42
 """Volts. The sag value the take-off limit allows for."""
 TAKE_OFF_BATTERY_VOLTAGE = LOW_BATTERY_VOLTAGE + BATTERY_SAG_VOLTAGE
 """Volts. The take-off limit: a take-off is refused below this, so the sag doesn't fail the safety pre-check at once."""
+
+# The take-off rule's estimate check, with flow arriving (ADR-0054). PLACEHOLDERS, to verify in flight.
+TAKE_OFF_MAX_SPEED = 0.05
+"""Meters per second: the most horizontal speed estimate a drone on the floor may show."""
+TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT = 0.05
+"""Meters: how far from the reset point (0, 0) the horizontal position estimate may be."""
 
 
 class _CheckedValue(NamedTuple):
@@ -103,7 +110,26 @@ def safety_pre_check(snapshot: Snapshot) -> list[str]:
         failures.append("the drone reports a crash")
     if status is not None and status.value.is_tumbled:
         failures.append("the drone reports it has tumbled")
+    # Only in flight: on the floor a failed pre-check would end every round at a dark
+    # hiding spot. The initial climb checks the flow itself (ADR-0054).
+    if status is not None and status.value.is_flying and not snapshot.is_in_initial_climb:
+        failure = _velocity_uncertainty_failure(snapshot)
+        if failure is not None:
+            failures.append(failure)
     return failures
+
+
+def _velocity_uncertainty_failure(snapshot: Snapshot) -> str | None:
+    uncertainty = snapshot.velocity_uncertainty
+    stale = _staleness(_CheckedValue("velocity uncertainty", uncertainty, STALE_AFTER), snapshot.time)
+    if stale is not None or uncertainty is None:
+        return stale
+    # The comparison is false for NaN too, so NaN fails like a missing value (ADR-0030).
+    if not uncertainty.value <= FLOW_VELOCITY_UNCERTAINTY:
+        return (
+            f"velocity uncertainty {uncertainty.value:.3f} m/s in flight (no flow over {FLOW_VELOCITY_UNCERTAINTY:g})"
+        )
+    return None
 
 
 def _staleness(checked: _CheckedValue, now: float) -> str | None:
@@ -118,9 +144,10 @@ def _staleness(checked: _CheckedValue, now: float) -> str | None:
 def judge(command_request: CommandRequest, snapshot: Snapshot) -> Verdict:
     """Approve or refuse a behavior's command request (ADR-0030, ADR-0039, ADR-0051, ADR-0053).
 
-    Arm is judged on the drone status, and take off on the drone status and
-    the take-off limit. Hover and land are always approved, and the adapter
-    decides whether to act on them. Buzzer requests are always approved.
+    Arm is judged on the drone status, and take off on the drone status, the
+    take-off limit and the estimate (ADR-0054). An estimate reset only on the
+    floor. Hover and land are always approved, and the adapter decides whether
+    to act on them. Buzzer requests are always approved.
     """
     # The drone status lags: it says "not flying" just after a take-off, and
     # "flying" for a while after the motors stop. Only the adapter, which
@@ -143,7 +170,14 @@ def judge(command_request: CommandRequest, snapshot: Snapshot) -> Verdict:
                 return Verdict.refused("the drone isn't armed")
             if status.value.is_flying:
                 return Verdict.refused("the drone is already flying")
-            return _judge_take_off_battery(snapshot)
+            battery_verdict = _judge_take_off_battery(snapshot)
+            if not battery_verdict.is_approved:
+                return battery_verdict
+            return _judge_take_off_estimate(snapshot)
+        case ResetEstimate():
+            if status.value.is_flying:
+                return Verdict.refused("an estimate reset is never sent in flight")
+            return _judge_on_the_floor(snapshot) or Verdict.approved()
         case SetVelocity() | MoveTo():
             # TODO: refused until the speed envelope exists (backlog #30).
             return Verdict.refused("steering mode and fast mode wait for the speed envelope (backlog #30)")
@@ -162,6 +196,48 @@ def _judge_take_off_battery(snapshot: Snapshot) -> Verdict:
         return Verdict.refused(f"battery voltage isn't finite: {battery.value} V")
     if battery.value < TAKE_OFF_BATTERY_VOLTAGE:
         return Verdict.refused(f"battery at {battery.value:.2f} V (take off from {TAKE_OFF_BATTERY_VOLTAGE:.2f} V)")
+    return Verdict.approved()
+
+
+def _judge_on_the_floor(snapshot: Snapshot) -> Verdict | None:
+    """A refusal unless the down range reads the floor (ADR-0054)."""
+    down = snapshot.range_readings.down
+    if down is None or down.value.status is not RangeStatus.DISTANCE or down.value.distance is None:
+        return Verdict.refused("the down range doesn't read the floor: no distance")
+    if down.value.distance > TOUCHDOWN_DOWN_RANGE:
+        return Verdict.refused(
+            f"the down range doesn't read the floor: {down.value.distance:.3f} m (floor up to {TOUCHDOWN_DOWN_RANGE:g})"
+        )
+    return None
+
+
+def _judge_take_off_estimate(snapshot: Snapshot) -> Verdict:
+    """On the floor; with flow arriving, the estimate must also be still at the reset point (ADR-0054).
+
+    Without flow, the take-off goes ahead: the initial climb checks the flow at the settle height.
+    """
+    floor_refusal = _judge_on_the_floor(snapshot)
+    if floor_refusal is not None:
+        return floor_refusal
+    uncertainty = snapshot.velocity_uncertainty
+    if uncertainty is None or uncertainty.age(snapshot.time) > STALE_AFTER or math.isnan(uncertainty.value):
+        return Verdict.refused("no fresh velocity uncertainty")
+    if uncertainty.value >= FLOW_VELOCITY_UNCERTAINTY:
+        return Verdict.approved()  # no flow: nothing to check the estimate against
+    velocity = snapshot.velocity_estimate
+    position = snapshot.position_estimate
+    if velocity is None or position is None:
+        return Verdict.refused("no position or velocity estimate yet")
+    speed = math.hypot(velocity.value.x, velocity.value.y)
+    # The comparisons are false for NaN too.
+    if not speed < TAKE_OFF_MAX_SPEED:
+        return Verdict.refused(f"the estimate is moving on the floor: {speed:.3f} m/s (under {TAKE_OFF_MAX_SPEED:g})")
+    distance = math.hypot(position.value.x, position.value.y)
+    if not distance <= TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT:
+        return Verdict.refused(
+            f"the estimate is {distance:.3f} m from the reset point "
+            f"(within {TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT:g}): request an estimate reset"
+        )
     return Verdict.approved()
 
 
@@ -213,6 +289,8 @@ class SafetyLayer:
         """This tick's snapshot: requests are judged against it."""
         self._movement_slot = _CommandSlot[MovementRequest]("movement")
         self._buzzer_slot = _CommandSlot[BuzzerRequest]("buzzer")
+        self._is_estimate_reset_requested = False
+        """An approved estimate reset waits for the end of the tick. It has no slot (ADR-0054)."""
         self._pre_check_has_failed = False
 
     @property
@@ -243,6 +321,7 @@ class SafetyLayer:
 
         An approved request fills its command slot, movement or buzzer. A later
         one in the same slot and tick replaces it, with a warning once per streak (ADR-0020).
+        An approved estimate reset has no slot: it's sent after the slots' commands (ADR-0054).
         """
         if self._pre_check_has_failed:
             verdict = Verdict.refused("the flight is over: the safety pre-check failed")
@@ -252,6 +331,8 @@ class SafetyLayer:
             verdict = judge(command_request, self._snapshot)
         if not verdict.is_approved:
             logger.debug("Refused %s: %s", command_request, verdict.reason)
+        elif isinstance(command_request, ResetEstimate):
+            self._is_estimate_reset_requested = True
         elif isinstance(command_request, Chirp | Tone | Silence):
             self._buzzer_slot.fill(command_request)
         else:
@@ -261,14 +342,20 @@ class SafetyLayer:
     def send(self) -> None:
         """Send each command slot's command, if any, then empty the slots for the next tick.
 
-        Movement first. TODO: the LED slot comes later (ADR-0025).
+        Movement first, then buzzer, then an approved estimate reset (ADR-0054).
+        TODO: the LED slot comes later (ADR-0025).
         """
         movement = self._movement_slot.take()
         buzzer = self._buzzer_slot.take()
+        is_estimate_reset_requested = self._is_estimate_reset_requested
+        self._is_estimate_reset_requested = False
         if movement is not None:
             self._send_movement(movement)
         if buzzer is not None:
             self._send_buzzer(buzzer)
+        if is_estimate_reset_requested:
+            logger.info("Sending %s", ResetEstimate())
+            self._drone.reset_estimate()
 
     def _send_movement(self, command: MovementRequest) -> None:
         logger.info("Sending %s", command)

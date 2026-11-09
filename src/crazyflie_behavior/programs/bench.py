@@ -64,6 +64,7 @@ def snapshot_summary(snapshot: Snapshot) -> str:
             now,
             lambda v: f"{v.x:.2f}, {v.y:.2f}, {v.z:.2f} m/s",
         ),
+        _describe_stamped("velocity uncertainty", snapshot.velocity_uncertainty, now, lambda u: f"{u:.3f} m/s"),
         _describe_stamped("battery", snapshot.battery_voltage, now, lambda v: f"{v:.2f} V"),
         _describe_stamped(
             "status",

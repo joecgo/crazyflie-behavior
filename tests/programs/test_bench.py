@@ -140,9 +140,11 @@ def test_the_summary_says_when_a_value_has_not_arrived_yet() -> None:
         dt=0.0,
         position_estimate=None,
         velocity_estimate=None,
+        velocity_uncertainty=None,
         range_readings=no_readings,
         battery_voltage=None,
         drone_status=None,
+        is_in_initial_climb=False,
     )
 
     summary = snapshot_summary(snapshot)

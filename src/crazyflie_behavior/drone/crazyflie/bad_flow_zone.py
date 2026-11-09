@@ -6,13 +6,15 @@ This module doesn't import cflib, so it's type-checked strictly and unit-tested 
 import math
 
 from crazyflie_behavior.drone.crazyflie.touchdown import MAX_READING_AGE, fresh_down_distance
+from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY
 from crazyflie_behavior.snapshot import Snapshot
 
 # PLACEHOLDERS, to verify in flight (ADR-0048, ADR-0056).
 LEVEL_VERTICAL_SPEED = 0.2
 """Meters per second: up in the initial climb, down in the level final descent."""
 SETTLE_SPEED = 0.15
-"""Meters per second. A horizontal speed estimate under this counts as settled."""
+"""Meters per second. A horizontal speed estimate under this counts as settled, with the velocity
+uncertainty under FLOW_VELOCITY_UNCERTAINTY (ADR-0054)."""
 SETTLE_HOLD = 0.2
 """Seconds the horizontal speed estimate must stay under SETTLE_SPEED."""
 SETTLE_MIN_DOWN_RANGE = 0.10
@@ -68,11 +70,21 @@ class SettleDetector:
             return  # decided
         down = fresh_down_distance(snapshot, now)
         velocity = snapshot.velocity_estimate
-        if down is None or velocity is None or velocity.age(now) > MAX_READING_AGE:
+        uncertainty = snapshot.velocity_uncertainty
+        if (
+            down is None
+            or velocity is None
+            or velocity.age(now) > MAX_READING_AGE
+            or uncertainty is None
+            or uncertainty.age(now) > MAX_READING_AGE
+        ):
             self._hold_started_at = None  # a missing or stale reading breaks the hold
             return
         horizontal_speed = math.hypot(velocity.value.x, velocity.value.y)
-        if horizontal_speed >= SETTLE_SPEED or down.value <= SETTLE_MIN_DOWN_RANGE:
+        # Without flow, a runaway speed can pass under SETTLE_SPEED by chance (ADR-0054).
+        # The comparison is false for NaN too.
+        has_flow = uncertainty.value < FLOW_VELOCITY_UNCERTAINTY
+        if horizontal_speed >= SETTLE_SPEED or not has_flow or down.value <= SETTLE_MIN_DOWN_RANGE:
             self._hold_started_at = None
         elif self._hold_started_at is None:
             self._hold_started_at = velocity.arrival_time

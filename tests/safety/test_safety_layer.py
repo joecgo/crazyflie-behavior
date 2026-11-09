@@ -7,6 +7,7 @@ from dataclasses import replace
 
 import pytest
 
+from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY, TOUCHDOWN_DOWN_RANGE
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.safety.requests import (
@@ -16,16 +17,20 @@ from crazyflie_behavior.safety.requests import (
     Hover,
     Land,
     MoveTo,
+    ResetEstimate,
     SetVelocity,
     Silence,
     TakeOff,
     Tone,
+    Verdict,
 )
 from crazyflie_behavior.safety.safety_layer import (
     BATTERY_STALE_AFTER,
     LOW_BATTERY_VOLTAGE,
     STALE_AFTER,
     TAKE_OFF_BATTERY_VOLTAGE,
+    TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT,
+    TAKE_OFF_MAX_SPEED,
     SafetyLayer,
     judge,
     safety_pre_check,
@@ -62,6 +67,9 @@ def snapshot(
     down_age: float = 0.0,
     battery_voltage: float = 4.0,
     battery_age: float = 0.0,
+    velocity_uncertainty: float = 0.01,
+    velocity_uncertainty_age: float = 0.0,
+    is_in_initial_climb: bool = False,
 ) -> Snapshot:
     """A hand-built snapshot: everything fresh and the battery charged, unless asked otherwise."""
     height = 0.5 if status.is_flying else 0.0
@@ -70,6 +78,7 @@ def snapshot(
         dt=0.05,
         position_estimate=stamped(Vector3(0.0, 0.0, height), position_age),
         velocity_estimate=stamped(Vector3.ZERO, position_age),
+        velocity_uncertainty=stamped(velocity_uncertainty, velocity_uncertainty_age),
         range_readings=RangeReadings(
             front=None,
             back=None,
@@ -80,6 +89,7 @@ def snapshot(
         ),
         battery_voltage=stamped(battery_voltage, battery_age),
         drone_status=stamped(status, status_age),
+        is_in_initial_climb=is_in_initial_climb,
     )
 
 
@@ -577,3 +587,150 @@ def test_after_the_failsafe_the_flight_never_resumes() -> None:
     assert not behaviors_may_run
     assert verdict.reason == "the flight is over: the safety pre-check failed"
     assert drone.command_log == ["land"]  # the failsafe's landing, sent once
+
+
+# --- The velocity uncertainty and the estimate reset (ADR-0054) -----------------------
+
+NO_FLOW = FLOW_VELOCITY_UNCERTAINTY * 3
+"""Meters per second: a velocity uncertainty without flow."""
+
+
+def with_estimate(base: Snapshot, *, position: Vector3 = Vector3.ZERO, velocity: Vector3 = Vector3.ZERO) -> Snapshot:
+    assert base.position_estimate is not None
+    assert base.velocity_estimate is not None
+    return replace(
+        base,
+        position_estimate=replace(base.position_estimate, value=position),
+        velocity_estimate=replace(base.velocity_estimate, value=velocity),
+    )
+
+
+def with_down_range(base: Snapshot, reading: RangeReading) -> Snapshot:
+    down = base.range_readings.down
+    assert down is not None
+    return replace(base, range_readings=replace(base.range_readings, down=replace(down, value=reading)))
+
+
+def test_in_flight_a_velocity_uncertainty_over_the_threshold_fails() -> None:
+    assert safety_pre_check(snapshot(FLYING, velocity_uncertainty=FLOW_VELOCITY_UNCERTAINTY)) == []
+    [failure] = safety_pre_check(snapshot(FLYING, velocity_uncertainty=NO_FLOW))
+    assert "velocity uncertainty" in failure
+
+
+@pytest.mark.parametrize("uncertainty", [math.nan, math.inf])
+def test_in_flight_a_velocity_uncertainty_that_isnt_finite_fails(uncertainty: float) -> None:
+    assert safety_pre_check(snapshot(FLYING, velocity_uncertainty=uncertainty)) != []
+
+
+def test_in_flight_a_missing_or_stale_velocity_uncertainty_fails() -> None:
+    missing = replace(snapshot(FLYING), velocity_uncertainty=None)
+    stale = snapshot(FLYING, velocity_uncertainty_age=STALE_AFTER + 0.01)
+
+    assert safety_pre_check(missing) == ["no velocity uncertainty yet"]
+    assert "velocity uncertainty is" in safety_pre_check(stale)[0]
+
+
+def test_on_the_floor_the_pre_check_ignores_the_velocity_uncertainty() -> None:
+    dark_floor = snapshot(ARMED, velocity_uncertainty=NO_FLOW)
+
+    assert safety_pre_check(dark_floor) == []
+    assert safety_pre_check(replace(dark_floor, velocity_uncertainty=None)) == []
+
+
+def test_during_the_initial_climb_the_pre_check_ignores_the_velocity_uncertainty() -> None:
+    climbing_without_flow = snapshot(FLYING, velocity_uncertainty=NO_FLOW, is_in_initial_climb=True)
+
+    assert safety_pre_check(climbing_without_flow) == []
+
+
+def test_a_take_off_is_refused_unless_the_down_range_reads_the_floor() -> None:
+    above_the_floor = with_down_range(snapshot(ARMED), RangeReading.at_distance(TOUCHDOWN_DOWN_RANGE + 0.01))
+    no_distance = with_down_range(snapshot(ARMED), RangeReading.out_of_range())
+
+    assert judge(TakeOff(1.0), with_down_range(snapshot(ARMED), RangeReading.at_distance(TOUCHDOWN_DOWN_RANGE)))
+    for refused in (above_the_floor, no_distance):
+        verdict = judge(TakeOff(1.0), refused)
+        assert not verdict.is_approved
+        assert "doesn't read the floor" in verdict.reason
+
+
+def test_with_flow_a_take_off_is_refused_when_the_estimate_moves() -> None:
+    moving = Vector3(TAKE_OFF_MAX_SPEED * 0.6, TAKE_OFF_MAX_SPEED * 0.8, 0.0)  # exactly the limit
+    nearly = Vector3(TAKE_OFF_MAX_SPEED * 0.9, 0.0, 0.0)
+
+    assert judge(TakeOff(1.0), with_estimate(snapshot(ARMED), velocity=nearly)).is_approved
+    verdict = judge(TakeOff(1.0), with_estimate(snapshot(ARMED), velocity=moving))
+    assert not verdict.is_approved
+    assert "moving" in verdict.reason
+
+
+def test_with_flow_a_take_off_is_refused_away_from_the_reset_point() -> None:
+    limit = TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT
+    at_the_limit = Vector3(limit * 0.6, -limit * 0.8, 0.02)
+    past_it = Vector3(0.0, limit + 0.01, 0.0)
+
+    assert judge(TakeOff(1.0), with_estimate(snapshot(ARMED), position=at_the_limit)).is_approved
+    verdict = judge(TakeOff(1.0), with_estimate(snapshot(ARMED), position=past_it))
+    assert not verdict.is_approved
+    assert "reset point" in verdict.reason
+
+
+def test_without_flow_a_take_off_goes_ahead_whatever_the_estimate() -> None:
+    runaway = with_estimate(
+        snapshot(ARMED, velocity_uncertainty=NO_FLOW), position=Vector3(-87.0, 3.0, 0.0), velocity=Vector3(1.0, 0, 0)
+    )
+
+    assert judge(TakeOff(1.0), runaway).is_approved
+
+
+def test_a_take_off_is_refused_without_a_fresh_velocity_uncertainty() -> None:
+    missing = replace(snapshot(ARMED), velocity_uncertainty=None)
+    stale = snapshot(ARMED, velocity_uncertainty_age=STALE_AFTER + 0.01)
+    not_a_number = snapshot(ARMED, velocity_uncertainty=math.nan)
+
+    for refused in (missing, stale, not_a_number):
+        assert judge(TakeOff(1.0), refused) == Verdict.refused("no fresh velocity uncertainty")
+
+
+def test_an_estimate_reset_is_approved_only_on_the_floor() -> None:
+    assert judge(ResetEstimate(), snapshot(ARMED, velocity_uncertainty=NO_FLOW)).is_approved
+    assert not judge(ResetEstimate(), snapshot(FLYING)).is_approved
+    lifted = with_down_range(snapshot(ON_THE_FLOOR), RangeReading.at_distance(0.3))
+    assert not judge(ResetEstimate(), lifted).is_approved
+
+
+def test_an_approved_estimate_reset_is_sent_after_the_slots_commands_and_takes_no_slot() -> None:
+    drone = RecordingDrone()
+    drone.connect()
+    safety_layer = SafetyLayer(drone)
+    safety_layer.pre_check(snapshot(ON_THE_FLOOR))
+
+    safety_layer.request(ResetEstimate())
+    safety_layer.request(Arm())
+    safety_layer.request(Chirp())
+    safety_layer.send()
+
+    assert drone.command_log[-3:] == ["arm", "chirp", "reset_estimate"]
+
+
+def test_a_refused_estimate_reset_is_not_sent() -> None:
+    drone = RecordingDrone()
+    safety_layer = SafetyLayer(drone)
+    safety_layer.pre_check(snapshot(FLYING))
+
+    assert not safety_layer.request(ResetEstimate()).is_approved
+    safety_layer.send()
+
+    assert "reset_estimate" not in drone.command_log
+
+
+def test_an_estimate_reset_is_sent_once_per_approval() -> None:
+    drone = RecordingDrone()
+    safety_layer = SafetyLayer(drone)
+    safety_layer.pre_check(snapshot(ON_THE_FLOOR))
+    safety_layer.request(ResetEstimate())
+    safety_layer.send()
+    safety_layer.pre_check(snapshot(ON_THE_FLOOR))
+    safety_layer.send()
+
+    assert drone.command_log.count("reset_estimate") == 1

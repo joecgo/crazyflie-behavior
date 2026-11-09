@@ -24,6 +24,17 @@ def range_reading_from_mm(range_mm: int) -> RangeReading:
     return RangeReading.at_distance(range_mm / 1000.0)
 
 
+def velocity_uncertainty_from_variances(variance_px: float, variance_py: float) -> float:
+    """The velocity uncertainty in m/s from `kalman.varPX` and `varPY` in m²/s² (ADR-0054).
+
+    NaN when either variance isn't finite or is negative.
+    """
+    variances = (variance_px, variance_py)
+    if not all(math.isfinite(variance) and variance >= 0.0 for variance in variances):
+        return math.nan
+    return math.sqrt(max(variances))
+
+
 LOG_TIMESTAMP_RANGE_MS = 1 << 24
 """cflib unpacks log timestamps as 24 bits, so they restart at zero every
 16,777,216 ms: about 4.7 hours of drone uptime."""

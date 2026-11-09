@@ -131,7 +131,11 @@ class Snapshot:
     mostly from the down range sensor, so it isn't an independent check on that reading."""
     velocity_estimate: Stamped[Vector3] | None
     """The drone's estimated velocity: world frame, meters per second."""
+    velocity_uncertainty: Stamped[float] | None
+    """Meters per second: how far off the horizontal velocity estimate may be (ADR-0054)."""
     range_readings: RangeReadings
     battery_voltage: Stamped[float] | None
     """Battery voltage in volts."""
     drone_status: Stamped[DroneStatus] | None
+    is_in_initial_climb: bool
+    """Whether the initial climb is running, as the adapter knew when it took the snapshot (ADR-0054)."""

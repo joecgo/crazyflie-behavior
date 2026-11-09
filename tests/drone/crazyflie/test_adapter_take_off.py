@@ -17,6 +17,7 @@ import pytest
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
 from crazyflie_behavior.drone.crazyflie.adapter import (
     DEFAULT_YAW_RAD,
+    LOW_LIGHT_IMAGE_QUALITY,
     TAKE_OFF_STATUS_GRACE,
     TOUCHDOWN_POLL_PERIOD,
     VERTICAL_SPEED,
@@ -94,10 +95,12 @@ def climb_tick(
     horizontal_speed: float = 0.0,
     down: RangeReading | None = None,
     x: float = 0.5,
+    velocity_uncertainty: float = 0.01,
 ) -> None:
     """One tick of the initial climb: the drone reports `height`, then the adapter updates.
 
     `down`: the down range reading; None means a distance equal to the height.
+    `velocity_uncertainty`: m/s; the default means flow is arriving.
     """
     clock.advance(TICK)
     telemetry = adapter._telemetry
@@ -107,6 +110,7 @@ def climb_tick(
     telemetry.write_range_readings(
         {RangeDirection.DOWN: RangeReading.at_distance(height) if down is None else down}, None
     )
+    telemetry.write_velocity_uncertainty(velocity_uncertainty, None)
     adapter.update_take_off_and_landing(adapter.take_snapshot(TICK))
 
 
@@ -406,3 +410,100 @@ def test_a_take_off_while_flying_above_the_bad_flow_zone_is_a_high_level_climb(
     fake_link.cf.high_level_commander.go_to.assert_called_once_with(
         0.5, -0.25, 1.5, DEFAULT_YAW_RAD, pytest.approx(0.5 / VERTICAL_SPEED)
     )
+
+
+# --- The flow and the estimate reset (ADR-0054) ---------------------------------------
+
+NO_FLOW = 0.1
+"""Meters per second: a velocity uncertainty without flow."""
+
+
+def test_a_climb_without_flow_finds_no_settle_height_and_lands_at_the_cap(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    adapter.take_off(1.0)
+
+    tick = climb_until_it_lands(
+        adapter, fake_link, lambda tick: climb_tick(adapter, clock, tick * CLIMB_STEP, velocity_uncertainty=NO_FLOW)
+    )
+
+    assert tick * CLIMB_STEP > SETTLE_CAP_HEIGHT >= (tick - 1) * CLIMB_STEP
+    fake_link.cf.high_level_commander.go_to.assert_not_called()
+
+
+def test_a_climb_whose_flow_arrives_above_the_dark_floor_hands_over(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    dark_below = 0.17
+    adapter.take_off(1.0)
+
+    for tick in range(1, GIVE_UP_AFTER_TICKS):
+        height = tick * CLIMB_STEP
+        climb_tick(adapter, clock, height, velocity_uncertainty=NO_FLOW if height < dark_below else 0.01)
+        if not adapter._is_in_initial_climb:
+            break
+
+    fake_link.cf.high_level_commander.go_to.assert_called_once()
+    assert adapter._final_descent_height > dark_below
+
+
+def test_the_snapshot_says_whether_the_initial_climb_is_running(adapter: CrazyflieAdapter, clock: SimClock) -> None:
+    assert not adapter.take_snapshot(TICK).is_in_initial_climb
+    adapter.take_off(1.0)
+    assert adapter.take_snapshot(TICK).is_in_initial_climb
+    climb_until_handed_over(adapter, clock)
+    assert not adapter.take_snapshot(TICK).is_in_initial_climb
+
+
+def low_light_warnings(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [record.getMessage() for record in caplog.records if "image quality" in record.getMessage()]
+
+
+@pytest.mark.parametrize(("quality", "warns"), [(LOW_LIGHT_IMAGE_QUALITY - 1, True), (LOW_LIGHT_IMAGE_QUALITY, False)])
+def test_a_take_off_warns_of_low_light_under_the_image_quality_limit(
+    adapter: CrazyflieAdapter, clock: SimClock, caplog: pytest.LogCaptureFixture, quality: int, warns: bool
+) -> None:
+    adapter._latest_image_quality = (clock.now(), quality)
+
+    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+        adapter.take_off(1.0)
+
+    assert adapter._is_in_initial_climb  # only a log line: it never refuses
+    assert bool(low_light_warnings(caplog)) == warns
+
+
+def test_a_take_off_with_no_recent_image_quality_warns_it_is_unknown(
+    adapter: CrazyflieAdapter, clock: SimClock, caplog: pytest.LogCaptureFixture
+) -> None:
+    adapter._latest_image_quality = (clock.now() - 1.0, 100)
+
+    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+        adapter.take_off(1.0)
+
+    assert any("unknown" in message for message in low_light_warnings(caplog))
+
+
+def reset_writes(fake_link: MagicMock) -> int:
+    return sum(1 for call in fake_link.cf.param.set_value.call_args_list if call.args == ("kalman.resetEstimation", 1))
+
+
+def test_an_estimate_reset_on_the_floor_writes_the_reset_parameter(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    adapter.reset_estimate()
+
+    assert reset_writes(fake_link) == 1
+
+
+def test_an_estimate_reset_while_the_drone_may_be_flying_is_ignored_and_warned_once_per_streak(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)  # the status still says not flying
+    adapter.take_off(1.0)
+
+    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+        adapter.reset_estimate()
+        adapter.reset_estimate()
+
+    assert reset_writes(fake_link) == 0
+    assert sum("Estimate reset ignored" in record.getMessage() for record in caplog.records) == 1

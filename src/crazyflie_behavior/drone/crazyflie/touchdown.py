@@ -7,11 +7,10 @@ the drone must be on the floor. This module doesn't import cflib, so it's
 type-checked strictly and unit-tested without a drone.
 """
 
+from crazyflie_behavior.drone.interface import TOUCHDOWN_DOWN_RANGE
 from crazyflie_behavior.snapshot import RangeStatus, Snapshot, Stamped
 
 # PLACEHOLDERS, to VERIFY at the bench (ADR-0012, ADR-0019).
-TOUCHDOWN_DOWN_RANGE = 0.05
-"""Meters. A down range at or below this means the drone is resting on something."""
 TOUCHDOWN_HOLD = 0.3
 """Seconds the down range must stay at or below TOUCHDOWN_DOWN_RANGE to confirm
 touchdown, so one noisy reading can't."""

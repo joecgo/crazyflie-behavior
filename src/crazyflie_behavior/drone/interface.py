@@ -19,6 +19,12 @@ from typing import Self
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import Snapshot
 
+# PLACEHOLDERS, to verify in flight (ADR-0012, ADR-0054).
+TOUCHDOWN_DOWN_RANGE = 0.05
+"""Meters. A down range at or below this means the drone is resting on something."""
+FLOW_VELOCITY_UNCERTAINTY = 0.03
+"""Meters per second. A velocity uncertainty under this means flow is arriving (ADR-0054)."""
+
 
 class DroneInterface(ABC):
     """What every adapter implements: the Crazyflie adapter and the mock adapter."""
@@ -101,6 +107,13 @@ class DroneInterface(ABC):
     @abstractmethod
     def emergency_stop(self) -> None:
         """Cut the motors immediately. The drone falls. Critical faults only."""
+
+    @abstractmethod
+    def reset_estimate(self) -> None:
+        """Estimate reset (ADR-0054): position (0, 0, 0) where the drone sits, velocity zero.
+
+        Doesn't wait for it. Ignored, logged once per streak, while the drone may be flying.
+        """
 
     @abstractmethod
     def chirp(self) -> None:

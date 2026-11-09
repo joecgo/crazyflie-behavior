@@ -42,9 +42,11 @@ def test_a_snapshot_cannot_be_modified() -> None:
         dt=0.05,
         position_estimate=None,
         velocity_estimate=None,
+        velocity_uncertainty=None,
         range_readings=no_ranges,
         battery_voltage=None,
         drone_status=None,
+        is_in_initial_climb=False,
     )
     field_name = "dt"
 

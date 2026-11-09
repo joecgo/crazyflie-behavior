@@ -40,7 +40,6 @@ from cflib.crazyflie.supervisor import (
 )
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.crtp.crtpstack import CRTPPacket, CRTPPort
-from cflib.utils.reset_estimator import reset_estimator
 
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
     INITIAL_CLIMB_TIME_LIMIT,
@@ -57,6 +56,7 @@ from crazyflie_behavior.drone.crazyflie.conversions import (
     move_duration,
     range_reading_from_mm,
     sound_frequency_from_pitch,
+    velocity_uncertainty_from_variances,
     yaw_rate_deg_per_s,
 )
 from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE, run_with_time_limit
@@ -114,14 +114,18 @@ LINK_TIME_LIMIT = 15.0
 with nothing cached, downloads more."""
 PARAMETERS_TIME_LIMIT = 10.0
 """Seconds to read the parameter values."""
-POSITION_ESTIMATE_TIME_LIMIT = 20.0
-"""Seconds for the position estimate to settle. cflib needs at least 5 s (ADR-0029)."""
 FIRST_TELEMETRY_TIME_LIMIT = 3.0
 """Seconds for every telemetry value to arrive once (ADR-0031). The battery,
 streamed once a second, is the slowest."""
 NOT_FLYING_TIME_LIMIT = 3.0
 """Seconds that closing the link waits, after a motor stop, for the drone to report not flying
 (ADR-0058). Its status keeps saying flying for 2 s after the motors stop."""
+LOW_LIGHT_IMAGE_QUALITY = 60
+"""The Flow deck's image quality (`motion.squal`) under which a take-off logs a low-light warning
+(ADR-0054). First flight 2: 22-42 on the dark floor, about 100 with a flashlight."""
+FLOOR_SPEED_LIMIT = 0.05
+"""Meters per second. An estimate reset logs a warning when the horizontal speed estimate it erases
+is over this: a drone on the floor is still (ADR-0054)."""
 # ------------------------------------------------------------------------------
 
 _MULTIRANGER_VARIABLES = {
@@ -132,12 +136,19 @@ _MULTIRANGER_VARIABLES = {
     RangeDirection.UP: "range.up",
 }
 _DOWN_RANGE_VARIABLE = "range.zrange"  # on the Flow deck
+_VELOCITY_VARIANCE_VARIABLES = ("kalman.varPX", "kalman.varPY")
+"""m²/s²: the velocity variances in the drone's forward and sideways directions (ADR-0054)."""
+_DOWN_VARIABLES = (_DOWN_RANGE_VARIABLE, *_VELOCITY_VARIANCE_VARIABLES)
+"""A uint16 and 2 floats: 10 bytes of a log block's 26 (ADR-0054)."""
+_RESET_ESTIMATE_PARAMETER = "kalman.resetEstimation"
+"""Written 1 for an estimate reset; the firmware sets it back to 0 (ADR-0054)."""
+_IMAGE_QUALITY_VARIABLE = "motion.squal"
 # The diagnostic block (ADR-0050, ADR-0053): 3 floats, 4 uint16, a uint8 and two uint16, 25 bytes.
 _ATTITUDE_VARIABLES = ("stateEstimate.roll", "stateEstimate.pitch", "stateEstimate.yaw")
 """Degrees. The firmware logs pitch with the legacy inverted sign."""
 _MOTOR_VARIABLES = ("motor.m1", "motor.m2", "motor.m3", "motor.m4")
 """Motor power, 0-65535."""
-_FLOW_QUALITY_VARIABLES = ("motion.squal", "motion.shutter")
+_FLOW_QUALITY_VARIABLES = (_IMAGE_QUALITY_VARIABLE, "motion.shutter")
 """Surface features seen, and shutter time (longer in low light)."""
 _DIAGNOSTIC_BATTERY_VARIABLE = "pm.vbatMV"
 """Millivolts: the battery voltage, faster than the battery block's once a second."""
@@ -275,6 +286,12 @@ class CrazyflieAdapter(DroneInterface):
         self._is_skipping_buzzer_commands = False
         """The latest buzzer command was skipped because the link is closed: the warning for it
         comes once per streak."""
+        self._is_ignoring_estimate_reset = False
+        """The latest estimate reset was ignored because the drone may be flying: the warning for it
+        comes once per streak."""
+        self._latest_image_quality: tuple[float, int] | None = None
+        """The arrival time and value of the latest `motion.squal`, for the low-light warning
+        (ADR-0054). Written on cflib's receive thread."""
 
     # --- Connection ---------------------------------------------------------
 
@@ -287,6 +304,8 @@ class CrazyflieAdapter(DroneInterface):
         self._has_stopped_motors = False
         self._is_ignoring_hover = False
         self._is_skipping_buzzer_commands = False
+        self._is_ignoring_estimate_reset = False
+        self._latest_image_quality = None
         self._is_drone_state_unknown = True
         # Nor does it carry on a take-off, landing or setpoint stream from an earlier session.
         self._is_in_initial_climb = False
@@ -324,7 +343,7 @@ class CrazyflieAdapter(DroneInterface):
             if not self._deck_attached("deck.bcFlow2", "deck.bcFlow"):  # Flow deck v2 or v1
                 raise RuntimeError("Flow deck not detected: autonomous flight needs it.")
             # Find out whether the drone is flying before anything else touches it: the
-            # position estimate reset below expects a drone sitting still (ADR-0038).
+            # estimate reset below expects a drone sitting still (ADR-0038).
             self._start_state_logging()
             self._settle_whether_the_drone_is_flying(self._wait_for_drone_status())
             self._start_remaining_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
@@ -387,6 +406,7 @@ class CrazyflieAdapter(DroneInterface):
             with self._handing_over_to_high_level():
                 self._go_to_height(height)
         else:
+            self._log_low_light_warning()
             self._start_initial_climb(height)
         self._is_airborne = True
         self._take_off_sent_at = self._clock.now()
@@ -460,6 +480,17 @@ class CrazyflieAdapter(DroneInterface):
         self._level_vertical_speed = None
         self._cancel_landing()
 
+    def reset_estimate(self) -> None:
+        if self._may_be_flying():
+            # Just after a take-off, the drone status still says not flying and the down
+            # range still reads the floor, so the safety layer can't tell (ADR-0039).
+            if not self._is_ignoring_estimate_reset:
+                logger.warning("Estimate reset ignored: the drone may be flying. Warned once per streak.")
+                self._is_ignoring_estimate_reset = True
+            return
+        self._is_ignoring_estimate_reset = False  # this reset goes through: the streak is over
+        self._send_estimate_reset()
+
     def chirp(self) -> None:
         # A chirp that a silence or a tone cuts short leaves the firmware partway through its
         # tune, so the next chirp plays only the rest.
@@ -475,7 +506,7 @@ class CrazyflieAdapter(DroneInterface):
         self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_OFF)
 
     def take_snapshot(self, dt: float) -> Snapshot:
-        return self._telemetry.snapshot(dt)
+        return self._telemetry.snapshot(dt, is_in_initial_climb=self._is_in_initial_climb)
 
     def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
         if self._is_in_initial_climb:
@@ -548,6 +579,50 @@ class CrazyflieAdapter(DroneInterface):
             return
         self._is_skipping_buzzer_commands = False  # this write goes through: the streak is over
         self._crazyflie.param.set_value(name, value)
+
+    def _send_estimate_reset(self) -> None:
+        """Log the estimate it erases (ADR-0020), then write the reset without waiting (ADR-0054)."""
+        self._log_estimate_before_reset()
+        # Once the link is lost, cflib forgets the parameter list and a write raises.
+        if self._crazyflie.link is None:
+            logger.warning("Estimate reset not sent: the link is closed.")
+            return
+        self._crazyflie.param.set_value(_RESET_ESTIMATE_PARAMETER, 1)
+
+    def _log_estimate_before_reset(self) -> None:
+        position = self._telemetry.latest_position_estimate()
+        velocity = self._telemetry.latest_velocity_estimate()
+        if position is None or velocity is None:
+            logger.info("Estimate reset, with no estimate before it.")
+            return
+        p, v = position.value, velocity.value
+        speed = math.hypot(v.x, v.y)
+        # The comparison is false for NaN too: an estimate that isn't finite is implausible.
+        is_plausible = speed <= FLOOR_SPEED_LIMIT
+        logger.log(
+            logging.INFO if is_plausible else logging.WARNING,
+            "Estimate reset. Before it: position (%.3f, %.3f, %.3f) m, velocity (%.3f, %.3f, %.3f) m/s%s",
+            p.x,
+            p.y,
+            p.z,
+            v.x,
+            v.y,
+            v.z,
+            "" if is_plausible else f": implausible on the floor (over {FLOOR_SPEED_LIMIT:g} m/s)",
+        )
+
+    def _log_low_light_warning(self) -> None:
+        """At take-off, warn of sideways drift when the Flow deck sees little (ADR-0054). Never refuses."""
+        quality = self._latest_image_quality
+        if quality is None or self._clock.now() - quality[0] > MAX_READING_AGE:
+            logger.warning("Taking off with the Flow deck's image quality unknown: it may be low light.")
+        elif quality[1] < LOW_LIGHT_IMAGE_QUALITY:
+            logger.warning(
+                "Low light: the Flow deck's image quality is %d (under %d). "
+                "The take-off may drift sideways until flow arrives.",
+                quality[1],
+                LOW_LIGHT_IMAGE_QUALITY,
+            )
 
     @contextmanager
     def _handing_over_to_high_level(self) -> Iterator[None]:
@@ -798,7 +873,8 @@ class CrazyflieAdapter(DroneInterface):
             )
 
     def _latest_fresh_down_distance(self) -> Stamped[float] | None:
-        return fresh_down_distance(self._telemetry.snapshot(0.0), self._clock.now())
+        snapshot = self._telemetry.snapshot(0.0, is_in_initial_climb=self._is_in_initial_climb)
+        return fresh_down_distance(snapshot, self._clock.now())
 
     def _land_and_wait_for_touchdown(self) -> None:
         """Land, or finish a take-off or landing under way, and block until the motors are stopped.
@@ -808,7 +884,7 @@ class CrazyflieAdapter(DroneInterface):
         self.land()
         while self._landing_phase is not _LandingPhase.NOT_LANDING:
             self._clock.sleep_until(self._clock.now() + TOUCHDOWN_POLL_PERIOD)
-            self._update_landing(self._telemetry.snapshot(0.0))
+            self._update_landing(self._telemetry.snapshot(0.0, is_in_initial_climb=self._is_in_initial_climb))
 
     # --- Telemetry ----------------------------------------------------------
 
@@ -817,7 +893,7 @@ class CrazyflieAdapter(DroneInterface):
 
     def _start_remaining_logging(self, has_multiranger: bool) -> None:
         self._add_log_block("battery", BATTERY_PERIOD_MS, ["pm.vbat"], self._on_battery)
-        self._add_log_block("down", DOWN_RANGE_PERIOD_MS, [_DOWN_RANGE_VARIABLE], self._on_down_range)
+        self._add_log_block("down", DOWN_RANGE_PERIOD_MS, list(_DOWN_VARIABLES), self._on_down_range)
         self._add_log_block("diagnostic", DIAGNOSTIC_PERIOD_MS, list(_DIAGNOSTIC_VARIABLES), self._on_diagnostic)
         if has_multiranger:
             self._add_log_block(
@@ -853,7 +929,7 @@ class CrazyflieAdapter(DroneInterface):
         return bitfield
 
     def _settle_whether_the_drone_is_flying(self, bitfield: int) -> None:
-        """Refuse a flying drone, take over its flight, or reset the position estimate (ADR-0038)."""
+        """Refuse a flying drone, take over its flight, or reset the estimate (ADR-0038, ADR-0054)."""
         if self._take_over_flight:
             logger.warning("Taking over the flight: no estimate reset.")
             self._is_airborne = True
@@ -870,17 +946,10 @@ class CrazyflieAdapter(DroneInterface):
                 "The drone is still flying: run the rescue landing, or wait a few seconds if it just landed."
             )
         self._is_drone_state_unknown = False  # on the floor: a normal link close is safe from here
-        run_with_time_limit(
-            "Settling the position estimate",
-            lambda: reset_estimator(self._sync_crazyflie),
-            POSITION_ESTIMATE_TIME_LIMIT,
-            what_to_check=(
-                "Check the Flow deck can see the floor (enough light and texture) and that the drone is sitting still."
-            ),
-            clock=self._clock,
-        )
-        # The state block kept streaming through the reset, so drop what it wrote before
-        # it: no position from before the reset is used (ADR-0038).
+        # No wait for the estimate to settle: the take-off rule judges it (ADR-0054).
+        self._send_estimate_reset()
+        # The state block kept streaming, so drop what it wrote before the reset: no
+        # position from before it is used (ADR-0038).
         self._telemetry = TelemetryBuffer(self._clock)
 
     def _wait_for_first_telemetry(self) -> None:
@@ -1037,13 +1106,20 @@ class CrazyflieAdapter(DroneInterface):
         self._telemetry.write_battery_voltage(data["pm.vbat"], self._drone_time(timestamp))
 
     def _on_down_range(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
+        drone_time = self._drone_time(timestamp)
         reading = range_reading_from_mm(int(data[_DOWN_RANGE_VARIABLE]))
-        self._telemetry.write_range_readings({RangeDirection.DOWN: reading}, self._drone_time(timestamp))
+        self._telemetry.write_range_readings({RangeDirection.DOWN: reading}, drone_time)
+        # NaN when a variance isn't finite: the safety layer counts it as missing (ADR-0054).
+        variance_px, variance_py = (data[variable] for variable in _VELOCITY_VARIANCE_VARIABLES)
+        self._telemetry.write_velocity_uncertainty(
+            velocity_uncertainty_from_variances(variance_px, variance_py), drone_time
+        )
 
     def _on_diagnostic(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
         """One debug line, nothing in the telemetry buffer (ADR-0050)."""
         roll_deg, pitch_deg, yaw_deg = (data[variable] for variable in _ATTITUDE_VARIABLES)
         squal, shutter = (int(data[variable]) for variable in _FLOW_QUALITY_VARIABLES)
+        self._latest_image_quality = (self._clock.now(), squal)
         battery_voltage = battery_voltage_from_mv(int(data[_DIAGNOSTIC_BATTERY_VARIABLE]))
         logger.debug(
             "Diagnostic: drone_time=%.3f roll_deg=%.2f pitch_deg=%.2f yaw_deg=%.2f motors=%s squal=%d shutter=%d "

@@ -34,6 +34,7 @@ class TelemetryBuffer:
         self._lock = lock if lock is not None else threading.Lock()
         self._position_estimate: Stamped[Vector3] | None = None
         self._velocity_estimate: Stamped[Vector3] | None = None
+        self._velocity_uncertainty: Stamped[float] | None = None
         self._range_readings: dict[RangeDirection, Stamped[RangeReading]] = {}
         self._battery_voltage: Stamped[float] | None = None
         self._drone_status: Stamped[DroneStatus] | None = None
@@ -49,6 +50,11 @@ class TelemetryBuffer:
         stamped = Stamped(velocity, self._clock.now(), drone_time)
         with self._lock:
             self._velocity_estimate = stamped
+
+    def write_velocity_uncertainty(self, uncertainty: float, drone_time: float | None) -> None:
+        stamped = Stamped(uncertainty, self._clock.now(), drone_time)
+        with self._lock:
+            self._velocity_uncertainty = stamped
 
     def write_range_readings(
         self,
@@ -99,6 +105,11 @@ class TelemetryBuffer:
         with self._lock:
             return self._position_estimate
 
+    def latest_velocity_estimate(self) -> Stamped[Vector3] | None:
+        """For adapters that need the drone's velocity to carry out a command."""
+        with self._lock:
+            return self._velocity_estimate
+
     def latest_drone_status(self) -> Stamped[DroneStatus] | None:
         """For adapters that need the drone status to carry out a command."""
         with self._lock:
@@ -114,6 +125,7 @@ class TelemetryBuffer:
             values: dict[str, object | None] = {
                 "position estimate": self._position_estimate,
                 "velocity estimate": self._velocity_estimate,
+                "velocity uncertainty": self._velocity_uncertainty,
                 "battery voltage": self._battery_voltage,
                 "drone status": self._drone_status,
             }
@@ -121,8 +133,10 @@ class TelemetryBuffer:
                 values[f"{direction.value} range"] = self._range_readings.get(direction)
         return [name for name, value in values.items() if value is None]
 
-    def snapshot(self, dt: float) -> Snapshot:
+    def snapshot(self, dt: float, *, is_in_initial_climb: bool) -> Snapshot:
         """Copy everything into a read-only snapshot for one tick (ADR-0007).
+
+        `is_in_initial_climb` isn't telemetry: the adapter passes it in (ADR-0054).
 
         Stored values are immutable, so copying references under the lock
         gives a true, consistent copy. The snapshot's time is read after the
@@ -132,6 +146,7 @@ class TelemetryBuffer:
         with self._lock:
             position_estimate = self._position_estimate
             velocity_estimate = self._velocity_estimate
+            velocity_uncertainty = self._velocity_uncertainty
             range_readings = dict(self._range_readings)
             battery_voltage = self._battery_voltage
             drone_status = self._drone_status
@@ -142,6 +157,7 @@ class TelemetryBuffer:
             dt=dt,
             position_estimate=position_estimate,
             velocity_estimate=velocity_estimate,
+            velocity_uncertainty=velocity_uncertainty,
             range_readings=RangeReadings(
                 front=range_readings.get(RangeDirection.FRONT),
                 back=range_readings.get(RangeDirection.BACK),
@@ -152,4 +168,5 @@ class TelemetryBuffer:
             ),
             battery_voltage=battery_voltage,
             drone_status=drone_status,
+            is_in_initial_climb=is_in_initial_climb,
         )

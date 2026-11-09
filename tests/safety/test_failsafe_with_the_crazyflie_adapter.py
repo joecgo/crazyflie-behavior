@@ -40,6 +40,7 @@ def report_everything(adapter: CrazyflieAdapter, status: DroneStatus, battery_vo
     telemetry.write_estimates_and_status(Vector3(0.0, 0.0, 0.3), Vector3.ZERO, status, None)
     telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(0.3)}, None)
     telemetry.write_battery_voltage(battery_voltage, None)
+    telemetry.write_velocity_uncertainty(0.01, None)
 
 
 def level_setpoints(fake_link: MagicMock) -> list[float]:

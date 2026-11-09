@@ -21,6 +21,7 @@ import pytest
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
 from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import MAX_FINAL_DESCENT_HEIGHT
+from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import RangeStatus
 from crazyflie_behavior.timing.clock import RealClock, SimClock
@@ -36,7 +37,7 @@ FIRST_SAMPLES: dict[str, dict[str, float]] = {
         "supervisor.info": 0.0,
     },
     "battery": {"pm.vbat": 4.0},
-    "down": {"range.zrange": 20.0},
+    "down": {"range.zrange": 20.0, "kalman.varPX": 1e-4, "kalman.varPY": 1e-4},
     "diagnostic": {
         "stateEstimate.roll": 0.0,
         "stateEstimate.pitch": 0.0,
@@ -81,8 +82,12 @@ class FakeCflib:
         firmware doesn't know the parameter, so cflib raises KeyError."""
         self.link.cf.param.get_value.side_effect = self.get_parameter
         self.events: list[str] = []
-        """What happened, in order: "start <block>" and "reset estimator"."""
-        self.reset_estimator = MagicMock(side_effect=self._record_the_reset)
+        """What happened, in order: "start <block>" and "reset estimate"."""
+        self.link.cf.param.set_value.side_effect = self._record_a_parameter_write
+        self.reset_estimate_error: BaseException | None = None
+        """Raised by the estimate reset's parameter write, when set."""
+        self.on_reset_estimate: Callable[[], None] | None = None
+        """Called by the estimate reset's parameter write, when set: what the drone does then."""
         self.samples = copy.deepcopy(FIRST_SAMPLES)
         """Each block's sample. A test can change one before it's sent."""
         self.log_block_names: list[str] = []
@@ -96,8 +101,18 @@ class FakeCflib:
     def get_parameter(self, name: str) -> str:
         return self.parameters[name]
 
-    def _record_the_reset(self, *_arguments: object) -> None:
-        self.events.append("reset estimator")
+    @property
+    def reset_count(self) -> int:
+        return self.events.count("reset estimate")
+
+    def _record_a_parameter_write(self, name: str, value: object) -> None:
+        if name == "kalman.resetEstimation":
+            if self.reset_estimate_error is not None:
+                raise self.reset_estimate_error
+            assert value == 1
+            self.events.append("reset estimate")
+            if self.on_reset_estimate is not None:
+                self.on_reset_estimate()
 
     def make_log_block(self, name: str, period_in_ms: int) -> MagicMock:
         self.log_block_names.append(name)
@@ -163,7 +178,6 @@ def fake_cflib(monkeypatch: pytest.MonkeyPatch) -> Generator[FakeCflib]:
     monkeypatch.setattr(adapter_module, "_drivers_initialized", True)
     monkeypatch.setattr(adapter_module, "SyncCrazyflie", MagicMock(return_value=fake.link))
     monkeypatch.setattr(adapter_module, "Crazyflie", MagicMock())
-    monkeypatch.setattr(adapter_module, "reset_estimator", fake.reset_estimator)
     monkeypatch.setattr(adapter_module, "LogConfig", fake.make_log_block)
     yield fake
     fake.stop()  # ends the streaming threads
@@ -185,7 +199,7 @@ def adapter(fake_cflib: FakeCflib) -> CrazyflieAdapter:
 def test_connecting_resets_the_estimate_and_starts_telemetry(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
     adapter.connect()
 
-    fake_cflib.reset_estimator.assert_called_once_with(fake_cflib.link)
+    assert fake_cflib.reset_count == 1
     assert fake_cflib.log_block_names == ["state", "battery", "down", "diagnostic"]
     fake_cflib.link.close_link.assert_not_called()
 
@@ -311,7 +325,7 @@ def test_without_a_multi_ranger_its_directions_read_invalid_never_clear(
 ) -> None:
     adapter.connect()
 
-    readings = adapter._telemetry.snapshot(0.0).range_readings
+    readings = adapter._telemetry.snapshot(0.0, is_in_initial_climb=False).range_readings
     for reading in (readings.front, readings.back, readings.left, readings.right, readings.up):
         assert reading is not None
         assert reading.value.status is RangeStatus.INVALID
@@ -323,7 +337,7 @@ def test_the_older_flow_deck_counts_too(adapter: CrazyflieAdapter, fake_cflib: F
 
     adapter.connect()
 
-    fake_cflib.reset_estimator.assert_called_once()
+    assert fake_cflib.reset_count == 1
 
 
 def test_without_a_flow_deck_it_refuses_to_fly_and_closes_only_the_radio_link(
@@ -335,7 +349,7 @@ def test_without_a_flow_deck_it_refuses_to_fly_and_closes_only_the_radio_link(
         adapter.connect()
 
     assert_only_the_radio_link_closed(fake_cflib)
-    fake_cflib.reset_estimator.assert_not_called()
+    assert fake_cflib.reset_count == 0
 
 
 class BlockingStep:
@@ -370,7 +384,7 @@ def interrupt_signal_step() -> Generator[BlockingStep]:
 
 @pytest.fixture
 def short_time_limits(monkeypatch: pytest.MonkeyPatch) -> None:
-    for name in ("LINK_TIME_LIMIT", "PARAMETERS_TIME_LIMIT", "POSITION_ESTIMATE_TIME_LIMIT"):
+    for name in ("LINK_TIME_LIMIT", "PARAMETERS_TIME_LIMIT"):
         monkeypatch.setattr(adapter_module, name, 0.2)
 
 
@@ -403,16 +417,41 @@ def test_reading_the_parameters_has_a_time_limit_then_closes_only_the_radio_link
     assert_only_the_radio_link_closed(fake_cflib)
 
 
-@pytest.mark.usefixtures("short_time_limits")
-def test_settling_the_position_estimate_has_a_time_limit_then_closes_the_link(
-    fake_cflib: FakeCflib, blocking_step: BlockingStep
+def test_connecting_resets_the_estimate_without_waiting_for_it_to_settle(fake_cflib: FakeCflib) -> None:
+    clock = StreamingSimClock(fake_cflib, start=10.0)
+    # The velocity uncertainty never settles, as on a dark floor (ADR-0054).
+    fake_cflib.samples["down"]["kalman.varPX"] = 1.0
+
+    CrazyflieAdapter(clock).connect()
+
+    assert fake_cflib.reset_count == 1
+    assert clock.now() - 10.0 <= WAIT_SLICE  # one wait for the first telemetry after the reset, no more
+
+
+def test_the_estimate_reset_logs_the_estimate_it_erases(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
 ) -> None:
-    fake_cflib.reset_estimator.side_effect = blocking_step
+    fake_cflib.samples["state"]["stateEstimate.x"] = -87.0
 
-    with pytest.raises(TimeoutError, match="Check the Flow deck can see the floor"):
-        real_time_adapter().connect()
+    with caplog.at_level(logging.INFO):
+        adapter.connect()
 
-    fake_cflib.link.close_link.assert_called_once()
+    [record] = [record for record in caplog.records if record.getMessage().startswith("Estimate reset")]
+    assert record.levelno == logging.INFO
+    assert "position (-87.000, 0.000, 0.000) m" in record.getMessage()
+
+
+def test_the_estimate_reset_warns_when_the_estimate_it_erases_was_moving_on_the_floor(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -> None:
+    fake_cflib.samples["state"]["stateEstimate.vy"] = 0.3
+
+    with caplog.at_level(logging.INFO):
+        adapter.connect()
+
+    [record] = [record for record in caplog.records if record.getMessage().startswith("Estimate reset")]
+    assert record.levelno == logging.WARNING
+    assert "implausible" in record.getMessage()
 
 
 def test_the_interrupt_signal_while_the_link_opens_gets_through_and_stops_the_connection_under_way(
@@ -450,7 +489,7 @@ def test_a_connect_that_fails_on_its_own_is_left_to_cflib_to_close(
 
 
 def test_any_failing_setup_step_closes_the_link(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
-    fake_cflib.reset_estimator.side_effect = TimeoutError("estimate never settled")
+    fake_cflib.reset_estimate_error = TimeoutError("parameter write failed")
 
     with pytest.raises(TimeoutError):
         adapter.connect()
@@ -572,7 +611,7 @@ FLYING = float(1 << adapter_module.BIT_IS_FLYING)
 def test_the_state_log_block_starts_before_the_estimate_reset(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
     adapter.connect()
 
-    assert fake_cflib.events.index("start state") < fake_cflib.events.index("reset estimator")
+    assert fake_cflib.events.index("start state") < fake_cflib.events.index("reset estimate")
 
 
 def test_a_flying_drone_is_refused_before_the_estimate_reset_and_without_a_zero_thrust_setpoint(
@@ -583,7 +622,7 @@ def test_a_flying_drone_is_refused_before_the_estimate_reset_and_without_a_zero_
     with pytest.raises(RuntimeError, match=r"still flying: run the rescue landing, or wait .* if it just landed"):
         adapter.connect()
 
-    fake_cflib.reset_estimator.assert_not_called()
+    assert fake_cflib.reset_count == 0
     assert_only_the_radio_link_closed(fake_cflib)
 
 
@@ -596,7 +635,7 @@ def test_a_status_that_never_arrives_is_a_time_limit_error_that_closes_only_the_
     with pytest.raises(TimeoutError, match=r"Waiting for the drone's status took longer than 3 s\. Check"):
         adapter.connect()
 
-    fake_cflib.reset_estimator.assert_not_called()
+    assert fake_cflib.reset_count == 0
     assert_only_the_radio_link_closed(fake_cflib)
 
 
@@ -615,14 +654,14 @@ def test_a_drone_on_the_floor_is_connected_and_a_later_failure_closes_the_link_n
 def test_telemetry_from_before_the_estimate_reset_is_not_used(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
     fake_cflib.samples["state"]["stateEstimate.x"] = 5.0  # where the drone thought it was before the reset
 
-    def reset_the_estimate(*_arguments: object) -> None:
+    def reset_the_estimate() -> None:
         fake_cflib.samples["state"]["stateEstimate.x"] = 0.0
 
-    fake_cflib.reset_estimator.side_effect = reset_the_estimate
+    fake_cflib.on_reset_estimate = reset_the_estimate
 
     adapter.connect()
 
-    position_estimate = adapter._telemetry.snapshot(0.0).position_estimate
+    position_estimate = adapter.take_snapshot(0.0).position_estimate
     assert position_estimate is not None
     assert position_estimate.value.x == 0.0
 
@@ -640,7 +679,7 @@ def test_taking_over_accepts_a_flying_drone_and_never_resets_its_estimate(
     with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
         taking_over_adapter.connect()
 
-    fake_cflib.reset_estimator.assert_not_called()
+    assert fake_cflib.reset_count == 0
     fake_cflib.link.close_link.assert_not_called()
     assert "Taking over the flight" in caplog.text
 
@@ -653,7 +692,7 @@ def test_taking_over_keeps_the_position_the_drone_already_reported(
 
     taking_over_adapter.connect()
 
-    position_estimate = taking_over_adapter._telemetry.snapshot(0.0).position_estimate
+    position_estimate = taking_over_adapter._telemetry.snapshot(0.0, is_in_initial_climb=False).position_estimate
     assert position_estimate is not None
     assert position_estimate.value.z == pytest.approx(0.4)
 

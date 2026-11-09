@@ -85,6 +85,7 @@ def fly_above_the_bad_flow_zone(
         if with_position:
             telemetry.write_position_estimate(Vector3(0.5, -0.25, height), None)
         telemetry.write_velocity_estimate(Vector3(0.0, 0.0, LEVEL_VERTICAL_SPEED), None)
+        telemetry.write_velocity_uncertainty(0.01, None)
         telemetry.write_drone_status(FLYING, None)
         telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(height)}, None)
         adapter.update_take_off_and_landing(adapter.take_snapshot(TICK))

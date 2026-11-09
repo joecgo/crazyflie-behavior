@@ -6,9 +6,13 @@ through the same `TelemetryBuffer` as every other adapter.
 
 It mocks the Crazyflie adapter, so it uses that adapter's numbers for the
 bad-flow zone (ADR-0048, ADR-0055). A take-off climbs level at
-`LEVEL_VERTICAL_SPEED` to the lowest final descent height, then teleports to
-its height: the mock's flow is perfect, so it settles at once and the final descent height is the lowest. A
-landing teleports down to the final descent height, then descends level at
+`LEVEL_VERTICAL_SPEED` to the final descent height, then teleports to its
+height. The mock's flow is perfect where it arrives, so the speed settles as
+soon as it does: at `SETTLE_MIN_DOWN_RANGE` on a lit floor, giving the lowest
+final descent height. A test can darken the floor with `set_dark_floor` (no
+flow below a height) or cut the flow with `cut_flow`: the velocity uncertainty
+is then high, and with no flow by `SETTLE_CAP_HEIGHT` the drone lands, as the
+Crazyflie adapter does (ADR-0054). A landing teleports down to the final descent height, then descends level at
 `LEVEL_VERTICAL_SPEED` to the floor. During those level parts it ignores every
 command but land and the motor stops, as the Crazyflie adapter does (ADR-0056).
 
@@ -35,7 +39,9 @@ import math
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
     LEVEL_VERTICAL_SPEED,
     MAX_FINAL_DESCENT_HEIGHT,
-    MIN_FINAL_DESCENT_HEIGHT,
+    SETTLE_CAP_HEIGHT,
+    SETTLE_MIN_DOWN_RANGE,
+    final_descent_height,
 )
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.telemetry_buffer import TelemetryBuffer
@@ -51,6 +57,11 @@ TAKEN_OVER_HEIGHT = 0.5
 
 FLOOR_DOWN_RANGE = 0.02
 """Meters: the down range on the floor. The real drone read 0.019-0.024 m at rest (Bench, 2026-11-04)."""
+
+FLOW_VELOCITY_UNCERTAINTY_VALUE = 0.01
+"""Meters per second: the velocity uncertainty while flow arrives. An estimate reset's value (ADR-0054)."""
+NO_FLOW_VELOCITY_UNCERTAINTY_VALUE = 0.5
+"""Meters per second: the velocity uncertainty without flow, well over any threshold."""
 
 # From the firmware source. VERIFY at the bench that the drone's firmware
 # matches (ADR-0011).
@@ -94,6 +105,9 @@ class MockAdapter(DroneInterface):
         """Once a test sets the down range, it stays as set instead of following the height."""
         self._battery_voltage = CHARGED_BATTERY_VOLTAGE
         self._is_streaming = True
+        self._dark_floor_height = 0.0
+        """Meters: no flow below this height."""
+        self._is_flow_cut = False
 
     # --- Test hooks: set the telemetry a test needs -----------------------------
     # A value set here arrives at once, so a test can set it and then stop the telemetry.
@@ -110,6 +124,16 @@ class MockAdapter(DroneInterface):
         self._battery_voltage = voltage
         if self._is_streaming:
             self._telemetry.write_battery_voltage(voltage, self._clock.now())
+
+    def set_dark_floor(self, height: float) -> None:
+        """No flow below `height` meters from now on, as over a dark floor (ADR-0054)."""
+        self._dark_floor_height = height
+        self._publish_state()
+
+    def cut_flow(self) -> None:
+        """A fault: no flow at any height from now on, so the velocity uncertainty is high (ADR-0054)."""
+        self._is_flow_cut = True
+        self._publish_state()
 
     def stop_telemetry(self) -> None:
         """Stop streaming, as if the link went quiet: every value goes stale from now on."""
@@ -152,7 +176,7 @@ class MockAdapter(DroneInterface):
             raise ValueError(f"Take-off height must be above the final descent height's cap, {cap:g} m: {height}")
         if self._is_armed and not self._is_flying:
             self._is_flying = True
-            self._final_descent_height = MIN_FINAL_DESCENT_HEIGHT
+            self._final_descent_height = MAX_FINAL_DESCENT_HEIGHT  # until the settle height is known
             self._climb_height = height
             self._start_level_part(LEVEL_VERTICAL_SPEED)
 
@@ -161,14 +185,7 @@ class MockAdapter(DroneInterface):
         if not self._is_flying:
             self._drop_to_ground()
         elif not self._is_in_final_descent:
-            # The landing approach, teleported. During the initial climb the drone is still below
-            # the final descent height, so the final descent starts from where it is (ADR-0049).
-            self._position = Vector3(
-                self._position.x, self._position.y, min(self._position.z, self._final_descent_height)
-            )
-            self._climb_height = None
-            self._is_in_final_descent = True
-            self._start_level_part(-LEVEL_VERTICAL_SPEED)
+            self._start_final_descent()
 
     def set_velocity(self, velocity: Vector3, yaw_rate_rad_per_s: float = 0.0) -> None:
         self.command_log.append("set_velocity")
@@ -197,6 +214,14 @@ class MockAdapter(DroneInterface):
         self._is_armed = False
         self._drop_to_ground()
 
+    def reset_estimate(self) -> None:
+        """Ignored while flying, as the Crazyflie adapter ignores it while the drone may be flying."""
+        self.command_log.append("reset_estimate")
+        if not self._is_flying:
+            self._position = Vector3(0.0, 0.0, self._position.z)
+            self._velocity = Vector3.ZERO
+            self._publish_state()
+
     def chirp(self) -> None:
         self.command_log.append("chirp")
 
@@ -210,14 +235,19 @@ class MockAdapter(DroneInterface):
         self.command_log.append("silence")
 
     def take_snapshot(self, dt: float) -> Snapshot:
-        return self._telemetry.snapshot(dt)
+        return self._telemetry.snapshot(dt, is_in_initial_climb=self._climb_height is not None)
 
     def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
         """Also moves the fake drone by the snapshot's `dt`, for every command, and streams every value (ADR-0055)."""
         self._apply_setpoint_timeout()
         if self._is_flying:
             self._position = self._position + self._velocity * snapshot.dt
-        if self._climb_height is not None and self._position.z >= self._final_descent_height:
+        settle_height = self._settle_height()
+        if self._climb_height is not None and settle_height is not None:
+            self._final_descent_height = final_descent_height(settle_height)
+        if self._climb_height is not None and settle_height is None and self._position.z > SETTLE_CAP_HEIGHT:
+            self._start_final_descent()  # no flow by the cap: the drone lands (ADR-0054)
+        elif self._climb_height is not None and self._position.z >= self._final_descent_height:
             # The initial climb is over: the high-level climb to the height, teleported.
             self._position = Vector3(self._position.x, self._position.y, self._climb_height)
             self._velocity = Vector3.ZERO
@@ -230,6 +260,24 @@ class MockAdapter(DroneInterface):
         self._publish_state()
 
     # --- Internals --------------------------------------------------------------
+
+    def _start_final_descent(self) -> None:
+        # The landing approach, teleported. During the initial climb the drone is still below
+        # the final descent height, so the final descent starts from where it is (ADR-0049).
+        self._position = Vector3(self._position.x, self._position.y, min(self._position.z, self._final_descent_height))
+        self._climb_height = None
+        self._is_in_final_descent = True
+        self._start_level_part(-LEVEL_VERTICAL_SPEED)
+
+    def _has_flow(self) -> bool:
+        return not self._is_flow_cut and self._position.z >= self._dark_floor_height
+
+    def _settle_height(self) -> float | None:
+        """Meters: where flow arrives above SETTLE_MIN_DOWN_RANGE, or None if not by the cap."""
+        if self._is_flow_cut:
+            return None
+        settle_height = max(self._dark_floor_height, SETTLE_MIN_DOWN_RANGE)
+        return settle_height if settle_height <= SETTLE_CAP_HEIGHT else None
 
     def _is_in_level_part(self) -> bool:
         return self._climb_height is not None or self._is_in_final_descent
@@ -274,6 +322,8 @@ class MockAdapter(DroneInterface):
         self._telemetry.write_battery_voltage(self._battery_voltage, drone_time)
         self._telemetry.write_position_estimate(self._position, drone_time)
         self._telemetry.write_velocity_estimate(self._velocity, drone_time)
+        uncertainty = FLOW_VELOCITY_UNCERTAINTY_VALUE if self._has_flow() else NO_FLOW_VELOCITY_UNCERTAINTY_VALUE
+        self._telemetry.write_velocity_uncertainty(uncertainty, drone_time)
         self._telemetry.write_drone_status(
             DroneStatus(
                 is_armed=self._is_armed,

@@ -39,9 +39,11 @@ def snapshot(time: float, status: DroneStatus) -> Snapshot:
         dt=0.05,
         position_estimate=fresh(Vector3(0.0, 0.0, 0.4)),
         velocity_estimate=fresh(Vector3.ZERO),
+        velocity_uncertainty=fresh(0.01),
         range_readings=RangeReadings(None, None, None, None, None, fresh(RangeReading.at_distance(0.4))),
         battery_voltage=fresh(4.0),
         drone_status=fresh(status),
+        is_in_initial_climb=False,
     )
 
 

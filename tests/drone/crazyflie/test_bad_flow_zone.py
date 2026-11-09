@@ -13,12 +13,15 @@ from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
     SettleDetector,
     final_descent_height,
 )
+from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import RangeReading, RangeReadings, Snapshot, Stamped
 
 TICK = 0.05
 SLOW = SETTLE_SPEED / 2
 FAST = SETTLE_SPEED * 2
+WITH_FLOW = FLOW_VELOCITY_UNCERTAINTY / 3
+"""Meters per second: a velocity uncertainty with flow arriving."""
 HOLD_TICKS = round(SETTLE_HOLD / TICK)
 """Ticks from the reading that starts the hold to the one that completes it."""
 
@@ -29,8 +32,10 @@ def snapshot_at(
     speed: float | None = SLOW,
     *,
     velocity_arrived: float | None = None,
+    velocity_uncertainty: float | None = WITH_FLOW,
 ) -> Snapshot:
-    """A snapshot at `time`: a down range of `down` meters and a horizontal speed estimate, both fresh.
+    """A snapshot at `time`: a down range of `down` meters, a horizontal speed estimate and a velocity
+    uncertainty, all fresh.
 
     None leaves a value missing. `velocity_arrived`: when the velocity estimate arrived; None means at `time`.
     """
@@ -40,6 +45,7 @@ def snapshot_at(
         dt=TICK,
         position_estimate=None,
         velocity_estimate=None if speed is None else Stamped(Vector3(0.6 * speed, 0.8 * speed, 0.2), arrived, None),
+        velocity_uncertainty=None if velocity_uncertainty is None else Stamped(velocity_uncertainty, time, None),
         range_readings=RangeReadings(
             front=None,
             back=None,
@@ -50,6 +56,7 @@ def snapshot_at(
         ),
         battery_voltage=None,
         drone_status=None,
+        is_in_initial_climb=False,
     )
 
 
@@ -200,3 +207,27 @@ def test_once_decided_the_settle_height_stays() -> None:
 
     assert detector.settle_height == pytest.approx(0.15)
     assert not detector.is_cap_tripped
+
+
+def test_without_flow_a_slow_speed_never_settles_and_the_cap_trips() -> None:
+    """A runaway speed can pass under the settle speed by chance (ADR-0054)."""
+    detector = SettleDetector()
+    no_flow = FLOW_VELOCITY_UNCERTAINTY
+
+    for tick in range(1, 100):
+        detector.observe(snapshot_at(tick * TICK, 0.12 + tick * 0.01, velocity_uncertainty=no_flow), tick * TICK)
+        if detector.is_cap_tripped:
+            break
+
+    assert detector.settle_height is None
+    assert detector.is_cap_tripped
+
+
+def test_a_missing_velocity_uncertainty_breaks_the_hold() -> None:
+    detector = SettleDetector()
+    detector.observe(snapshot_at(0.0, 0.15), 0.0)
+    detector.observe(snapshot_at(TICK, 0.15, velocity_uncertainty=None), TICK)
+    for tick in range(2, HOLD_TICKS + 2):
+        detector.observe(snapshot_at(tick * TICK, 0.20), tick * TICK)
+
+    assert detector.settle_height is None  # the hold restarted at 0.20 m and hasn't held long enough

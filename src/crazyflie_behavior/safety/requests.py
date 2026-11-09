@@ -5,7 +5,8 @@ a verdict (ADR-0025) and is the only code that sends commands (ADR-0008).
 Behaviors import this module, never the safety layer itself.
 
 The safety layer approves only arm, take off, hover and land (ADR-0030), and
-the buzzer requests: chirp, tone and silence (ADR-0053).
+the buzzer requests: chirp, tone and silence (ADR-0053), and the estimate
+reset, on the floor (ADR-0054).
 TODO: it refuses velocity and fast-mode requests until the speed envelope
 exists (backlog #30).
 """
@@ -89,13 +90,18 @@ class Silence:
     """Stop the buzzer (ADR-0053)."""
 
 
+@dataclass(frozen=True, slots=True)
+class ResetEstimate:
+    """An estimate reset, for a clean launch (ADR-0054). It has no command slot."""
+
+
 type MovementRequest = Arm | TakeOff | Hover | Land | SetVelocity | MoveTo
 """The command requests that share the movement slot (ADR-0025)."""
 
 type BuzzerRequest = Chirp | Tone | Silence
 """The command requests that share the buzzer slot (ADR-0025, ADR-0053)."""
 
-type CommandRequest = MovementRequest | BuzzerRequest
+type CommandRequest = MovementRequest | BuzzerRequest | ResetEstimate
 """What a behavior can ask the drone to do (glossary: Command request)."""
 
 

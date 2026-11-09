@@ -29,6 +29,7 @@ def snapshot_with(
         dt=0.05,
         position_estimate=(None if height is None else Stamped(Vector3(0.0, 0.0, height), height_arrived, None)),
         velocity_estimate=None,
+        velocity_uncertainty=None,
         range_readings=RangeReadings(
             front=None,
             back=None,
@@ -39,6 +40,7 @@ def snapshot_with(
         ),
         battery_voltage=None,
         drone_status=None,
+        is_in_initial_climb=False,
     )
 
 

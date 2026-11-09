@@ -6,7 +6,10 @@ from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
     LEVEL_VERTICAL_SPEED,
     MAX_FINAL_DESCENT_HEIGHT,
     MIN_FINAL_DESCENT_HEIGHT,
+    SETTLE_CAP_HEIGHT,
+    final_descent_height,
 )
+from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY
 from crazyflie_behavior.drone.mock_adapter import (
     FLOOR_DOWN_RANGE,
     SETPOINT_CUT_MOTORS_AFTER,
@@ -14,6 +17,7 @@ from crazyflie_behavior.drone.mock_adapter import (
     MockAdapter,
 )
 from crazyflie_behavior.geometry import Vector3
+from crazyflie_behavior.safety.safety_layer import SafetyLayer
 from crazyflie_behavior.snapshot import (
     DroneStatus,
     RangeDirection,
@@ -608,3 +612,100 @@ def test_a_tone_pitch_that_isnt_positive_is_a_bug(pitch: float) -> None:
         drone.play_tone(pitch)
 
     assert drone.tone_pitches == []
+
+
+# --- The flow (ADR-0054) ---------------------------------------------------------------
+
+
+def uncertainty_now(drone: MockAdapter) -> float:
+    uncertainty = snapshot_now(drone).velocity_uncertainty
+    assert uncertainty is not None
+    return uncertainty.value
+
+
+def armed_drone(clock: SimClock) -> MockAdapter:
+    drone = MockAdapter(clock)
+    drone.connect()
+    drone.arm()
+    return drone
+
+
+def climb(drone: MockAdapter, clock: SimClock) -> list[float]:
+    """Tick until the initial climb is over. Returns each tick's height."""
+    heights: list[float] = []
+    while snapshot_now(drone).is_in_initial_climb or not heights:
+        if len(heights) > 100:
+            pytest.fail("the initial climb never ended")
+        tick(drone, clock)
+        heights.append(height_now(drone))
+    return heights
+
+
+def test_over_a_dark_floor_the_velocity_uncertainty_is_high_below_its_height() -> None:
+    clock = SimClock()
+    drone = armed_drone(clock)
+    lit = uncertainty_now(drone)
+
+    drone.set_dark_floor(0.2)
+
+    assert lit < FLOW_VELOCITY_UNCERTAINTY < uncertainty_now(drone)
+
+
+def test_a_climb_over_a_dark_floor_lower_than_the_cap_settles_where_flow_arrives() -> None:
+    clock = SimClock()
+    drone = armed_drone(clock)
+    drone.set_dark_floor(0.2)
+
+    drone.take_off(0.8)
+    heights = climb(drone, clock)
+
+    assert heights[-2] == pytest.approx(final_descent_height(0.2), abs=LEVEL_STEP)
+    assert heights[-1] == pytest.approx(0.8)
+
+
+def test_a_climb_over_a_dark_floor_higher_than_the_cap_lands() -> None:
+    clock = SimClock()
+    drone = armed_drone(clock)
+    drone.set_dark_floor(SETTLE_CAP_HEIGHT + 0.1)
+
+    drone.take_off(0.8)
+    heights = climb(drone, clock) + tick_until_landed(drone, clock)
+
+    assert max(heights) == pytest.approx(SETTLE_CAP_HEIGHT, abs=LEVEL_STEP)
+    assert not status_of(snapshot_now(drone)).is_flying
+
+
+def test_a_flow_cut_in_flight_fails_the_pre_check_so_the_failsafe_lands() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock)
+    safety_layer = SafetyLayer(drone)
+
+    drone.cut_flow()
+    tick(drone, clock)
+
+    assert not safety_layer.pre_check(snapshot_now(drone))
+    safety_layer.send()
+    assert drone.command_log[-1] == "land"
+
+
+def test_an_estimate_reset_on_the_floor_puts_the_estimate_at_the_reset_point() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock)
+    drone.move_to(Vector3(1.0, -2.0, 0.5), 1.0)
+    drone.land()
+    tick_until_landed(drone, clock)
+
+    drone.reset_estimate()
+
+    assert xyz(position_of(snapshot_now(drone)))[:2] == (0.0, 0.0)
+
+
+def test_an_estimate_reset_in_flight_is_ignored() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock)
+    drone.move_to(Vector3(1.0, -2.0, 0.5), 1.0)
+
+    drone.reset_estimate()
+    tick(drone, clock)
+
+    assert xyz(position_of(snapshot_now(drone)))[:2] == (1.0, -2.0)
