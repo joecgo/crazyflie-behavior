@@ -31,10 +31,10 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 5 | 15 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
-| communication | 7 | 19 |
+| communication | 7 | 20 |
 | testing | 0 | 9 |
 | process | 4 | 12 |
-| **Total** | **31** | **82** |
+| **Total** | **31** | **83** |
 
 Of the 31 I pointed out, a later Claude review would probably have caught
 none, maybe 7, and probably not 24. So far, 7 of the 11 recommendation
@@ -566,6 +566,21 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-08: "In this light it never did", for a run with no flow data
+
+- **What happened:** First flight 3's Failsafe low run stopped at connect
+  ("Settling the position estimate took longer than 20 s"). Claude told me the
+  cause was too little room light for the Flow deck, as fact. That run's log
+  has no flow data: the diagnostic log stream starts only after connect waits
+  for the estimate. I had added light for the Hover run that came next, and
+  it connected with a surface quality around 95, so darkness is likely but
+  not shown by the data.
+- **How it was caught:** reading the Hover run's log, which had flow data the
+  failsafe run's log lacked.
+- **Kind:** communication.
+- **Takeaway:** before naming the cause of a field failure, check the log
+  holds the data that shows it; otherwise say it's a likely cause.
 
 ### 2026-11-08: "First flight 1 didn't hit it", with cflib's close unchecked
 
