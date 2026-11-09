@@ -1,17 +1,24 @@
 """The bad-flow zone's settle check and final descent height (ADR-0048, ADR-0056)."""
 
+import math
+
 import pytest
 
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
+    LEVEL_VERTICAL_SPEED,
     MAX_FINAL_DESCENT_HEIGHT,
+    MAX_INITIAL_CLIMB_SPEED,
     MIN_FINAL_DESCENT_HEIGHT,
+    MIN_INITIAL_CLIMB_SPEED,
     SETTLE_CAP_HEIGHT,
     SETTLE_HOLD,
     SETTLE_MARGIN,
     SETTLE_MIN_DOWN_RANGE,
     SETTLE_SPEED,
     SettleDetector,
+    check_initial_climb_speed,
     final_descent_height,
+    initial_climb_time_limit,
 )
 from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY
 from crazyflie_behavior.geometry import Vector3
@@ -231,3 +238,24 @@ def test_a_missing_velocity_uncertainty_breaks_the_hold() -> None:
         detector.observe(snapshot_at(tick * TICK, 0.20), tick * TICK)
 
     assert detector.settle_height is None  # the hold restarted at 0.20 m and hasn't held long enough
+
+
+# --- The initial climb's speed (ADR-0059) -------------------------------------------
+
+
+@pytest.mark.parametrize("climb_speed", [MIN_INITIAL_CLIMB_SPEED, LEVEL_VERTICAL_SPEED, MAX_INITIAL_CLIMB_SPEED])
+def test_an_initial_climb_speed_in_the_range_is_accepted(climb_speed: float) -> None:
+    check_initial_climb_speed(climb_speed)
+
+
+@pytest.mark.parametrize("climb_speed", [0.09, 0.41, 0.0, -0.2, math.nan])
+def test_an_initial_climb_speed_outside_the_range_is_refused(climb_speed: float) -> None:
+    with pytest.raises(ValueError, match="initial climb speed"):
+        check_initial_climb_speed(climb_speed)
+
+
+@pytest.mark.parametrize(("climb_speed", "time_limit"), [(0.1, 4.0), (0.2, 2.5), (0.4, 1.75)])
+def test_the_initial_climb_time_limit_is_the_cap_height_over_the_speed_plus_a_second(
+    climb_speed: float, time_limit: float
+) -> None:
+    assert initial_climb_time_limit(climb_speed) == pytest.approx(time_limit)

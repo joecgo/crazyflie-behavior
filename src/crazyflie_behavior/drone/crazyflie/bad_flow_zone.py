@@ -11,7 +11,11 @@ from crazyflie_behavior.snapshot import Snapshot
 
 # PLACEHOLDERS, to verify in flight (ADR-0048, ADR-0056).
 LEVEL_VERTICAL_SPEED = 0.2
-"""Meters per second: up in the initial climb, down in the level final descent."""
+"""Meters per second: down in the level final descent, and the initial climb's default."""
+MIN_INITIAL_CLIMB_SPEED = 0.1
+"""Meters per second: the slowest initial climb an adapter accepts (ADR-0059)."""
+MAX_INITIAL_CLIMB_SPEED = 0.4
+"""Meters per second: the fastest initial climb an adapter accepts (ADR-0059)."""
 SETTLE_SPEED = 0.15
 """Meters per second. A horizontal speed estimate under this counts as settled, with the velocity
 uncertainty under FLOW_VELOCITY_UNCERTAINTY (ADR-0054)."""
@@ -29,8 +33,18 @@ MAX_FINAL_DESCENT_HEIGHT = 0.30
 
 SETTLE_CAP_HEIGHT = MAX_FINAL_DESCENT_HEIGHT - SETTLE_MARGIN
 """Meters. If the speed hasn't settled by this down range, the drone lands at once."""
-INITIAL_CLIMB_TIME_LIMIT = MAX_FINAL_DESCENT_HEIGHT / LEVEL_VERTICAL_SPEED + 1.0
-"""Seconds from the take-off to the end of the initial climb, or the drone lands."""
+
+
+def check_initial_climb_speed(climb_speed: float) -> None:
+    """Raises ValueError unless the speed is in the accepted range (ADR-0059)."""
+    if not MIN_INITIAL_CLIMB_SPEED <= climb_speed <= MAX_INITIAL_CLIMB_SPEED:
+        low, high = MIN_INITIAL_CLIMB_SPEED, MAX_INITIAL_CLIMB_SPEED
+        raise ValueError(f"The initial climb speed must be {low:g}-{high:g} m/s: {climb_speed}")
+
+
+def initial_climb_time_limit(climb_speed: float) -> float:
+    """Seconds from the take-off to the end of the initial climb, or the drone lands (ADR-0059)."""
+    return MAX_FINAL_DESCENT_HEIGHT / climb_speed + 1.0
 
 
 def final_descent_height(settle_height: float | None) -> float:

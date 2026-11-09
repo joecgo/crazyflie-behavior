@@ -42,12 +42,13 @@ from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.crtp.crtpstack import CRTPPacket, CRTPPort
 
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
-    INITIAL_CLIMB_TIME_LIMIT,
     LEVEL_VERTICAL_SPEED,
     MAX_FINAL_DESCENT_HEIGHT,
     SETTLE_CAP_HEIGHT,
     SettleDetector,
+    check_initial_climb_speed,
     final_descent_height,
+    initial_climb_time_limit,
 )
 from crazyflie_behavior.drone.crazyflie.conversions import (
     alt_hold_packet_data,
@@ -232,10 +233,17 @@ class CrazyflieAdapter(DroneInterface):
         cache_directory: str = "./cache",
         *,
         take_over_flight: bool = False,
+        initial_climb_speed: float = LEVEL_VERTICAL_SPEED,
     ) -> None:
         """`take_over_flight`: only the rescue landing sets this (ADR-0038). `connect()` then
         accepts a drone that is flying, skips the position estimate reset and treats the
-        drone as airborne, as if this adapter had sent the take-off."""
+        drone as airborne, as if this adapter had sent the take-off.
+
+        `initial_climb_speed`: meters per second, for take-off speed tests (ADR-0059). Raises
+        ValueError outside the accepted range."""
+        check_initial_climb_speed(initial_climb_speed)
+        self._initial_climb_speed = initial_climb_speed
+        self._initial_climb_time_limit = initial_climb_time_limit(initial_climb_speed)
         self._clock = clock
         self._uri = uri
         self._cache_directory = cache_directory
@@ -738,14 +746,16 @@ class CrazyflieAdapter(DroneInterface):
         # A landing during the climb sets its final descent's time limit from these readings (ADR-0049).
         self._touchdown_detector = TouchdownDetector()
         self._final_descent_height = final_descent_height(None)
-        self._send_level_setpoint(LEVEL_VERTICAL_SPEED)
+        logger.info("Initial climb at %g m/s.", self._initial_climb_speed)
+        self._send_level_setpoint(self._initial_climb_speed)
 
     def _update_initial_climb(self, snapshot: Snapshot) -> None:
         now = self._clock.now()
         self._settle_detector.observe(snapshot, now)
         self._touchdown_detector.observe(snapshot, now)
-        if now - self._take_off_sent_at >= INITIAL_CLIMB_TIME_LIMIT:
-            logger.warning("The initial climb hasn't ended %g s after the take-off. Landing.", INITIAL_CLIMB_TIME_LIMIT)
+        if now - self._take_off_sent_at >= self._initial_climb_time_limit:
+            time_limit = self._initial_climb_time_limit
+            logger.warning("The initial climb hasn't ended %g s after the take-off. Landing.", time_limit)
             self.land()
             return
         if self._settle_detector.is_cap_tripped:
@@ -760,7 +770,7 @@ class CrazyflieAdapter(DroneInterface):
         if settle_height is not None and down is not None and down.value >= final_descent_height(settle_height):
             self._end_initial_climb(settle_height)
         else:
-            self._send_level_setpoint(LEVEL_VERTICAL_SPEED)
+            self._send_level_setpoint(self._initial_climb_speed)
 
     def _end_initial_climb(self, settle_height: float) -> None:
         """Hand over to a high-level climb to the take-off height, at the current x and y (ADR-0048)."""

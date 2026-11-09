@@ -709,3 +709,24 @@ def test_an_estimate_reset_in_flight_is_ignored() -> None:
     tick(drone, clock)
 
     assert xyz(position_of(snapshot_now(drone)))[:2] == (1.0, -2.0)
+
+
+# --- A set initial climb speed (ADR-0059) -------------------------------------------
+
+
+def test_take_off_climbs_level_at_a_set_initial_climb_speed() -> None:
+    clock = SimClock()
+    drone = MockAdapter(clock, initial_climb_speed=0.4)
+    drone.connect()
+    drone.arm()
+
+    drone.take_off(0.8)
+    tick(drone, clock)
+    tick(drone, clock)
+
+    assert height_now(drone) == pytest.approx(2 * 0.4 * TICK)
+
+
+def test_an_initial_climb_speed_outside_the_range_is_refused() -> None:
+    with pytest.raises(ValueError, match="initial climb speed"):
+        MockAdapter(SimClock(), initial_climb_speed=0.05)

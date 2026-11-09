@@ -485,3 +485,15 @@ def test_an_error_ends_a_program_with_exit_code_1_and_goes_to_the_log(
     log_text = the_log_file_text(tmp_path / "logs")
     assert "The test program stopped with an error" in log_text
     assert "the tick step broke" in log_text
+
+
+def test_make_drone_passes_the_initial_climb_speed_on_to_either_adapter() -> None:
+    clock = SimClock()
+
+    mock_drone = make_drone(use_crazyflie=False, clock=clock, initial_climb_speed=0.4)
+    crazyflie = make_drone(use_crazyflie=True, clock=clock, initial_climb_speed=0.4)
+
+    assert isinstance(mock_drone, MockAdapter)
+    assert mock_drone._initial_climb_speed == 0.4  # pyright: ignore[reportPrivateUsage]
+    assert isinstance(crazyflie, CrazyflieAdapter)
+    assert crazyflie._initial_climb_speed == 0.4  # pyright: ignore[reportPrivateUsage]

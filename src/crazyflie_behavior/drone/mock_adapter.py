@@ -5,8 +5,8 @@ It answers commands instantly with no physics: `move_to` teleports, and
 through the same `TelemetryBuffer` as every other adapter.
 
 It mocks the Crazyflie adapter, so it uses that adapter's numbers for the
-bad-flow zone (ADR-0048, ADR-0055). A take-off climbs level at
-`LEVEL_VERTICAL_SPEED` to the final descent height, then teleports to its
+bad-flow zone (ADR-0048, ADR-0055). A take-off climbs level at its initial
+climb speed (`LEVEL_VERTICAL_SPEED` unless set, ADR-0059) to the final descent height, then teleports to its
 height. The mock's flow is perfect where it arrives, so the speed settles as
 soon as it does: at `SETTLE_MIN_DOWN_RANGE` on a lit floor, giving the lowest
 final descent height. A test can darken the floor with `set_dark_floor` (no
@@ -41,6 +41,7 @@ from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
     MAX_FINAL_DESCENT_HEIGHT,
     SETTLE_CAP_HEIGHT,
     SETTLE_MIN_DOWN_RANGE,
+    check_initial_climb_speed,
     final_descent_height,
 )
 from crazyflie_behavior.drone.interface import DroneInterface
@@ -75,10 +76,17 @@ and the drone drops."""
 class MockAdapter(DroneInterface):
     """A fake drone that does exactly what it's told, instantly."""
 
-    def __init__(self, clock: Clock, *, take_over_flight: bool = False) -> None:
+    def __init__(
+        self, clock: Clock, *, take_over_flight: bool = False, initial_climb_speed: float = LEVEL_VERTICAL_SPEED
+    ) -> None:
         """`take_over_flight`: the rescue landing's setting (ADR-0038). `connect()` then finds the
         drone armed and hovering at `TAKEN_OVER_HEIGHT`, as if a program had been lost with it
-        in the air, so the rescue landing has something to land."""
+        in the air, so the rescue landing has something to land.
+
+        `initial_climb_speed`: meters per second, as the Crazyflie adapter's (ADR-0059). Raises
+        ValueError outside the accepted range."""
+        check_initial_climb_speed(initial_climb_speed)
+        self._initial_climb_speed = initial_climb_speed
         self._clock = clock
         self._take_over_flight = take_over_flight
         self._telemetry = TelemetryBuffer(clock)
@@ -178,7 +186,7 @@ class MockAdapter(DroneInterface):
             self._is_flying = True
             self._final_descent_height = MAX_FINAL_DESCENT_HEIGHT  # until the settle height is known
             self._climb_height = height
-            self._start_level_part(LEVEL_VERTICAL_SPEED)
+            self._start_level_part(self._initial_climb_speed)
 
     def land(self) -> None:
         self.command_log.append("land")

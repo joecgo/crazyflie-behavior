@@ -24,10 +24,10 @@ from crazyflie_behavior.drone.crazyflie.adapter import (
     CrazyflieAdapter,
 )
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
-    INITIAL_CLIMB_TIME_LIMIT,
     LEVEL_VERTICAL_SPEED,
     SETTLE_CAP_HEIGHT,
     SETTLE_SPEED,
+    initial_climb_time_limit,
 )
 from crazyflie_behavior.drone.crazyflie.conversions import alt_hold_packet_data
 from crazyflie_behavior.drone.crazyflie.touchdown import TOUCHDOWN_HOLD
@@ -245,7 +245,7 @@ def test_a_climb_that_never_settles_lands_level_at_its_time_limit(
             adapter, fake_link, lambda _: climb_tick(adapter, clock, 0.08)
         )  # stuck where no hold starts
 
-    assert clock.now() - take_off_sent_at == pytest.approx(INITIAL_CLIMB_TIME_LIMIT)
+    assert clock.now() - take_off_sent_at == pytest.approx(initial_climb_time_limit(LEVEL_VERTICAL_SPEED))
     assert level_setpoints(fake_link)[-1] == pytest.approx(-LEVEL_VERTICAL_SPEED)  # the final descent
     assert any("initial climb hasn't ended" in record.getMessage() for record in caplog.records)
 
@@ -507,3 +507,53 @@ def test_an_estimate_reset_while_the_drone_may_be_flying_is_ignored_and_warned_o
 
     assert reset_writes(fake_link) == 0
     assert sum("Estimate reset ignored" in record.getMessage() for record in caplog.records) == 1
+
+
+# --- A set initial climb speed (ADR-0059) -------------------------------------------
+
+FAST_CLIMB = 0.4
+"""Meters per second: the fastest initial climb accepted."""
+
+
+@pytest.fixture
+def fast_climb_adapter(clock: SimClock, fake_link: MagicMock) -> CrazyflieAdapter:
+    """A connected adapter on the floor, set to climb at FAST_CLIMB."""
+    adapter = CrazyflieAdapter(clock, initial_climb_speed=FAST_CLIMB)
+    adapter._sync_crazyflie = fake_link
+    return adapter
+
+
+def test_a_set_initial_climb_speed_is_the_speed_of_every_climb_setpoint(
+    fast_climb_adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    fast_climb_adapter.take_off(1.0)
+    climb_tick(fast_climb_adapter, clock, 0.02)
+    climb_tick(fast_climb_adapter, clock, 0.04)
+
+    assert level_setpoints(fake_link) == [pytest.approx(FAST_CLIMB)] * 3
+
+
+def test_a_faster_climb_lands_at_its_shorter_time_limit_and_descends_at_the_final_descent_speed(
+    fast_climb_adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    fast_climb_adapter.take_off(1.0)
+    take_off_sent_at = clock.now()
+
+    climb_until_it_lands(fast_climb_adapter, fake_link, lambda _: climb_tick(fast_climb_adapter, clock, 0.08))
+
+    assert clock.now() - take_off_sent_at == pytest.approx(initial_climb_time_limit(FAST_CLIMB))
+    assert level_setpoints(fake_link)[-1] == pytest.approx(-LEVEL_VERTICAL_SPEED)
+
+
+def test_an_initial_climb_speed_outside_the_range_is_refused_before_connecting(clock: SimClock) -> None:
+    with pytest.raises(ValueError, match="initial climb speed"):
+        CrazyflieAdapter(clock, initial_climb_speed=0.5)
+
+
+def test_the_initial_climb_logs_its_speed(
+    fast_climb_adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+        fast_climb_adapter.take_off(1.0)
+
+    assert "Initial climb at 0.4 m/s." in caplog.text
