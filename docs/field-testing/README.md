@@ -1,6 +1,6 @@
 # Field testing
 
-> **Status, updated 2026-11-07:** a vertical slice: one room (the living
+> **Status, updated 2026-11-09:** a vertical slice: one room (the living
 > room), working toward hide-and-seek. Pass criteria are light for now. First
 > hardware session on 2026-11-04 ([First flight 1](sessions/2026-11-04-first-flight-1.md)):
 > the Bench; Failsafe high with the forged fault; a 60 s Hover through the
@@ -13,7 +13,10 @@
 > ([ADR-0049](../decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md)). The rescue landing and the
 > emergency-stop script are built
 > ([ADR-0038](../decisions/0038-connecting-to-a-flying-drone.md)) and not yet
-> run on hardware.
+> run on hardware. Session 3 (drafted, date not set) adds Take-off
+> speeds: short hovers at 0.1, 0.2 and 0.4 m/s initial climbs, to see whether
+> the climb's speed changes the sideways drift at take-off in low light
+> ([ADR-0059](../decisions/0059-initial-climb-speed-set-per-hover-run.md)).
 
 Real flights are where the design gets proven or broken. This folder is the
 record: every field test gets a test log and every session a session doc,
