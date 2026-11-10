@@ -28,13 +28,13 @@ decisions are recorded), *communication* (how Claude explains things).
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 4 | 14 |
-| safety design | 5 | 15 |
+| safety design | 5 | 16 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
-| communication | 7 | 20 |
+| communication | 7 | 21 |
 | testing | 0 | 9 |
 | process | 4 | 12 |
-| **Total** | **31** | **83** |
+| **Total** | **31** | **85** |
 
 Of the 31 I pointed out, a later Claude review would probably have caught
 none, maybe 7, and probably not 24. So far, 7 of the 11 recommendation
@@ -566,6 +566,33 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-09: A 0.05 s margin on the climb time limit, not flagged
+
+- **What happened:** analyzing First flight 2's Failsafe high, Claude
+  recorded that the initial climb ended 2.45 s after the take-off, but didn't
+  point out that the time limit (ADR-0056) was 2.5 s, so the one full climb
+  so far passed with 0.05 s to spare. ADR-0059 then kept 2.5 s for 0.2 m/s.
+  In First flight 3 the climb was slower and the time limit landed the drone
+  before the hover, so Failsafe high didn't test the failsafe.
+- **How it was caught:** analyzing First flight 3's Failsafe high log.
+- **Kind:** safety design.
+- **Takeaway:** when a flight shows how long a step took, compare it with
+  that step's time limit and say the margin.
+
+### 2026-11-09: ADR-0054 described from its number, not its text
+
+- **What happened:** arguing for the owed `/project-review` before First
+  flight 3's Failsafe low, Claude said ADR-0054 changed how the initial
+  climb lands the drone at the settle cap. ADR-0054 is a fresh position
+  estimate for every take-off; it kept the cap from ADR-0048. The take-off
+  does run ADR-0054's code, so the case for the review still held, but the
+  reason given was wrong, and I chose to fly first on it.
+- **How it was caught:** linking the ADR in the drafted test log, where its
+  file name didn't match.
+- **Kind:** communication.
+- **Takeaway:** before citing what an ADR decides, read its title and
+  Decision section, not a code comment that mentions it.
 
 ### 2026-11-08: "In this light it never did", for a run with no flow data
 
