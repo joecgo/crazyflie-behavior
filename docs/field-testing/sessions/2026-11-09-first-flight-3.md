@@ -1,6 +1,4 @@
-# YYYY-MM-DD-first-flight-3
-
-*Draft: rename with the session's date once it's set.*
+# 2026-11-09-first-flight-3
 
 A session is one trip with one or more field tests, flown in order. Each
 field test has its own log in [`../field-tests/`](../field-tests/).
@@ -19,10 +17,10 @@ Take-off speeds: short hovers at different initial climb speeds
 to learn whether a faster or slower climb drifts less in low light.
 
 1. Bench (log to be drafted)
-2. Failsafe low (log to be drafted)
-3. Failsafe high (log to be drafted)
-4. [Take-off speeds](../field-tests/YYYY-MM-DD-first-flight-3-take-off-speeds.md)
-5. Hover, with chirps (`--chirp`) (log to be drafted)
+2. [Failsafe low](../field-tests/2026-11-09-first-flight-3-failsafe-low.md)
+3. [Failsafe high](../field-tests/2026-11-09-first-flight-3-failsafe-high.md)
+4. [Take-off speeds](../field-tests/2026-11-09-first-flight-3-take-off-speeds.md)
+5. [Hover, with chirps](../field-tests/2026-11-09-first-flight-3-hover.md) (`--chirp`)
 
 Each test needs the ones before it to pass. If one fails, stop and write it
 up before flying the next (README, "Sessions and test logs"). Take-off speeds
@@ -42,6 +40,17 @@ comes before the Hover so a 60 s hover doesn't use up the batteries first.
 
 ## Results
 *From the operator or the recordings, never from an AI. One line per test: passed, failed or not flown.*
+
+- Bench: not flown (Joe's call).
+- Failsafe low: passed by the log; both flights landed 6 cm right.
+- Failsafe high: failed. It landed early, 20 cm forward and to the right: the
+  initial climb's time limit landed it before the hover.
+- Take-off speeds: flown, 2 rounds (flight 5 flown twice, one take-off
+  refused on the floor). Only 0.4 m/s climbed; one flight reached the hover
+  and the safety layer landed it on velocity uncertainty. The time limit or
+  the cap landed every other flight.
+- Hover: failed. Flown with a 0.4 m/s climb (Joe's call); it reached 0.5 m
+  and the safety layer landed it about 1 s into the hover (backlog #80).
 
 ## Next session
 *What the results decide: another session, or the milestone is done.*

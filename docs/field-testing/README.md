@@ -13,10 +13,12 @@
 > ([ADR-0049](../decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md)). The rescue landing and the
 > emergency-stop script are built
 > ([ADR-0038](../decisions/0038-connecting-to-a-flying-drone.md)) and not yet
-> run on hardware. Session 3 (drafted, date not set) adds Take-off
-> speeds: short hovers at 0.1, 0.2 and 0.4 m/s initial climbs, to see whether
-> the climb's speed changes the sideways drift at take-off in low light
-> ([ADR-0059](../decisions/0059-initial-climb-speed-set-per-hover-run.md)).
+> run on hardware. [First flight 3](sessions/2026-11-09-first-flight-3.md)
+> (2026-11-09, low light): Failsafe low passed, and the drone re-armed with
+> no power cycle. Failsafe high and the Hover failed. In Take-off speeds only
+> 0.4 m/s climbed out of ground effect, and the two flights that reached
+> 0.5 m were landed by the safety layer's velocity uncertainty limit about 1 s
+> into the hover. Backlog #78-#81 decide what comes next.
 
 Real flights are where the design gets proven or broken. This folder is the
 record: every field test gets a test log and every session a session doc,
