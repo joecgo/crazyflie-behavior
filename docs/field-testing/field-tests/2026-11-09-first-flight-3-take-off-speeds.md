@@ -105,7 +105,7 @@ What happened, especially anything surprising. Include numbers.
   it (`Final descent: level, from 0.108 m by the down range`). No
   `Initial climb done`. Shift by the estimate: by 0.6 s, 5 cm right; by the
   time limit, 26 cm right and 14 cm forward, mostly steady through the climb;
-  at touchdown (3.4 s), 32 cm right and 19 cm forward. After touchdown the
+  at touchdown (3.4 s), 37 cm right and 23 cm forward. After touchdown the
   safety layer's pre-check failed "in flight", as in Failsafe high (backlog
   #79).
 - **Flight 2 (0.4 m/s):** before the reset, the estimate said (-4.8, -5.9) m.

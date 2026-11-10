@@ -31,10 +31,10 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 5 | 16 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
-| communication | 7 | 21 |
+| communication | 7 | 23 |
 | testing | 0 | 9 |
 | process | 4 | 12 |
-| **Total** | **31** | **85** |
+| **Total** | **31** | **87** |
 
 Of the 31 I pointed out, a later Claude review would probably have caught
 none, maybe 7, and probably not 24. So far, 7 of the 11 recommendation
@@ -566,6 +566,30 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-10: A cut-off extraction read as the touchdown
+
+- **What happened:** Claude's printout of Take-off speeds flight 1's
+  estimate stopped at 3.15 s, 0.25 s before touchdown, and Claude logged
+  those values as the shift at touchdown (32 cm right, 19 cm forward; it was
+  37 cm right, 23 cm forward). In chat it then said flight 2's drift was
+  half on the landing "like flight 1"; flight 1's was about a third.
+- **How it was caught:** re-reading the flight's log for the handoff.
+- **Kind:** communication.
+- **Takeaway:** check that an extraction reaches the moment it's quoted
+  for, and compare flights only from numbers already checked.
+
+### 2026-11-10: Session 2's light blamed on a check that didn't exist yet
+
+- **What happened:** reporting the velocity uncertainty limit that landed a
+  0.5 m hover in First flight 3 (backlog #80), Claude said it "may also
+  explain why the session 2 Hover needed more light". The check was built
+  on 2026-11-09, after session 2; session 2's light problem was the estimate
+  settle at connect.
+- **How it was caught:** checking the timeline for the handoff.
+- **Kind:** communication.
+- **Takeaway:** before linking a finding to an earlier session, check the
+  code that session flew had the feature.
 
 ### 2026-11-09: A 0.05 s margin on the climb time limit, not flagged
 
