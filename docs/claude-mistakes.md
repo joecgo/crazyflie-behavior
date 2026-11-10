@@ -27,18 +27,18 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 4 | 14 |
+| design | 4 | 15 |
 | safety design | 5 | 16 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
-| communication | 7 | 23 |
-| testing | 0 | 9 |
-| process | 4 | 12 |
-| **Total** | **31** | **87** |
+| communication | 7 | 24 |
+| testing | 0 | 10 |
+| process | 4 | 14 |
+| **Total** | **31** | **92** |
 
 Of the 31 I pointed out, a later Claude review would probably have caught
 none, maybe 7, and probably not 24. So far, 7 of the 11 recommendation
-mistakes needed me, and 7 of the 26 communication mistakes. The first
+mistakes needed me, and 7 of the 31 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -566,6 +566,67 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-10: One limit read two ways, and messages that seemed to contradict it
+
+- **What happened:** in ADR-0054's code, the safety pre-check passed a
+  velocity uncertainty of exactly 0.03 m/s, while the take-off rule and the
+  settle height counted it as no flow. The 0.05 m/s floor speed was two
+  constants that compared differently (the take-off rule's and the reset
+  log's). Messages such as "0.030 m/s in flight (no flow over 0.03)" and
+  "0.050 m/s (under 0.05)" read as if the value were within its limit.
+- **How it was caught:** the project review of ADR-0054's code.
+- **Kind:** design.
+- **Takeaway:** define each limit once, compare it the same way everywhere,
+  and have each message say which side the value must be on.
+
+### 2026-11-10: A comment and an ADR line that promised more than the code
+
+- **What happened:** after ADR-0054 removed the wait for the estimate at
+  connect, a comment still said no position from before the reset is used,
+  but values from before it can still arrive. ADR-0054 also said the adapter
+  warns when the estimate jumps; that wasn't built (backlog #76), and the ADR
+  didn't say so.
+- **How it was caught:** the project review of ADR-0054's code.
+- **Kind:** process.
+- **Takeaway:** when a change removes a wait, re-read the comments that
+  relied on it; when code leaves part of an ADR unbuilt, mark that line with
+  its backlog item.
+
+### 2026-11-10: Choices made while building, not recorded, and new terms not proposed
+
+- **What happened:** ADR-0054's code put `FLOW_VELOCITY_UNCERTAINTY` in the
+  drone interface module, chose the reset log's "implausible" threshold, and
+  made the low-light warning fire when the image quality is unknown. The ADR
+  stated none of these. Its messages and comments also used "reset point",
+  "image quality" and "low light", which weren't glossary terms.
+- **How it was caught:** the project review of ADR-0054's code.
+- **Kind:** process.
+- **Takeaway:** before the commit, list each rule, threshold and new word the
+  code uses that the ADR and glossary don't, and bring them to me.
+
+### 2026-11-10: The mock found the settle height again every tick
+
+- **What happened:** the Crazyflie adapter keeps the settle height once
+  found, but the mock adapter recomputed it every tick, so a flow cut after
+  the settle height would land the mock drone at the cap and not the real
+  one.
+- **How it was caught:** the project review of ADR-0054's code.
+- **Kind:** testing.
+- **Takeaway:** for each state the real adapter keeps once set, check that
+  the mock keeps it too.
+
+### 2026-11-10: An old status logged as current, and a reset logged before it was sent
+
+- **What happened:** the arm log said "The drone reports" for a drone status
+  of any age. The estimate reset logged the estimate it erases, then "not
+  sent: the link is closed". The mock's `FLOW_VELOCITY_UNCERTAINTY_VALUE` (a
+  reading) was named almost like the interface's `FLOW_VELOCITY_UNCERTAINTY`
+  (the limit), and a docstring quoted First flight 2's readings.
+- **How it was caught:** the project review of ADR-0054's code.
+- **Kind:** communication.
+- **Takeaway:** a log line about telemetry gives its age, and an action is
+  logged only on the path where it happens.
 
 ### 2026-11-10: A cut-off extraction read as the touchdown
 

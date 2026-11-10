@@ -68,5 +68,6 @@ This column is honest about which ideas were mine.
 | [0057](0057-failsafe-low-fires-at-5-cm.md) | Failsafe low forges its fault at a down range of 0.05 m (was 0.10 m), two readings; amends 0049 | My idea; the AI first recommended keeping 0.10 m, then agreed once the goal (take-off to landing switch) was stated |
 | [0058](0058-release-setpoint-priority-after-motor-stop.md) | After a motor stop, release the setpoint priority; close the link only once the drone isn't flying; the drone status decodes can-arm and locked | Mixed: keeping the Crazyflie term "locked" was mine; the rest were AI recommendations accepted |
 | [0059](0059-initial-climb-speed-set-per-hover-run.md) | The hover program sets the initial climb's speed (0.1-0.4 m/s) for take-off speed tests; the time limit scales with it; amends 0048 | Mixed: the tests and the climb-only flag were mine; the adapter setting, range and time limit were AI recommendations accepted |
+| [0060](0060-pre-check-flow-while-the-drone-may-be-flying.md) | The pre-check checks the velocity uncertainty while the drone may be flying (not by the drone status); flow means under 0.03 m/s in every check; one floor speed limit; amends 0054 | AI recommendations accepted, from the project review of ADR-0054's code |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

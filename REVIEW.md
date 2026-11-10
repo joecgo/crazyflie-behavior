@@ -114,6 +114,12 @@ takeaway applies to reviews, it's added here as a question.
 - Does new wording name a milestone, quote a constant's value, or describe
   something temporary without `TODO:`?
 - Is any new constant a copy of a value that follows from another one?
+- Is each limit defined once, and compared the same way ("under" or "up
+  to") in every check that uses it? Does each message about it say which
+  side the value must be on?
+- When a change removes a wait or a check, do the comments and ADR lines
+  that relied on it still hold? Is each ADR line the code leaves unbuilt
+  marked, with its backlog item?
 - A docstring, comment or message that describes a safety judgment: which
   way does the judgment fail when unsure, and does the wording say the same?
 - Review fixes are new code: did anything review the lines a fix commit

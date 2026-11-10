@@ -139,3 +139,6 @@ class Snapshot:
     drone_status: Stamped[DroneStatus] | None
     is_in_initial_climb: bool
     """Whether the initial climb is running, as the adapter knew when it took the snapshot (ADR-0054)."""
+    may_be_flying: bool
+    """The adapter's "may be flying" when it took the snapshot (ADR-0039, ADR-0060). Unlike the
+    drone status, it says not flying as soon as the motors stop."""

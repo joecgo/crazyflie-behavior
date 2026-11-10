@@ -325,7 +325,7 @@ def test_without_a_multi_ranger_its_directions_read_invalid_never_clear(
 ) -> None:
     adapter.connect()
 
-    readings = adapter._telemetry.snapshot(0.0, is_in_initial_climb=False).range_readings
+    readings = adapter._telemetry.snapshot(0.0, is_in_initial_climb=False, may_be_flying=False).range_readings
     for reading in (readings.front, readings.back, readings.left, readings.right, readings.up):
         assert reading is not None
         assert reading.value.status is RangeStatus.INVALID
@@ -692,7 +692,9 @@ def test_taking_over_keeps_the_position_the_drone_already_reported(
 
     taking_over_adapter.connect()
 
-    position_estimate = taking_over_adapter._telemetry.snapshot(0.0, is_in_initial_climb=False).position_estimate
+    position_estimate = taking_over_adapter._telemetry.snapshot(
+        0.0, is_in_initial_climb=False, may_be_flying=False
+    ).position_estimate
     assert position_estimate is not None
     assert position_estimate.value.z == pytest.approx(0.4)
 

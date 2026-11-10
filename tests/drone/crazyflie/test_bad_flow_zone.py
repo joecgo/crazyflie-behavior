@@ -64,6 +64,7 @@ def snapshot_at(
         battery_voltage=None,
         drone_status=None,
         is_in_initial_climb=False,
+        may_be_flying=False,
     )
 
 

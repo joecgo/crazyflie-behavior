@@ -108,6 +108,7 @@ class StandInDrone(DroneInterface):
             battery_voltage=None if self.battery_voltage is None else fresh(self.battery_voltage.value),
             drone_status=fresh(self.status),
             is_in_initial_climb=False,
+            may_be_flying=self.status.is_flying,
         )
 
     def _down_reading(self, time: float) -> Stamped[RangeReading]:

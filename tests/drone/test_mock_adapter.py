@@ -675,6 +675,35 @@ def test_a_climb_over_a_dark_floor_higher_than_the_cap_lands() -> None:
     assert not status_of(snapshot_now(drone)).is_flying
 
 
+def test_a_flow_cut_after_the_settle_height_doesnt_undo_it() -> None:
+    clock = SimClock()
+    drone = armed_drone(clock)
+    settle_height = SETTLE_CAP_HEIGHT - 0.03  # its final descent height is above the cap
+    drone.set_dark_floor(settle_height)
+    drone.take_off(0.8)
+    while height_now(drone) < SETTLE_CAP_HEIGHT - LEVEL_STEP:
+        tick(drone, clock)
+
+    drone.cut_flow()
+    heights = climb(drone, clock)
+
+    assert heights[-1] == pytest.approx(0.8)  # the climb went on past the cap, as the Crazyflie adapter's does
+
+
+def test_the_snapshot_says_may_be_flying_from_the_take_off_to_touchdown() -> None:
+    clock = SimClock()
+    drone = armed_drone(clock)
+    assert not snapshot_now(drone).may_be_flying
+
+    drone.take_off(0.8)
+    climb(drone, clock)
+    assert snapshot_now(drone).may_be_flying
+
+    drone.land()
+    tick_until_landed(drone, clock)
+    assert not snapshot_now(drone).may_be_flying
+
+
 def test_a_flow_cut_in_flight_fails_the_pre_check_so_the_failsafe_lands() -> None:
     clock = SimClock()
     drone = flying_drone(clock)

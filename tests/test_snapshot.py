@@ -47,6 +47,7 @@ def test_a_snapshot_cannot_be_modified() -> None:
         battery_voltage=None,
         drone_status=None,
         is_in_initial_climb=False,
+        may_be_flying=False,
     )
     field_name = "dt"
 

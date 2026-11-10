@@ -63,6 +63,7 @@ def snapshot(time: float, status: DroneStatus, height: float = 0.0) -> Snapshot:
         battery_voltage=fresh(4.0),
         drone_status=fresh(status),
         is_in_initial_climb=False,
+        may_be_flying=status.is_flying,
     )
 
 

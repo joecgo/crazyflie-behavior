@@ -288,7 +288,7 @@ def test_an_arm_request_logs_what_the_drone_reports(
         adapter.arm()
 
     assert [(record.levelno, record.getMessage()) for record in caplog.records] == [
-        (logging.INFO, "Arm requested. The drone reports: armed yes, can arm no, locked no.")
+        (logging.INFO, "Arm requested. The drone status, 0.00 s old: armed yes, can arm no, locked no.")
     ]
     fake_link.cf.supervisor.send_arming_request.assert_called_once_with(True)
 

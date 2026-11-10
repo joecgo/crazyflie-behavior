@@ -22,7 +22,12 @@ import logging
 import math
 from typing import NamedTuple
 
-from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY, TOUCHDOWN_DOWN_RANGE, DroneInterface
+from crazyflie_behavior.drone.interface import (
+    FLOOR_MAX_SPEED,
+    FLOW_VELOCITY_UNCERTAINTY,
+    TOUCHDOWN_DOWN_RANGE,
+    DroneInterface,
+)
 from crazyflie_behavior.safety.requests import (
     Arm,
     BuzzerRequest,
@@ -59,9 +64,8 @@ BATTERY_SAG_VOLTAGE = 0.42
 TAKE_OFF_BATTERY_VOLTAGE = LOW_BATTERY_VOLTAGE + BATTERY_SAG_VOLTAGE
 """Volts. The take-off limit: a take-off is refused below this, so the sag doesn't fail the safety pre-check at once."""
 
-# The take-off rule's estimate check, with flow arriving (ADR-0054). PLACEHOLDERS, to verify in flight.
-TAKE_OFF_MAX_SPEED = 0.05
-"""Meters per second: the most horizontal speed estimate a drone on the floor may show."""
+# The take-off rule's estimate check, with flow arriving (ADR-0054). A PLACEHOLDER, to verify in flight.
+# Its speed limit is FLOOR_MAX_SPEED, shared with the adapter (ADR-0060).
 TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT = 0.05
 """Meters: how far from the reset point (0, 0) the horizontal position estimate may be."""
 
@@ -110,9 +114,10 @@ def safety_pre_check(snapshot: Snapshot) -> list[str]:
         failures.append("the drone reports a crash")
     if status is not None and status.value.is_tumbled:
         failures.append("the drone reports it has tumbled")
-    # Only in flight: on the floor a failed pre-check would end every round at a dark
-    # hiding spot. The initial climb checks the flow itself (ADR-0054).
-    if status is not None and status.value.is_flying and not snapshot.is_in_initial_climb:
+    # Only in flight: on the floor a failed pre-check would end every round at a dark hiding spot.
+    # By "may be flying", not the drone status, which says flying for 2 s after the motors stop.
+    # The initial climb checks the flow itself (ADR-0054, ADR-0060).
+    if snapshot.may_be_flying and not snapshot.is_in_initial_climb:
         failure = _velocity_uncertainty_failure(snapshot)
         if failure is not None:
             failures.append(failure)
@@ -125,9 +130,10 @@ def _velocity_uncertainty_failure(snapshot: Snapshot) -> str | None:
     if stale is not None or uncertainty is None:
         return stale
     # The comparison is false for NaN too, so NaN fails like a missing value (ADR-0030).
-    if not uncertainty.value <= FLOW_VELOCITY_UNCERTAINTY:
+    if not uncertainty.value < FLOW_VELOCITY_UNCERTAINTY:
         return (
-            f"velocity uncertainty {uncertainty.value:.3f} m/s in flight (no flow over {FLOW_VELOCITY_UNCERTAINTY:g})"
+            f"velocity uncertainty {uncertainty.value:.3f} m/s in flight, "
+            f"must be under {FLOW_VELOCITY_UNCERTAINTY:g}: no flow"
         )
     return None
 
@@ -230,13 +236,15 @@ def _judge_take_off_estimate(snapshot: Snapshot) -> Verdict:
         return Verdict.refused("no position or velocity estimate yet")
     speed = math.hypot(velocity.value.x, velocity.value.y)
     # The comparisons are false for NaN too.
-    if not speed < TAKE_OFF_MAX_SPEED:
-        return Verdict.refused(f"the estimate is moving on the floor: {speed:.3f} m/s (under {TAKE_OFF_MAX_SPEED:g})")
+    if not speed < FLOOR_MAX_SPEED:
+        return Verdict.refused(
+            f"the estimate is moving on the floor: {speed:.3f} m/s, must be under {FLOOR_MAX_SPEED:g}"
+        )
     distance = math.hypot(position.value.x, position.value.y)
     if not distance <= TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT:
         return Verdict.refused(
-            f"the estimate is {distance:.3f} m from the reset point "
-            f"(within {TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT:g}): request an estimate reset"
+            f"the estimate is {distance:.3f} m from the reset point, "
+            f"must be within {TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT:g}: request an estimate reset"
         )
     return Verdict.approved()
 

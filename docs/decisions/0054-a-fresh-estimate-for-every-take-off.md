@@ -1,6 +1,6 @@
 # 0054: Behaviors request estimate resets on the floor; the velocity uncertainty is checked at take-off and in flight
 
-- **Status:** Accepted. Amends [ADR-0030](0030-minimal-safety-layer-for-first-flight.md): the safety pre-check also checks the velocity uncertainty while flying, and the take-off rule checks the estimate. Amends [ADR-0025](0025-safety-pre-check-and-command-slots.md): the estimate reset request has no command slot. Closes backlog #48. Amended 2026-11-07, before its code: behaviors request a reset when they want a clean launch, with no command slot and no wait after it; the reset command is built now, not with the round start; the adapter ignores a reset while the drone may be flying; the take-off rule's floor threshold moves to the drone interface module. Amended 2026-11-08, before its code: the drone takes off without flow in low light, and the flow is checked at the top of the initial climb instead (see "Amendment, 2026-11-08"). That also amends [ADR-0048](0048-level-through-the-bad-flow-zone.md) (the settle height needs a low velocity uncertainty) and [ADR-0029](0029-connecting-has-time-limits.md) (`connect()` no longer waits for the estimate), and closes backlog #53 and #60.
+- **Status:** Accepted. Amends [ADR-0030](0030-minimal-safety-layer-for-first-flight.md): the safety pre-check also checks the velocity uncertainty while flying, and the take-off rule checks the estimate. Amends [ADR-0025](0025-safety-pre-check-and-command-slots.md): the estimate reset request has no command slot. Closes backlog #48. Amended 2026-11-07, before its code: behaviors request a reset when they want a clean launch, with no command slot and no wait after it; the reset command is built now, not with the round start; the adapter ignores a reset while the drone may be flying; the take-off rule's floor threshold moves to the drone interface module. Amended 2026-11-08, before its code: the drone takes off without flow in low light, and the flow is checked at the top of the initial climb instead (see "Amendment, 2026-11-08"). That also amends [ADR-0048](0048-level-through-the-bad-flow-zone.md) (the settle height needs a low velocity uncertainty) and [ADR-0029](0029-connecting-has-time-limits.md) (`connect()` no longer waits for the estimate), and closes backlog #53 and #60. Amended by [ADR-0060](0060-pre-check-flow-while-the-drone-may-be-flying.md), 2026-11-10: the in-flight check runs while the drone may be flying, flow means an uncertainty under 0.03 m/s in every check, and one floor speed limit.
 - **Date:** 2026-11-06
 - **Origin:** Mixed. The velocity uncertainty and the landed-drone check, a reset command, landing on a high uncertainty in flight, and no hold or bad-flow-zone exemption: AI recommendations accepted. Proving it by cutting the flow in software, in its own test program: mine. On 2026-11-07, all mine: building the reset now, for a clean launch without restarting the program; behaviors deciding when to reset; no slot (over the AI's movement slot); no wait after a reset (over the AI's 5 s wait in the take-off rule). The adapter ignoring a reset while the drone may be flying, and moving the floor threshold to the drone interface module: AI recommendations accepted. On 2026-11-08, mine: taking off without flow in low light, trusting the climb to reach flow above the bad-flow zone, and the low-light warning as a log line. AI recommendations accepted: checking the flow at the top of the initial climb, the floor check only with flow, the snapshot saying when the initial climb runs, no wait in `connect()`, the warning from the Flow deck's image quality, and keeping the cap.
 
@@ -70,6 +70,7 @@ A and B, and an estimate reset that behaviors request.
   0.03 m/s. No settle by the cap (0.25 m), and the drone lands, as before.
 - **In flight:** while the drone status says flying, a velocity uncertainty
   over 0.03 m/s, missing or stale fails the pre-check, and the failsafe lands.
+  (ADR-0060: while the drone may be flying, and not under 0.03 m/s.)
   On the floor the pre-check ignores it: a failed pre-check ends the flight
   for good, so a drone landed at a dark hiding spot would end every round.
   It also ignores it during the initial climb (amended 2026-11-08): the
@@ -118,10 +119,13 @@ A and B, and an estimate reset that behaviors request.
     bad estimate until the final descent (backlog #58).
   - Wrong flow above the bad-flow zone isn't detected in flight.
   - The firmware resets the estimate itself past 100 m or 10 m/s, in flight
-    too (`kalman_supervisor.c`). The adapter warns when the estimate jumps.
+    too (`kalman_supervisor.c`). A warning when the estimate jumps isn't
+    built yet (backlog #76).
 - A take-off requested in the same tick as a reset is judged on the estimate
   from before it, and is sent first, so the adapter then ignores the reset. A
-  behavior takes off a tick or more after its reset.
+  behavior takes off a tick or more after its reset. Nothing waits for the
+  reset, so values from before it can still arrive until it reaches the
+  drone, and a take-off judged on them may be refused.
 - Hypothesis for ADR-0050's attitude log: the post-landing runaway is the
   estimator's flying model, used for 2 s after the motors stop
   (`supervisor.c` 56, `kalman_core.c` 506-540).
@@ -166,3 +170,17 @@ flew only with a flashlight under the drone.
   integration.
 - Field test: take-offs without the flashlight, logging the uncertainty and
   image quality from the reset to the settle height (backlog #74).
+
+## As built, 2026-11-10
+
+Choices made while building, recorded after the project review (AI choices,
+accepted 2026-11-10):
+
+- `FLOW_VELOCITY_UNCERTAINTY` lives in the drone interface module, next to
+  `TOUCHDOWN_DOWN_RANGE`: the safety layer and the Crazyflie adapter's settle
+  height both use it.
+- The reset log calls the estimate it erases implausible when its horizontal
+  speed estimate isn't under the floor speed limit (`FLOOR_MAX_SPEED`,
+  ADR-0060).
+- The low-light warning also fires when the image quality is unknown: no
+  reading in the last 0.5 s (`MAX_READING_AGE`).

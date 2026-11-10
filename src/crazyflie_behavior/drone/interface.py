@@ -24,6 +24,9 @@ TOUCHDOWN_DOWN_RANGE = 0.05
 """Meters. A down range at or below this means the drone is resting on something."""
 FLOW_VELOCITY_UNCERTAINTY = 0.03
 """Meters per second. A velocity uncertainty under this means flow is arriving (ADR-0054)."""
+FLOOR_MAX_SPEED = 0.05
+"""Meters per second. A drone on the floor is still, so with flow arriving its horizontal speed
+estimate is under this (ADR-0054, ADR-0060)."""
 
 
 class DroneInterface(ABC):

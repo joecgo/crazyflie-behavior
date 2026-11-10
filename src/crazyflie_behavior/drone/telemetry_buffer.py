@@ -133,10 +133,11 @@ class TelemetryBuffer:
                 values[f"{direction.value} range"] = self._range_readings.get(direction)
         return [name for name, value in values.items() if value is None]
 
-    def snapshot(self, dt: float, *, is_in_initial_climb: bool) -> Snapshot:
+    def snapshot(self, dt: float, *, is_in_initial_climb: bool, may_be_flying: bool) -> Snapshot:
         """Copy everything into a read-only snapshot for one tick (ADR-0007).
 
-        `is_in_initial_climb` isn't telemetry: the adapter passes it in (ADR-0054).
+        `is_in_initial_climb` and `may_be_flying` aren't telemetry: the adapter passes them in
+        (ADR-0054, ADR-0060).
 
         Stored values are immutable, so copying references under the lock
         gives a true, consistent copy. The snapshot's time is read after the
@@ -169,4 +170,5 @@ class TelemetryBuffer:
             battery_voltage=battery_voltage,
             drone_status=drone_status,
             is_in_initial_climb=is_in_initial_climb,
+            may_be_flying=may_be_flying,
         )

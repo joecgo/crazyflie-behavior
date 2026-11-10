@@ -7,7 +7,7 @@ from dataclasses import replace
 
 import pytest
 
-from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY, TOUCHDOWN_DOWN_RANGE
+from crazyflie_behavior.drone.interface import FLOOR_MAX_SPEED, FLOW_VELOCITY_UNCERTAINTY, TOUCHDOWN_DOWN_RANGE
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.safety.requests import (
@@ -30,7 +30,6 @@ from crazyflie_behavior.safety.safety_layer import (
     STALE_AFTER,
     TAKE_OFF_BATTERY_VOLTAGE,
     TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT,
-    TAKE_OFF_MAX_SPEED,
     SafetyLayer,
     judge,
     safety_pre_check,
@@ -70,8 +69,12 @@ def snapshot(
     velocity_uncertainty: float = 0.01,
     velocity_uncertainty_age: float = 0.0,
     is_in_initial_climb: bool = False,
+    may_be_flying: bool | None = None,
 ) -> Snapshot:
-    """A hand-built snapshot: everything fresh and the battery charged, unless asked otherwise."""
+    """A hand-built snapshot: everything fresh and the battery charged, unless asked otherwise.
+
+    `may_be_flying` follows the status unless set.
+    """
     height = 0.5 if status.is_flying else 0.0
     return Snapshot(
         time=NOW,
@@ -90,6 +93,7 @@ def snapshot(
         battery_voltage=stamped(battery_voltage, battery_age),
         drone_status=stamped(status, status_age),
         is_in_initial_climb=is_in_initial_climb,
+        may_be_flying=status.is_flying if may_be_flying is None else may_be_flying,
     )
 
 
@@ -611,10 +615,10 @@ def with_down_range(base: Snapshot, reading: RangeReading) -> Snapshot:
     return replace(base, range_readings=replace(base.range_readings, down=replace(down, value=reading)))
 
 
-def test_in_flight_a_velocity_uncertainty_over_the_threshold_fails() -> None:
-    assert safety_pre_check(snapshot(FLYING, velocity_uncertainty=FLOW_VELOCITY_UNCERTAINTY)) == []
-    [failure] = safety_pre_check(snapshot(FLYING, velocity_uncertainty=NO_FLOW))
-    assert "velocity uncertainty" in failure
+def test_in_flight_a_velocity_uncertainty_not_under_the_threshold_fails() -> None:
+    assert safety_pre_check(snapshot(FLYING, velocity_uncertainty=FLOW_VELOCITY_UNCERTAINTY * 0.99)) == []
+    [failure] = safety_pre_check(snapshot(FLYING, velocity_uncertainty=FLOW_VELOCITY_UNCERTAINTY))
+    assert failure == "velocity uncertainty 0.030 m/s in flight, must be under 0.03: no flow"
 
 
 @pytest.mark.parametrize("uncertainty", [math.nan, math.inf])
@@ -637,6 +641,17 @@ def test_on_the_floor_the_pre_check_ignores_the_velocity_uncertainty() -> None:
     assert safety_pre_check(replace(dark_floor, velocity_uncertainty=None)) == []
 
 
+def test_after_the_motors_stop_the_pre_check_ignores_the_velocity_uncertainty() -> None:
+    # The drone status says flying for 2 s after the motors stop; "may be flying" doesn't (ADR-0060).
+    landed_on_a_dark_floor = snapshot(FLYING, velocity_uncertainty=NO_FLOW, may_be_flying=False)
+
+    assert safety_pre_check(landed_on_a_dark_floor) == []
+
+
+def test_while_the_drone_may_be_flying_the_pre_check_checks_the_velocity_uncertainty_whatever_the_status() -> None:
+    assert safety_pre_check(snapshot(ARMED, velocity_uncertainty=NO_FLOW, may_be_flying=True)) != []
+
+
 def test_during_the_initial_climb_the_pre_check_ignores_the_velocity_uncertainty() -> None:
     climbing_without_flow = snapshot(FLYING, velocity_uncertainty=NO_FLOW, is_in_initial_climb=True)
 
@@ -655,8 +670,8 @@ def test_a_take_off_is_refused_unless_the_down_range_reads_the_floor() -> None:
 
 
 def test_with_flow_a_take_off_is_refused_when_the_estimate_moves() -> None:
-    moving = Vector3(TAKE_OFF_MAX_SPEED * 0.6, TAKE_OFF_MAX_SPEED * 0.8, 0.0)  # exactly the limit
-    nearly = Vector3(TAKE_OFF_MAX_SPEED * 0.9, 0.0, 0.0)
+    moving = Vector3(FLOOR_MAX_SPEED * 0.6, FLOOR_MAX_SPEED * 0.8, 0.0)  # exactly the limit
+    nearly = Vector3(FLOOR_MAX_SPEED * 0.9, 0.0, 0.0)
 
     assert judge(TakeOff(1.0), with_estimate(snapshot(ARMED), velocity=nearly)).is_approved
     verdict = judge(TakeOff(1.0), with_estimate(snapshot(ARMED), velocity=moving))

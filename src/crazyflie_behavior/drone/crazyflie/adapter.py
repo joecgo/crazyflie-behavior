@@ -69,7 +69,7 @@ from crazyflie_behavior.drone.crazyflie.touchdown import (
     final_descent_deadline,
     fresh_down_distance,
 )
-from crazyflie_behavior.drone.interface import DroneInterface
+from crazyflie_behavior.drone.interface import FLOOR_MAX_SPEED, DroneInterface
 from crazyflie_behavior.drone.telemetry_buffer import TelemetryBuffer
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading, Snapshot, Stamped
@@ -123,10 +123,7 @@ NOT_FLYING_TIME_LIMIT = 3.0
 (ADR-0058). Its status keeps saying flying for 2 s after the motors stop."""
 LOW_LIGHT_IMAGE_QUALITY = 60
 """The Flow deck's image quality (`motion.squal`) under which a take-off logs a low-light warning
-(ADR-0054). First flight 2: 22-42 on the dark floor, about 100 with a flashlight."""
-FLOOR_SPEED_LIMIT = 0.05
-"""Meters per second. An estimate reset logs a warning when the horizontal speed estimate it erases
-is over this: a drone on the floor is still (ADR-0054)."""
+(ADR-0054)."""
 # ------------------------------------------------------------------------------
 
 _MULTIRANGER_VARIABLES = {
@@ -387,7 +384,8 @@ class CrazyflieAdapter(DroneInterface):
             level = logging.WARNING if status.value.is_locked else logging.INFO
             logger.log(
                 level,
-                "Arm requested. The drone reports: armed %s, can arm %s, locked %s.",
+                "Arm requested. The drone status, %.2f s old: armed %s, can arm %s, locked %s.",
+                status.age(self._clock.now()),
                 _yes_no(status.value.is_armed),
                 _yes_no(status.value.can_arm),
                 _yes_no(status.value.is_locked),
@@ -514,7 +512,9 @@ class CrazyflieAdapter(DroneInterface):
         self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_OFF)
 
     def take_snapshot(self, dt: float) -> Snapshot:
-        return self._telemetry.snapshot(dt, is_in_initial_climb=self._is_in_initial_climb)
+        return self._telemetry.snapshot(
+            dt, is_in_initial_climb=self._is_in_initial_climb, may_be_flying=self._may_be_flying()
+        )
 
     def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
         if self._is_in_initial_climb:
@@ -590,11 +590,11 @@ class CrazyflieAdapter(DroneInterface):
 
     def _send_estimate_reset(self) -> None:
         """Log the estimate it erases (ADR-0020), then write the reset without waiting (ADR-0054)."""
-        self._log_estimate_before_reset()
         # Once the link is lost, cflib forgets the parameter list and a write raises.
         if self._crazyflie.link is None:
             logger.warning("Estimate reset not sent: the link is closed.")
             return
+        self._log_estimate_before_reset()
         self._crazyflie.param.set_value(_RESET_ESTIMATE_PARAMETER, 1)
 
     def _log_estimate_before_reset(self) -> None:
@@ -606,7 +606,7 @@ class CrazyflieAdapter(DroneInterface):
         p, v = position.value, velocity.value
         speed = math.hypot(v.x, v.y)
         # The comparison is false for NaN too: an estimate that isn't finite is implausible.
-        is_plausible = speed <= FLOOR_SPEED_LIMIT
+        is_plausible = speed < FLOOR_MAX_SPEED
         logger.log(
             logging.INFO if is_plausible else logging.WARNING,
             "Estimate reset. Before it: position (%.3f, %.3f, %.3f) m, velocity (%.3f, %.3f, %.3f) m/s%s",
@@ -616,7 +616,7 @@ class CrazyflieAdapter(DroneInterface):
             v.x,
             v.y,
             v.z,
-            "" if is_plausible else f": implausible on the floor (over {FLOOR_SPEED_LIMIT:g} m/s)",
+            "" if is_plausible else f": implausible on the floor, the speed must be under {FLOOR_MAX_SPEED:g} m/s",
         )
 
     def _log_low_light_warning(self) -> None:
@@ -883,7 +883,7 @@ class CrazyflieAdapter(DroneInterface):
             )
 
     def _latest_fresh_down_distance(self) -> Stamped[float] | None:
-        snapshot = self._telemetry.snapshot(0.0, is_in_initial_climb=self._is_in_initial_climb)
+        snapshot = self.take_snapshot(0.0)
         return fresh_down_distance(snapshot, self._clock.now())
 
     def _land_and_wait_for_touchdown(self) -> None:
@@ -894,7 +894,7 @@ class CrazyflieAdapter(DroneInterface):
         self.land()
         while self._landing_phase is not _LandingPhase.NOT_LANDING:
             self._clock.sleep_until(self._clock.now() + TOUCHDOWN_POLL_PERIOD)
-            self._update_landing(self._telemetry.snapshot(0.0, is_in_initial_climb=self._is_in_initial_climb))
+            self._update_landing(self.take_snapshot(0.0))
 
     # --- Telemetry ----------------------------------------------------------
 
@@ -958,8 +958,9 @@ class CrazyflieAdapter(DroneInterface):
         self._is_drone_state_unknown = False  # on the floor: a normal link close is safe from here
         # No wait for the estimate to settle: the take-off rule judges it (ADR-0054).
         self._send_estimate_reset()
-        # The state block kept streaming, so drop what it wrote before the reset: no
-        # position from before it is used (ADR-0038).
+        # The state block kept streaming, so drop what it wrote before the reset (ADR-0038).
+        # Nothing waits for the reset, so values from before it can still arrive until it
+        # reaches the drone, and a take-off judged on them may be refused (ADR-0054).
         self._telemetry = TelemetryBuffer(self._clock)
 
     def _wait_for_first_telemetry(self) -> None:

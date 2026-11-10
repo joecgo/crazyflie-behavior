@@ -495,6 +495,20 @@ def test_an_estimate_reset_on_the_floor_writes_the_reset_parameter(
     assert reset_writes(fake_link) == 1
 
 
+def test_an_estimate_reset_with_the_link_closed_logs_only_that_it_wasnt_sent(
+    adapter: CrazyflieAdapter, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    fake_link.cf.link = None
+
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+        adapter.reset_estimate()
+
+    assert reset_writes(fake_link) == 0
+    assert [record.getMessage() for record in caplog.records if "Estimate reset" in record.getMessage()] == [
+        "Estimate reset not sent: the link is closed."
+    ]
+
+
 def test_an_estimate_reset_while_the_drone_may_be_flying_is_ignored_and_warned_once_per_streak(
     adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:

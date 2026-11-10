@@ -651,6 +651,18 @@ def test_land_after_our_own_stop_does_not_land_again(
     assert len(landing_approach_moves(fake_link)) == 1  # only the first landing
 
 
+def test_after_our_own_stop_the_snapshot_says_not_flying_while_the_status_still_says_flying(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    land_and_wait_for_the_landing_approach(adapter, clock)
+    assert adapter.take_snapshot(TICK).may_be_flying
+    tick_for(adapter, clock, TOUCHDOWN_HOLD + TICK, RangeReading.at_distance(0.02))
+    assert motors_stopped(fake_link)
+    report_status(adapter, FLYING)
+
+    assert not adapter.take_snapshot(TICK).may_be_flying  # so the safety pre-check skips the flow (ADR-0060)
+
+
 def test_an_old_on_the_floor_status_counts_as_unknown_so_it_lands(
     adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
 ) -> None:
