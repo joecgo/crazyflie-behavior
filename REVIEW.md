@@ -24,6 +24,10 @@ takeaway applies to reviews, it's added here as a question.
 - For each way a flight ends (landing, failsafe, disarm, link close): which
   firmware supervisor state does the drone end in, checked in the source, and
   can it arm again without a reboot?
+- Code that switches the firmware between setpoint types (a setpoint stream,
+  the high-level commander): was the controller's source read for what the
+  switch does (integrals restarted, base values, where a planned move
+  starts), and does the code or its ADR allow for it?
 
 ## Fakes and the real drone
 

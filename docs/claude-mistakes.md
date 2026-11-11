@@ -27,14 +27,14 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 4 | 15 |
+| design | 4 | 16 |
 | safety design | 5 | 16 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
 | communication | 7 | 24 |
 | testing | 0 | 10 |
 | process | 4 | 14 |
-| **Total** | **31** | **92** |
+| **Total** | **31** | **93** |
 
 Of the 31 I pointed out, a later Claude review would probably have caught
 none, maybe 7, and probably not 24. So far, 7 of the 11 recommendation
@@ -566,6 +566,25 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-10: The altHold climb chosen without reading what its controller does at a switch
+
+- **What happened:** ADR-0048 (2026-11-05) described the altHold option as
+  "the height controller tracks the vertical speed estimate", citing
+  `controller_pid.c` for ignoring the horizontal estimate. The same file
+  restarts every controller integral at a setpoint mode change, and the
+  vertical speed controller starts from a fixed thrust base (36,000) that
+  this drone needs about 7,300 more than to hover. Neither was checked, so
+  ADR-0056's and ADR-0059's time limits and Take-off speeds' prediction
+  assumed the climb runs at the commanded speed. In First flights 2 and 3 the
+  climbs ran far slower, the time limit landed most of them, and every
+  hand-over dipped.
+- **How it was caught:** analyzing First flight 3, by fitting the firmware's
+  formula to the thrust command reconstructed from the motor logs.
+- **Kind:** design.
+- **Takeaway:** before relying on a firmware setpoint type, read what its
+  controller does when that setpoint starts and stops (integrals, base
+  values, the planner's start), not only which inputs it ignores.
 
 ### 2026-11-10: One limit read two ways, and messages that seemed to contradict it
 

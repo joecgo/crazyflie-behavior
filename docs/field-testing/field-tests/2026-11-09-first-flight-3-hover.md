@@ -81,6 +81,11 @@
 - **Shift by the estimate**, from 0.6 s (after the jump) to 3.2 s: within
   about 10 cm.
 - No chirps during the hover: it never got that far. Battery 3.86 V at rest.
+- **Analysis, 2026-11-10:** the dip, the fast final descent and the velocity
+  uncertainty's rise are explained in
+  [Take-off speeds' analysis](2026-11-09-first-flight-3-take-off-speeds.md#analysis-2026-11-10-claude):
+  the firmware's vertical speed controller restarts its integral at every
+  mode change, and the uncertainty grows with height in any light.
 
 ## Next
 - Code changes and ADRs:

@@ -90,7 +90,9 @@
   estimate being off; this log can't tell which.
 - **Yaw:** both flights turned about 13-14 degrees during the climb (yaw
   from 0 to 13.5 by the fault), and stayed there through the landing.
-  Session 2's logs weren't checked for this.
+  Session 2's logs weren't checked for this. (Checked 2026-11-10: session 2
+  turned 3-4° by the end of its climbs, with a smaller motor imbalance; see
+  [Take-off speeds' analysis](2026-11-09-first-flight-3-take-off-speeds.md#analysis-2026-11-10-claude).)
 - **Light:** the low-light warning appeared both times (image quality 20
   and 36 at the take-off); the quality rose above 90 once the drone was a
   few centimeters up.

@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" role="img" aria-label="Measured thrust command against the firmware model, and height, for a 0.2 and a 0.4 m/s climb">
+<style>
+.bg{fill:#fcfcfb}.p{fill:#0b0b0b}.s{fill:#52514e}.m{fill:#898781}.grid{stroke:#e1e0d9}.axis{stroke:#c3c2b7}
+.c1{stroke:#2a78d6}.c2{stroke:#eb6834}.c3{stroke:#1baf7a}.cg{stroke:#898781}.ref{stroke:#52514e}
+.f1{fill:#2a78d6}.f2{fill:#eb6834}.f3{fill:#1baf7a}.fg{fill:#898781}
+@media (prefers-color-scheme: dark){
+.bg{fill:#1a1a19}.p{fill:#f0efec}.s{fill:#c3c2b7}.grid{stroke:#2c2c2a}.axis{stroke:#383835}
+.c1{stroke:#3987e5}.c2{stroke:#d95926}.c3{stroke:#199e70}.ref{stroke:#c3c2b7}
+.f1{fill:#3987e5}.f2{fill:#d95926}.f3{fill:#199e70}}
+text{font:12px system-ui,sans-serif}.t{font-weight:600;font-size:14px}.pt{font-weight:600;font-size:12px}
+polyline{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+line{stroke-width:1}.refl{stroke-width:1;stroke-dasharray:4 3}
+.d2{stroke-dasharray:7 3}.d3{stroke-dasharray:2 3}.dg{stroke-dasharray:5 4;stroke-width:1.5}
+</style>
+<rect class="bg" width="1000" height="600"/>
+<text class="p t" x="16" y="24">The climb follows the firmware's vertical speed controller</text>
+<text class="s" x="16" y="42">Thrust command reconstructed from the motor outputs and battery voltage (dots) against the firmware's z loop, fed the logged vertical speed (line).</text>
+<text class="p pt" x="80.0" y="82.0" text-anchor="start">TOS 4: 0.2 m/s climb</text>
+<line class="grid" x1="80" x2="480" y1="304.7" y2="304.7"/>
+<text class="m" x="74.0" y="308.7" text-anchor="end">30,000</text>
+<line class="grid" x1="80" x2="480" y1="258.7" y2="258.7"/>
+<text class="m" x="74.0" y="262.7" text-anchor="end">36,000</text>
+<line class="grid" x1="80" x2="480" y1="202.7" y2="202.7"/>
+<text class="m" x="74.0" y="206.7" text-anchor="end">43,300</text>
+<line class="grid" x1="80" x2="480" y1="151.3" y2="151.3"/>
+<text class="m" x="74.0" y="155.3" text-anchor="end">50,000</text>
+<line class="grid" x1="80" x2="480" y1="105.3" y2="105.3"/>
+<text class="m" x="74.0" y="109.3" text-anchor="end">56,000</text>
+<line class="axis" x1="80" x2="480" y1="320" y2="320"/>
+<text class="m" transform="translate(36,205.0) rotate(-90)" text-anchor="middle">thrust command</text>
+<line class="ref refl" x1="80" x2="480" y1="202.7" y2="202.7"/>
+<line class="ref refl" x1="80" x2="480" y1="258.7" y2="258.7"/>
+<polyline class="ref" points="80.0,220.3 81.3,220.1 82.7,219.9 84.0,219.7 85.3,219.3 86.7,218.8 88.0,218.4 89.3,218.0 90.7,218.1 92.0,218.1 93.3,218.2 94.7,218.2 96.0,218.3 97.3,218.3 98.7,218.3 100.0,218.3 101.3,218.3 102.7,218.3 104.0,218.3 105.3,218.3 106.7,218.3 108.0,218.3 109.3,218.3 110.7,218.1 112.0,215.7 113.3,213.3 114.7,210.9 116.0,208.7 117.3,209.0 118.7,209.2 120.0,209.4 121.3,209.6 122.7,209.9 124.0,210.1 125.3,210.1 126.7,210.2 128.0,210.3 129.3,210.4 130.7,211.3 132.0,212.2 133.3,213.1 134.7,214.0 136.0,215.0 137.3,215.8 138.7,216.1 140.0,216.4 141.3,216.7 142.7,217.0 144.0,217.7 145.3,218.4 146.7,219.0 148.0,219.7 149.3,220.4 150.7,221.2 152.0,222.0 153.3,222.9 154.7,223.8 156.0,224.7 157.3,225.4 158.7,226.1 160.0,226.8 161.3,227.5 162.7,228.2 164.0,228.9 165.3,228.8 166.7,228.8 168.0,228.8 169.3,228.7 170.7,228.7 172.0,228.6 173.3,228.5 174.7,228.5 176.0,228.4 177.3,228.3 178.7,227.9 180.0,227.4 181.3,227.0 182.7,226.5 184.0,225.9 185.3,225.3 186.7,224.7 188.0,224.1 189.3,223.5 190.7,222.9 192.0,221.8 193.3,220.6 194.7,219.5 196.0,218.4 197.3,217.2 198.7,216.0 200.0,214.8 201.3,213.6 202.7,212.3 204.0,211.2 205.3,210.4 206.7,209.7 208.0,209.0 209.3,208.3 210.7,207.9 212.0,207.5 213.3,207.1 214.7,206.7 216.0,206.3 217.3,205.9 218.7,205.4 220.0,205.0 221.3,204.5 222.7,204.1 224.0,203.6 225.3,203.1 226.7,202.4 228.0,201.7 229.3,201.1 230.7,200.3 232.0,199.1 233.3,198.0 234.7,196.8 236.0,195.6 237.3,195.1 238.7,194.6 240.0,194.1 241.3,193.6 242.7,193.0 244.0,192.5 245.3,192.0 246.7,191.6 248.0,191.1 249.3,190.7 250.7,190.8 252.0,190.9 253.3,191.0 254.7,191.1 256.0,191.2 257.3,191.3 258.7,191.8 260.0,192.3 261.3,192.9 262.7,193.4 264.0,193.8 265.3,194.2 266.7,194.6 268.0,195.0 269.3,195.4 270.7,195.8 272.0,195.4 273.3,195.0 274.7,194.6 276.0,194.3 277.3,194.9 278.7,195.6 280.0,196.3 281.3,197.0 282.7,197.7 284.0,198.4 285.3,199.6 286.7,200.7 288.0,201.9 289.3,202.9 290.7,203.2 292.0,203.4 293.3,203.7 294.7,204.0 296.0,204.2 297.3,204.4 298.7,204.3 300.0,204.1 301.3,204.0 302.7,203.7 304.0,202.9 305.3,202.1 306.7,201.3 308.0,200.4 309.3,199.6 310.7,198.8 312.0,198.8 313.3,198.7 314.7,198.7 316.0,198.7 317.3,199.1 318.7,199.6 320.0,200.0 321.3,200.5 322.7,200.9 324.0,201.3 325.3,200.3 326.7,199.4 328.0,198.4 329.3,197.6 330.7,197.4 332.0,197.2 333.3,197.0 334.7,196.9 336.0,196.7 337.3,196.4 338.7,195.2 340.0,194.0 341.3,192.8 342.7,191.7 344.0,191.6 345.3,191.4 346.7,191.2 348.0,191.1 349.3,190.9 350.7,190.8 352.0,190.8 353.3,190.9 354.7,190.9 356.0,190.9 357.3,190.6 358.7,190.3 360.0,189.9 361.3,189.6 362.7,189.3 364.0,189.0 365.3,189.2 366.7,189.5 368.0,189.7 369.3,190.0 370.7,190.4 372.0,190.8 373.3,191.3 374.7,191.7 376.0,192.2 377.3,192.6 378.7,192.5 380.0,192.5 381.3,192.4 382.7,192.4 384.0,192.9 385.3,193.5 386.7,194.0 388.0,194.5 389.3,195.1 390.7,195.6 392.0,195.6 393.3,195.6 394.7,195.6 396.0,195.6 397.3,196.0 398.7,196.3 400.0,196.6 401.3,197.0 402.7,197.3 404.0,197.6 405.3,197.3 406.7,197.0 408.0,196.7 409.3,196.4 410.7,196.2 412.0,195.9 413.3,195.7 414.7,195.5 416.0,195.2 417.3,195.0 418.7,194.2 420.0,193.5"><title>firmware model, fed the logged vertical speed</title></polyline>
+<circle class="f2" cx="111.7" cy="219.7" r="3.5"><title>0.24 s: 41,081</title></circle>
+<circle class="f2" cx="125.1" cy="211.5" r="3.5"><title>0.34 s: 42,149</title></circle>
+<circle class="f2" cx="138.4" cy="215.7" r="3.5"><title>0.44 s: 41,601</title></circle>
+<circle class="f2" cx="151.7" cy="221.4" r="3.5"><title>0.54 s: 40,860</title></circle>
+<circle class="f2" cx="165.1" cy="228.1" r="3.5"><title>0.64 s: 39,993</title></circle>
+<circle class="f2" cx="178.4" cy="227.3" r="3.5"><title>0.74 s: 40,092</title></circle>
+<circle class="f2" cx="191.7" cy="221.1" r="3.5"><title>0.84 s: 40,898</title></circle>
+<circle class="f2" cx="205.1" cy="209.7" r="3.5"><title>0.94 s: 42,383</title></circle>
+<circle class="f2" cx="218.4" cy="205.0" r="3.5"><title>1.04 s: 43,000</title></circle>
+<circle class="f2" cx="231.7" cy="199.4" r="3.5"><title>1.14 s: 43,732</title></circle>
+<circle class="f2" cx="245.1" cy="192.2" r="3.5"><title>1.24 s: 44,676</title></circle>
+<circle class="f2" cx="258.4" cy="191.5" r="3.5"><title>1.34 s: 44,765</title></circle>
+<circle class="f2" cx="271.7" cy="195.3" r="3.5"><title>1.44 s: 44,270</title></circle>
+<circle class="f2" cx="285.1" cy="198.2" r="3.5"><title>1.54 s: 43,892</title></circle>
+<circle class="f2" cx="298.4" cy="204.4" r="3.5"><title>1.64 s: 43,082</title></circle>
+<circle class="f2" cx="311.7" cy="198.2" r="3.5"><title>1.74 s: 43,881</title></circle>
+<circle class="f2" cx="325.1" cy="200.9" r="3.5"><title>1.84 s: 43,539</title></circle>
+<circle class="f2" cx="338.4" cy="196.2" r="3.5"><title>1.94 s: 44,145</title></circle>
+<circle class="f2" cx="351.7" cy="190.6" r="3.5"><title>2.04 s: 44,872</title></circle>
+<circle class="f2" cx="365.1" cy="189.0" r="3.5"><title>2.14 s: 45,089</title></circle>
+<circle class="f2" cx="378.4" cy="192.7" r="3.5"><title>2.24 s: 44,601</title></circle>
+<circle class="f2" cx="391.7" cy="195.3" r="3.5"><title>2.34 s: 44,261</title></circle>
+<circle class="f2" cx="405.1" cy="197.1" r="3.5"><title>2.44 s: 44,028</title></circle>
+<circle class="f2" cx="418.4" cy="194.8" r="3.5"><title>2.54 s: 44,333</title></circle>
+<circle class="f2" cx="431.7" cy="263.4" r="3.5"><title>2.64 s: 35,380</title></circle>
+<circle class="f2" cx="445.1" cy="239.1" r="3.5"><title>2.74 s: 38,555</title></circle>
+<circle class="f2" cx="458.4" cy="216.5" r="3.5"><title>2.84 s: 41,502</title></circle>
+<circle class="f2" cx="471.7" cy="203.9" r="3.5"><title>2.94 s: 43,149</title></circle>
+<line class="ref refl" x1="420.1" x2="420.1" y1="90" y2="320"/>
+<text class="s" x="416.1" y="102.0" text-anchor="end">time limit</text>
+<line class="grid" x1="80" x2="480" y1="490.0" y2="490.0"/>
+<text class="m" x="74.0" y="494.0" text-anchor="end">0</text>
+<line class="grid" x1="80" x2="480" y1="430.9" y2="430.9"/>
+<text class="m" x="74.0" y="434.9" text-anchor="end">0.25</text>
+<line class="grid" x1="80" x2="480" y1="371.8" y2="371.8"/>
+<text class="m" x="74.0" y="375.8" text-anchor="end">0.5</text>
+<text class="m" x="80.0" y="506.0" text-anchor="middle">0</text>
+<text class="m" x="146.7" y="506.0" text-anchor="middle">0.5</text>
+<text class="m" x="213.3" y="506.0" text-anchor="middle">1</text>
+<text class="m" x="280.0" y="506.0" text-anchor="middle">1.5</text>
+<text class="m" x="346.7" y="506.0" text-anchor="middle">2</text>
+<text class="m" x="413.3" y="506.0" text-anchor="middle">2.5</text>
+<text class="m" x="480.0" y="506.0" text-anchor="middle">3</text>
+<line class="axis" x1="80" x2="480" y1="490" y2="490"/>
+<text class="m" x="280.0" y="522.0" text-anchor="middle">seconds from the take-off send</text>
+<text class="m" transform="translate(36,425.0) rotate(-90)" text-anchor="middle">height (m)</text>
+<polyline class="ref" points="84.9,485.3 90.3,485.7 98.3,484.8 103.6,485.5 108.9,485.7 116.9,489.1 122.3,489.3 130.3,490.0 135.6,490.0 143.6,490.0 151.6,490.0 156.9,487.9 164.9,485.0 170.3,483.9 178.3,480.8 183.6,479.1 188.9,476.5 196.9,476.1 204.9,475.6 210.3,474.6 218.3,473.9 223.6,474.2 231.6,474.9 236.9,476.1 244.9,477.2 250.3,477.9 258.3,477.9 263.6,478.2 271.6,478.7 276.9,479.4 284.9,478.2 290.3,475.6 298.3,475.3 303.6,474.9 311.6,475.1 316.9,473.0 324.9,470.9 330.3,471.8 338.3,470.6 343.6,471.6 351.6,470.9 356.9,470.1 364.9,471.1 370.3,469.7 378.3,469.0 383.6,468.7 391.6,466.4 396.9,466.1 404.9,464.2 410.3,464.0 418.3,463.3 423.6,462.6 431.6,460.5 436.9,460.0 444.9,460.0 450.3,460.7 458.3,462.6 463.6,464.7 471.6,467.1 476.9,469.4"><title>down range</title></polyline>
+<line class="ref refl" x1="420.1" x2="420.1" y1="360" y2="490"/>
+<text class="p pt" x="550.0" y="82.0" text-anchor="start">TOS 5b: 0.4 m/s climb</text>
+<line class="grid" x1="550" x2="950" y1="304.7" y2="304.7"/>
+<text class="m" x="544.0" y="308.7" text-anchor="end">30,000</text>
+<line class="grid" x1="550" x2="950" y1="258.7" y2="258.7"/>
+<text class="m" x="544.0" y="262.7" text-anchor="end">36,000</text>
+<line class="grid" x1="550" x2="950" y1="202.7" y2="202.7"/>
+<text class="m" x="544.0" y="206.7" text-anchor="end">43,300</text>
+<line class="grid" x1="550" x2="950" y1="151.3" y2="151.3"/>
+<text class="m" x="544.0" y="155.3" text-anchor="end">50,000</text>
+<line class="grid" x1="550" x2="950" y1="105.3" y2="105.3"/>
+<text class="m" x="544.0" y="109.3" text-anchor="end">56,000</text>
+<line class="axis" x1="550" x2="950" y1="320" y2="320"/>
+<line class="ref refl" x1="550" x2="950" y1="202.7" y2="202.7"/>
+<line class="ref refl" x1="550" x2="950" y1="258.7" y2="258.7"/>
+<polyline class="ref" points="550.0,182.6 551.3,182.2 552.7,181.9 554.0,181.3 555.3,180.7 556.7,180.0 558.0,179.4 559.3,178.8 560.7,178.3 562.0,177.8 563.3,177.3 564.7,176.8 566.0,176.3 567.3,175.7 568.7,175.0 570.0,174.3 571.3,173.6 572.7,173.6 574.0,174.1 575.3,174.7 576.7,175.2 578.0,175.8 579.3,176.4 580.7,177.3 582.0,178.6 583.3,179.8 584.7,181.1 586.0,182.1 587.3,182.7 588.7,183.3 590.0,183.9 591.3,184.5 592.7,185.1 594.0,185.9 595.3,186.8 596.7,187.8 598.0,188.7 599.3,189.9 600.7,191.4 602.0,192.8 603.3,194.3 604.7,195.8 606.0,197.3 607.3,199.0 608.7,200.9 610.0,202.8 611.3,204.7 612.7,206.4 614.0,207.7 615.3,209.0 616.7,210.3 618.0,211.6 619.3,212.9 620.7,214.2 622.0,215.5 623.3,216.7 624.7,217.9 626.0,218.9 627.3,219.7 628.7,220.4 630.0,221.2 631.3,221.9 632.7,222.7 634.0,222.8 635.3,222.4 636.7,222.0 638.0,221.5 639.3,220.9 640.7,220.1 642.0,219.2 643.3,218.4 644.7,217.6 646.0,216.7 647.3,215.7 648.7,214.4 650.0,213.2 651.3,212.0 652.7,210.6 654.0,209.2 655.3,207.7 656.7,206.2 658.0,204.8 659.3,203.3 660.7,201.9 662.0,200.6 663.3,199.4 664.7,198.1 666.0,196.9 667.3,195.6 668.7,194.4 670.0,193.1"><title>firmware model, fed the logged vertical speed</title></polyline>
+<circle class="f3" cx="581.2" cy="179.9" r="3.5"><title>0.23 s: 46,272</title></circle>
+<circle class="f3" cx="594.5" cy="186.3" r="3.5"><title>0.33 s: 45,440</title></circle>
+<circle class="f3" cx="607.9" cy="198.0" r="3.5"><title>0.43 s: 43,912</title></circle>
+<circle class="f3" cx="621.2" cy="213.2" r="3.5"><title>0.53 s: 41,935</title></circle>
+<circle class="f3" cx="634.5" cy="222.6" r="3.5"><title>0.63 s: 40,706</title></circle>
+<circle class="f3" cx="647.9" cy="215.9" r="3.5"><title>0.73 s: 41,580</title></circle>
+<circle class="f3" cx="661.2" cy="202.0" r="3.5"><title>0.83 s: 43,396</title></circle>
+<circle class="f3" cx="674.5" cy="290.2" r="3.5"><title>0.93 s: 31,890</title></circle>
+<circle class="f3" cx="687.9" cy="260.7" r="3.5"><title>1.03 s: 35,741</title></circle>
+<circle class="f3" cx="701.2" cy="215.8" r="3.5"><title>1.13 s: 41,592</title></circle>
+<circle class="f3" cx="714.5" cy="173.3" r="3.5"><title>1.23 s: 47,135</title></circle>
+<circle class="f3" cx="727.9" cy="141.3" r="3.5"><title>1.33 s: 51,310</title></circle>
+<circle class="f3" cx="741.2" cy="116.2" r="3.5"><title>1.43 s: 54,579</title></circle>
+<circle class="f3" cx="754.5" cy="114.9" r="3.5"><title>1.53 s: 54,754</title></circle>
+<circle class="f3" cx="767.9" cy="130.4" r="3.5"><title>1.63 s: 52,736</title></circle>
+<circle class="f3" cx="781.2" cy="149.2" r="3.5"><title>1.73 s: 50,281</title></circle>
+<circle class="f3" cx="794.5" cy="178.0" r="3.5"><title>1.83 s: 46,528</title></circle>
+<circle class="f3" cx="807.9" cy="195.0" r="3.5"><title>1.93 s: 44,300</title></circle>
+<circle class="f3" cx="821.2" cy="214.2" r="3.5"><title>2.03 s: 41,800</title></circle>
+<circle class="f3" cx="834.5" cy="224.5" r="3.5"><title>2.13 s: 40,457</title></circle>
+<circle class="f3" cx="847.9" cy="227.1" r="3.5"><title>2.23 s: 40,116</title></circle>
+<circle class="f3" cx="861.2" cy="224.6" r="3.5"><title>2.33 s: 40,444</title></circle>
+<circle class="f3" cx="874.5" cy="216.1" r="3.5"><title>2.43 s: 41,548</title></circle>
+<circle class="f3" cx="887.9" cy="210.3" r="3.5"><title>2.53 s: 42,313</title></circle>
+<circle class="f3" cx="901.2" cy="202.5" r="3.5"><title>2.63 s: 43,328</title></circle>
+<circle class="f3" cx="914.5" cy="198.9" r="3.5"><title>2.73 s: 43,797</title></circle>
+<circle class="f3" cx="927.9" cy="198.3" r="3.5"><title>2.83 s: 43,874</title></circle>
+<circle class="f3" cx="941.2" cy="194.8" r="3.5"><title>2.93 s: 44,330</title></circle>
+<line class="ref refl" x1="670.1" x2="670.1" y1="90" y2="320"/>
+<text class="s" x="666.1" y="102.0" text-anchor="end">hand-over</text>
+<line class="grid" x1="550" x2="950" y1="490.0" y2="490.0"/>
+<text class="m" x="544.0" y="494.0" text-anchor="end">0</text>
+<line class="grid" x1="550" x2="950" y1="430.9" y2="430.9"/>
+<text class="m" x="544.0" y="434.9" text-anchor="end">0.25</text>
+<line class="grid" x1="550" x2="950" y1="371.8" y2="371.8"/>
+<text class="m" x="544.0" y="375.8" text-anchor="end">0.5</text>
+<text class="m" x="550.0" y="506.0" text-anchor="middle">0</text>
+<text class="m" x="616.7" y="506.0" text-anchor="middle">0.5</text>
+<text class="m" x="683.3" y="506.0" text-anchor="middle">1</text>
+<text class="m" x="750.0" y="506.0" text-anchor="middle">1.5</text>
+<text class="m" x="816.7" y="506.0" text-anchor="middle">2</text>
+<text class="m" x="883.3" y="506.0" text-anchor="middle">2.5</text>
+<text class="m" x="950.0" y="506.0" text-anchor="middle">3</text>
+<line class="axis" x1="550" x2="950" y1="490" y2="490"/>
+<text class="m" x="750.0" y="522.0" text-anchor="middle">seconds from the take-off send</text>
+<polyline class="ref" points="554.1,485.0 559.5,485.5 567.5,485.5 572.8,486.0 580.8,485.5 586.1,486.7 594.1,490.0 599.5,490.0 607.5,488.3 612.8,484.6 620.8,479.8 626.1,474.9 634.1,468.5 639.5,465.7 647.5,461.4 652.8,458.6 660.8,455.5 666.1,452.9 674.1,451.0 679.5,448.6 687.5,448.2 692.8,447.5 700.8,447.5 706.1,448.6 714.1,451.7 719.5,453.6 727.5,457.6 732.8,460.7 740.8,464.7 746.1,465.7 754.1,465.7 759.5,466.1 767.5,463.8 772.8,462.8 778.1,459.3 786.1,455.0 794.1,449.1 799.5,445.3 807.5,440.6 812.8,433.5 820.8,426.4 826.1,420.3 834.1,414.4 839.5,408.7 847.5,402.8 852.8,397.8 860.8,392.9 868.8,386.0 874.1,386.0 879.5,383.2 887.5,380.8 892.8,379.1 900.8,378.0 906.1,376.5 914.1,374.9 919.5,373.9 927.5,373.2 932.8,373.0 940.8,372.5 946.1,372.1"><title>down range</title></polyline>
+<line class="ref refl" x1="670.1" x2="670.1" y1="360" y2="490"/>
+<text class="s" x="80.0" y="545.0" text-anchor="start">Dots: measured. Gray line: the model, until the hand-over or time limit. Dashed: the hover thrust (about 43,300, from three 0.5 m hovers)</text>
+<text class="s" x="80.0" y="561.0" text-anchor="start">and the firmware's base (36,000). Firmware 2026.08: thrust = 36,000 + 1,000 x (25 e + 15 x integral of e), e = commanded minus estimated</text>
+<text class="s" x="80.0" y="577.0" text-anchor="start">vertical speed; every integral resets at a setpoint mode change (position_controller_pid.c, controller_pid.c).</text>
+</svg>

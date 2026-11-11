@@ -165,7 +165,8 @@ What happened, especially anything surprising. Include numbers.
   touchdown at 5.47 s. The log has no estimate after 3.45 s. Analysis, not
   observed: with flow quality that good, the rise looks like the
   uncertainty growing with height rather than lost flow, which would make
-  0.03 m/s too tight for a 0.5 m hover in this light.
+  0.03 m/s too tight for a 0.5 m hover in this light. (2026-11-10: in any
+  light, by the firmware source; see the analysis below.)
 - **Flight 6 (0.1 m/s):** like flight 3. No flow for the first 0.5 s, then
   the estimate jumped about 8 cm. The height estimate never passed 0.06 m;
   the time limit landed it at 4.05 s (`Final descent: level, from 0.049 m`),
@@ -179,6 +180,68 @@ What happened, especially anything surprising. Include numbers.
   test's question, and at 0.4 m/s one of three climbs settled. Each slow
   climb drifted mostly forward and right at a steady rate while it stayed
   low, as First flight 2 did (backlog #68).
+
+### Analysis, 2026-11-10 (Claude)
+
+From the logs of sessions 2 and 3 and the 2026-11-08 flights, and the
+firmware 2026.08 source. Analysis, not observations. Scripts in
+`drafts/ff3/` (git-ignored, backlog #55).
+
+- **Why the slow climbs failed: the firmware's vertical speed controller, in
+  any light.** Its thrust command is 36,000 + 1,000 × (25 e + 15 × the
+  integral of e), where e is the commanded minus the estimated vertical speed
+  (`position_controller_pid.c` 236-266, `platform_defaults_cf2.h` 142-156).
+  Every controller integral restarts at zero at a setpoint mode change and on
+  the floor (`controller_pid.c`, `setpointModeChanged`). This drone hovers at
+  a thrust command of about 43,300 (three 0.5 m hovers in session 2 and on
+  2026-11-08, reconstructed from the motor outputs and battery voltage
+  through the firmware's battery compensation), so every take-off waits for
+  the integral to make up about 7,300. Fed the logged vertical speed, the
+  formula matches the reconstructed thrust command within about 1% (flight 4,
+  second chart). At 0.1 m/s the drone left the floor only at 2.8-2.9 s. At
+  0.2 m/s it left at 0.6-0.8 s, then stalled at 1.0-1.5 s while the integral
+  caught up as ground effect faded. At 0.4 m/s it left at 0.53 s. The 0.2 m/s
+  take-offs in good light (session 2's Hover flight 5, image quality 96 on
+  the floor, and 2026-11-08) climbed the same way (gray lines below).
+- **The dip after the hand-over (backlog #69) is the same restart:** in
+  flight 5's second try the thrust command fell from about 44,500 to 31,900
+  at the switch to the high-level climb (the integral restarts, and the
+  planner starts at zero speed), and the drone fell 7.8 cm. The level final
+  descent after a landing approach is a mode change too: the Hover's took
+  about 0.6-0.8 s from 0.30 m, about twice the commanded speed.
+- **Thrust wasn't the limit:** the highest motor output in any flight was
+  62,672 of 65,535, never capped.
+- **The cap landings (flights 2 and 5) were real drift, not bad flow:** a tilt
+  of about 0.5-1° to the right and forward in the first second after lift-off
+  gave 0.1-0.2 m/s by the estimate, and the level climb never brakes it, so
+  the speed never settled under 0.15 m/s.
+- **Velocity uncertainty (backlog #80):** the Flow deck's noise is fixed at 2
+  pixels by default (`flowdeck_v1v2.c`), and the flow model divides speed by
+  height (`mm_flow.c`), so the uncertainty grows with height with good flow:
+  0.010 m/s at 0.1-0.2 m, about 0.023 at 0.47 m, 0.030 at 0.5 m and still
+  rising, with image quality 90-110. Where it settles at 0.5 m isn't known:
+  neither hover lasted 1 s there.
+- **Yaw:** motors 1 and 3 ran above 2 and 4 in every flight, a pure yaw
+  command (roll and pitch commands stayed small). In steady hover,
+  (m1+m3)/(m2+m4) was 1.11-1.21 on 2026-11-07, 1.40-1.45 on 2026-11-08 and
+  1.34-1.38 here. The drone turned 13-15° by the end of every climb and up to
+  28° after the hand-over. The level climb does hold the heading
+  (`controller_pid.c` 84-86); the disturbance is larger than the yaw loop
+  cancels quickly (backlog #83).
+- **The estimate's shift against the tape** (last chart): close for the
+  flights that climbed above 0.1 m; about twice the tape for the 0.1 m/s
+  flights, which stayed under 0.06 m, where the flow model counts the height
+  as 0.1 m.
+
+![Height against time in every take-off, by climb speed, with the good-light 0.2 m/s take-offs in gray](figures/2026-11-09-first-flight-3-climb-height.svg)
+
+![Measured thrust command against the firmware's vertical speed controller, flights 4 and 5 (second try)](figures/2026-11-09-first-flight-3-thrust-model.svg)
+
+![Forward and right shift by the estimate against time](figures/2026-11-09-first-flight-3-shift.svg)
+
+![Velocity uncertainty against height in the 0.4 m/s take-offs](figures/2026-11-09-first-flight-3-velocity-uncertainty.svg)
+
+![The estimate's shift against the tape measure](figures/2026-11-09-first-flight-3-estimate-vs-tape.svg)
 
 ## Next
 - Code changes:
