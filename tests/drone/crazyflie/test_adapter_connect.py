@@ -88,6 +88,13 @@ class FakeCflib:
         """Raised by the estimate reset's parameter write, when set."""
         self.on_reset_estimate: Callable[[], None] | None = None
         """Called by the estimate reset's parameter write, when set: what the drone does then."""
+        self.thrust_base_error: BaseException | None = None
+        """Raised by the thrust base's parameter write, when set."""
+        self.reports_written_values = True
+        """Whether the drone reports each written value back, as it does when a write arrives."""
+        self.parameter_callbacks: dict[str, list[Callable[[str, str], None]]] = {}
+        """Update callbacks by parameter name, called with each value the drone reports, as text."""
+        self.link.cf.param.add_update_callback.side_effect = self._add_parameter_callback
         self.samples = copy.deepcopy(FIRST_SAMPLES)
         """Each block's sample. A test can change one before it's sent."""
         self.log_block_names: list[str] = []
@@ -105,6 +112,14 @@ class FakeCflib:
     def reset_count(self) -> int:
         return self.events.count("reset estimate")
 
+    def report_parameter(self, name: str, value: str) -> None:
+        """The drone reports a parameter's value."""
+        for callback in self.parameter_callbacks.get(name, []):
+            callback(name, value)
+
+    def _add_parameter_callback(self, group: str, name: str, cb: Callable[[str, str], None]) -> None:
+        self.parameter_callbacks.setdefault(f"{group}.{name}", []).append(cb)
+
     def _record_a_parameter_write(self, name: str, value: object) -> None:
         if name == "kalman.resetEstimation":
             if self.reset_estimate_error is not None:
@@ -113,6 +128,12 @@ class FakeCflib:
             self.events.append("reset estimate")
             if self.on_reset_estimate is not None:
                 self.on_reset_estimate()
+        elif name == "posCtlPid.thrustBase":
+            if self.thrust_base_error is not None:
+                raise self.thrust_base_error
+            self.events.append(f"write thrust base {value}")
+        if self.reports_written_values:
+            self.report_parameter(name, str(value))
 
     def make_log_block(self, name: str, period_in_ms: int) -> MagicMock:
         self.log_block_names.append(name)
@@ -871,3 +892,146 @@ def test_connecting_again_waits_for_a_new_status_not_the_last_connections(
 
     with pytest.raises(TimeoutError, match="Waiting for the drone's status"):
         second_adapter.connect()
+
+
+# --- The thrust base (ADR-0061) -----------------------------------------------------
+
+UNCONFIRMED_TAKE_OFF_WARNING = "Taking off without a confirmed thrust base: the climb may be slow."
+
+
+def thrust_base_writes(fake_cflib: FakeCflib) -> list[str]:
+    return [event for event in fake_cflib.events if event.startswith("write thrust base")]
+
+
+def thrust_base_logs(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [record.getMessage() for record in caplog.records if "thrust base" in record.getMessage().lower()]
+
+
+def take_off_logs(adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture) -> list[str]:
+    """Take off from the floor, and return what the adapter logged about the thrust base meanwhile."""
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+        adapter.take_off(1.0)
+    return thrust_base_logs(caplog)
+
+
+def test_connecting_writes_the_thrust_base(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
+    adapter.connect()
+
+    assert thrust_base_writes(fake_cflib) == [f"write thrust base {adapter_module.THRUST_BASE}"]
+
+
+def test_a_flying_drone_is_refused_without_a_thrust_base_write(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+
+    with pytest.raises(RuntimeError, match="still flying"):
+        adapter.connect()
+
+    assert thrust_base_writes(fake_cflib) == []
+
+
+@pytest.mark.parametrize("status", [FLYING, 0.0], ids=["flying", "on the floor"])
+def test_taking_over_leaves_the_thrust_base_as_it_is(
+    taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture, status: float
+) -> None:
+    fake_cflib.samples["state"]["supervisor.info"] = status
+
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+        taking_over_adapter.connect()
+
+    assert thrust_base_writes(fake_cflib) == []
+    assert thrust_base_logs(caplog) == ["Thrust base left as it is: the drone may be flying."]
+
+
+def test_the_thrust_base_the_drone_reports_is_logged(
+    adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+        adapter.connect()
+
+    assert thrust_base_logs(caplog) == [f"The drone reports a thrust base of {adapter_module.THRUST_BASE}."]
+
+
+def test_a_take_off_after_the_drone_confirmed_the_thrust_base_does_not_warn(
+    adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture
+) -> None:
+    adapter.connect()
+
+    assert take_off_logs(adapter, caplog) == []
+
+
+def test_a_take_off_warns_when_the_drone_has_not_confirmed_the_thrust_base(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -> None:
+    fake_cflib.reports_written_values = False  # the write, or the drone's report of it, was lost
+    adapter.connect()
+
+    assert take_off_logs(adapter, caplog) == [UNCONFIRMED_TAKE_OFF_WARNING]
+    assert adapter._is_in_initial_climb  # only a log line: it never refuses
+
+
+@pytest.mark.parametrize("reports_the_write", [False, True], ids=["instead of the write", "after the write"])
+def test_a_report_of_the_old_thrust_base_is_not_a_confirmation(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture, reports_the_write: bool
+) -> None:
+    """Only the latest report counts, and only THRUST_BASE confirms: a parameter read can report the old value."""
+    fake_cflib.reports_written_values = reports_the_write
+    adapter.connect()
+    fake_cflib.report_parameter("posCtlPid.thrustBase", "36000")
+
+    assert take_off_logs(adapter, caplog) == [UNCONFIRMED_TAKE_OFF_WARNING]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [KeyError("posCtlPid.thrustBase not in param TOC"), AttributeError("posCtlPid.thrustBase is read-only!")],
+    ids=["missing", "read-only"],
+)
+def test_a_thrust_base_the_firmware_cannot_write_is_warned_and_the_drone_still_flies(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture, error: Exception
+) -> None:
+    """A missing write never stops a flight (ADR-0061)."""
+    fake_cflib.thrust_base_error = error
+
+    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+        adapter.connect()
+
+    assert thrust_base_logs(caplog) == ["Thrust base not sent: the firmware can't write it."]
+    assert take_off_logs(adapter, caplog) == [UNCONFIRMED_TAKE_OFF_WARNING]
+    assert adapter._is_in_initial_climb
+
+
+def test_a_thrust_base_write_after_the_link_is_lost_says_the_link_is_closed(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -> None:
+    def lose_the_link() -> None:
+        fake_cflib.link.cf.link = None
+        # cflib forgets the parameter list once the link is lost.
+        fake_cflib.thrust_base_error = KeyError("posCtlPid.thrustBase not in param TOC")
+
+    fake_cflib.on_reset_estimate = lose_the_link  # the write just before the thrust base's
+
+    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+        adapter.connect()
+
+    assert thrust_base_logs(caplog) == ["Thrust base not sent: the link is closed."]
+
+
+def test_connecting_again_needs_a_new_report_of_the_thrust_base(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -> None:
+    adapter.connect()  # the drone reports the thrust base
+    adapter.disconnect()
+    fake_cflib.reports_written_values = False
+    adapter.connect()
+
+    assert take_off_logs(adapter, caplog) == [UNCONFIRMED_TAKE_OFF_WARNING]
+
+
+def test_the_thrust_base_report_never_raises_on_cflibs_receive_thread(adapter: CrazyflieAdapter) -> None:
+    """An exception there would block every later parameter write in cflib."""
+    adapter._on_thrust_base_reported("posCtlPid.thrustBase", "not a number")
+
+    assert not adapter._is_thrust_base_confirmed

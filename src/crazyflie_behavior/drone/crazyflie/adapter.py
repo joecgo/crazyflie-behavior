@@ -124,6 +124,9 @@ NOT_FLYING_TIME_LIMIT = 3.0
 LOW_LIGHT_IMAGE_QUALITY = 60
 """The Flow deck's image quality (`motion.squal`) under which a take-off logs a low-light warning
 (ADR-0054)."""
+THRUST_BASE = 43_000
+"""Written to the drone at connect, near this drone's hover thrust (ADR-0061). VERIFY from each hover's
+motor outputs."""
 # ------------------------------------------------------------------------------
 
 _MULTIRANGER_VARIABLES = {
@@ -140,6 +143,7 @@ _DOWN_VARIABLES = (_DOWN_RANGE_VARIABLE, *_VELOCITY_VARIANCE_VARIABLES)
 """A uint16 and 2 floats: 10 bytes of a log block's 26 (ADR-0054)."""
 _RESET_ESTIMATE_PARAMETER = "kalman.resetEstimation"
 """Written 1 for an estimate reset; the firmware sets it back to 0 (ADR-0054)."""
+_THRUST_BASE_PARAMETER = "posCtlPid.thrustBase"
 _IMAGE_QUALITY_VARIABLE = "motion.squal"
 # The diagnostic block (ADR-0050, ADR-0053): 3 floats, 4 uint16, a uint8 and two uint16, 25 bytes.
 _ATTITUDE_VARIABLES = ("stateEstimate.roll", "stateEstimate.pitch", "stateEstimate.yaw")
@@ -297,6 +301,9 @@ class CrazyflieAdapter(DroneInterface):
         self._latest_image_quality: tuple[float, int] | None = None
         """The arrival time and value of the latest `motion.squal`, for the low-light warning
         (ADR-0054). Written on cflib's receive thread."""
+        self._is_thrust_base_confirmed = False
+        """The drone's latest report of its thrust base was THRUST_BASE (ADR-0061). Written on cflib's
+        receive thread."""
 
     # --- Connection ---------------------------------------------------------
 
@@ -311,6 +318,7 @@ class CrazyflieAdapter(DroneInterface):
         self._is_skipping_buzzer_commands = False
         self._is_ignoring_estimate_reset = False
         self._latest_image_quality = None
+        self._is_thrust_base_confirmed = False
         self._is_drone_state_unknown = True
         # Nor does it carry on a take-off, landing or setpoint stream from an earlier session.
         self._is_in_initial_climb = False
@@ -351,6 +359,7 @@ class CrazyflieAdapter(DroneInterface):
             # estimate reset below expects a drone sitting still (ADR-0038).
             self._start_state_logging()
             self._settle_whether_the_drone_is_flying(self._wait_for_drone_status())
+            self._write_thrust_base()
             self._start_remaining_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
             self._wait_for_first_telemetry()
             self._log_whether_the_drone_arms_itself()
@@ -413,6 +422,7 @@ class CrazyflieAdapter(DroneInterface):
                 self._go_to_height(height)
         else:
             self._log_low_light_warning()
+            self._log_thrust_base_warning()
             self._start_initial_climb(height)
         self._is_airborne = True
         self._take_off_sent_at = self._clock.now()
@@ -597,6 +607,29 @@ class CrazyflieAdapter(DroneInterface):
         self._log_estimate_before_reset()
         self._crazyflie.param.set_value(_RESET_ESTIMATE_PARAMETER, 1)
 
+    def _write_thrust_base(self) -> None:
+        """Write THRUST_BASE and log what the drone reports back, unless taking over a flight (ADR-0061)."""
+        if self._take_over_flight:
+            # The drone may be flying: a new base would change its thrust at once.
+            logger.info("Thrust base left as it is: the drone may be flying.")
+            return
+        param = self._crazyflie.param
+        group, name = _THRUST_BASE_PARAMETER.split(".")
+        param.add_update_callback(group=group, name=name, cb=self._on_thrust_base_reported)
+        try:
+            param.set_value(_THRUST_BASE_PARAMETER, THRUST_BASE)
+        except (KeyError, AttributeError):
+            # cflib raises these for a parameter the firmware lacks or can't write, and once the link is
+            # lost. The take-off warns and flies on without it.
+            cause = "the link is closed" if self._crazyflie.link is None else "the firmware can't write it"
+            logger.warning("Thrust base not sent: %s.", cause)
+
+    def _on_thrust_base_reported(self, name: str, value: str) -> None:
+        # cflib calls this on its receive thread, inside its parameter writer: an exception here would block
+        # every later parameter write. So the value is compared as text, never parsed.
+        self._is_thrust_base_confirmed = value == str(THRUST_BASE)
+        logger.info("The drone reports a thrust base of %s.", value)
+
     def _log_estimate_before_reset(self) -> None:
         position = self._telemetry.latest_position_estimate()
         velocity = self._telemetry.latest_velocity_estimate()
@@ -631,6 +664,11 @@ class CrazyflieAdapter(DroneInterface):
                 quality[1],
                 LOW_LIGHT_IMAGE_QUALITY,
             )
+
+    def _log_thrust_base_warning(self) -> None:
+        """At take-off, warn of a slow climb unless the drone confirmed the thrust base (ADR-0061). Never refuses."""
+        if not self._is_thrust_base_confirmed:
+            logger.warning("Taking off without a confirmed thrust base: the climb may be slow.")
 
     @contextmanager
     def _handing_over_to_high_level(self) -> Iterator[None]:
