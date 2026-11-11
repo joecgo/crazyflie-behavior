@@ -31,14 +31,14 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 5 | 16 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
-| communication | 8 | 24 |
+| communication | 7 | 24 |
 | testing | 0 | 10 |
 | process | 4 | 14 |
-| **Total** | **32** | **93** |
+| **Total** | **31** | **93** |
 
-Of the 32 I pointed out, a later Claude review would probably have caught
-none, maybe 7, and probably not 25. So far, 7 of the 11 recommendation
-mistakes needed me, and 8 of the 32 communication mistakes. The first
+Of the 31 I pointed out, a later Claude review would probably have caught
+none, maybe 7, and probably not 24. So far, 7 of the 11 recommendation
+mistakes needed me, and 7 of the 31 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -49,19 +49,6 @@ times so far).
 ---
 
 ## Mistakes I had to point out
-
-### 2026-11-11: "Hundreds of tests on every push" on the portfolio
-
-- **What happened:** the portfolio's new Working with Claude section headed
-  its test item "Hundreds of tests on every push". It reads as hundreds of
-  new tests per push; I push often, and the point is that the whole suite
-  (665 tests) runs on every push. Reworded to "The whole test suite on
-  every push".
-- **Would a later Claude review have caught it?** No: the portfolio isn't
-  in this repo, and no review reads it.
-- **Kind:** communication.
-- **Takeaway:** in a heading that pairs a count with "every", check that it
-  can't be read as a rate.
 
 ### 2026-11-08: The level final descent's motor stop locks the drone
 
