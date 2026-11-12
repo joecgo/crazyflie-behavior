@@ -6,7 +6,7 @@
 
 - **Session:** [First flight 1](../sessions/2026-11-04-first-flight-1.md)
 - **Test:** Hover (flight)
-- **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point, plus a flashlight on the floor aimed at the take-off spot, night
+- **Environment:** [Kitchen](../environments/kitchen.md), center, plus a flashlight on the floor aimed at the take-off spot, night
 - **Git commit:** `3c59ee7` (must be committed before flying; same code as `de24a7c`)
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger / Buzzer, battery #
 - **Firmware / cflib:** 2026.08, release 2026.10, unmodified ([ADR-0047](../../decisions/0047-pinned-firmware-release-warn-on-mismatch.md)) / 0.1.34

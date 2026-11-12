@@ -1,7 +1,7 @@
 # Field testing
 
-> **Status, updated 2026-11-09:** a vertical slice: one room (the living
-> room), working toward hide-and-seek. Pass criteria are light for now. First
+> **Status, updated 2026-11-12:** a vertical slice: two rooms (the living
+> room and the kitchen), working toward hide-and-seek. Pass criteria are light for now. First
 > hardware session on 2026-11-04 ([First flight 1](sessions/2026-11-04-first-flight-1.md)):
 > the Bench; Failsafe high with the forged fault; a 60 s Hover through the
 > project's own code. Touchdown was confirmed in every landing, but the drone
@@ -90,8 +90,12 @@ records how the tests are organized, and why there is no gate between them.
 
 ## Test environment
 
-One for now: the living room (ID `living-room`). It's static: nothing moves
-while the drone flies.
+Two so far, both static (nothing moves while the drone flies):
+
+- [Living room](environments/living-room.md) (ID `living-room`), the
+  hide-and-seek room.
+- [Kitchen](environments/kitchen.md) (ID `kitchen`), used only for the Hover in
+  First flight 1.
 
 Flight quality depends on the room (the flow deck needs floor texture and
 light, and range sensors struggle with glass, mirrors and dark surfaces), so
@@ -100,8 +104,8 @@ lighting (including time of day and sunlight through windows), obstacles, and
 anything reflective.
 
 **First flights** (Bench, Failsafe low, Failsafe high, Hover) are flown in a
-room at least 3 x 3 m with a textured hard floor (the flow deck needs texture),
-a soft landing patch (a mat or carpet) under the drone, and one operator, with
+clear space of at least 1 x 1 x 1 m with a textured hard floor (the flow deck needs texture)
+and one operator, with
 nobody else in the room, no people and no pets.
 
 **If a program dies with the drone in the air**

@@ -9,7 +9,7 @@ A session is one trip with one or more field tests, flown in order. Each
 field test has its own log in [`../field-tests/`](../field-tests/).
 
 - **Milestone:** First flight, session 1
-- **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point
+- **Environment:** [Living room](../environments/living-room.md), hide-and-seek launch point; the Hover in the [kitchen](../environments/kitchen.md), center
 
 ## Plan
 
