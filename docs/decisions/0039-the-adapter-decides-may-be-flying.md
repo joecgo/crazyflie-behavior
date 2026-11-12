@@ -1,6 +1,6 @@
 # 0039: The adapter decides whether the drone may be flying; hover on the floor does nothing
 
-- **Status:** Accepted. Amends [ADR-0030](0030-minimal-safety-layer-for-first-flight.md): the safety layer no longer refuses hover and land on the floor.
+- **Status:** Accepted. Amends [ADR-0030](0030-minimal-safety-layer-for-first-flight.md): the safety layer no longer refuses hover and land on the floor. Amended by [ADR-0060](0060-pre-check-flow-while-the-drone-may-be-flying.md), 2026-11-10: the snapshot carries the adapter's "may be flying", and the safety pre-check's velocity uncertainty check reads it. That's part of option B, rejected here; hover and land are unchanged.
 - **Date:** 2026-11-02
 - **Origin:** AI recommendation accepted (option A, which backlog #8 already suggested). Splitting this piece off from the rest of #8: mine.
 

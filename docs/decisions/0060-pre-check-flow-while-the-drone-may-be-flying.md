@@ -1,6 +1,6 @@
 # 0060: The pre-check checks the flow while the drone may be flying; one floor speed limit
 
-- **Status:** Accepted. Amends [ADR-0054](0054-a-fresh-estimate-for-every-take-off.md): the in-flight velocity uncertainty check runs while the drone may be flying ([ADR-0039](0039-the-adapter-decides-may-be-flying.md)), not while the drone status says flying; flow means an uncertainty under 0.03 m/s in every check; the take-off rule and the reset log share one floor speed limit. Closes the after-touchdown part of backlog #75 and the safety layer part of #79.
+- **Status:** Accepted. Amends [ADR-0054](0054-a-fresh-estimate-for-every-take-off.md): the in-flight velocity uncertainty check runs while the drone may be flying ([ADR-0039](0039-the-adapter-decides-may-be-flying.md)), not while the drone status says flying; flow means an uncertainty under 0.03 m/s in every check; the take-off rule and the reset log share one floor speed limit. Amends [ADR-0039](0039-the-adapter-decides-may-be-flying.md) (noted 2026-11-12): the snapshot carries the adapter's "may be flying", part of ADR-0039's option B, which it rejected; hover and land are unchanged. Closes the after-touchdown part of backlog #75 and the safety layer part of #79.
 - **Date:** 2026-11-10
 - **Origin:** AI recommendations accepted, from the project review of ADR-0054's code.
 
@@ -23,7 +23,7 @@ no flow. And the 0.05 m/s floor speed was two constants: the take-off rule's
 ## Options considered
 
 - **The in-flight gate:** the drone status (as built); "may be flying",
-  carried in the snapshot; a failsafe landing that ends on the floor clears
+  carried in the snapshot (ADR-0039's option B, for this check); a failsafe landing that ends on the floor clears
   the failed pre-check (#75's other option); or leave it for backlog #8.
 - **The limits:** one rule and one constant; the same comparisons but two
   constants; as built.
@@ -56,10 +56,16 @@ no flow. And the 0.05 m/s floor speed was two constants: the take-off rule's
 
 - **Risks I accept knowingly:** a dark final descent can still fail the
   pre-check for good; #75 stays open for that part.
+- The snapshot now carries what the adapter sent (its motor stop), which
+  ADR-0039 avoided. The adapter still uses its own "may be flying" for hover,
+  land and disconnecting. It goes against backlog #8's "flight state from the
+  drone, not from what was sent", so deciding #8 revisits this.
 - Behaviors can read "may be flying" too. Whether they should, to see a
   landing they didn't ask for, stays open in #79.
 - Tests: the pre-check ignoring the uncertainty after the motors stop while
   the status still says flying, and checking it while the drone may be
   flying whatever the status; failing at exactly 0.03; the Crazyflie
   adapter's and the mock's snapshot flag.
-- No glossary change: *May be flying* already names it.
+- Glossary (updated 2026-11-12): *May be flying* says every snapshot carries
+  it, and *Safety pre-check* checks the velocity uncertainty while the drone
+  may be flying.
