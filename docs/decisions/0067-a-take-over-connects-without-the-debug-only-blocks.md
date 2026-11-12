@@ -2,7 +2,7 @@
 
 - **Status:** Accepted. Amends [ADR-0050](0050-diagnostic-log-block-to-the-debug-log.md) and [ADR-0063](0063-take-off-and-controller-log-blocks.md): with `take_over_flight`, the Crazyflie adapter starts neither block.
 - **Date:** 2026-11-12
-- **Origin:** Mixed: skipping the blocks was mine, over the AI's other option (correct ADR-0063's wording and accept the risk). Leaving the take-off block out of this was an AI choice while building, for me to confirm.
+- **Origin:** Mixed: skipping the blocks was mine, over the AI's other option (correct ADR-0063's wording and accept the risk). Leaving the take-off block out of this was an AI choice while building, which I confirmed.
 
 ## Context
 
