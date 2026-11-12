@@ -510,19 +510,30 @@ def test_an_estimate_reset_with_the_link_closed_logs_only_that_it_wasnt_sent(
 
 
 @pytest.mark.parametrize("error", [KeyError, AttributeError])
-def test_an_estimate_reset_that_loses_the_link_as_it_writes_warns_that_it_wasnt_sent(
-    adapter: CrazyflieAdapter, fake_link: MagicMock, caplog: pytest.LogCaptureFixture, error: type[Exception]
+@pytest.mark.parametrize(
+    ("loses_the_link", "cause"),
+    [(True, "the link is closed"), (False, "the firmware can't write it")],
+    ids=["link lost", "firmware"],
+)
+def test_an_estimate_reset_whose_write_fails_logs_only_that_it_wasnt_sent_and_why(
+    adapter: CrazyflieAdapter,
+    fake_link: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+    error: type[Exception],
+    loses_the_link: bool,
+    cause: str,
 ) -> None:
-    def lose_the_link(*_: object) -> None:
-        fake_link.cf.link = None  # cflib closes the link, then forgets the parameter list
+    def fail(*_: object) -> None:
+        if loses_the_link:
+            fake_link.cf.link = None  # cflib closes the link, then forgets the parameter list
         raise error
 
-    fake_link.cf.param.set_value.side_effect = lose_the_link
+    fake_link.cf.param.set_value.side_effect = fail
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
         adapter.reset_estimate()
 
-    assert caplog.messages == ["Estimate reset not sent: the link is closed."]
+    assert caplog.messages == [f"Estimate reset not sent: {cause}."]
 
 
 def test_an_estimate_reset_while_the_drone_may_be_flying_is_ignored_and_warned_once_per_streak(

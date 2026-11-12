@@ -598,18 +598,22 @@ class CrazyflieAdapter(DroneInterface):
         self._crazyflie.param.set_value(name, value)
 
     def _send_estimate_reset(self) -> None:
-        """Log the estimate it erases (ADR-0020), then write the reset without waiting (ADR-0054)."""
+        """Write the reset without waiting (ADR-0054), then log the estimate it erases (ADR-0020)."""
         # Once the link is lost, cflib forgets the parameter list and a write raises.
         if self._crazyflie.link is None:
             logger.warning("Estimate reset not sent: the link is closed.")
             return
-        self._log_estimate_before_reset()
+        # Read before the write: telemetry that arrives after it may already show the reset.
+        position = self._telemetry.latest_position_estimate()
+        velocity = self._telemetry.latest_velocity_estimate()
         try:
             self._crazyflie.param.set_value(_RESET_ESTIMATE_PARAMETER, 1)
         except (KeyError, AttributeError):
             # The link can be lost after the check above. The drone is on the floor, so carry on (ADR-0020).
             cause = "the link is closed" if self._crazyflie.link is None else "the firmware can't write it"
             logger.warning("Estimate reset not sent: %s.", cause)
+            return
+        self._log_estimate_before_reset(position, velocity)
 
     def _write_thrust_base(self) -> None:
         """Write THRUST_BASE and log what the drone reports back, unless taking over a flight (ADR-0061)."""
@@ -632,11 +636,12 @@ class CrazyflieAdapter(DroneInterface):
         # cflib calls this on its receive thread, inside its parameter writer: an exception here would block
         # every later parameter write. So the value is compared as text, never parsed.
         self._is_thrust_base_confirmed = value == str(THRUST_BASE)
-        logger.info("The drone reports a thrust base of %s.", value)
+        if self._is_thrust_base_confirmed:
+            logger.info("Thrust base confirmed: the drone reports %s.", value)
+        else:
+            logger.warning("Thrust base not confirmed: the drone reports %s, not %d.", value, THRUST_BASE)
 
-    def _log_estimate_before_reset(self) -> None:
-        position = self._telemetry.latest_position_estimate()
-        velocity = self._telemetry.latest_velocity_estimate()
+    def _log_estimate_before_reset(self, position: Stamped[Vector3] | None, velocity: Stamped[Vector3] | None) -> None:
         if position is None or velocity is None:
             logger.info("Estimate reset, with no estimate before it.")
             return

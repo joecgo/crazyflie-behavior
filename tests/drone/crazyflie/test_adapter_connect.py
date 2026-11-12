@@ -455,6 +455,12 @@ def test_the_estimate_reset_logs_the_estimate_it_erases(
 ) -> None:
     fake_cflib.samples["state"]["stateEstimate.x"] = -87.0
 
+    def stream_the_reset_estimate() -> None:
+        fake_cflib.samples["state"]["stateEstimate.x"] = 0.0
+        fake_cflib.stream_samples()
+
+    fake_cflib.on_reset_estimate = stream_the_reset_estimate  # telemetry from after the reset, during the write
+
     with caplog.at_level(logging.INFO):
         adapter.connect()
 
@@ -949,13 +955,38 @@ def test_taking_over_leaves_the_thrust_base_as_it_is(
     assert thrust_base_logs(caplog) == ["Thrust base left as it is: the drone may be flying."]
 
 
-def test_the_thrust_base_the_drone_reports_is_logged(
-    adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture
+@pytest.mark.parametrize(
+    ("value", "level", "message"),
+    [
+        (
+            str(adapter_module.THRUST_BASE),
+            logging.INFO,
+            f"Thrust base confirmed: the drone reports {adapter_module.THRUST_BASE}.",
+        ),
+        (
+            "36000",
+            logging.WARNING,
+            f"Thrust base not confirmed: the drone reports 36000, not {adapter_module.THRUST_BASE}.",
+        ),
+    ],
+    ids=["the written value", "another value"],
+)
+def test_each_thrust_base_report_is_logged_with_whether_it_confirms_the_write(
+    adapter: CrazyflieAdapter,
+    fake_cflib: FakeCflib,
+    caplog: pytest.LogCaptureFixture,
+    value: str,
+    level: int,
+    message: str,
 ) -> None:
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
-        adapter.connect()
+    fake_cflib.reports_written_values = False
+    adapter.connect()
+    caplog.clear()
 
-    assert thrust_base_logs(caplog) == [f"The drone reports a thrust base of {adapter_module.THRUST_BASE}."]
+    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+        fake_cflib.report_parameter("posCtlPid.thrustBase", value)
+
+    assert [(record.levelno, record.getMessage()) for record in caplog.records] == [(level, message)]
 
 
 def test_a_take_off_after_the_drone_confirmed_the_thrust_base_does_not_warn(
