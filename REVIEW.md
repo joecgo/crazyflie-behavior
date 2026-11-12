@@ -18,6 +18,8 @@ takeaway applies to reviews, it's added here as a question.
   an error? Is that checked in the source, including the `if` that guards the
   call (not only what the function does when it runs)? For firmware, also the
   `#ifdef` or build option around the function's body, in the build flashed.
+  Can what a guard checks (the link is up) change on another thread before
+  the call runs?
 - Windows-only code: is it checked against Windows' documented behavior, and
   is every Windows call's result checked? Continuous integration runs on
   Linux.
@@ -95,7 +97,8 @@ takeaway applies to reviews, it's added here as a question.
   about the code, is there a fitness function, and does it read at least one
   real file? Is each form its scanner handles exercised by a test?
 - A decision that makes an exception to an older ADR: is the older ADR's
-  status line marked?
+  status line marked? Does it take up an option an older ADR rejected, or
+  go against an open backlog item on the same subject?
 - Does each function do only what its name and its ADR say? Extra work in a
   query (a snapshot that moves the landing on) is a design decision: which
   ADR approved it?
@@ -120,7 +123,8 @@ takeaway applies to reviews, it's added here as a question.
 - Is any new constant a copy of a value that follows from another one?
 - Is each limit defined once, and compared the same way ("under" or "up
   to") in every check that uses it? Does each message about it say which
-  side the value must be on?
+  side the value must be on? Does each check have a test at exactly the
+  limit?
 - When a change removes a wait or a check, do the comments and ADR lines
   that relied on it still hold? Is each ADR line the code leaves unbuilt
   marked, with its backlog item?

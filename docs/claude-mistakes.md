@@ -27,18 +27,18 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 4 | 16 |
+| design | 4 | 17 |
 | safety design | 5 | 16 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
-| communication | 7 | 24 |
-| testing | 0 | 10 |
-| process | 4 | 14 |
-| **Total** | **31** | **93** |
+| communication | 7 | 25 |
+| testing | 0 | 11 |
+| process | 4 | 16 |
+| **Total** | **31** | **98** |
 
 Of the 31 I pointed out, a later Claude review would probably have caught
 none, maybe 7, and probably not 24. So far, 7 of the 11 recommendation
-mistakes needed me, and 7 of the 31 communication mistakes. The first
+mistakes needed me, and 7 of the 32 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -566,6 +566,63 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-12: "No glossary change" for a term whose meaning grew
+
+- **What happened:** ADR-0060 said *May be flying* needed no glossary change,
+  but the snapshot now carries it from every adapter, while the glossary
+  still called it the Crazyflie adapter's judgment. *Safety pre-check* still
+  said its velocity uncertainty check runs "while flying", the drone status
+  reading ADR-0060 replaced.
+- **How it was caught:** the project review of fdad2db.
+- **Kind:** process.
+- **Takeaway:** when a decision moves a value to a new place or changes when
+  a check runs, re-read the glossary rows that name it.
+
+### 2026-11-12: An ADR that took up an older ADR's rejected option, unmarked
+
+- **What happened:** ADR-0060 (2026-11-10) put the adapter's "may be
+  flying" in the snapshot for the safety pre-check. That's part of
+  ADR-0039's option B, which ADR-0039 rejected, and it goes against backlog
+  #8's "flight state from the drone, not from what was sent". Neither ADR's
+  status line nor #8 said so, though the review checklist asks for it.
+- **How it was caught:** the project review of fdad2db.
+- **Kind:** process.
+- **Takeaway:** before writing an ADR, check the options the ADRs it touches
+  rejected, and the backlog items on the same subject.
+
+### 2026-11-12: The reset's link check could go stale before the write
+
+- **What happened:** the review fixes for ADR-0054's code (fdad2db) moved the
+  estimate reset's log after its "link closed" check, but left the write
+  unguarded. cflib's receive thread can lose the link between the check and
+  `param.set_value`, which then raises `KeyError` or `AttributeError` into
+  the tick loop. The thrust base write (95693eb) already caught both.
+- **How it was caught:** the project review of fdad2db.
+- **Kind:** design.
+- **Takeaway:** a check before a library call can go false on another thread
+  before the call runs; handle the call's own failure too.
+
+### 2026-11-12: A boundary fix with no test at the boundary
+
+- **What happened:** fdad2db changed the reset log's floor speed comparison
+  from "up to" to "under", but its only test used 0.3 m/s, far over the
+  limit. Planting the old `<=` back passed every test.
+- **How it was caught:** the project review of fdad2db, then planting the
+  bug.
+- **Kind:** testing.
+- **Takeaway:** a change to a comparison needs a test at exactly the limit.
+
+### 2026-11-12: "As soon as the motors stop" for a flag that knows only our stop
+
+- **What happened:** fdad2db's docstring for the snapshot's `may_be_flying`
+  said it turns false as soon as the motors stop. It turns false when our
+  motor stop is sent; after a stop the firmware makes, it follows the drone
+  status, lag included.
+- **How it was caught:** the project review of fdad2db.
+- **Kind:** communication.
+- **Takeaway:** in a docstring about a safety judgment, say whose action
+  changes it.
 
 ### 2026-11-10: The altHold climb chosen without reading what its controller does at a switch
 
