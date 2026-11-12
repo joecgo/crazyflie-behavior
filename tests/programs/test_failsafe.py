@@ -39,9 +39,12 @@ class MockAdapterMaker:
         """If set, the mock drone starts with this battery voltage in place of a charged one."""
         self.down_range: float | None = None
         """If set, the mock drone's down range is fixed at this, in meters, instead of following its height."""
+        self.take_off_log: bool | None = None
+        """What the program asked for."""
 
-    def __call__(self, use_crazyflie: bool, clock: Clock) -> DroneInterface:
+    def __call__(self, use_crazyflie: bool, clock: Clock, *, take_off_log: bool = False) -> DroneInterface:
         assert not use_crazyflie
+        self.take_off_log = take_off_log
         self.mock_adapter = self.adapter_class(clock)
         if self.battery_voltage is not None:
             self.mock_adapter.set_battery_voltage(self.battery_voltage)
@@ -212,6 +215,24 @@ def test_the_fault_timing_is_required(capsys: pytest.CaptureFixture[str]) -> Non
 
     assert stopped.value.code == 2
     assert "--fault-at" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(("arguments", "expected"), [([], False), (["--take-off-log"], True)])
+def test_the_take_off_log_option_reaches_make_drone_and_the_description(
+    arguments: list[str], expected: bool, mock_adapter_maker: MockAdapterMaker, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    descriptions: list[str] = []
+
+    def record_the_description(program_name: str, description: str, *_rest: object) -> int:
+        descriptions.append(description)
+        return 0
+
+    monkeypatch.setattr(failsafe_module, "run_program", record_the_description)
+
+    main(["--fault-at", "hover", *arguments])
+
+    assert mock_adapter_maker.take_off_log is expected
+    assert descriptions[0].endswith(", with the take-off block (the mock adapter has none)") == expected
 
 
 def test_the_old_height_option_is_refused() -> None:

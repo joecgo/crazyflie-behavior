@@ -5,8 +5,11 @@ adapter unless it's run with --crazyflie:
 
     .venv\\Scripts\\python -m crazyflie_behavior.programs.bench
     .venv\\Scripts\\python -m crazyflie_behavior.programs.bench --crazyflie
+    .venv\\Scripts\\python -m crazyflie_behavior.programs.bench --crazyflie --take-off-log
 
 Each snapshot goes to the log file; the console gets a summary every second.
+With --take-off-log, the take-off block runs for its time at connect, which
+shows its radio load on the data ages (ADR-0063, ADR-0065).
 """
 
 import argparse
@@ -16,7 +19,12 @@ from collections.abc import Callable
 
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.loop.tick_loop import TickStep
-from crazyflie_behavior.programs.start_up import make_drone, run_program
+from crazyflie_behavior.programs.start_up import (
+    add_take_off_log_option,
+    make_drone,
+    run_program,
+    take_off_log_description,
+)
 from crazyflie_behavior.snapshot import RangeReading, RangeStatus, Snapshot, Stamped
 from crazyflie_behavior.timing.clock import RealClock
 
@@ -117,11 +125,17 @@ def main(arguments: list[str] | None = None) -> int:
         action="store_true",
         help="use the real Crazyflie instead of the mock adapter",
     )
-    use_crazyflie: bool = parser.parse_args(arguments).crazyflie
+    add_take_off_log_option(parser)
+    parsed_arguments = parser.parse_args(arguments)
+    use_crazyflie: bool = parsed_arguments.crazyflie
+    take_off_log: bool = parsed_arguments.take_off_log
     clock = RealClock()
-    drone = make_drone(use_crazyflie, clock)
+    drone = make_drone(use_crazyflie, clock, take_off_log=take_off_log)
     adapter_name = "the Crazyflie" if use_crazyflie else "the mock adapter"
-    return run_program("bench", f"Bench program, {adapter_name}", drone, BenchTickStep(drone), clock)
+    description = f"Bench program, {adapter_name}"
+    if take_off_log:
+        description += take_off_log_description(use_crazyflie)
+    return run_program("bench", description, drone, BenchTickStep(drone), clock)
 
 
 if __name__ == "__main__":

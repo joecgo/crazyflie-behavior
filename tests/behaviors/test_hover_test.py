@@ -155,6 +155,43 @@ def test_it_is_done_once_the_drone_reports_it_landed() -> None:
     assert safety_layer.requests == [Arm(), TakeOff(TAKE_OFF_HEIGHT), Land()]
 
 
+def test_it_has_failed_until_the_drone_status_says_landed_after_its_own_landing() -> None:
+    """The safety layer or a stop request ends the run without ticking it again: a hover cut short
+    at any step has failed (ADR-0062)."""
+    safety_layer = SafetyLayerStandIn()
+    hover_test = HoverTest(HOVER_DURATION)
+    has_failed_before_any_tick = hover_test.has_failed
+    has_failed_after_each_tick: list[bool] = []
+
+    for time, status, height in [
+        (0.0, ON_THE_FLOOR, 0.0),  # arms
+        (0.25, ARMED, 0.0),  # takes off
+        (0.5, FLYING, TAKE_OFF_HEIGHT),  # hovers
+        (0.5 + HOVER_DURATION, FLYING, TAKE_OFF_HEIGHT),  # lands
+        (2.75, FLYING, 0.25),  # still landing
+        (3.0, ARMED, 0.0),  # the drone status says landed
+    ]:
+        hover_test.tick(snapshot(time, status, height), safety_layer)
+        has_failed_after_each_tick.append(hover_test.has_failed)
+
+    assert has_failed_before_any_tick
+    assert has_failed_after_each_tick == [True, True, True, True, True, False]
+    assert safety_layer.requests == [Arm(), TakeOff(TAKE_OFF_HEIGHT), Land()]
+
+
+def test_a_take_off_that_does_not_reach_the_height_in_time_has_failed_even_once_landed() -> None:
+    safety_layer = SafetyLayerStandIn()
+    hover_test = HoverTest()
+    hover_test.tick(snapshot(0.0, ON_THE_FLOOR), safety_layer)
+    hover_test.tick(snapshot(0.25, ARMED), safety_layer)  # take-off starts
+    hover_test.tick(snapshot(0.5 + TAKE_OFF_TIME_LIMIT, FLYING, 0.25), safety_layer)  # lands
+
+    is_done = hover_test.tick(snapshot(0.75 + TAKE_OFF_TIME_LIMIT, ARMED, 0.0), safety_layer)
+
+    assert is_done
+    assert hover_test.has_failed
+
+
 def test_it_lands_if_the_take_off_does_not_reach_the_height_in_time(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -350,6 +387,30 @@ def test_with_chirps_it_is_done_only_after_the_silence_hold() -> None:
     assert flight.done_at is not None
     assert on_its_tick(flight.done_at, due=flight.time_of(Silence()) + SILENCE_HOLD)
     assert flight.timeline[-1].request == Silence()
+
+
+def test_with_chirps_a_full_run_passes() -> None:
+    flight = ScriptedFlight(HoverTest(LONG_HOVER, chirp=True))
+
+    flight.run(until=60.0)
+
+    assert flight.done_at is not None
+    assert not flight.hover_test.has_failed
+
+
+def test_with_chirps_a_refused_request_after_landing_still_fails_the_test(caplog: pytest.LogCaptureFixture) -> None:
+    flight = ScriptedFlight(HoverTest(hover_duration=0.0, chirp=True))
+    after_landing = FLOOR_CHIRP_WAIT + LANDED_CHIRP_DELAY / 2  # landed, and the chirp after landing not yet due
+    flight.run(until=after_landing)
+    passed_when_landed = not flight.hover_test.has_failed
+
+    flight.safety_layer = SafetyLayerStandIn(refuse_with="made-up reason")
+    flight.run(start=after_landing + TICK, until=60.0)
+
+    assert passed_when_landed
+    assert flight.done_at is not None
+    assert flight.hover_test.has_failed
+    assert errors_in(caplog) == ["Hover test failed: Chirp() was refused: made-up reason"]
 
 
 def test_charge_is_the_bugle_call_g4_c5_e5_g5_e5_g5() -> None:

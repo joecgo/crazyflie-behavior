@@ -5,6 +5,7 @@ old Windows console window, and running the tick loop between connecting and
 disconnecting the drone, with the interrupt signal as a stop request.
 """
 
+import argparse
 import ctypes
 import logging
 import signal
@@ -17,7 +18,7 @@ from pathlib import Path
 from types import FrameType, TracebackType
 from typing import Any, Self, TextIO
 
-from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
+from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_BLOCK_DURATION, TAKE_OFF_PERIOD_MS, CrazyflieAdapter
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import LEVEL_VERTICAL_SPEED
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
@@ -56,15 +57,39 @@ def make_drone(
     *,
     take_over_flight: bool = False,
     initial_climb_speed: float = LEVEL_VERTICAL_SPEED,
+    take_off_log: bool = False,
 ) -> DroneInterface:
     """The real Crazyflie only when asked for, otherwise the mock adapter (ADR-0028).
 
     `take_over_flight` is for the rescue landing program only (ADR-0038);
-    `initial_climb_speed` for take-off speed tests (ADR-0059).
+    `initial_climb_speed` for take-off speed tests (ADR-0059); `take_off_log` runs
+    the Crazyflie adapter's take-off block (ADR-0063), which the mock adapter doesn't have.
     """
     if use_crazyflie:
-        return CrazyflieAdapter(clock, take_over_flight=take_over_flight, initial_climb_speed=initial_climb_speed)
+        return CrazyflieAdapter(
+            clock,
+            take_over_flight=take_over_flight,
+            initial_climb_speed=initial_climb_speed,
+            take_off_log=take_off_log,
+        )
     return MockAdapter(clock, take_over_flight=take_over_flight, initial_climb_speed=initial_climb_speed)
+
+
+def add_take_off_log_option(parser: argparse.ArgumentParser) -> None:
+    """`--take-off-log`, for the hover, failsafe and bench programs (ADR-0063, ADR-0065)."""
+    parser.add_argument(
+        "--take-off-log",
+        action="store_true",
+        help=(
+            f"run the take-off block: attitude and motor power to the log file every {TAKE_OFF_PERIOD_MS} ms, "
+            f"for {TAKE_OFF_BLOCK_DURATION:g} s from connecting and from each take-off (the Crazyflie only)"
+        ),
+    )
+
+
+def take_off_log_description(use_crazyflie: bool) -> str:
+    """What a program's description adds when it runs with `--take-off-log`."""
+    return ", with the take-off block" if use_crazyflie else ", with the take-off block (the mock adapter has none)"
 
 
 def run_program(program_name: str, description: str, drone: DroneInterface, tick_step: TickStep, clock: Clock) -> int:

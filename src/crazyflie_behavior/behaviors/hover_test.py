@@ -15,7 +15,9 @@ Failure rule (ADR-0033): the first refused request ends the test, since it
 tests the basic sequence and an unexpected state is the finding. So do its
 time limits: arming too slowly ends it at once, and a take-off that doesn't
 reach the height lands first. Ending lands the drone, and every failure is
-logged as an error with its reason.
+logged as an error with its reason. `has_failed` counts these, and a run
+that ended before the drone status said landed after its own landing, as
+when the safety layer or a stop request cut the hover short (ADR-0062).
 """
 
 import logging
@@ -140,6 +142,16 @@ class HoverTest(Behavior):
         """The snapshot time of the next chirp in flight."""
         self._charge_note_playing: int | None = None
         """The index of the latest note requested."""
+        self._has_failed = False
+        """By its own rules: a refused request or a time limit."""
+        self._has_landed = False
+        """Whether the drone status said landed after the hover test's own landing."""
+
+    @property
+    def has_failed(self) -> bool:
+        """Whether the test failed: by its own rules, or because the drone status never said landed
+        after its own landing, as when the safety layer or a stop request cut the hover short (ADR-0062)."""
+        return self._has_failed or not self._has_landed
 
     def tick(self, snapshot: Snapshot, ask_safety_layer: Callable[[CommandRequest], Verdict]) -> bool:
         status = snapshot.drone_status
@@ -166,21 +178,15 @@ class HoverTest(Behavior):
                         self._start_step(_Step.TAKING_OFF, now)
                         self._next_chirp_at = now + CHIRP_PERIOD
                 elif time_in_step > ARM_TIME_LIMIT:
-                    logger.error(
-                        "Hover test failed: the drone didn't report armed within %g s",
-                        ARM_TIME_LIMIT,
-                    )
-                    self._start_step(_Step.DONE, now)
+                    self._fail(f"the drone didn't report armed within {ARM_TIME_LIMIT:g} s", now)
             case _Step.TAKING_OFF:
                 if abs(height - TAKE_OFF_HEIGHT) <= HEIGHT_TOLERANCE:
                     logger.info("Hover test: at %.2f m. Hovering for %g s", height, self._hover_duration)
                     self._start_step(_Step.HOVERING, now)
                 elif time_in_step > TAKE_OFF_TIME_LIMIT:
-                    logger.error(
-                        "Hover test failed: not at %.2f m after %g s (at %.2f m). Landing.",
-                        TAKE_OFF_HEIGHT,
-                        TAKE_OFF_TIME_LIMIT,
-                        height,
+                    self._fail(
+                        f"not at {TAKE_OFF_HEIGHT:.2f} m after {TAKE_OFF_TIME_LIMIT:g} s (at {height:.2f} m). Landing.",
+                        now,
                     )
                     self._land(ask_safety_layer, now)
             case _Step.HOVERING:
@@ -189,6 +195,7 @@ class HoverTest(Behavior):
                     self._land(ask_safety_layer, now)
             case _Step.LANDING:
                 if not status.value.is_flying:
+                    self._has_landed = True
                     if self._chirps:
                         logger.info("Hover test: landed. Chirping in %g s", LANDED_CHIRP_DELAY)
                         self._start_step(_Step.LANDED, now)
@@ -256,9 +263,13 @@ class HoverTest(Behavior):
         """Make a command request; returns whether it was approved. A refused one ends the hover test."""
         verdict = ask_safety_layer(command_request)
         if not verdict.is_approved:
-            logger.error("Hover test failed: %s was refused: %s", command_request, verdict.reason)
-            self._start_step(_Step.DONE, now)
+            self._fail(f"{command_request} was refused: {verdict.reason}", now)
         return verdict.is_approved
+
+    def _fail(self, reason: str, now: float) -> None:
+        logger.error("Hover test failed: %s", reason)
+        self._has_failed = True
+        self._start_step(_Step.DONE, now)
 
     def _start_step(self, step: _Step, now: float) -> None:
         self._step = step

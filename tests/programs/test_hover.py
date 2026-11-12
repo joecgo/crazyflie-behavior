@@ -7,11 +7,13 @@ from pathlib import Path
 import pytest
 
 from crazyflie_behavior.behaviors import hover_test as hover_test_module
-from crazyflie_behavior.behaviors.hover_test import note_pitch
+from crazyflie_behavior.behaviors.hover_test import TAKE_OFF_HEIGHT, note_pitch
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.programs import hover as hover_module
 from crazyflie_behavior.programs.hover import main
+from crazyflie_behavior.safety.safety_layer import LOW_BATTERY_VOLTAGE
+from crazyflie_behavior.snapshot import Snapshot
 from crazyflie_behavior.timing.clock import Clock
 
 
@@ -48,7 +50,9 @@ def test_with_chirp_the_buzzer_commands_reach_the_drone(tmp_path: Path, monkeypa
         monkeypatch.setattr(hover_test_module, wait, 0.1)
     drones: list[MockAdapter] = []
 
-    def make_mock_adapter(use_crazyflie: bool, clock: Clock, *, initial_climb_speed: float) -> DroneInterface:
+    def make_mock_adapter(
+        use_crazyflie: bool, clock: Clock, *, initial_climb_speed: float, take_off_log: bool
+    ) -> DroneInterface:
         drone = MockAdapter(clock, initial_climb_speed=initial_climb_speed)
         drones.append(drone)
         return drone
@@ -69,6 +73,83 @@ def test_with_chirp_the_buzzer_commands_reach_the_drone(tmp_path: Path, monkeypa
     log_text = the_log_file_text(tmp_path / "logs")
     assert "Hover program, the mock adapter, hovering 0.1 s, climbing at 0.2 m/s, with chirps" in log_text
     assert "Hover test: done." in log_text
+
+
+class SaggingBatteryMockAdapter(MockAdapter):
+    """A mock drone whose battery reads below the safety pre-check's limit from the take-off height on."""
+
+    def take_snapshot(self, dt: float) -> Snapshot:
+        snapshot = super().take_snapshot(dt)
+        position = snapshot.position_estimate
+        if position is not None and position.value.z >= TAKE_OFF_HEIGHT:
+            self.set_battery_voltage(LOW_BATTERY_VOLTAGE - 0.1)
+        return snapshot
+
+
+def test_a_hover_the_safety_layer_cut_short_exits_with_1(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """ADR-0062, with no line of its own in the log (ADR-0066)."""
+    monkeypatch.chdir(tmp_path)
+
+    def make_sagging_drone(
+        use_crazyflie: bool, clock: Clock, *, initial_climb_speed: float, take_off_log: bool
+    ) -> DroneInterface:
+        return SaggingBatteryMockAdapter(clock, initial_climb_speed=initial_climb_speed)
+
+    monkeypatch.setattr(hover_module, "make_drone", make_sagging_drone)
+
+    exit_code = main(["--hover-seconds", "5"])
+
+    assert exit_code == 1
+    log_text = the_log_file_text(tmp_path / "logs")
+    assert "Safety pre-check failed: battery at" in log_text
+    assert "Hover test: hovered" not in log_text
+    assert "Hover test failed" not in log_text
+
+
+class InterruptedWhileConnectingMockAdapter(MockAdapter):
+    def connect(self) -> None:
+        raise KeyboardInterrupt
+
+
+class FailingDisconnectMockAdapter(MockAdapter):
+    def disconnect(self) -> None:
+        super().disconnect()
+        raise RuntimeError("made-up disconnect failure")
+
+
+def test_the_interrupt_signal_while_connecting_still_exits_with_130(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Though the hover test never ran, so it has failed (ADR-0062)."""
+    monkeypatch.chdir(tmp_path)
+
+    def make_drone(
+        use_crazyflie: bool, clock: Clock, *, initial_climb_speed: float, take_off_log: bool
+    ) -> DroneInterface:
+        return InterruptedWhileConnectingMockAdapter(clock, initial_climb_speed=initial_climb_speed)
+
+    monkeypatch.setattr(hover_module, "make_drone", make_drone)
+
+    assert main(["--hover-seconds", "0"]) == 130
+
+
+def test_an_error_after_a_full_hover_still_exits_with_1(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Though the hover test passed (ADR-0062)."""
+    monkeypatch.chdir(tmp_path)
+
+    def make_drone(
+        use_crazyflie: bool, clock: Clock, *, initial_climb_speed: float, take_off_log: bool
+    ) -> DroneInterface:
+        return FailingDisconnectMockAdapter(clock, initial_climb_speed=initial_climb_speed)
+
+    monkeypatch.setattr(hover_module, "make_drone", make_drone)
+
+    exit_code = main(["--hover-seconds", "0"])
+
+    assert exit_code == 1
+    log_text = the_log_file_text(tmp_path / "logs")
+    assert "Hover test: landed. Done." in log_text
+    assert "made-up disconnect failure" in log_text
 
 
 @pytest.mark.parametrize("hover_seconds", ["-1", "nan", "inf"])
@@ -99,7 +180,9 @@ def test_climb_speed_reaches_the_drone_and_the_log(tmp_path: Path, monkeypatch: 
     monkeypatch.chdir(tmp_path)
     climb_speeds: list[float] = []
 
-    def make_mock_adapter(use_crazyflie: bool, clock: Clock, *, initial_climb_speed: float) -> DroneInterface:
+    def make_mock_adapter(
+        use_crazyflie: bool, clock: Clock, *, initial_climb_speed: float, take_off_log: bool
+    ) -> DroneInterface:
         climb_speeds.append(initial_climb_speed)
         return MockAdapter(clock, initial_climb_speed=initial_climb_speed)
 
@@ -110,6 +193,32 @@ def test_climb_speed_reaches_the_drone_and_the_log(tmp_path: Path, monkeypatch: 
     assert exit_code == 0
     assert climb_speeds == [0.4]
     assert "climbing at 0.4 m/s" in the_log_file_text(tmp_path / "logs")
+
+
+@pytest.mark.parametrize(("arguments", "expected"), [([], False), (["--take-off-log"], True)])
+def test_the_take_off_log_option_reaches_make_drone_and_the_description(
+    arguments: list[str], expected: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    take_off_logs: list[bool] = []
+    descriptions: list[str] = []
+
+    def make_mock_adapter(
+        use_crazyflie: bool, clock: Clock, *, initial_climb_speed: float, take_off_log: bool
+    ) -> DroneInterface:
+        take_off_logs.append(take_off_log)
+        return MockAdapter(clock, initial_climb_speed=initial_climb_speed)
+
+    def record_the_description(program_name: str, description: str, *_rest: object) -> int:
+        descriptions.append(description)
+        return 0
+
+    monkeypatch.setattr(hover_module, "make_drone", make_mock_adapter)
+    monkeypatch.setattr(hover_module, "run_program", record_the_description)
+
+    main(arguments)
+
+    assert take_off_logs == [expected]
+    assert descriptions[0].endswith(", with the take-off block (the mock adapter has none)") == expected
 
 
 @pytest.mark.parametrize("climb_speed", ["0.05", "0.5", "nan"])

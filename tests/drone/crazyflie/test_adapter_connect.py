@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
-from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
+from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_BLOCK_DURATION, CrazyflieAdapter
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import MAX_FINAL_DESCENT_HEIGHT
 from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE
 from crazyflie_behavior.drone.interface import FLOOR_MAX_SPEED
@@ -58,6 +58,27 @@ FIRST_SAMPLES: dict[str, dict[str, float]] = {
         "range.right": 8000.0,
         "range.up": 8000.0,
     },
+    "controller": {
+        "pid_attitude.roll_outI": 0.0,
+        "pid_attitude.pitch_outI": 0.0,
+        "pid_rate.roll_outI": 0.0,
+        "pid_rate.pitch_outI": 0.0,
+        "controller.cmd_roll": 0.0,
+        "controller.cmd_pitch": 0.0,
+        "controller.roll": 0.0,
+        "controller.pitch": 0.0,
+        "gyro.x": 0.0,
+        "gyro.y": 0.0,
+    },
+    "take_off": {
+        "stateEstimate.roll": 0.0,
+        "stateEstimate.pitch": 0.0,
+        "stateEstimate.yaw": 0.0,
+        "motor.m1": 0.0,
+        "motor.m2": 0.0,
+        "motor.m3": 0.0,
+        "motor.m4": 0.0,
+    },
 }
 """Each log block's first sample, as cflib delivers it."""
 
@@ -70,7 +91,8 @@ class FakeCflib:
     in `silent_blocks`. A real drone keeps streaming, and connect() relies on
     that after it swaps the telemetry buffer (ADR-0038): `stream_samples()`
     sends every started block's sample again, and with a delay the blocks keep
-    streaming on a thread.
+    streaming on a thread. A block's `started` is True from its start, as if the
+    drone confirmed it at once, until its stop; silent blocks never confirm.
     """
 
     def __init__(self) -> None:
@@ -83,7 +105,7 @@ class FakeCflib:
         firmware doesn't know the parameter, so cflib raises KeyError."""
         self.link.cf.param.get_value.side_effect = self.get_parameter
         self.events: list[str] = []
-        """What happened, in order: "start <block>" and "reset estimate"."""
+        """What happened, in order: "start <block>", "stop <block>", "reset estimate" and "write thrust base"."""
         self.link.cf.param.set_value.side_effect = self._record_a_parameter_write
         self.reset_estimate_error: BaseException | None = None
         """Raised by the estimate reset's parameter write, when set."""
@@ -140,10 +162,11 @@ class FakeCflib:
         self.log_block_names.append(name)
         self.log_block_periods_ms[name] = period_in_ms
         block = MagicMock()
+        block.started = False
         callbacks: list[Callable[[int, dict[str, float], object], None]] = []
         block.data_received_cb.add_callback.side_effect = callbacks.append
         block.start.side_effect = lambda: self._start_block(name, block, callbacks)
-        block.stop.side_effect = lambda: self._started_blocks.pop(name, None)
+        block.stop.side_effect = lambda: self._stop_block(name, block)
         return block
 
     def stream_samples(self) -> None:
@@ -153,6 +176,11 @@ class FakeCflib:
 
     def stop(self) -> None:
         self._stopped.set()
+
+    def _stop_block(self, name: str, block: MagicMock) -> None:
+        self.events.append(f"stop {name}")
+        block.started = False
+        self._started_blocks.pop(name, None)
 
     def _send(self, name: str) -> None:
         block, callbacks = self._started_blocks[name]
@@ -168,6 +196,7 @@ class FakeCflib:
         self.events.append(f"start {name}")
         if name in self.silent_blocks:
             return
+        block.started = True
         self._started_blocks[name] = (block, callbacks)
         if self.first_sample_delay > 0.0:
 
@@ -222,7 +251,8 @@ def test_connecting_resets_the_estimate_and_starts_telemetry(adapter: CrazyflieA
     adapter.connect()
 
     assert fake_cflib.reset_count == 1
-    assert fake_cflib.log_block_names == ["state", "battery", "down", "diagnostic"]
+    # The controller block too (ADR-0063); the take-off block only with the take-off log.
+    assert fake_cflib.log_block_names == ["state", "battery", "down", "diagnostic", "controller"]
     fake_cflib.link.close_link.assert_not_called()
 
 
@@ -330,11 +360,13 @@ def test_the_diagnostic_block_carries_the_battery_voltage(adapter: CrazyflieAdap
     assert "pm.vbatMV" in variables
 
 
-def test_log_periods_are_ones_the_firmware_accepts(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
+def test_log_periods_are_ones_the_firmware_accepts(fake_cflib: FakeCflib) -> None:
     fake_cflib.parameters["deck.bcMultiranger"] = "1"
+    adapter = CrazyflieAdapter(StreamingSimClock(fake_cflib, start=10.0), take_off_log=True)  # every block
 
     adapter.connect()
 
+    assert set(fake_cflib.log_block_periods_ms) == {*FIRST_SAMPLES}
     for period_ms in fake_cflib.log_block_periods_ms.values():
         assert 10 <= period_ms <= 2540  # the firmware counts periods in 10 ms steps
         assert period_ms % 10 == 0
@@ -1070,3 +1102,177 @@ def test_the_thrust_base_report_never_raises_on_cflibs_receive_thread(adapter: C
     adapter._on_thrust_base_reported("posCtlPid.thrustBase", "not a number")
 
     assert not adapter._is_thrust_base_confirmed
+
+
+# --- The controller block and the take-off block (ADR-0063, ADR-0065) -------------------
+
+TICK = 0.05
+
+
+def variables_fetched(block: object) -> list[tuple[str, str | None]]:
+    """Each variable added to a fake log block, with the type it's fetched as."""
+    add_variable = cast(MagicMock, cast(MagicMock, block).add_variable)
+    return [(added.args[0], added.args[1]) for added in add_variable.call_args_list]
+
+
+def test_connect_does_not_wait_for_the_controller_block(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
+    # It's for the debug log only, not telemetry (ADR-0063).
+    fake_cflib.silent_blocks.add("controller")
+
+    adapter.connect()
+
+    assert adapter._telemetry.missing_values() == []
+    assert fake_cflib.log_block_periods_ms["controller"] == 100
+
+
+def test_only_the_controller_block_fetches_its_variables_as_fp16(fake_cflib: FakeCflib) -> None:
+    """10 floats in 20 bytes (ADR-0063); every other variable comes as the type the drone stores."""
+    fake_cflib.parameters["deck.bcMultiranger"] = "1"
+    adapter = CrazyflieAdapter(StreamingSimClock(fake_cflib, start=10.0), take_off_log=True)
+
+    adapter.connect()
+
+    for name, block in zip(fake_cflib.log_block_names, adapter._log_configs, strict=True):
+        fetched_as = {fetch_as for _, fetch_as in variables_fetched(block)}
+        assert fetched_as == ({"FP16"} if name == "controller" else {None}), name
+
+
+def test_with_every_block_the_drones_limits_hold(fake_cflib: FakeCflib) -> None:
+    """The firmware takes up to 16 log blocks and 128 variables, and cflib raises past either."""
+    fake_cflib.parameters["deck.bcMultiranger"] = "1"
+    adapter = CrazyflieAdapter(StreamingSimClock(fake_cflib, start=10.0), take_off_log=True)
+
+    adapter.connect()
+
+    assert len(adapter._log_configs) <= 16
+    assert sum(len(variables_fetched(block)) for block in adapter._log_configs) <= 128
+
+
+def connected_with_the_take_off_log(fake_cflib: FakeCflib) -> tuple[CrazyflieAdapter, StreamingSimClock, float]:
+    """A connected adapter with the take-off log, its clock, and when the take-off block's run from connect ends."""
+    clock = StreamingSimClock(fake_cflib, start=10.0)
+    adapter = CrazyflieAdapter(clock, take_off_log=True)
+    adapter.connect()
+    return adapter, clock, clock.now() + TAKE_OFF_BLOCK_DURATION
+
+
+def tick_at(adapter: CrazyflieAdapter, clock: SimClock, time: float) -> None:
+    """The take-off and landing update of a tick at `time`."""
+    clock.sleep_until(time)
+    adapter.update_take_off_and_landing(adapter.take_snapshot(TICK))
+
+
+def take_off_block_events(fake_cflib: FakeCflib) -> list[str]:
+    return [event for event in fake_cflib.events if event in {"start take_off", "stop take_off"}]
+
+
+def test_with_the_take_off_log_the_take_off_block_is_created_last_in_connect(
+    fake_cflib: FakeCflib, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """After the wait for the first telemetry, so its run falls in the first ticks (ADR-0065)."""
+    adapter = CrazyflieAdapter(StreamingSimClock(fake_cflib, start=10.0), take_off_log=True)
+    wait_for_first_telemetry = adapter._wait_for_first_telemetry
+
+    def recorded_wait() -> None:
+        wait_for_first_telemetry()
+        fake_cflib.events.append("first telemetry")
+
+    monkeypatch.setattr(adapter, "_wait_for_first_telemetry", recorded_wait)
+
+    adapter.connect()
+
+    assert fake_cflib.log_block_names[-1] == "take_off"
+    assert fake_cflib.events[-2:] == ["first telemetry", "start take_off"]
+    assert fake_cflib.log_block_periods_ms["take_off"] == 10
+
+
+def test_the_tick_stops_the_take_off_block_once_its_run_from_connect_is_over(fake_cflib: FakeCflib) -> None:
+    """The run counts from the create request (ADR-0065)."""
+    adapter, clock, run_ends = connected_with_the_take_off_log(fake_cflib)
+
+    tick_at(adapter, clock, run_ends - TICK)
+    events_before_the_end = take_off_block_events(fake_cflib)
+    tick_at(adapter, clock, run_ends)
+    events_at_the_end = take_off_block_events(fake_cflib)
+    tick_at(adapter, clock, run_ends + TICK)
+
+    assert events_before_the_end == ["start take_off"]
+    assert events_at_the_end == ["start take_off", "stop take_off"]
+    assert take_off_block_events(fake_cflib) == ["start take_off", "stop take_off"]  # once
+
+
+def test_the_take_off_block_is_never_stopped_before_the_drone_confirms_its_start(fake_cflib: FakeCflib) -> None:
+    """cflib sends the start only once the drone confirms the create: a stop sent earlier would arrive first."""
+    fake_cflib.silent_blocks.add("take_off")  # no confirmation
+    adapter, clock, run_ends = connected_with_the_take_off_log(fake_cflib)
+    block = cast(MagicMock, adapter._log_configs[fake_cflib.log_block_names.index("take_off")])
+
+    tick_at(adapter, clock, run_ends)
+    tick_at(adapter, clock, run_ends + 1.0)
+    events_while_unconfirmed = take_off_block_events(fake_cflib)
+    block.started = True  # the drone confirms it at last
+    tick_at(adapter, clock, run_ends + 1.0 + TICK)
+
+    assert events_while_unconfirmed == ["start take_off"]
+    assert take_off_block_events(fake_cflib) == ["start take_off", "stop take_off"]
+
+
+def test_a_take_off_while_the_take_off_block_runs_restarts_its_run_with_no_packet(fake_cflib: FakeCflib) -> None:
+    adapter, clock, run_ends = connected_with_the_take_off_log(fake_cflib)
+    clock.sleep_until(run_ends - 1.0)
+
+    adapter.take_off(0.5)
+    tick_at(adapter, clock, run_ends)  # the run from connect alone would stop here
+    tick_at(adapter, clock, run_ends + 1.0 - TICK)
+    events_before_the_end = take_off_block_events(fake_cflib)
+    tick_at(adapter, clock, run_ends + 1.0)
+
+    assert events_before_the_end == ["start take_off"]  # only the create's
+    assert take_off_block_events(fake_cflib) == ["start take_off", "stop take_off"]
+
+
+def test_a_take_off_after_the_run_starts_the_take_off_block_again_after_its_own_commands(
+    fake_cflib: FakeCflib,
+) -> None:
+    """One start packet, after the initial climb's first setpoint: the drone kept the block (ADR-0065)."""
+    adapter, clock, run_ends = connected_with_the_take_off_log(fake_cflib)
+    tick_at(adapter, clock, run_ends)  # stops it
+
+    def record_the_packet(packet: object) -> None:
+        fake_cflib.events.append("send packet")
+
+    fake_cflib.link.cf.send_packet.side_effect = record_the_packet
+    take_off_time = run_ends + 3.0
+    clock.sleep_until(take_off_time)
+
+    adapter.take_off(0.5)
+    events_of_the_take_off = fake_cflib.events[-2:]
+    tick_at(adapter, clock, take_off_time + TAKE_OFF_BLOCK_DURATION - TICK)
+    events_before_the_end = take_off_block_events(fake_cflib)
+    tick_at(adapter, clock, take_off_time + TAKE_OFF_BLOCK_DURATION)
+
+    assert events_of_the_take_off == ["send packet", "start take_off"]
+    assert events_before_the_end == ["start take_off", "stop take_off", "start take_off"]
+    assert take_off_block_events(fake_cflib) == ["start take_off", "stop take_off"] * 2
+
+
+@pytest.mark.parametrize("is_confirmed", [True, False], ids=["start confirmed", "start not confirmed"])
+def test_disconnecting_stops_the_take_off_block_before_its_landing(fake_cflib: FakeCflib, is_confirmed: bool) -> None:
+    """The landing doesn't tick, so nothing else would stop the block while it lands (ADR-0065)."""
+    fake_cflib.samples["state"]["stateEstimate.z"] = 0.4
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    fake_cflib.samples["down"]["range.zrange"] = 400.0
+    if not is_confirmed:
+        fake_cflib.silent_blocks.add("take_off")
+    adapter = CrazyflieAdapter(StreamingSimClock(fake_cflib, start=10.0), take_over_flight=True, take_off_log=True)
+    adapter.connect()
+
+    def record_the_landing_approach(*arguments: object, **keywords: object) -> None:
+        fake_cflib.events.append("landing approach")
+
+    fake_cflib.link.cf.high_level_commander.go_to.side_effect = record_the_landing_approach
+    events_before = len(fake_cflib.events)
+
+    adapter.disconnect()
+
+    assert fake_cflib.events[events_before : events_before + 2] == ["stop take_off", "landing approach"]

@@ -10,10 +10,15 @@ speed, for take-off speed tests (ADR-0059):
     .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie --hover-seconds 60
     .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie --chirp
     .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie --climb-speed 0.4
+    .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie --take-off-log
 
 Each snapshot goes to the log file; the console shows the hover test's steps
 and each command sent. In a terminal, Ctrl+C sends the interrupt signal, which
 makes a stop request: the drone lands.
+
+The exit code is 1 when the hover test failed, even if the program ran fine:
+a refused request, a time limit, or a hover the safety layer or a stop request
+cut short (ADR-0062). The log shows the cause, not the exit code (ADR-0066).
 """
 
 import argparse
@@ -27,7 +32,14 @@ from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
     check_initial_climb_speed,
 )
 from crazyflie_behavior.loop.tick_step import BehaviorTickStep
-from crazyflie_behavior.programs.start_up import make_drone, run_program
+from crazyflie_behavior.programs.start_up import (
+    EXIT_ERROR,
+    EXIT_OK,
+    add_take_off_log_option,
+    make_drone,
+    run_program,
+    take_off_log_description,
+)
 from crazyflie_behavior.safety.safety_layer import SafetyLayer
 from crazyflie_behavior.timing.clock import RealClock
 
@@ -64,11 +76,13 @@ def main(arguments: list[str] | None = None) -> int:
             f"(default: {LEVEL_VERTICAL_SPEED:g}); the landing keeps its own"
         ),
     )
+    add_take_off_log_option(parser)
     parsed_arguments = parser.parse_args(arguments)
     use_crazyflie: bool = parsed_arguments.crazyflie
     hover_duration: float = parsed_arguments.hover_seconds
     chirp: bool = parsed_arguments.chirp
     climb_speed: float = parsed_arguments.climb_speed
+    take_off_log: bool = parsed_arguments.take_off_log
     try:
         hover_test = HoverTest(hover_duration, chirp=chirp)
     except ValueError as error:
@@ -78,13 +92,17 @@ def main(arguments: list[str] | None = None) -> int:
     except ValueError as error:
         parser.error(f"--climb-speed: {error}")
     clock = RealClock()
-    drone = make_drone(use_crazyflie, clock, initial_climb_speed=climb_speed)
+    drone = make_drone(use_crazyflie, clock, initial_climb_speed=climb_speed, take_off_log=take_off_log)
     tick_step = BehaviorTickStep(drone, SafetyLayer(drone), hover_test)
     adapter_name = "the Crazyflie" if use_crazyflie else "the mock adapter"
     description = f"Hover program, {adapter_name}, hovering {hover_duration:g} s, climbing at {climb_speed:g} m/s"
     if chirp:
         description += ", with chirps"
-    return run_program("hover", description, drone, tick_step, clock)
+    if take_off_log:
+        description += take_off_log_description(use_crazyflie)
+    exit_code = run_program("hover", description, drone, tick_step, clock)
+    # A hover cut short is a failed test, even though the program itself ran fine.
+    return EXIT_ERROR if exit_code == EXIT_OK and hover_test.has_failed else exit_code
 
 
 if __name__ == "__main__":

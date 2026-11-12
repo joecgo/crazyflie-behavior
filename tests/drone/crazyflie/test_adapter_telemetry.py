@@ -14,9 +14,11 @@ from unittest.mock import MagicMock
 import pytest
 
 from crazyflie_behavior.drone.crazyflie.adapter import (
+    _CONTROLLER_VARIABLES,
     _DIAGNOSTIC_VARIABLES,
     _DOWN_VARIABLES,
     _STATE_VARIABLES,
+    _TAKE_OFF_VARIABLES,
     CrazyflieAdapter,
 )
 from crazyflie_behavior.geometry import Vector3
@@ -28,6 +30,7 @@ ARMED = 1 << 1
 FLYING = 1 << 4
 
 LOG_BLOCK_LIMIT_BYTES = 26  # cflib's LogConfig.MAX_LEN
+FP16_SIZE_BYTES = 2  # cflib's size for a variable fetched as FP16
 
 VARIABLE_SIZES_BYTES = {
     "stateEstimate.x": 4,
@@ -165,6 +168,68 @@ def test_the_diagnostic_block_fits_in_one_log_block() -> None:
     size = sum(VARIABLE_SIZES_BYTES[variable] for variable in _DIAGNOSTIC_VARIABLES)
 
     assert size <= LOG_BLOCK_LIMIT_BYTES
+
+
+def test_the_controller_block_fits_in_one_log_block() -> None:
+    """Every variable fetched as FP16 (ADR-0063)."""
+    assert len(_CONTROLLER_VARIABLES) * FP16_SIZE_BYTES <= LOG_BLOCK_LIMIT_BYTES
+
+
+def test_the_take_off_block_fits_in_one_log_block() -> None:
+    assert sum(VARIABLE_SIZES_BYTES[variable] for variable in _TAKE_OFF_VARIABLES) <= LOG_BLOCK_LIMIT_BYTES
+
+
+def test_a_controller_sample_is_one_debug_line_and_never_telemetry(
+    adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture
+) -> None:
+    sample = {  # a value with 4 significant digits in each pair: FP16 keeps about 3.3
+        "pid_attitude.roll_outI": 1.234,
+        "pid_attitude.pitch_outI": -0.25,
+        "pid_rate.roll_outI": 1234.0,
+        "pid_rate.pitch_outI": -56.0,
+        "controller.cmd_roll": 2048.0,
+        "controller.cmd_pitch": -1024.0,
+        "controller.roll": 0.5625,
+        "controller.pitch": -0.75,
+        "gyro.x": 12.34,
+        "gyro.y": -3.0,
+    }
+    before = snapshot_of(adapter)
+
+    with caplog.at_level(logging.DEBUG, logger=ADAPTER_LOGGER):
+        adapter._on_controller(3000, sample, MagicMock())
+
+    assert [r.getMessage() for r in caplog.records] == [
+        "Controller block: drone_time=3.000 attitude_integral_deg_per_s=[1.234, -0.25] rate_integral=[1234, -56] "
+        "command=[2048, -1024] attitude_setpoint_deg=[0.5625, -0.75] gyro_deg_per_s=[12.34, -3]"
+    ]
+    assert caplog.records[0].levelno == logging.DEBUG
+    assert snapshot_of(adapter) == before
+
+
+def test_a_take_off_block_sample_is_one_debug_line_and_never_telemetry(
+    adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture
+) -> None:
+    sample = {
+        "stateEstimate.roll": 0.42,
+        "stateEstimate.pitch": -0.9,
+        "stateEstimate.yaw": 1.0,
+        "motor.m1": 40000.0,
+        "motor.m2": 41000.0,
+        "motor.m3": 42000.0,
+        "motor.m4": 43000.0,
+    }
+    before = snapshot_of(adapter)
+
+    with caplog.at_level(logging.DEBUG, logger=ADAPTER_LOGGER):
+        adapter._on_take_off_block(3010, sample, MagicMock())
+
+    assert [r.getMessage() for r in caplog.records] == [
+        "Take-off block: drone_time=3.010 roll_deg=0.42 pitch_deg=-0.90 yaw_deg=1.00 "
+        "motors=[40000, 41000, 42000, 43000]"
+    ]
+    assert caplog.records[0].levelno == logging.DEBUG
+    assert snapshot_of(adapter) == before
 
 
 def test_a_diagnostic_sample_is_one_debug_line_and_never_telemetry(

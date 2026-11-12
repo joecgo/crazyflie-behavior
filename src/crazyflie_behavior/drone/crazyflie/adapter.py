@@ -93,6 +93,12 @@ MULTIRANGER_PERIOD_MS = 100
 BATTERY_PERIOD_MS = 1000
 DIAGNOSTIC_PERIOD_MS = 100
 """Attitude, motor power and flow quality, for the debug log only (ADR-0050)."""
+CONTROLLER_PERIOD_MS = 100
+"""The controller block, for the debug log only (ADR-0063)."""
+TAKE_OFF_PERIOD_MS = 10
+"""The take-off block, for the debug log only (ADR-0063)."""
+TAKE_OFF_BLOCK_DURATION = 2.0
+"""Seconds the take-off block runs from the end of connect and from each take-off (ADR-0065)."""
 
 # --- PLACEHOLDERS, NOT DECISIONS ---------------------------------------------
 # Flight parameters wait on speed envelopes (ADR-0005) and the safety layer.
@@ -159,6 +165,24 @@ _DIAGNOSTIC_VARIABLES = (
     *_FLOW_QUALITY_VARIABLES,
     _DIAGNOSTIC_BATTERY_VARIABLE,
 )
+# The controller block (ADR-0063): 10 floats fetched as FP16, 20 bytes. Each pair is roll, then pitch,
+# with the signs the firmware logs.
+_CONTROLLER_VARIABLES = (
+    "pid_attitude.roll_outI",  # the attitude controllers' integrals: degrees per second of rate setpoint
+    "pid_attitude.pitch_outI",
+    "pid_rate.roll_outI",  # the rate controllers' integrals, in command units
+    "pid_rate.pitch_outI",
+    "controller.cmd_roll",  # the controller's commands: 16-bit, signed
+    "controller.cmd_pitch",
+    "controller.roll",  # the attitude setpoint: degrees
+    "controller.pitch",
+    "gyro.x",  # degrees per second
+    "gyro.y",
+)
+_CONTROLLER_FETCH_AS = "FP16"
+"""2 bytes a variable, about 3 significant digits (ADR-0063)."""
+# The take-off block (ADR-0063): 3 floats and 4 uint16, 20 bytes.
+_TAKE_OFF_VARIABLES = (*_ATTITUDE_VARIABLES, *_MOTOR_VARIABLES)
 # Buzzer parameters (ADR-0053). `sound.effect` picks an entry in the firmware's effects table.
 _SOUND_EFFECT_PARAMETER = "sound.effect"
 _SOUND_FREQUENCY_PARAMETER = "sound.freq"
@@ -234,13 +258,17 @@ class CrazyflieAdapter(DroneInterface):
         *,
         take_over_flight: bool = False,
         initial_climb_speed: float = LEVEL_VERTICAL_SPEED,
+        take_off_log: bool = False,
     ) -> None:
         """`take_over_flight`: only the rescue landing sets this (ADR-0038). `connect()` then
         accepts a drone that is flying, skips the position estimate reset and treats the
         drone as airborne, as if this adapter had sent the take-off.
 
         `initial_climb_speed`: meters per second, for take-off speed tests (ADR-0059). Raises
-        ValueError outside the accepted range."""
+        ValueError outside the accepted range.
+
+        `take_off_log`: run the take-off block, from the end of connect and from each take-off
+        (ADR-0063, ADR-0065)."""
         check_initial_climb_speed(initial_climb_speed)
         self._initial_climb_speed = initial_climb_speed
         self._initial_climb_time_limit = initial_climb_time_limit(initial_climb_speed)
@@ -303,6 +331,13 @@ class CrazyflieAdapter(DroneInterface):
         self._is_thrust_base_confirmed = False
         """The drone's latest report of its thrust base was THRUST_BASE (ADR-0061). Written on cflib's
         receive thread."""
+        self._take_off_log = take_off_log
+        self._take_off_block: LogConfig | None = None
+        """Created last in connect with `take_off_log`, for this link."""
+        self._is_take_off_block_running = False
+        """A start or create was sent for the take-off block, and no stop since."""
+        self._take_off_block_stops_at = 0.0
+        """When the take-off block's run is over. Meaningful while it runs."""
 
     # --- Connection ---------------------------------------------------------
 
@@ -363,6 +398,9 @@ class CrazyflieAdapter(DroneInterface):
             self._wait_for_first_telemetry()
             self._log_whether_the_drone_arms_itself()
             self._log_whether_the_buzzer_deck_is_attached()
+            if self._take_off_log:
+                # Last, so its run falls in the first ticks: cflib starts a block once it's created (ADR-0065).
+                self._create_take_off_block()
         except BaseException:
             self._close_link()
             raise
@@ -374,6 +412,8 @@ class CrazyflieAdapter(DroneInterface):
         # flying drone. Land first and wait until the motors are stopped:
         # blocking is fine at shutdown.
         try:
+            # The landing below doesn't tick, so nothing else would stop the take-off block (ADR-0065).
+            self._stop_take_off_block()
             if self._is_airborne:
                 self._land_and_wait_for_touchdown()
             if self._has_stopped_motors:
@@ -425,6 +465,7 @@ class CrazyflieAdapter(DroneInterface):
             self._start_initial_climb(height)
         self._is_airborne = True
         self._take_off_sent_at = self._clock.now()
+        self._run_take_off_block()  # after the take-off's own commands (ADR-0065)
 
     def land(self) -> None:
         if not self._may_be_flying():
@@ -526,10 +567,12 @@ class CrazyflieAdapter(DroneInterface):
         )
 
     def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
+        """Also stops the take-off block once its run is over (ADR-0065)."""
         if self._is_in_initial_climb:
             self._update_initial_climb(snapshot)
         else:
             self._update_landing(snapshot)
+        self._stop_take_off_block_once_its_run_is_over()
 
     # --- Internals ----------------------------------------------------------
 
@@ -547,7 +590,10 @@ class CrazyflieAdapter(DroneInterface):
             else:
                 self._sync_crazyflie.close_link()
             self._sync_crazyflie = None
-        self._log_configs.clear()  # they belonged to that link
+        # They belonged to that link, as did the take-off block's state.
+        self._log_configs.clear()
+        self._take_off_block = None
+        self._is_take_off_block_running = False
 
     def _close_radio_link_only(self) -> None:
         """Turn off the radio link and nothing else, so a flying drone keeps flying (ADR-0038).
@@ -952,6 +998,13 @@ class CrazyflieAdapter(DroneInterface):
         self._add_log_block("battery", BATTERY_PERIOD_MS, ["pm.vbat"], self._on_battery)
         self._add_log_block("down", DOWN_RANGE_PERIOD_MS, list(_DOWN_VARIABLES), self._on_down_range)
         self._add_log_block("diagnostic", DIAGNOSTIC_PERIOD_MS, list(_DIAGNOSTIC_VARIABLES), self._on_diagnostic)
+        self._add_log_block(
+            "controller",
+            CONTROLLER_PERIOD_MS,
+            list(_CONTROLLER_VARIABLES),
+            self._on_controller,
+            fetch_as=_CONTROLLER_FETCH_AS,
+        )
         if has_multiranger:
             self._add_log_block(
                 "multiranger",
@@ -965,6 +1018,42 @@ class CrazyflieAdapter(DroneInterface):
             self._telemetry.write_range_readings(
                 dict.fromkeys(_MULTIRANGER_VARIABLES, RangeReading.invalid()), drone_time=None
             )
+
+    # The take-off block (ADR-0063, ADR-0065). Nothing waits for it. cflib sends one packet for each start
+    # or stop, and sets `started` on its receive thread once the drone confirms a start.
+
+    def _create_take_off_block(self) -> None:
+        """Its run counts from the create request: cflib starts it once the drone confirms the create."""
+        self._take_off_block = self._add_log_block(
+            "take_off", TAKE_OFF_PERIOD_MS, list(_TAKE_OFF_VARIABLES), self._on_take_off_block
+        )
+        self._is_take_off_block_running = True
+        self._take_off_block_stops_at = self._clock.now() + TAKE_OFF_BLOCK_DURATION
+
+    def _run_take_off_block(self) -> None:
+        """Run it from now: a start, or just a later stop for a run under way."""
+        if self._take_off_block is None:
+            return
+        if not self._is_take_off_block_running:
+            self._take_off_block.start()  # the drone kept the block from connect, so no create
+            self._is_take_off_block_running = True
+        self._take_off_block_stops_at = self._clock.now() + TAKE_OFF_BLOCK_DURATION
+
+    def _stop_take_off_block_once_its_run_is_over(self) -> None:
+        """Only once the drone has confirmed its start, so the stop can't overtake cflib's start."""
+        block = self._take_off_block
+        if (
+            block is not None
+            and self._is_take_off_block_running
+            and self._clock.now() >= self._take_off_block_stops_at
+            and block.started
+        ):
+            self._stop_take_off_block()
+
+    def _stop_take_off_block(self) -> None:
+        if self._take_off_block is not None and self._is_take_off_block_running:
+            self._take_off_block.stop()
+            self._is_take_off_block_running = False
 
     def _wait_for_drone_status(self) -> int:
         """Return the supervisor bitfield of the first state packet since connecting (ADR-0038).
@@ -1107,10 +1196,14 @@ class CrazyflieAdapter(DroneInterface):
         else:
             logger.info("No Buzzer deck: buzzer commands will make no sound.")
 
-    def _add_log_block(self, name: str, period_ms: int, variables: list[str], on_data: _LogCallback) -> None:
+    def _add_log_block(
+        self, name: str, period_ms: int, variables: list[str], on_data: _LogCallback, fetch_as: str | None = None
+    ) -> LogConfig:
+        """Create and start a log block. `fetch_as`: the cflib type to fetch every variable as; by default,
+        each comes as the type the drone stores."""
         log_config = LogConfig(name=name, period_in_ms=period_ms)
         for variable in variables:
-            log_config.add_variable(variable)  # fetched as the type the drone stores
+            log_config.add_variable(variable, fetch_as)
         try:
             self._crazyflie.log.add_config(log_config)
         except KeyError as error:
@@ -1120,6 +1213,7 @@ class CrazyflieAdapter(DroneInterface):
         log_config.data_received_cb.add_callback(on_data)
         log_config.start()
         self._log_configs.append(log_config)
+        return log_config
 
     # Log callbacks run on cflib's receive thread. Keep them tiny: convert and
     # write to the telemetry buffer, nothing else.
@@ -1190,6 +1284,27 @@ class CrazyflieAdapter(DroneInterface):
             squal,
             shutter,
             battery_voltage,
+        )
+
+    def _on_controller(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
+        """One debug line, nothing in the telemetry buffer (ADR-0063)."""
+        logger.debug(
+            "Controller block: drone_time=%.3f attitude_integral_deg_per_s=[%.4g, %.4g] rate_integral=[%.4g, %.4g] "
+            "command=[%.4g, %.4g] attitude_setpoint_deg=[%.4g, %.4g] gyro_deg_per_s=[%.4g, %.4g]",
+            self._drone_time(timestamp),
+            *(data[variable] for variable in _CONTROLLER_VARIABLES),
+        )
+
+    def _on_take_off_block(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
+        """One debug line, nothing in the telemetry buffer (ADR-0063)."""
+        roll_deg, pitch_deg, yaw_deg = (data[variable] for variable in _ATTITUDE_VARIABLES)
+        logger.debug(
+            "Take-off block: drone_time=%.3f roll_deg=%.2f pitch_deg=%.2f yaw_deg=%.2f motors=%s",
+            self._drone_time(timestamp),
+            roll_deg,
+            pitch_deg,
+            yaw_deg,
+            [int(data[variable]) for variable in _MOTOR_VARIABLES],
         )
 
     def _on_multiranger(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:

@@ -31,6 +31,7 @@ from crazyflie_behavior.programs.start_up import (
     restored_mode,
     run_program,
     run_tick_loop,
+    take_off_log_description,
 )
 from crazyflie_behavior.timing.clock import SimClock
 
@@ -485,6 +486,25 @@ def test_an_error_ends_a_program_with_exit_code_1_and_goes_to_the_log(
     log_text = the_log_file_text(tmp_path / "logs")
     assert "The test program stopped with an error" in log_text
     assert "the tick step broke" in log_text
+
+
+def test_make_drone_passes_the_take_off_log_on_to_the_crazyflie_adapter() -> None:
+    clock = SimClock()
+
+    mock_drone = make_drone(use_crazyflie=False, clock=clock, take_off_log=True)
+    crazyflie = make_drone(use_crazyflie=True, clock=clock, take_off_log=True)
+    default = make_drone(use_crazyflie=True, clock=clock)
+
+    assert isinstance(mock_drone, MockAdapter)  # it has no take-off block
+    assert isinstance(crazyflie, CrazyflieAdapter)
+    assert crazyflie._take_off_log  # pyright: ignore[reportPrivateUsage]
+    assert isinstance(default, CrazyflieAdapter)
+    assert not default._take_off_log  # pyright: ignore[reportPrivateUsage]
+
+
+def test_the_description_says_when_the_take_off_block_runs_and_when_the_adapter_has_none() -> None:
+    assert take_off_log_description(use_crazyflie=True) == ", with the take-off block"
+    assert take_off_log_description(use_crazyflie=False) == ", with the take-off block (the mock adapter has none)"
 
 
 def test_make_drone_passes_the_initial_climb_speed_on_to_either_adapter() -> None:

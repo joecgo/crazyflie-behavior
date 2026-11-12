@@ -14,7 +14,7 @@ from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.programs import bench as bench_module
 from crazyflie_behavior.programs.bench import BenchTickStep, main, snapshot_summary
 from crazyflie_behavior.snapshot import RangeDirection, RangeReading, RangeReadings, Snapshot
-from crazyflie_behavior.timing.clock import SimClock
+from crazyflie_behavior.timing.clock import Clock, SimClock
 
 BENCH_LOGGER = "crazyflie_behavior.programs.bench"
 TICK_PERIOD = 0.25
@@ -210,6 +210,30 @@ def test_the_bench_program_runs_with_the_mock_adapter_until_the_interrupt_signal
     assert "Snapshot: Snapshot(" in log_text  # the debug lines reach the file
     assert "The interrupt signal made the stop request" in log_text
     assert "Tick loop summary: ticks: 3" in log_text
+
+
+@pytest.mark.parametrize(("arguments", "expected"), [([], False), (["--take-off-log"], True)])
+def test_the_take_off_log_option_reaches_make_drone_and_the_description(
+    arguments: list[str], expected: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With it, the Crazyflie adapter runs the take-off block at connect: the Bench measures its load (ADR-0063)."""
+    take_off_logs: list[bool] = []
+    descriptions: list[str] = []
+
+    def make_mock_adapter(use_crazyflie: bool, clock: Clock, *, take_off_log: bool) -> DroneInterface:
+        take_off_logs.append(take_off_log)
+        return MockAdapter(clock)
+
+    def record_the_description(program_name: str, description: str, *_rest: object) -> int:
+        descriptions.append(description)
+        return 0
+
+    monkeypatch.setattr(bench_module, "make_drone", make_mock_adapter)
+    monkeypatch.setattr(bench_module, "run_program", record_the_description)
+
+    assert main(arguments) == 0
+    assert take_off_logs == [expected]
+    assert descriptions[0].endswith(", with the take-off block (the mock adapter has none)") == expected
 
 
 @pytest.mark.skipif(
