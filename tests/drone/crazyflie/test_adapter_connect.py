@@ -22,6 +22,7 @@ from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
 from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import MAX_FINAL_DESCENT_HEIGHT
 from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE
+from crazyflie_behavior.drone.interface import FLOOR_MAX_SPEED
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import RangeStatus
 from crazyflie_behavior.timing.clock import RealClock, SimClock
@@ -462,17 +463,20 @@ def test_the_estimate_reset_logs_the_estimate_it_erases(
     assert "position (-87.000, 0.000, 0.000) m" in record.getMessage()
 
 
-def test_the_estimate_reset_warns_when_the_estimate_it_erases_was_moving_on_the_floor(
-    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+@pytest.mark.parametrize(
+    ("speed", "level"), [(FLOOR_MAX_SPEED * 0.99, logging.INFO), (FLOOR_MAX_SPEED, logging.WARNING)]
+)
+def test_the_estimate_reset_warns_unless_the_estimate_it_erases_was_under_the_floor_speed_limit(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture, speed: float, level: int
 ) -> None:
-    fake_cflib.samples["state"]["stateEstimate.vy"] = 0.3
+    fake_cflib.samples["state"]["stateEstimate.vy"] = speed
 
     with caplog.at_level(logging.INFO):
         adapter.connect()
 
     [record] = [record for record in caplog.records if record.getMessage().startswith("Estimate reset")]
-    assert record.levelno == logging.WARNING
-    assert "implausible" in record.getMessage()
+    assert record.levelno == level
+    assert ("implausible" in record.getMessage()) == (level == logging.WARNING)
 
 
 def test_the_interrupt_signal_while_the_link_opens_gets_through_and_stops_the_connection_under_way(

@@ -605,7 +605,12 @@ class CrazyflieAdapter(DroneInterface):
             logger.warning("Estimate reset not sent: the link is closed.")
             return
         self._log_estimate_before_reset()
-        self._crazyflie.param.set_value(_RESET_ESTIMATE_PARAMETER, 1)
+        try:
+            self._crazyflie.param.set_value(_RESET_ESTIMATE_PARAMETER, 1)
+        except (KeyError, AttributeError):
+            # The link can be lost after the check above. The drone is on the floor, so carry on (ADR-0020).
+            cause = "the link is closed" if self._crazyflie.link is None else "the firmware can't write it"
+            logger.warning("Estimate reset not sent: %s.", cause)
 
     def _write_thrust_base(self) -> None:
         """Write THRUST_BASE and log what the drone reports back, unless taking over a flight (ADR-0061)."""
