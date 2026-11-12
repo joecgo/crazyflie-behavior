@@ -3,10 +3,9 @@
 # exposes is fully typed; the looseness stays inside this file.
 """The Crazyflie adapter: implements the drone interface on a real Crazyflie.
 
-TODO: not yet run on hardware. Written before the drone arrived, as a deliberate
-exception for learning (ADR-0010), from the installed cflib source and
-docs/cflib-primer.md. Its first real test is the Bench field test (propellers on:
-ADR-0044). Assumptions that need checking there are marked VERIFY.
+Written before the drone arrived, as a deliberate exception for learning
+(ADR-0010), from the installed cflib source and docs/cflib-primer.md.
+Assumptions still to check in field tests are marked VERIFY.
 
 How the interface maps onto cflib:
 - Telemetry: log blocks stream into the shared TelemetryBuffer, converted to
