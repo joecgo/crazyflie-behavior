@@ -56,6 +56,9 @@ takeaway applies to reviews, it's added here as a question.
   on, and does that follow ADR-0020 (or ADR-0033, for a field test)?
 - A decision made from telemetry: what does it do when the value is missing,
   old or not a number? Is that the safe choice for that decision?
+- A verdict read from the drone status (landed, armed): can the run end
+  during the status's lag, such as its 2 s of flying after a motor stop,
+  before the verdict is recorded?
 - For a check like "has it arrived?" or "is it ready?": could state left by
   an earlier run or connection satisfy it?
 - Code that resets state for a new connection or run: is every field the
@@ -72,6 +75,9 @@ takeaway applies to reviews, it's added here as a question.
   flying then? cflib's `close_link()` sends a zero-thrust setpoint first,
   while its link is still open (ADR-0038; the condition was checked in the
   source on 2026-11-04).
+- A claim that a failure happens on the floor: does every program that
+  reaches it start on the floor? The rescue landing connects to a flying
+  drone.
 - A safety gap that's deferred: does an accepted ADR plan a feature that
   would open it first?
 - A new safety pre-check condition: what does it do on a landed drone? A
