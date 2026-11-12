@@ -13,6 +13,9 @@ Don't use those in new docs or code.
 To add or change a term: propose it in conversation, agree on it, then edit
 this file in the same commit as the code or ADR that uses it.
 
+Definitions leave out specifics (a measured value, a milestone) unless they're
+only an example: "For example, about 43,300 for this drone".
+
 ---
 
 ## Hardware and platform
@@ -58,9 +61,9 @@ this file in the same commit as the code or ADR that uses it.
 | **Setpoint priority** | The firmware follows one source of setpoints at a time, and a setpoint stream outranks the high-level commander. After a stream, the adapter releases the priority so the high-level commander is followed again; until then the drone refuses its setpoints ([ADR-0058](decisions/0058-release-setpoint-priority-after-motor-stop.md)). |
 | **High-level commander** | Firmware feature that plans a smooth trajectory to a goal on the drone itself (`takeoff`, `go_to`, `land`). |
 | **Trajectory** | A planned path through time from the current state to a goal. |
-| **Thrust command** | The thrust the firmware's controller asks for, in its own units: 0 to 65,535, where 65,535 is each motor's maximum thrust. The motors' outputs average to it; the firmware adjusts them for the battery voltage. |
-| **Hover thrust** | The thrust command that holds the drone at a steady height, the same at any battery charge. About 43,300 for this drone with the Flow, Multi-ranger and Buzzer decks (First flight 3). |
-| **Thrust base** | The thrust command the firmware's vertical speed controller starts from (`posCtlPid.thrustBase`); its integral adds the rest, and restarts at zero at every setpoint mode change. The Crazyflie adapter sets it just under the hover thrust at connect ([ADR-0061](decisions/0061-thrust-base-set-at-connect.md)). |
+| **Thrust command** | The thrust the firmware's controller asks for, in its own units: 0 to 65,535, where 65,535 is each motor's maximum thrust. The firmware adjusts each motor's output for the battery voltage, so a thrust command gives the same thrust at any charge; the logged motor outputs average to it only once that adjustment is undone. |
+| **Hover thrust** | The thrust command that holds the drone at a steady height, the same at any battery charge. It depends on the drone's weight, so on its decks and propellers. For example, about 43,300 for this drone with the Flow, Multi-ranger and Buzzer decks (First flight 3). |
+| **Thrust base** | The thrust command the firmware's vertical speed controller starts from (`posCtlPid.thrustBase`); its integral adds the rest, and restarts at zero at every setpoint mode change and on the floor. The Crazyflie adapter sets it near the hover thrust at connect ([ADR-0061](decisions/0061-thrust-base-set-at-connect.md)). |
 
 ## State and estimation
 
