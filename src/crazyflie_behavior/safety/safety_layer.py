@@ -69,6 +69,13 @@ TAKE_OFF_BATTERY_VOLTAGE = LOW_BATTERY_VOLTAGE + BATTERY_SAG_VOLTAGE
 TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT = 0.05
 """Meters: how far from the reset point (0, 0) the horizontal position estimate may be."""
 
+# The in-flight check's velocity uncertainty limit grows with height (ADR-0064), from
+# FLOW_VELOCITY_UNCERTAINTY up to a cap. The growth is a PLACEHOLDER, to verify in flight.
+VELOCITY_UNCERTAINTY_LIMIT_PER_METER = 0.1
+"""Meters per second, per meter of height."""
+MAX_VELOCITY_UNCERTAINTY_LIMIT = 0.1
+"""Meters per second."""
+
 
 class _CheckedValue(NamedTuple):
     """A snapshot value whose freshness the safety pre-check checks."""
@@ -129,13 +136,35 @@ def _velocity_uncertainty_failure(snapshot: Snapshot) -> str | None:
     stale = _staleness(_CheckedValue("velocity uncertainty", uncertainty, STALE_AFTER), snapshot.time)
     if stale is not None or uncertainty is None:
         return stale
+    height = _known_height(snapshot)
+    limit = in_flight_velocity_uncertainty_limit(height)
     # The comparison is false for NaN too, so NaN fails like a missing value (ADR-0030).
-    if not uncertainty.value < FLOW_VELOCITY_UNCERTAINTY:
+    if not uncertainty.value < limit:
+        at_height = "an unknown height" if height is None else f"{height:.2f} m"
         return (
             f"velocity uncertainty {uncertainty.value:.3f} m/s in flight, "
-            f"must be under {FLOW_VELOCITY_UNCERTAINTY:g}: no flow"
+            f"must be under {limit:g} at {at_height}: no flow"
         )
     return None
+
+
+def in_flight_velocity_uncertainty_limit(height: float | None) -> float:
+    """Meters per second: in flight, the velocity uncertainty must be under this at `height` meters (ADR-0064).
+
+    An unknown height (None, or not finite) gets the strictest limit.
+    """
+    if height is None or not math.isfinite(height):
+        return FLOW_VELOCITY_UNCERTAINTY
+    grown = VELOCITY_UNCERTAINTY_LIMIT_PER_METER * height
+    return min(MAX_VELOCITY_UNCERTAINTY_LIMIT, max(FLOW_VELOCITY_UNCERTAINTY, grown))
+
+
+def _known_height(snapshot: Snapshot) -> float | None:
+    """Meters: the position estimate's height, or None if it's missing, stale or not finite."""
+    position = snapshot.position_estimate
+    if position is None or position.age(snapshot.time) > STALE_AFTER or not math.isfinite(position.value.z):
+        return None
+    return position.value.z
 
 
 def _staleness(checked: _CheckedValue, now: float) -> str | None:

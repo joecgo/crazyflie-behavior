@@ -31,6 +31,7 @@ from crazyflie_behavior.safety.safety_layer import (
     TAKE_OFF_BATTERY_VOLTAGE,
     TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT,
     SafetyLayer,
+    in_flight_velocity_uncertainty_limit,
     judge,
     safety_pre_check,
 )
@@ -615,10 +616,57 @@ def with_down_range(base: Snapshot, reading: RangeReading) -> Snapshot:
     return replace(base, range_readings=replace(base.range_readings, down=replace(down, value=reading)))
 
 
-def test_in_flight_a_velocity_uncertainty_not_under_the_threshold_fails() -> None:
-    assert safety_pre_check(snapshot(FLYING, velocity_uncertainty=FLOW_VELOCITY_UNCERTAINTY * 0.99)) == []
-    [failure] = safety_pre_check(snapshot(FLYING, velocity_uncertainty=FLOW_VELOCITY_UNCERTAINTY))
-    assert failure == "velocity uncertainty 0.030 m/s in flight, must be under 0.03: no flow"
+@pytest.mark.parametrize(
+    ("height", "limit"),
+    [(-0.1, 0.03), (0.0, 0.03), (0.2, 0.03), (0.3, 0.03), (0.4, 0.04), (0.5, 0.05), (1.0, 0.1), (3.0, 0.1)],
+)
+def test_the_in_flight_limit_is_0_03_up_to_0_3_m_then_grows_with_height_to_0_1_at_1_m(
+    height: float, limit: float
+) -> None:
+    """ADR-0064."""
+    assert in_flight_velocity_uncertainty_limit(height) == pytest.approx(limit)
+
+
+@pytest.mark.parametrize("height", [None, math.nan, math.inf, -math.inf])
+def test_an_unknown_height_gets_the_strictest_in_flight_limit(height: float | None) -> None:
+    assert in_flight_velocity_uncertainty_limit(height) == 0.03
+
+
+def test_in_flight_a_velocity_uncertainty_not_under_the_limit_at_its_height_fails() -> None:
+    at_half_a_meter = snapshot(FLYING)  # the limit is 0.05 here
+    low_down = with_estimate(snapshot(FLYING, velocity_uncertainty=0.03), position=Vector3(0.0, 0.0, 0.2))
+
+    assert safety_pre_check(replace(at_half_a_meter, velocity_uncertainty=stamped(0.04, 0.0))) == []
+    assert safety_pre_check(replace(at_half_a_meter, velocity_uncertainty=stamped(0.0499, 0.0))) == []
+    [at_the_limit] = safety_pre_check(replace(at_half_a_meter, velocity_uncertainty=stamped(0.05, 0.0)))
+    assert at_the_limit == "velocity uncertainty 0.050 m/s in flight, must be under 0.05 at 0.50 m: no flow"
+    [low_down_at_the_limit] = safety_pre_check(low_down)
+    assert low_down_at_the_limit == "velocity uncertainty 0.030 m/s in flight, must be under 0.03 at 0.20 m: no flow"
+
+
+def test_in_flight_with_a_missing_stale_or_non_finite_height_the_strictest_limit_applies() -> None:
+    """Each of these fails the pre-check anyway; the message shows the limit used (ADR-0064)."""
+    hovering = snapshot(FLYING, velocity_uncertainty=0.04)  # under the limit at 0.5 m
+    missing = replace(hovering, position_estimate=None)
+    stale = snapshot(FLYING, velocity_uncertainty=0.04, position_age=STALE_AFTER + 0.01)
+    not_finite = with_estimate(hovering, position=Vector3(0.0, 0.0, math.nan))
+
+    for unknown_height in (missing, stale, not_finite):
+        failures = safety_pre_check(unknown_height)
+        assert "velocity uncertainty 0.040 m/s in flight, must be under 0.03 at an unknown height: no flow" in failures
+        assert len(failures) == 2  # the position estimate's own failure, too
+
+
+def test_the_take_off_rule_keeps_its_flow_threshold_whatever_the_height() -> None:
+    """Only the in-flight check's limit grows with height (ADR-0064): 0.04 is no flow for a take-off."""
+    away_from_the_reset_point = Vector3(0.0, TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT + 0.01, 0.5)
+    with_flow = with_estimate(
+        snapshot(ARMED, velocity_uncertainty=FLOW_VELOCITY_UNCERTAINTY * 0.99), position=away_from_the_reset_point
+    )
+    without_flow = with_estimate(snapshot(ARMED, velocity_uncertainty=0.04), position=away_from_the_reset_point)
+
+    assert not judge(TakeOff(1.0), with_flow).is_approved  # with flow, the estimate is checked
+    assert judge(TakeOff(1.0), without_flow).is_approved  # without, it isn't
 
 
 @pytest.mark.parametrize("uncertainty", [math.nan, math.inf])
