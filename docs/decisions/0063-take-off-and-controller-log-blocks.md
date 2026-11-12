@@ -1,6 +1,6 @@
 # 0063: A switchable 10 ms take-off block and an always-on controller block, to the debug log
 
-- **Status:** Accepted. Extends [ADR-0050](0050-diagnostic-log-block-to-the-debug-log.md) (debug log only, never the snapshot). Amended by [ADR-0065](0065-take-off-block-runs-from-connect-and-each-take-off.md) (2026-11-12): cflib starts a block once it's created, so with the option the take-off block also runs 2 s from the end of connect in every program; the tick thread stops it.
+- **Status:** Accepted. Extends [ADR-0050](0050-diagnostic-log-block-to-the-debug-log.md) (debug log only, never the snapshot). Amended by [ADR-0065](0065-take-off-block-runs-from-connect-and-each-take-off.md) (2026-11-12): cflib starts a block once it's created, so with the option the take-off block also runs 2 s from the end of connect in every program; the tick thread stops it. Amended by [ADR-0067](0067-a-take-over-connects-without-the-debug-only-blocks.md) (2026-11-12): a take-over starts no controller block.
 - **Date:** 2026-11-12
 - **Origin:** Mixed: both blocks, the take-off block behind a switch, and testing its radio load with the Bench were mine (over the AI's recommendation of the controller block alone); the variables, FP16, the `--take-off-log` option and starting it at connect in the Bench were AI recommendations accepted.
 
