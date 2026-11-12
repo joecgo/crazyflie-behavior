@@ -1,12 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 470" role="img" aria-label="Scatter of estimated shift against measured landing distance">
 <style>
-.bg{fill:#fcfcfb}.p{fill:#0b0b0b}.s{fill:#52514e}.m{fill:#898781}.grid{stroke:#e1e0d9}.axis{stroke:#c3c2b7}
-.c1{stroke:#2a78d6}.c2{stroke:#eb6834}.c3{stroke:#1baf7a}.cg{stroke:#898781}.ref{stroke:#52514e}
-.f1{fill:#2a78d6}.f2{fill:#eb6834}.f3{fill:#1baf7a}.fg{fill:#898781}
-@media (prefers-color-scheme: dark){
-.bg{fill:#1a1a19}.p{fill:#f0efec}.s{fill:#c3c2b7}.grid{stroke:#2c2c2a}.axis{stroke:#383835}
-.c1{stroke:#3987e5}.c2{stroke:#d95926}.c3{stroke:#199e70}.ref{stroke:#c3c2b7}
-.f1{fill:#3987e5}.f2{fill:#d95926}.f3{fill:#199e70}}
+.bg{fill:#000000}.p{fill:#f0efec}.s{fill:#c3c2b7}.m{fill:#a3a19a}.grid{stroke:#2c2c2a}.axis{stroke:#4a4a47}
+.c1{stroke:#3987e5}.c2{stroke:#d95926}.c3{stroke:#199e70}.cg{stroke:#a3a19a}.ref{stroke:#c3c2b7}
+.f1{fill:#3987e5}.f2{fill:#d95926}.f3{fill:#199e70}.fg{fill:#a3a19a}
 text{font:12px system-ui,sans-serif}.t{font-weight:600;font-size:14px}.pt{font-weight:600;font-size:12px}
 polyline{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 line{stroke-width:1}.refl{stroke-width:1;stroke-dasharray:4 3}
