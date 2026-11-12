@@ -45,8 +45,8 @@ flies the code built since:
 1. Bench, with `--take-off-log` (log to be drafted)
 2. Failsafe low, with `--take-off-log` (log to be drafted)
 3. Failsafe high, with `--take-off-log` (log to be drafted)
-4. Take-off speeds, with `--take-off-log`: 0.1, 0.2 and 0.4 m/s (0.6 waits
-   on ADR-0059's range, below) (log to be drafted)
+4. Take-off speeds, with `--take-off-log`: one flight each at 0.1, 0.2 and
+   0.4 m/s, and a second round if there's time (log to be drafted)
 5. Hover, 60 s, with chirps and `--take-off-log`, at a climb speed chosen
    from Take-off speeds' results (log to be drafted)
 
@@ -60,7 +60,9 @@ results choose the Hover's climb speed.
 **Joe's choices (2026-11-12):**
 
 - `--take-off-log` on every test, if the Bench shows no latency issues with
-  it. If the Bench does, the flying tests run without it. **Risk accepted
+  it: no stale-data failure and no tick overrun during the take-off block's
+  2 s (the existing 0.25 s stale limit, no extra margin). If the Bench does,
+  the flying tests run without it. **Risk accepted
   knowingly:** backlog #87 (the block's log lines are written on cflib's
   receive thread) is still open, so a stale-data landing with the option on
   can't be put down to the radio load or to those lines. The Bench measures
@@ -69,14 +71,9 @@ results choose the Hover's climb speed.
 - The Hover chirps (`--chirp`). **Risk accepted knowingly:** in session 3 the
   chirp's 5 s on the floor let the estimate run away 2.2 m before the
   take-off (backlog #81, deferred until before the geofence).
-- Take-off speeds: 0.1, 0.2, 0.4 and 0.6 m/s.
-
-**Open:**
-
-- 0.6 m/s is outside ADR-0059's 0.1-0.4 m/s, which the hover program
-  refuses. Flying it needs a new ADR that amends ADR-0059.
-- The Bench's pass line for "no latency issues" with `--take-off-log`.
-- How many flights per speed (session 3 flew two rounds).
+- Take-off speeds: 0.1, 0.2 and 0.4 m/s, one flight each, a second round
+  if there's time. 0.6 m/s is outside ADR-0059's range and waits for these
+  results (backlog #89).
 
 ## Before the session
 *Done at the desk, not at the session. If any code changes after these runs, run them again.*
