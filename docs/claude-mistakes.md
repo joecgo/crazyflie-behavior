@@ -28,17 +28,17 @@ decisions are recorded), *communication* (how Claude explains things).
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 4 | 17 |
-| safety design | 5 | 16 |
+| safety design | 5 | 17 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
-| communication | 7 | 29 |
+| communication | 7 | 31 |
 | testing | 0 | 12 |
 | process | 4 | 16 |
-| **Total** | **31** | **103** |
+| **Total** | **31** | **106** |
 
 Of the 31 I pointed out, a later Claude review would probably have caught
 none, maybe 7, and probably not 24. So far, 7 of the 11 recommendation
-mistakes needed me, and 7 of the 32 communication mistakes. The first
+mistakes needed me, and 7 of the 38 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -567,6 +567,33 @@ times so far).
 
 ## Mistakes Claude caught itself
 
+### 2026-11-12: A recap that called the torque a match for the battery move
+
+- **What happened:** a wrap-up said the 2026-11-09 front-right torque was
+  "matching the battery move" when Joe had only said the battery moved, not
+  which way; the same message asked him the direction to check it. His answer
+  (left and back, or centred after a left-back counterbalance) fits only the
+  second reading.
+- **How it was caught:** reading Joe's answer against the data.
+- **Kind:** communication.
+- **Takeaway:** a recap says only what's established; a claim still waiting
+  on a check stays a question.
+
+### 2026-11-12: An estimate reset described as starting with large uncertainty
+
+- **What happened:** asked what moving the estimate reset to just before the
+  take-off (#81) would cause, Claude said the reset starts "with large
+  uncertainty" and that a take-off soon after it flies on an estimate that
+  "hasn't converged yet". The firmware starts the velocity and attitude
+  uncertainty at 0.01 (`kalman_core_params_defaults.h` 65-68), and the
+  glossary's *Estimate reset* row already said it starts small. Joe found
+  the option too complicated from that list.
+- **How it was caught:** checking the source after Joe asked whether #81 is
+  needed at all.
+- **Kind:** communication.
+- **Takeaway:** check every firmware claim in an explanation against the
+  source and the glossary, the side points as well as the main one.
+
 ### 2026-11-12: Two glossary rows for ADR-0061 that didn't match it
 
 - **What happened:** *Thrust base* said the adapter sets it "just under"
@@ -675,6 +702,21 @@ times so far).
 - **Kind:** communication.
 - **Takeaway:** in a docstring about a safety judgment, say whose action
   changes it.
+
+### 2026-11-10: One no-flow limit for an uncertainty that grows with height
+
+- **What happened:** ADR-0054 set one velocity uncertainty limit for "no
+  flow", 0.03 m/s, at every height. The firmware's flow model, read on
+  2026-11-05 for the bad-flow zone, divides speed by height, so with good
+  flow the uncertainty grows with height. It reaches 0.03 m/s at about
+  0.53 m, and the safety pre-check landed every hover at 0.5 m about 1 s in.
+- **How it was caught:** analyzing First flight 3, then the firmware source
+  (backlog #80). Logged on 2026-11-12, after three hovers flown for fun on
+  2026-11-10, two with a flashlight under the drone, followed the same curve.
+- **Kind:** safety design.
+- **Takeaway:** before setting a fixed limit on an estimator's uncertainty,
+  read its model for what else the uncertainty depends on, and check the
+  limit at every height where it's used.
 
 ### 2026-11-10: The altHold climb chosen without reading what its controller does at a switch
 

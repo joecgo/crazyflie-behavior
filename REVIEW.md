@@ -30,6 +30,9 @@ takeaway applies to reviews, it's added here as a question.
   the high-level commander): was the controller's source read for what the
   switch does (integrals restarted, base values, where a planned move
   starts), and does the code or its ADR allow for it?
+- A fixed limit on an estimator's output (an uncertainty, a speed): was the
+  firmware's model read for what else the output depends on (height, time
+  since a reset), and does the limit hold at every height where it's checked?
 
 ## Fakes and the real drone
 
