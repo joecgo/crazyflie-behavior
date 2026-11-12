@@ -31,10 +31,10 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 5 | 16 |
 | recommendation | 7 | 4 |
 | environment | 4 | 9 |
-| communication | 7 | 25 |
-| testing | 0 | 11 |
+| communication | 7 | 29 |
+| testing | 0 | 12 |
 | process | 4 | 16 |
-| **Total** | **31** | **98** |
+| **Total** | **31** | **103** |
 
 Of the 31 I pointed out, a later Claude review would probably have caught
 none, maybe 7, and probably not 24. So far, 7 of the 11 recommendation
@@ -566,6 +566,58 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-12: Two glossary rows for ADR-0061 that didn't match it
+
+- **What happened:** *Thrust base* said the adapter sets it "just under"
+  the hover thrust, though ADR-0061 accepts it may sit above, and left out
+  that the integral also restarts on the floor. *Thrust command* said the
+  motor outputs average to it, but the logged outputs include the battery
+  compensation: the analysis had to undo it.
+- **How it was caught:** the project review of 9f98d17..f35aa64.
+- **Kind:** communication.
+- **Takeaway:** check each new glossary row against its ADR's accepted risks
+  and the analysis it came from.
+
+### 2026-11-12: A thrust base report logged the same whether it confirmed or not
+
+- **What happened:** the adapter logged "The drone reports a thrust base of
+  X." at INFO for any X, so a wrong value showed only in the take-off
+  warning.
+- **How it was caught:** the project review of 9f98d17..f35aa64.
+- **Kind:** communication.
+- **Takeaway:** a log line about a check says its outcome.
+
+### 2026-11-12: "Estimate reset." logged before a write that can fail
+
+- **What happened:** the review fix for the reset's link race (f35aa64) added
+  a failure path after the "Estimate reset. Before it: ..." line, so a failed
+  write logged a reset and then "not sent".
+- **How it was caught:** the project review of 9f98d17..f35aa64.
+- **Kind:** communication.
+- **Takeaway:** when a fix adds a failure path, re-read the log lines before
+  it.
+
+### 2026-11-12: A two-cause failure branch tested for one cause
+
+- **What happened:** the same fix gave the reset's failure two causes ("the
+  link is closed", "the firmware can't write it") but tested only the first,
+  so always naming the link passed every test.
+- **How it was caught:** the project review of 9f98d17..f35aa64.
+- **Kind:** testing.
+- **Takeaway:** a branch that picks between messages needs a test per
+  message.
+
+### 2026-11-12: A review finding against the adapter's VERIFY convention
+
+- **What happened:** a low-effort project review of 9f98d17..f35aa64 said
+  THRUST_BASE's "VERIFY from each hover's motor outputs" should start with
+  `TODO:`. The Crazyflie adapter's module docstring makes VERIFY the marker
+  for assumptions still to check in field tests; the review didn't read it.
+- **How it was caught:** the same review, run again at a higher effort.
+- **Kind:** communication.
+- **Takeaway:** before flagging a marker or a wording style, check whether
+  the file or the coding style already sets a convention for it.
 
 ### 2026-11-12: "No glossary change" for a term whose meaning grew
 

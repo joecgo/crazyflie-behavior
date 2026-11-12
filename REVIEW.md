@@ -108,6 +108,8 @@ takeaway applies to reviews, it's added here as a question.
   pass criteria and checklists match it, and is there a test for the new rule?
 - Does every term in a new name or comment appear in the glossary, even one
   that other docs already use? Does its definition still match the code?
+- Does each new glossary row agree with its ADR, including the risks the ADR
+  accepts, and with the analysis its facts come from?
 - Does a new name use a glossary term's word for something else?
 - Does a name, comment or log message name a raw input (a key) where the
   code receives a signal or command?
@@ -119,7 +121,9 @@ takeaway applies to reviews, it's added here as a question.
   log its own line, success included? A log that only speaks up on trouble
   reads as if the good outcome never happened.
 - Does new wording name a milestone, quote a constant's value, or describe
-  something temporary without `TODO:`?
+  something temporary without `TODO:`? (An assumption still to check in a
+  field test is marked VERIFY instead, as the Crazyflie adapter's docstring
+  says. The glossary may give a specific value, but only as an example.)
 - Is any new constant a copy of a value that follows from another one?
 - Is each limit defined once, and compared the same way ("under" or "up
   to") in every check that uses it? Does each message about it say which
