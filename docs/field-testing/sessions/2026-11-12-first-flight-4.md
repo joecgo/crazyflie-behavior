@@ -43,29 +43,37 @@ flies the code built since:
 0. Propeller test, motors spinning on the floor, no flight (no log; results
    in this doc)
 1. Bench, with `--take-off-log` (log to be drafted)
-2. Failsafe low (log to be drafted)
-3. Failsafe high (log to be drafted)
-4. Hover, 60 s (log to be drafted)
+2. Failsafe low, with `--take-off-log` (log to be drafted)
+3. Failsafe high, with `--take-off-log` (log to be drafted)
+4. Take-off speeds, with `--take-off-log`: one flight each at 0.1, 0.2 and
+   0.4 m/s, and a second round if there's time (log to be drafted)
+5. Hover, 60 s, with chirps and `--take-off-log`, at a climb speed chosen
+   from Take-off speeds' results (log to be drafted)
 
 Each test needs the ones before it to pass. If one fails, stop and write it
 up before flying the next (README, "Sessions and test logs"). The safety
 tests fly again because the Crazyflie adapter changed (README, "When to
-repeat a test").
+repeat a test"). Take-off speeds comes before the Hover, as in session 3: it
+flies the speed comparison again after ADR-0061 (backlog #68), and its
+results choose the Hover's climb speed.
 
-**Open, for Joe before the logs are drafted:**
+**Joe's choices (2026-11-12):**
 
-- Does `--take-off-log` go on the flying tests too, or only on the Bench
-  first? Backlog #87 says to decide where its log lines are written before a
-  result with the option is read: a stale-data failure with it on could come
-  from its radio load or from those lines.
-- The Hover's climb speed: the default 0.2 m/s would show whether ADR-0061
-  brings the climb to its commanded speed (closes backlog #78); session 3
-  flew 0.4.
-- `--chirp` or not: in session 3 the chirp's 5 s on the floor let the
-  estimate run away 2.2 m before the take-off (backlog #81, deferred until
-  before the geofence).
-- Take-off speeds again: backlog #68 says to fly the speed comparison again
-  after ADR-0061. Not in this plan.
+- `--take-off-log` on every test, if the Bench shows no latency issues with
+  it: no stale-data failure and no tick overrun during the take-off block's
+  2 s (the existing 0.25 s stale limit, no extra margin). If the Bench does,
+  the flying tests run without it. **Risk accepted
+  knowingly:** backlog #87 (the block's log lines are written on cflib's
+  receive thread) is still open, so a stale-data landing with the option on
+  can't be put down to the radio load or to those lines. The Bench measures
+  both together, without setpoints (ADR-0063).
+- The Hover's climb speed is chosen after Take-off speeds.
+- The Hover chirps (`--chirp`). **Risk accepted knowingly:** in session 3 the
+  chirp's 5 s on the floor let the estimate run away 2.2 m before the
+  take-off (backlog #81, deferred until before the geofence).
+- Take-off speeds: 0.1, 0.2 and 0.4 m/s, one flight each, a second round
+  if there's time. 0.6 m/s is outside ADR-0059's range and waits for these
+  results (backlog #89).
 
 ## Before the session
 *Done at the desk, not at the session. If any code changes after these runs, run them again.*
@@ -73,9 +81,10 @@ repeat a test").
 - **Commit to fly:** `<hash>`
 - [ ] Mock adapter run of each test's program on that commit passed:
   - [ ] Bench: `.venv\Scripts\python -m crazyflie_behavior.programs.bench --take-off-log`
-  - [ ] Failsafe low: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at climb`
-  - [ ] Failsafe high: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at hover`
-  - [ ] Hover: `.venv\Scripts\python -m crazyflie_behavior.programs.hover --hover-seconds 60`, exit code 0
+  - [ ] Failsafe low: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at climb --take-off-log`
+  - [ ] Failsafe high: `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at hover --take-off-log`
+  - [ ] Take-off speeds: `.venv\Scripts\python -m crazyflie_behavior.programs.hover --hover-seconds 5 --take-off-log --climb-speed 0.1`, then the same with `0.2` and `0.4`
+  - [ ] Hover: `.venv\Scripts\python -m crazyflie_behavior.programs.hover --hover-seconds 60 --chirp --take-off-log`, exit code 0, then the same with each climb speed it might fly
   - [ ] Rescue landing: `.venv\Scripts\python -m crazyflie_behavior.programs.rescue_landing`
 - [ ] Laptop on the charger, high-performance power plan (backlog #70)
 - [ ] Joe's code review of what's new since `0846826` (the last entry in
