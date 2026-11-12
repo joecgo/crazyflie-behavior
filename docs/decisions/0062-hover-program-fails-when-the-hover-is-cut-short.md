@@ -1,6 +1,6 @@
 # 0062: The hover program exits with an error when the hover is cut short
 
-- **Status:** Accepted. Closes backlog #71.
+- **Status:** Accepted. Closes backlog #71. Amended by [ADR-0066](0066-hover-program-reports-by-exit-code-only.md) (2026-11-12): no error line after the run; the exit code alone reports a cut-short hover.
 - **Date:** 2026-11-12
 - **Origin:** AI recommendation accepted.
 

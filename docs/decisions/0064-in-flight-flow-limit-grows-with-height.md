@@ -48,6 +48,6 @@ with height. A fixed 0.03 fits one height. The hide-and-seek game will fly above
   4's Hover checks where the uncertainty settles against the limit.
 - Tests: 0.03 at and below 0.3 m; 0.05 at 0.5 m; 0.1 at 1 m and above; 0.03
   for a missing or NaN height; a hover at 0.5 m with uncertainty 0.04 passes
-  the pre-check; the take-off rule still refuses at 0.03.
+  the pre-check; the take-off rule's flow threshold stays 0.03 at any height.
 - Glossary: no change (*Velocity uncertainty* and *Safety pre-check* don't
   state the limit).
