@@ -27,18 +27,18 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 4 | 17 |
+| design | 4 | 18 |
 | safety design | 5 | 17 |
-| recommendation | 7 | 4 |
+| recommendation | 7 | 5 |
 | environment | 4 | 9 |
-| communication | 7 | 31 |
+| communication | 7 | 32 |
 | testing | 0 | 12 |
-| process | 4 | 16 |
-| **Total** | **31** | **106** |
+| process | 4 | 17 |
+| **Total** | **31** | **110** |
 
 Of the 31 I pointed out, a later Claude review would probably have caught
-none, maybe 7, and probably not 24. So far, 7 of the 11 recommendation
-mistakes needed me, and 7 of the 38 communication mistakes. The first
+none, maybe 7, and probably not 24. So far, 7 of the 12 recommendation
+mistakes needed me, and 7 of the 39 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -566,6 +566,58 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-12: A work-log total that missed three changes to a day's hours
+
+- **What happened:** three updates to the work log changed a row's hours
+  without the milestone total: 2026-11-09 raised by 0.5, then 2026-11-12
+  added at 1.25 and raised by 0.5. The total read ~61.75 where the rows add
+  up to 64.0. The 2026-11-02 row had already fixed one such miss.
+- **How it was caught:** summing the rows before adding a session's hours.
+- **Kind:** process.
+- **Takeaway:** after changing any row's hours, recompute the total from
+  every row, not from the change alone.
+
+### 2026-11-12: ADR-0064's test list said the take-off rule refuses at 0.03
+
+- **What happened:** ADR-0064's Consequences listed the test "the take-off
+  rule still refuses at 0.03". The take-off rule never refuses for the
+  velocity uncertainty: at 0.03 or more it counts no flow and approves
+  without the estimate check (ADR-0054). The Decision itself was right (the
+  take-off rule keeps 0.03). Built as written, the test would have asked for
+  a take-off rule that refuses a dark floor.
+- **How it was caught:** reading the take-off rule before building ADR-0064.
+  The test now checks that the threshold stays 0.03 at any height, and the
+  ADR's line says so.
+- **Kind:** communication.
+- **Takeaway:** describe a test by what the code does at that value
+  (approves, refuses, skips a check), read from its branches.
+
+### 2026-11-12: A recommended run at connect that the Bench would only half see
+
+- **What happened:** backlog #85's recommended option C ran the take-off
+  block for 2 s at connect so the Bench could measure its radio load. Created
+  with the other blocks, about 1 s of that run would fall in the wait for the
+  battery's first sample, before the first tick, where the Bench's snapshots
+  can't see it.
+- **How it was caught:** tracing the connect sequence before asking Joe.
+  ADR-0065 creates the block last in connect.
+- **Kind:** recommendation.
+- **Takeaway:** for a window meant to be measured, check that whatever
+  measures it is already running, given every wait before it.
+
+### 2026-11-12: ADR-0063 designed around a log block created but not started
+
+- **What happened:** ADR-0063 said the take-off block is created at connect
+  and started at the take-off. cflib 0.1.34 starts every block as soon as the
+  drone confirms its create (`log.py` 551-563), so there's no create without
+  a start. The handoff for the build also counted six log blocks; it's seven
+  with the Multi-ranger.
+- **How it was caught:** the source check the handoff asked for before the
+  build. ADR-0065 records the fix.
+- **Kind:** design.
+- **Takeaway:** for a library call a design relies on for one step, read what
+  the library does on its own afterwards too, such as when the reply arrives.
 
 ### 2026-11-12: A recap that called the torque a match for the battery move
 

@@ -20,6 +20,9 @@ takeaway applies to reviews, it's added here as a question.
   `#ifdef` or build option around the function's body, in the build flashed.
   Can what a guard checks (the link is up) change on another thread before
   the call runs?
+- A library call relied on for one step (create a log block, not start it):
+  what does the library do on its own afterwards, such as when the drone's
+  reply arrives?
 - Windows-only code: is it checked against Windows' documented behavior, and
   is every Windows call's result checked? Continuous integration runs on
   Linux.
@@ -86,6 +89,8 @@ takeaway applies to reviews, it's added here as a question.
   just the middle.
 - A mechanism such as the interrupt signal or a timeout: what does it do by
   default, and what does a second one do?
+- A window meant to be measured or watched (a log block run at connect): is
+  whatever measures it already running, given every wait before it?
 
 ## How I run things
 
@@ -109,6 +114,8 @@ takeaway applies to reviews, it's added here as a question.
   across the code, the glossary and the ADRs?
 - An ADR amendment that changes how a test passes: do the test log drafts'
   pass criteria and checklists match it, and is there a test for the new rule?
+- Does each test an ADR lists say what the code does at that value
+  (approves, refuses, skips a check), as its branches read?
 - Does every term in a new name or comment appear in the glossary, even one
   that other docs already use? Does its definition still match the code?
 - Does each new glossary row agree with its ADR, including the risks the ADR
