@@ -75,5 +75,6 @@ This column is honest about which ideas were mine.
 | [0064](0064-in-flight-flow-limit-grows-with-height.md) | The in-flight flow limit is max(0.03, 0.1 × height), capped at 0.1 m/s, from the position estimate's height; amends 0060 | Mixed: the formula and the height source were mine; the cap, no extra filter and 0.03 for an unknown height were AI recommendations accepted |
 | [0065](0065-take-off-block-runs-from-connect-and-each-take-off.md) | ADR-0063 as built: with `--take-off-log`, the take-off block runs 2 s from the end of connect and 2 s from each take-off; the tick thread stops it once the drone confirms the start; disconnect stops it before landing; amends 0063 | AI recommendations accepted |
 | [0066](0066-hover-program-reports-by-exit-code-only.md) | The hover program reports a cut-short hover by its exit code only, with no error line after the run; amends 0062 | AI recommendation overridden: the exit code alone was mine |
+| [0067](0067-a-take-over-connects-without-the-debug-only-blocks.md) | A take-over (the rescue landing) connects without the diagnostic and controller blocks, so a missing debug-only variable can't fail it; amends 0050 and 0063 | Mixed: skipping the blocks was mine |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).

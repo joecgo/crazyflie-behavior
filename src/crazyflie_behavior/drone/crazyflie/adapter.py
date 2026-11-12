@@ -262,7 +262,8 @@ class CrazyflieAdapter(DroneInterface):
     ) -> None:
         """`take_over_flight`: only the rescue landing sets this (ADR-0038). `connect()` then
         accepts a drone that is flying, skips the position estimate reset and treats the
-        drone as airborne, as if this adapter had sent the take-off.
+        drone as airborne, as if this adapter had sent the take-off. It also skips the
+        diagnostic and controller blocks (ADR-0067).
 
         `initial_climb_speed`: meters per second, for take-off speed tests (ADR-0059). Raises
         ValueError outside the accepted range.
@@ -997,14 +998,16 @@ class CrazyflieAdapter(DroneInterface):
     def _start_remaining_logging(self, has_multiranger: bool) -> None:
         self._add_log_block("battery", BATTERY_PERIOD_MS, ["pm.vbat"], self._on_battery)
         self._add_log_block("down", DOWN_RANGE_PERIOD_MS, list(_DOWN_VARIABLES), self._on_down_range)
-        self._add_log_block("diagnostic", DIAGNOSTIC_PERIOD_MS, list(_DIAGNOSTIC_VARIABLES), self._on_diagnostic)
-        self._add_log_block(
-            "controller",
-            CONTROLLER_PERIOD_MS,
-            list(_CONTROLLER_VARIABLES),
-            self._on_controller,
-            fetch_as=_CONTROLLER_FETCH_AS,
-        )
+        # A take-over connects to a drone that may be flying: a missing debug-only variable mustn't fail it (ADR-0067).
+        if not self._take_over_flight:
+            self._add_log_block("diagnostic", DIAGNOSTIC_PERIOD_MS, list(_DIAGNOSTIC_VARIABLES), self._on_diagnostic)
+            self._add_log_block(
+                "controller",
+                CONTROLLER_PERIOD_MS,
+                list(_CONTROLLER_VARIABLES),
+                self._on_controller,
+                fetch_as=_CONTROLLER_FETCH_AS,
+            )
         if has_multiranger:
             self._add_log_block(
                 "multiranger",

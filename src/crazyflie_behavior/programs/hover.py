@@ -101,7 +101,7 @@ def main(arguments: list[str] | None = None) -> int:
     if take_off_log:
         description += take_off_log_description(use_crazyflie)
     exit_code = run_program("hover", description, drone, tick_step, clock)
-    # A hover cut short is a failed test, even though the program itself ran fine.
+    # A failed hover test exits 1 even though the program itself ran fine: see `has_failed` (ADR-0062).
     return EXIT_ERROR if exit_code == EXIT_OK and hover_test.has_failed else exit_code
 
 

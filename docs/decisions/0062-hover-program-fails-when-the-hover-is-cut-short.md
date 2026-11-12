@@ -1,6 +1,6 @@
 # 0062: The hover program exits with an error when the hover is cut short
 
-- **Status:** Accepted. Closes backlog #71. Amended by [ADR-0066](0066-hover-program-reports-by-exit-code-only.md) (2026-11-12): no error line after the run; the exit code alone reports a cut-short hover.
+- **Status:** Accepted. Closes backlog #71. Amended by [ADR-0066](0066-hover-program-reports-by-exit-code-only.md) (2026-11-12): no error line after the run; the exit code alone reports a cut-short hover. Clarified in the review of its code (2026-11-12): the hover test's landing counts once *may be flying* turns false, not the drone status.
 - **Date:** 2026-11-12
 - **Origin:** AI recommendation accepted.
 
@@ -27,6 +27,11 @@ Option A.
 - The hover test has `has_failed`: true unless it hovered for the whole
   requested time and then landed by its own request. A safety layer landing,
   a refused request or an interrupted run all count as failed.
+  Landed means the snapshot's *may be flying* turned false after its own
+  landing request: the motors are stopped. The drone status says landed
+  only about 2 s later, long enough for a failed safety pre-check to end
+  the run and fail a full hover (clarified in the review of this code,
+  2026-11-12).
 - The hover program returns `EXIT_ERROR` when the run itself returned
   `EXIT_OK` but `has_failed` is true, and logs why at error level.
 - Other exit codes from the run (an error, the interrupt signal) pass through
