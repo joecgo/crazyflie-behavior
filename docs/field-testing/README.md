@@ -19,6 +19,15 @@
 > 0.4 m/s climbed out of ground effect, and the two flights that reached
 > 0.5 m were landed by the safety layer's velocity uncertainty limit about 1 s
 > into the hover. Backlog #78-#81 decide what comes next.
+> [First flight 4](sessions/2026-11-12-first-flight-4.md) (2026-11-12; Bench,
+> Window bench and the failsafes in daylight, the rest at night): the Bench
+> passed (Joe). Failsafe low drifted 20 cm and Failsafe high was landed at
+> 0.26 m in the initial climb, so its fault never fired. A spare propeller on
+> M1 and three propeller tests: M2 and M4 vibrate most (#83). Take-off speeds:
+> all three speeds (0.1, 0.2, 0.4 m/s) reached the hover with drift of 3.5-9 cm,
+> one flight each. The 60 s Hover completed, but the battery fell from 3.76 V
+> to the 3.20 V landing limit. The Multi-ranger probably doesn't see window
+> glass (Joe's assumption).
 
 Real flights are where the design gets proven or broken. This folder is the
 record: every field test gets a test log and every session a session doc,
