@@ -4,7 +4,7 @@ A session is one trip with one or more field tests, flown in order. Each
 field test has its own log in [`../field-tests/`](../field-tests/).
 
 - **Milestone:** First flight, session 4
-- **Environment:** [Kitchen](../environments/kitchen.md), all lights on. Bench, Window bench, Failsafe low and Failsafe high in cloudy daylight; Take-off speeds and Hover in the dark (night, Joe, 2026-11-12). Location, and the room of the night tests: to confirm. The plan below said the living room's hide-and-seek launch point.
+- **Environment:** [Kitchen](../environments/kitchen.md), all lights on. Bench, Window bench, Failsafe low and Failsafe high in cloudy daylight; Take-off speeds and Hover in the dark (night, Joe, 2026-11-12). Center of the kitchen for every test (Joe). The plan below said the living room's hide-and-seek launch point.
 
 ## Plan
 *Written before flying. The tests in order, each linked to its log.*
@@ -86,7 +86,7 @@ results choose the Hover's climb speed.
   - [ ] Take-off speeds: `.venv\Scripts\python -m crazyflie_behavior.programs.hover --hover-seconds 5 --take-off-log --climb-speed 0.1`, then the same with `0.2` and `0.4`
   - [ ] Hover: `.venv\Scripts\python -m crazyflie_behavior.programs.hover --hover-seconds 60 --chirp --take-off-log`, exit code 0, then the same with each climb speed it might fly
   - [ ] Rescue landing: `.venv\Scripts\python -m crazyflie_behavior.programs.rescue_landing`
-- [ ] Laptop on the charger, high-performance power plan (backlog #70)
+- [x] Laptop on the charger, high-performance power plan (backlog #70) (Joe)
 - [ ] Joe's code review of what's new since `0846826` (the last entry in
       `REVIEW.md`'s "My reviews"): it covers the safety layer and Crazyflie
       adapter changes this session flies
@@ -106,20 +106,27 @@ The Bench's `--take-off-log` run showed no tick overrun in the block's 2 s (the 
 The rescue landing wasn't run. The laptop's power plan and the code review before the session weren't recorded.
 
 ## Results
-*From the operator or the recordings, never from an AI. One line per test: passed, failed or not flown.*
+*From the operator or the recordings, never from an AI. One line per test: pass, fail or not flown.*
 
-- Bench: passed (Joe).
-- Window bench: run, 4 runs; the first two don't count (Joe wasn't at the window yet, then a mesh screen was in front). Joe held it about 9 inches (23 cm) from the glass; the front read 0.43-0.44 m. Joe's assumption: the sensor sees things outside the window, not the glass.
-- Failsafe low: "I guess that's a fail": drifted 20 cm forward and right (Joe). The log shows the fault, the pre-check failure and the landing.
-- Failsafe high: failed. It drifted 59 cm away (Joe); the log shows the safety layer landed it at 0.26 m in the initial climb, before the hover, and the fault never fired.
+- Bench: pass (Joe).
+- Window bench: pass (Joe). 4 runs; the first two don't count (Joe wasn't at the window yet, then a mesh screen was in front). Joe held it about 9 inches (23 cm) from the glass; the front read 0.43-0.44 m. Joe's assumption: the sensor sees things outside the window, not the glass.
+- Failsafe low: fail (Joe). It landed 20 cm forward and right of the mark (Joe). The log shows the fault, the pre-check failure and the landing.
+- Failsafe high: fail (Joe). It landed 59 cm from the mark (Joe); the log shows the safety layer landed it at 0.26 m in the initial climb, before the hover, and the fault never fired.
 - Propeller test: run 3 times (backlog #83). M2 and M4 vibrate most in all three runs.
-- Take-off speeds: flown, one flight at each of 0.1, 0.2 and 0.4 m/s; a second 0.2 m/s attempt was refused on the floor and isn't counted. All three reached the hover. Drift: 7, 9 and 3.5 cm (Joe). Pass or fail: Joe to call (the test has no pass or fail on distance).
-- Hover: flew the full 60 s and landed; straight take-off, drifted left on the landing, 6 cm from the mark (Joe). Pass or fail: Joe to call.
+- Take-off speeds: flown, one flight at each of 0.1, 0.2 and 0.4 m/s; a second 0.2 m/s attempt was refused on the floor and isn't counted. All three reached the hover. Landed 7, 9 and 3.5 cm from the mark (Joe). Pass (Joe).
+- Hover: flew the full 60 s and landed; straight take-off, drifted left on the landing, 6 cm from the mark (Joe). Heard the chirps, probably not the final Charge melody (a bug, backlog #92). Pass (Joe).
 
 ## Next session
 *What the results decide: another session, or the milestone is done.*
 
-To decide (Joe). Open from this session: the take-off drift against the
-light (backlog #68, #78), the estimate running away on the floor (#81), the
-M2 and M4 propellers (#83), the battery margin for a 60 s hover, and that
-the Multi-ranger doesn't see windows.
+- Session 5 flies the rescue landing, which the plan listed and session 4
+  didn't run (Joe, 2026-11-13).
+- Before more flights, Joe analyses session 4's logs in a separate session
+  (take-off tilt and torque from the take-off block, the Hover's velocity
+  uncertainty against ADR-0064's limit, the estimate runaway before each reset,
+  the Bench's latency check against the plan). Which tests follow depends on
+  that.
+- Open from this session: where the drone lands against the light (backlog
+  #68, #78), the estimate running away on the floor (#81), the M2 and M4
+  propellers (#83), the battery margin for a 60 s hover (#91), the Multi-ranger
+  not seeing windows (#90) and the missing Charge melody (#92).

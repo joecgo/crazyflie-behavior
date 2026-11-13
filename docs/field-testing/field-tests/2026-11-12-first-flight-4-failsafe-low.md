@@ -6,7 +6,7 @@
 
 - **Session:** [First flight 4](../sessions/2026-11-12-first-flight-4.md)
 - **Test:** Failsafe low (safety)
-- **Environment:** [Kitchen](../environments/kitchen.md), all lights on, cloudy daylight. Location: to confirm.
+- **Environment:** [Kitchen](../environments/kitchen.md), center of the room, all lights on, cloudy daylight.
 - **Git commit:** `8d7bc29`
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger / Buzzer, battery #: ___
 - **Firmware / cflib:** 2026.08 (as in session 3, not re-read) / 0.1.34
@@ -44,7 +44,8 @@ What happened, especially anything surprising. Include numbers.
 
 ### Joe
 
-- It drifted 20 cm forward and right. "I guess that's a fail."
+- Result: fail.
+- It landed 20 cm forward and right of the mark (Joe measured where it landed).
 
 ### Computed from the logs (Claude)
 

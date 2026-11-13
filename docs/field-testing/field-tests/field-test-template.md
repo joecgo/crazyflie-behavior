@@ -20,7 +20,6 @@
 - [ ] Propellers undamaged, battery charged (voltage: ___; below 3.62 V the take-off is refused, [ADR-0051](../../decisions/0051-battery-flight-limit-and-take-off-limit.md))
 - [ ] Flight area clear of people and pets
 - [ ] E-stop tested on the ground this session
-- [ ] Geofence configured for this space
 - [ ] Recording on (telemetry + video)
 
 ## During the test

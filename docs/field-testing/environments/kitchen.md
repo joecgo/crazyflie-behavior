@@ -7,8 +7,9 @@ description (time of day, sunlight) itself.
 A semi-open layout joins it to the [living room](living-room.md), so some light
 spreads between the two rooms (Joe, 2026-11-12).
 
-Used so far only for the Hover in
-[First flight 1](../sessions/2026-11-04-first-flight-1.md).
+Used for the Hover in
+[First flight 1](../sessions/2026-11-04-first-flight-1.md) and for every test in
+[First flight 4](../sessions/2026-11-12-first-flight-4.md), at the center of the room.
 
 ## Locations
 

@@ -6,7 +6,7 @@
 
 - **Session:** [First flight 4](../sessions/2026-11-12-first-flight-4.md)
 - **Test:** Bench (calibration)
-- **Environment:** [Kitchen](../environments/kitchen.md), all lights on, cloudy daylight. Location: to confirm.
+- **Environment:** [Kitchen](../environments/kitchen.md), center of the room, all lights on, cloudy daylight.
 - **Git commit:** `8d7bc29`
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger / Buzzer, battery #: ___
 - **Firmware / cflib:** 2026.08 (as in session 3, not re-read) / 0.1.34
@@ -45,7 +45,8 @@ What happened, especially anything surprising. Include numbers.
 
 ### Joe
 
-- "The sensors seem to work, so let's say that the bench passed."
+- Result: pass.
+- "The sensors seem to work."
 - Forgot the radio on the first attempt.
 
 ### Computed from the logs (Claude)

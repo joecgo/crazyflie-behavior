@@ -6,7 +6,7 @@
 
 - **Session:** [First flight 4](../sessions/2026-11-12-first-flight-4.md)
 - **Test:** Hover (flight), with chirps
-- **Environment:** [Kitchen](../environments/kitchen.md), night (Joe), all lights on assumed. Location: to confirm.
+- **Environment:** [Kitchen](../environments/kitchen.md), center of the room, all lights on, night (Joe).
 - **Git commit:** `8d7bc29`
 - **Hardware:** Crazyflie 2.1+, decks: Flow / Multi-ranger / Buzzer, battery #: ___
 - **Firmware / cflib:** 2026.08 (as in session 3, not re-read) / 0.1.34
@@ -35,7 +35,9 @@ What happened, especially anything surprising. Include numbers.
 
 ### Joe
 
+- Result: pass.
 - Flew pretty straight on take-off, drifted left on the landing, landed 6 cm from the mark.
+- Heard the chirps, but doesn't remember hearing the last one, the Charge melody at the end. Not a reason to fail the test: a bug to fix later (backlog #92).
 
 ### Computed from the logs (Claude)
 

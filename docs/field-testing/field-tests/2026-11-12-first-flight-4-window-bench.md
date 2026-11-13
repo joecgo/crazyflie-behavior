@@ -36,6 +36,7 @@ What happened, especially anything surprising. Include numbers.
 
 ### Joe
 
+- Result: pass.
 - Run 3 had a mesh screen in front of the window.
 - Run 4: the drone was about 9 inches (23 cm) from the glass.
 - "It was hitting stuff outside the window I think; I'll assume it can't see the window."
@@ -55,4 +56,4 @@ What happened, especially anything surprising. Include numbers.
 ## Next
 - Code changes: none yet.
 - ADRs to write or revisit: the geofence must keep the drone away from windows (backlog #90).
-- Next session's goal: back, left and right at the glass at measured distances (10, 20, 40 cm).
+- Next session's goal: none; Joe doesn't plan to measure the back, left and right sensors at the window.

@@ -21,10 +21,10 @@
 > into the hover. Backlog #78-#81 decide what comes next.
 > [First flight 4](sessions/2026-11-12-first-flight-4.md) (2026-11-12; Bench,
 > Window bench and the failsafes in daylight, the rest at night): the Bench
-> passed (Joe). Failsafe low drifted 20 cm and Failsafe high was landed at
-> 0.26 m in the initial climb, so its fault never fired. A spare propeller on
+> passed (Joe). Failsafe low landed 20 cm from the mark and Failsafe high was landed at
+> 0.26 m, 59 cm from it in the initial climb, so its fault never fired. A spare propeller on
 > M1 and three propeller tests: M2 and M4 vibrate most (#83). Take-off speeds:
-> all three speeds (0.1, 0.2, 0.4 m/s) reached the hover with drift of 3.5-9 cm,
+> all three speeds (0.1, 0.2, 0.4 m/s) reached the hover and landed 3.5-9 cm from the mark,
 > one flight each. The 60 s Hover completed, but the battery fell from 3.76 V
 > to the 3.20 V landing limit. The Multi-ranger probably doesn't see window
 > glass (Joe's assumption).
