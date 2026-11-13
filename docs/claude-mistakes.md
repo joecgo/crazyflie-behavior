@@ -31,14 +31,14 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 5 | 18 |
 | recommendation | 7 | 5 |
 | environment | 4 | 9 |
-| communication | 7 | 33 |
+| communication | 7 | 34 |
 | testing | 0 | 12 |
 | process | 5 | 17 |
-| **Total** | **32** | **114** |
+| **Total** | **32** | **115** |
 
 Of the 32 I pointed out, a later Claude review would probably have caught
 none, maybe 7, and probably not 25. So far, 7 of the 12 recommendation
-mistakes needed me, and 7 of the 40 communication mistakes. The first
+mistakes needed me, and 7 of the 41 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -573,6 +573,18 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-13: Hover heights taken from the moment the hover started
+
+- **What happened:** First flight 4's Take-off speeds log said the flights
+  hovered at 0.42, 0.41 and 0.40 m, and the Hover log at 0.41 m. Those are the
+  heights in the hover test's "at ... m" line, logged when the drone first came
+  within 0.1 m of 0.5 m. By the down range the drone hovered at 0.50-0.52 m.
+- **How it was caught:** the First flight 4 analysis, computing each hover's
+  mean down range.
+- **Kind:** communication.
+- **Takeaway:** a number in "Computed from the logs" comes from the data over
+  the part it describes, not from a log line written at one moment of it.
 
 ### 2026-11-12: A time limit quoted from memory
 

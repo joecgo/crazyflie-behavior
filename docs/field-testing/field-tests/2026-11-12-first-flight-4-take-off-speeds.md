@@ -31,10 +31,14 @@
 
 | # | Climb speed (m/s) | Battery (V) | Shift at take-off (cm) | Landing from mark (cm) | Settle / final descent height (m) | Low-light warning | Result | Data file | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | 0.1 | 3.82 (at rest) | | 7, right and slightly back (Joe) | 0.117 / 0.167 | yes (11) | Hovered at 0.42 m, landed | `logs/2026-11-12_16-17-38_hover.log` | |
+| 1 | 0.1 | 3.82 (at rest) | | 7, right and slightly back (Joe) | 0.117 / 0.167 | yes (11) | Hovered at 0.52 m (down range), landed | `logs/2026-11-12_16-17-38_hover.log` | |
 | - | 0.2 | 3.81 (at rest) | | | | | Take-off refused: estimate moving on the floor, 0.076 m/s | `logs/2026-11-12_16-19-07_hover.log` | Not counted as a flight |
-| 2 | 0.2 | 3.80 (at rest) | | 9, right and slightly back (Joe) | 0.103 / 0.153 | yes (9) | Hovered at 0.41 m, landed | `logs/2026-11-12_16-21-26_hover.log` | |
-| 3 | 0.4 | 3.78 (at rest) | | 3.5, right (Joe) | 0.113 / 0.163 | yes (14) | Hovered at 0.40 m, landed | `logs/2026-11-12_16-23-01_hover.log` | |
+| 2 | 0.2 | 3.80 (at rest) | | 9, right and slightly back (Joe) | 0.103 / 0.153 | yes (9) | Hovered at 0.52 m (down range), landed | `logs/2026-11-12_16-21-26_hover.log` | |
+| 3 | 0.4 | 3.78 (at rest) | | 3.5, right (Joe) | 0.113 / 0.163 | yes (14) | Hovered at 0.51 m (down range), landed | `logs/2026-11-12_16-23-01_hover.log` | |
+
+The hover heights are the mean down range in the hover (corrected 2026-11-13: this
+table first gave 0.42, 0.41 and 0.40 m, the heights at which the hover test counted
+the drone as there, within 0.1 m of 0.5 m).
 
 ## Observations
 What happened, especially anything surprising. Include numbers.

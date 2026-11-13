@@ -43,7 +43,9 @@ What happened, especially anything surprising. Include numbers.
 
 - Take-off with image quality 22 ("low light"); initial climb at 0.4 m/s
   ended normally (settle 0.112 m, final descent height 0.162 m); hovered at
-  0.41 m from 16:26:00 to 16:27:00, with a chirp about every 5 s. The cap,
+  0.50 m by the down range (mean) from 16:26:00 to 16:27:00, with a chirp
+  about every 5 s (corrected 2026-11-13: first written as 0.41 m, the height
+  at which the hover test counted the drone as there). The cap,
   the time limit and the safety layer did not cut it short.
 - Final descent level from 0.290 m, touchdown confirmed, "not flying and
   isn't locked". 1360 ticks, 2 overruns, worst lateness 76 ms (99th
