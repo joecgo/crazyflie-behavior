@@ -31,10 +31,10 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 5 | 17 |
 | recommendation | 7 | 5 |
 | environment | 4 | 9 |
-| communication | 7 | 32 |
+| communication | 7 | 33 |
 | testing | 0 | 12 |
-| process | 4 | 17 |
-| **Total** | **31** | **110** |
+| process | 5 | 17 |
+| **Total** | **32** | **111** |
 
 Of the 31 I pointed out, a later Claude review would probably have caught
 none, maybe 7, and probably not 24. So far, 7 of the 12 recommendation
@@ -49,6 +49,13 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-12: A recording started before Joe was ready
+
+- **What happened:** after Joe said the next bench would use `--take-off-log`, I started the bench at once. Joe was not at the window yet and only held the drone there at the end, so most of that run was unusable ("I didn't realize you started"). Earlier I had told Joe to say "start" first.
+- **Would a Claude review have caught it?** No: it's a conversation step, not code.
+- **Kind:** process.
+- **Takeaway:** for a run that needs Joe's hands (a bench, a flight), start it only after Joe says go, not when they name the test.
 
 ### 2026-11-08: The level final descent's motor stop locks the drone
 
@@ -566,6 +573,13 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-12: A time limit quoted from memory
+
+- **What happened:** I said a 0.6 m/s initial climb would have a time limit of about 1.2 s. The code's formula (`MAX_FINAL_DESCENT_HEIGHT / climb_speed + 1.0`) gives 1.5 s. I corrected it in the next message.
+- **How it was caught:** reading `initial_climb_time_limit` while checking the climb speed limit.
+- **Kind:** communication.
+- **Takeaway:** when quoting a number the code computes, read the formula first.
 
 ### 2026-11-12: A work-log total that missed three changes to a day's hours
 
