@@ -14,7 +14,7 @@
 ## Goal and pass criteria
 *Written before flying.*
 
-- Goal: no goal was written before flying; as in
+- Goal: the session doc's plan covers it; as in
   [First flight 3's Hover](2026-11-09-first-flight-3-hover.md): a 60 s hover
   with chirps.
 - Pass if: Joe's call. The program's own rule ([ADR-0062](../../decisions/0062-hover-program-fails-when-the-hover-is-cut-short.md)):
@@ -56,5 +56,5 @@ What happened, especially anything surprising. Include numbers.
 
 ## Next
 - Code changes:
-- ADRs to write or revisit: ADR-0051 (a take-off at 3.76 V reached the landing limit in a 60 s hover)
+- ADRs to write or revisit: backlog #91, ADR-0051 (a take-off at 3.76 V reached the landing limit in a 60 s hover)
 - Next session's goal:

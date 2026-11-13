@@ -747,6 +747,18 @@ def test_taking_over_accepts_a_flying_drone_and_never_resets_its_estimate(
     assert "Taking over the flight" in caplog.text
 
 
+def test_taking_over_starts_no_diagnostic_or_controller_block(
+    taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    """The drone may be flying: a missing debug-only variable mustn't fail the connect (ADR-0067)."""
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    fake_cflib.parameters["deck.bcMultiranger"] = "1"
+
+    taking_over_adapter.connect()
+
+    assert fake_cflib.log_block_names == ["state", "battery", "down", "multiranger"]
+
+
 def test_taking_over_keeps_the_position_the_drone_already_reported(
     taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
 ) -> None:

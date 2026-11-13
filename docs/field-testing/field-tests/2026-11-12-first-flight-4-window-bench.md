@@ -54,5 +54,5 @@ What happened, especially anything surprising. Include numbers.
 
 ## Next
 - Code changes: none yet.
-- ADRs to write or revisit: the geofence must keep the drone away from windows (a backlog entry, to add).
+- ADRs to write or revisit: the geofence must keep the drone away from windows (backlog #90).
 - Next session's goal: back, left and right at the glass at measured distances (10, 20, 40 cm).

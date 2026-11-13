@@ -16,8 +16,9 @@ tests the basic sequence and an unexpected state is the finding. So do its
 time limits: arming too slowly ends it at once, and a take-off that doesn't
 reach the height lands first. Ending lands the drone, and every failure is
 logged as an error with its reason. `has_failed` counts these, and a run
-that ended before the drone status said landed after its own landing, as
-when the safety layer or a stop request cut the hover short (ADR-0062).
+that ended before the snapshot said the drone may no longer be flying after
+its own landing, as when the safety layer or a stop request cut the hover
+short (ADR-0062).
 """
 
 import logging
@@ -145,12 +146,15 @@ class HoverTest(Behavior):
         self._has_failed = False
         """By its own rules: a refused request or a time limit."""
         self._has_landed = False
-        """Whether the drone status said landed after the hover test's own landing."""
+        """Whether the snapshot said the drone may no longer be flying after the hover test's own landing.
+        The drone status says landed only later, long enough for a failed safety pre-check to end the run
+        first (ADR-0062)."""
 
     @property
     def has_failed(self) -> bool:
-        """Whether the test failed: by its own rules, or because the drone status never said landed
-        after its own landing, as when the safety layer or a stop request cut the hover short (ADR-0062)."""
+        """Whether the test failed: by its own rules, or because the run ended before the snapshot said the
+        drone may no longer be flying after its own landing, as when the safety layer or a stop request cut
+        the hover short (ADR-0062)."""
         return self._has_failed or not self._has_landed
 
     def tick(self, snapshot: Snapshot, ask_safety_layer: Callable[[CommandRequest], Verdict]) -> bool:
@@ -194,8 +198,9 @@ class HoverTest(Behavior):
                     logger.info("Hover test: hovered %g s. Landing.", self._hover_duration)
                     self._land(ask_safety_layer, now)
             case _Step.LANDING:
-                if not status.value.is_flying:
+                if not snapshot.may_be_flying:
                     self._has_landed = True
+                if not status.value.is_flying:
                     if self._chirps:
                         logger.info("Hover test: landed. Chirping in %g s", LANDED_CHIRP_DELAY)
                         self._start_step(_Step.LANDED, now)

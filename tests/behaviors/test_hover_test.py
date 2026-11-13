@@ -155,28 +155,41 @@ def test_it_is_done_once_the_drone_reports_it_landed() -> None:
     assert safety_layer.requests == [Arm(), TakeOff(TAKE_OFF_HEIGHT), Land()]
 
 
-def test_it_has_failed_until_the_drone_status_says_landed_after_its_own_landing() -> None:
+def test_it_has_failed_until_the_drone_may_no_longer_be_flying_after_its_own_landing() -> None:
     """The safety layer or a stop request ends the run without ticking it again: a hover cut short
-    at any step has failed (ADR-0062)."""
+    at any step has failed. The drone status says landed only later, so it isn't waited for (ADR-0062)."""
     safety_layer = SafetyLayerStandIn()
     hover_test = HoverTest(HOVER_DURATION)
     has_failed_before_any_tick = hover_test.has_failed
     has_failed_after_each_tick: list[bool] = []
 
-    for time, status, height in [
-        (0.0, ON_THE_FLOOR, 0.0),  # arms
-        (0.25, ARMED, 0.0),  # takes off
-        (0.5, FLYING, TAKE_OFF_HEIGHT),  # hovers
-        (0.5 + HOVER_DURATION, FLYING, TAKE_OFF_HEIGHT),  # lands
-        (2.75, FLYING, 0.25),  # still landing
-        (3.0, ARMED, 0.0),  # the drone status says landed
+    for time, status, height, may_be_flying in [
+        (0.0, ON_THE_FLOOR, 0.0, False),  # arms
+        (0.25, ARMED, 0.0, False),  # takes off
+        (0.5, FLYING, TAKE_OFF_HEIGHT, True),  # hovers
+        (0.5 + HOVER_DURATION, FLYING, TAKE_OFF_HEIGHT, True),  # lands
+        (2.75, FLYING, 0.25, True),  # still landing
+        (3.0, FLYING, 0.0, False),  # touchdown: the motors are stopped, the status still says flying
     ]:
-        hover_test.tick(snapshot(time, status, height), safety_layer)
+        hover_test.tick(replace(snapshot(time, status, height), may_be_flying=may_be_flying), safety_layer)
         has_failed_after_each_tick.append(hover_test.has_failed)
 
     assert has_failed_before_any_tick
     assert has_failed_after_each_tick == [True, True, True, True, True, False]
     assert safety_layer.requests == [Arm(), TakeOff(TAKE_OFF_HEIGHT), Land()]
+
+
+def test_the_drone_may_no_longer_be_flying_before_its_own_landing_is_no_landing() -> None:
+    """Only its own landing counts (ADR-0062)."""
+    safety_layer = SafetyLayerStandIn()
+    hover_test = HoverTest(HOVER_DURATION)
+    hover_test.tick(snapshot(0.0, ON_THE_FLOOR), safety_layer)  # arms
+    hover_test.tick(snapshot(0.25, ARMED), safety_layer)  # takes off
+
+    hover_test.tick(replace(snapshot(0.5, FLYING, TAKE_OFF_HEIGHT), may_be_flying=False), safety_layer)
+
+    assert hover_test.has_failed
+    assert safety_layer.requests == [Arm(), TakeOff(TAKE_OFF_HEIGHT)]
 
 
 def test_a_take_off_that_does_not_reach_the_height_in_time_has_failed_even_once_landed() -> None:

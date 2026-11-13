@@ -162,7 +162,8 @@ def in_flight_velocity_uncertainty_limit(height: float | None) -> float:
 def _known_height(snapshot: Snapshot) -> float | None:
     """Meters: the position estimate's height, or None if it's missing, stale or not finite."""
     position = snapshot.position_estimate
-    if position is None or position.age(snapshot.time) > STALE_AFTER or not math.isfinite(position.value.z):
+    stale = _staleness(_CheckedValue("position estimate", position, STALE_AFTER), snapshot.time)
+    if position is None or stale is not None or not math.isfinite(position.value.z):
         return None
     return position.value.z
 

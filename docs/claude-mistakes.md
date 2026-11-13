@@ -27,18 +27,18 @@ decisions are recorded), *communication* (how Claude explains things).
 
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 4 | 18 |
-| safety design | 5 | 17 |
+| design | 4 | 20 |
+| safety design | 5 | 18 |
 | recommendation | 7 | 5 |
 | environment | 4 | 9 |
 | communication | 7 | 33 |
 | testing | 0 | 12 |
 | process | 5 | 17 |
-| **Total** | **32** | **111** |
+| **Total** | **32** | **114** |
 
-Of the 31 I pointed out, a later Claude review would probably have caught
-none, maybe 7, and probably not 24. So far, 7 of the 12 recommendation
-mistakes needed me, and 7 of the 39 communication mistakes. The first
+Of the 32 I pointed out, a later Claude review would probably have caught
+none, maybe 7, and probably not 25. So far, 7 of the 12 recommendation
+mistakes needed me, and 7 of the 40 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -580,6 +580,57 @@ times so far).
 - **How it was caught:** reading `initial_climb_time_limit` while checking the climb speed limit.
 - **Kind:** communication.
 - **Takeaway:** when quoting a number the code computes, read the formula first.
+
+### 2026-11-12: The hover test waited for a drone status that comes too late
+
+- **What happened:** ADR-0062's `has_failed` counted the hover test's
+  landing only once the drone status said landed. That status keeps saying
+  flying for 2 s after the motors stop (ADR-0058), and a failed safety
+  pre-check ends the run for good. A stale value in those 2 s, as a laptop
+  stall gives (backlog #70), would have turned a full, landed hover into
+  exit 1.
+- **How it was caught:** `/code-review` in the project review of the
+  session 4 code, checked against the tick step. The landing now counts once
+  the snapshot's *may be flying* turns false (ADR-0062 clarified).
+- **Kind:** design.
+- **Takeaway:** a verdict read from the drone status: can the run end during
+  the status's lag, before the verdict is recorded?
+
+### 2026-11-12: "Fails the connect, on the floor" for a block the rescue landing starts too
+
+- **What happened:** ADR-0063 said a missing controller variable fails the
+  connect on the floor, as ADR-0050 said for the diagnostic block. Both
+  blocks were always on, also in the rescue landing's connect to a flying
+  drone, where a missing variable would fail the rescue and leave the drone
+  in the air.
+- **How it was caught:** the project review of the session 4 code.
+  ADR-0067: a take-over starts neither block.
+- **Kind:** safety design.
+- **Takeaway:** a claim that a failure happens on the floor: does every
+  program that reaches it start on the floor?
+
+### 2026-11-12: Wording that ADR-0062 and ADR-0064 left behind
+
+- **What happened:** `FLOW_VELOCITY_UNCERTAINTY`'s docstring still said a
+  velocity uncertainty under it means flow, with no word of ADR-0064's
+  in-flight limit that grows with height. A comment in `hover.py` named one
+  cause of exit 1 where `has_failed` has three.
+- **How it was caught:** the project review of the session 4 code.
+- **Kind:** communication.
+- **Takeaway:** the review checklist already asks for the old wording to be
+  searched when a value's meaning changes; this was that miss.
+
+### 2026-11-12: A second copy of the staleness rule
+
+- **What happened:** `_known_height` in the safety layer compared the
+  position estimate's age with `STALE_AFTER` itself, next to `_staleness`,
+  which judges every other pre-check value. A later change to the stale rule
+  (backlog #70's options) could have missed it.
+- **How it was caught:** `/code-review` in the project review of the
+  session 4 code. It now calls `_staleness`.
+- **Kind:** design.
+- **Takeaway:** a new check on a value the pre-check already judges: reuse
+  that judgment instead of restating it.
 
 ### 2026-11-12: A work-log total that missed three changes to a day's hours
 

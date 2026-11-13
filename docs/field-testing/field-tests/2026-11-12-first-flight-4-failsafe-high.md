@@ -14,7 +14,7 @@
 ## Goal and pass criteria
 *Written before flying.*
 
-- Goal: no goal was written before flying; as in
+- Goal: the session doc's plan covers it; as in
   [First flight 3's log](2026-11-09-first-flight-3-failsafe-high.md): the real
   failsafe lands the drone from a hover.
 - Pass if: the fault fires after a few seconds of hover, the pre-check fails

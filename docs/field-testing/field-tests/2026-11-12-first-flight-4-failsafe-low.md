@@ -14,7 +14,7 @@
 ## Goal and pass criteria
 *Written before flying.*
 
-- Goal: no goal was written before flying; the test is as in
+- Goal: the session doc's plan covers it; the test is as in
   [First flight 3's log](2026-11-09-first-flight-3-failsafe-low.md)
   ([ADR-0049](../../decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md)).
 - Pass if (the criteria of First flight 3, drift not among them):

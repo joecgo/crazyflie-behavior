@@ -14,7 +14,7 @@
 ## Goal and pass criteria
 *Written before flying.*
 
-- Goal: no goal was written before flying. The reason to run it: the first
+- Goal: the session doc's plan has the reasons. The reason to run it: the first
   bench since the controller block and take-off block were added
   ([ADR-0063](../../decisions/0063-take-off-and-controller-log-blocks.md),
   [ADR-0065](../../decisions/0065-take-off-block-runs-from-connect-and-each-take-off.md)),
