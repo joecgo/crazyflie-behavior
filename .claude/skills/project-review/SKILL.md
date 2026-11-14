@@ -38,10 +38,11 @@ last.
   (reading a path to its end, planting a bug, checking a library's source)
   only when it could affect safety or correctness. Report the rest as found:
   verified if the diff itself shows it, plausible otherwise.
-- **Ask before subagents.** At xhigh or max, `/code-review` starts subagents
-  that the step budget doesn't count. Before running it at those levels, tell
-  the user and wait for a yes. Seven of them used up the 5-hour limit on the
-  first review of the unpushed ADR-0048 work.
+- **Ask before subagents.** `/code-review` can start subagents that the step
+  budget doesn't count: seven of them used up the 5-hour limit on the first
+  review of the unpushed ADR-0048 work. At xhigh it has run inline since
+  (2026-11-13 and 11-14). At max, or when its instructions ask for subagents,
+  tell the user and wait for a yes.
 
 ## Steps
 
