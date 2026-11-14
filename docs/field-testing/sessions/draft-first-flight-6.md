@@ -207,16 +207,173 @@ and session 5's logs.
 ## Before the session
 *Done at the desk, not at the session. If any code changes after these runs, run them again.*
 
-- **Commit to fly:** `<hash>`
-- [ ] Mock adapter run of each test's program on that commit passed:
-  - [ ] `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at climb`
-  - [ ] `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at hover`
-  - [ ] `.venv\Scripts\python -m crazyflie_behavior.programs.hover --hover-seconds 5 --take-off-log`, then the same with `--take-off-height` at each height flown
-- [ ] Laptop on the charger, high-performance power plan (backlog #70)
-- [ ] Joe's code review of what's new since the last entry in `REVIEW.md`'s "My reviews"
+- **Commit to fly:** `d12975a`
+- [x] Mock adapter run of each test's program on that commit passed (2026-11-14, exit code 0, no tick overruns):
+  - [x] `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at climb`
+  - [x] `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at hover`
+  - [x] `.venv\Scripts\python -m crazyflie_behavior.programs.hover --hover-seconds 5 --take-off-log`, then the same with `--take-off-height` 0.75 and 1.0
+- [x] Laptop on the charger, high-performance power plan (backlog #70): both confirmed by Joe 2026-11-14
+- [ ] Joe's code review of what's new since the last entry in `REVIEW.md`'s "My reviews": **deferred by Joe on 2026-11-14** to the next milestone, because of a planned refactor. Risk accepted knowingly: this session flies Crazyflie adapter and safety layer changes that only `/project-review` has checked.
 
 ## Results
 *From the operator or the recordings, never from an AI. One line per test: passed, failed or not flown.*
+
+### Propeller test runs
+
+After Joe replaced M4's propeller only (2026-11-14). Run by Joe; console
+output pasted by Joe. Sideways vibration variance X+Y (Z in brackets), voltage
+sag per motor, and the noise floor X+Y.
+
+| Run | M1 | M2 | M3 | M4 | Sag M1-M4 (V) | Noise floor |
+|---|---|---|---|---|---|---|
+| 1 | 4.12 (3.39) | 8.33 (11.29) | 6.21 (0.85) | 8.95 (14.22) | 0.47 0.49 0.52 0.52 | 0.0037 |
+| 2 | 5.11 (3.08) | 8.97 (10.69) | 7.40 (0.85) | 10.02 (21.37) | 0.48 0.49 0.52 0.52 | 0.0042 |
+| 3 | 4.09 (3.03) | 7.45 (8.49) | 8.32 (1.08) | 10.09 (18.25) | 0.48 0.48 0.50 0.51 | 0.0035 |
+| 4 | 2.92 (2.58) | 13.30 (10.96) | 4.73 (0.95) | 9.97 (9.24) | 0.41 0.43 0.45 0.45 | 0.0038 |
+| 5 | 3.89 (1.43) | 10.83 (9.75) | 5.47 (1.13) | 10.30 (8.75) | 0.42 0.44 0.44 0.45 | 0.0035 |
+| 6 | 4.44 (1.70) | 15.33 (14.02) | 4.01 (1.20) | 10.68 (10.45) | 0.42 0.44 0.45 0.45 | 0.0037 |
+
+"Kalman prediction rate off" was printed after every run (74, 39, 86, 91, 24,
+53). Runs 4-6 were pasted by Joe after test 3. Joe: "M4 just sounds louder,
+like there is more vibration".
+
+### Test 3, hover at 0.5 m (14:45)
+
+- Joe: "significant drift to the right (23 cm)". Joe: about 10 cm at the
+  take-off and 10 cm at the landing, both in the bad-flow zone.
+- Two earlier attempts (14:43, 14:44) timed out opening the link: stuck
+  propeller test processes from 14:38 held the radio.
+- Analysis (Claude, from the log): hover motor outputs (the diagnostic
+  block's `motors`, not the thrust command) M1 about 52,700, M2 41,500, M3
+  50,500, M4 40,500 (mean about 46,300; session 4's hovers 47,900-50,300). Battery 4.04 V before,
+  3.59-3.65 V in the hover. Image quality 49 at take-off, 122-139 in the hover.
+- Next (Joe's call, 2026-11-14): first Joe chose to replace the other three
+  propellers and skip test 8, then changed it to flying test 8 (turned
+  around): one 0.5 m hover with the drone turned 180° on the mark.
+
+### Test 8, turned around, hover at 0.5 m (14:51)
+
+- Joe: take-off "relatively straight, maybe 3-5 cm drift"; landing "about
+  10-15 cm drift, for a total of 20 cm to the right (relative to the drone)".
+- Analysis (Claude, from the log): hover motor outputs M1 about 52,600, M2
+  41,900, M3 51,600, M4 40,800 (mean about 46,700), the same split between
+  the pairs as test 3.
+
+### Level check across sessions 4-6 (analysis, Claude, 2026-11-14)
+
+From the diagnostic block of every real hover log since session 4. Roll is
+the mean in each phase, in degrees.
+
+| Flights | Roll on the floor | Roll in the initial climb | Roll in the final descent | Right side's share (M1+M2) in the hover |
+|---|---|---|---|---|
+| Session 4 (4) | +0.02 to +0.04 | +0.01 to +0.27 | -0.40 to +0.17 | 0.500-0.502 |
+| Session 5 (8) | -0.17 to +0.29 | -0.05 to +0.78 | -0.08 to +0.98 | 0.502-0.510 |
+| Session 6 (2) | -0.25 to +0.05 | +0.42 to +0.89 | +0.56 to +1.76 | 0.506-0.509 |
+
+- On the floor the drone reads level, so the level calibration looks fine.
+- Since session 5 the drone rolls one way in both bad-flow-zone phases, most
+  in the final descent, and the right side's motors (M1 front-right, M2
+  back-right, by session 4's analysis) work harder in the hover. Which way a
+  positive roll leans hasn't been checked in the firmware source.
+- The diagonal split (M1+M3)/(M2+M4) is 1.14-1.40 in all three sessions.
+
+### After test 8
+
+- Joe: the battery is centered. Joe replaced M2's propeller (M3's not yet).
+- Propeller test runs 7-9, after M2's new propeller (pasted by Joe; same
+  columns as the table above):
+
+| Run | M1 | M2 | M3 | M4 | Sag M1-M4 (V) | Noise floor |
+|---|---|---|---|---|---|---|
+| 7 | 4.66 (2.32) | 7.90 (1.60) | 3.23 (2.0) | 8.09 (2.47) | 0.45 0.45 0.49 0.49 | 0.0039 |
+| 8 | 5.63 (2.52) | 9.52 (1.52) | 2.65 (1.67) | 6.78 (3.46) | 0.45 0.47 0.50 0.50 | 0.0038 |
+| 9 | 3.45 (3.64) | 5.07 (0.89) | 2.32 (1.60) | 7.67 (2.74) | 0.48 0.48 0.50 0.51 | 0.0043 |
+
+  Joe: "the prop tests are making things look more balanced now."
+
+### Hover at 0.5 m after M2's propeller (15:02 and 15:03)
+
+- Flight 1 (15:02), Joe: "went way off to the right and failed". The log:
+  image quality 16 at take-off; "The horizontal speed estimate hasn't
+  settled by 0.25 m. Landing." at 0.26 m in the initial climb; touchdown
+  confirmed; the hover test then reported "not at 0.50 m after 5 s". An
+  abnormal end by the README's rule; flight 2 was flown after it.
+- Flight 2 (15:03), Joe: "only went slightly to the right and back equally
+  about 9 cm". Hovered 5 s and landed.
+- Analysis (Claude, flight 2's log): image quality 15 at take-off. Roll +0.52°
+  in the initial climb and +0.40° in the final descent (test 3: +0.89° and
+  +1.76°). Right side's share 0.506. Motor outputs mean about 48,500.
+- Joe's call (2026-11-14): flies on after flight 1's abnormal end, with more
+  light added at the take-off mark. Risk accepted knowingly, against the
+  README's rule to stop and write it up first.
+
+### Hover at 0.5 m with more light (15:05)
+
+- Joe: "still drifting right this time about 25 cm, half on take-off and half
+  on landing (about)".
+- Analysis (Claude, from the log): image quality 27-40 on the floor (38 at
+  take-off), 113-144 from about 0.1 m up. Roll -0.24° on the floor, +0.43° in
+  the initial climb, +0.07° in the hover, +1.12° in the final descent. Right
+  side's share 0.507.
+- Joe: "the yaw change about 15 degrees counter clockwise on take-off, then
+  twist back".
+- Analysis (Claude): the logged yaw rises 20-26° in the first 1.5 s after the
+  take-off request in this flight, 14:45 and 15:03, and in session 4 and 5
+  flights checked (16:21 on 11-12, 11:09 on 11-13), then turns back.
+
+### Controller analysis (Claude, 2026-11-14)
+
+From the Controller block lines (roll rate integral, the controller's
+standing roll trim). Not yet checked in the firmware source.
+
+- Mid-hover trim: session 4 -690 to +500; session 5 -900 to -4,200;
+  session 6 -1,800 to -3,200. Same sign in every flight since session 5.
+- 15:05 flight: about -1,280 at the hand-over from the initial climb, then
+  -335, rebuilt to about -1,600 over about 0.8 s; about -2,400 before the
+  level final descent, then -490. The two drops come at the two phases where
+  the drone drifts (backlog #101).
+- Pitch is balanced (front share 0.498-0.503), so the imbalance is side to
+  side, not at one corner.
+
+### Battery shifted left
+
+- Joe: the battery was already as far left as it can go; it couldn't be
+  moved further.
+- Next (Joe's call, 2026-11-14): replace the M1 motor with the one spare.
+
+### After the M1 motor swap
+
+Propeller test runs 10-11 (pasted by Joe):
+
+| Run | M1 | M2 | M3 | M4 | Sag M1-M4 (V) | Noise floor |
+|---|---|---|---|---|---|---|
+| 10 | 5.60 (3.61) | 6.84 (10.08) | 1.48 (0.54) | 7.09 (9.05) | 0.49 0.48 0.49 0.50 | 0.0033 |
+| 11 | 5.55 (4.01) | 5.52 (7.59) | 1.84 (0.68) | 7.65 (10.07) | 0.48 0.48 0.49 0.49 | 0.0034 |
+
+Run 10 also printed "ESTKALMAN: State out of bounds, resetting".
+
+Three hovers at 0.5 m (15:15, 15:17, 15:18). Joe: "the take-off has been
+pretty smooth with 0-5 cm of movement, but the landing has been rough, ending
+first 9 cm to the back left, then 7 cm back right, then 16 cm back left, the
+last landing was the worst".
+
+Analysis (Claude, from the logs):
+
+- Right side's share 0.496-0.499 (before the swap 0.506-0.509). Roll trim in
+  the hover +660 to +1,380 (before: -1,800 to -3,200). Roll in the initial
+  climb -0.20° to -0.04° (before: +0.42° to +0.89°).
+- Pitch trim in the hover now -1,700 to -2,050 (15:05 flight: about -60 to
+  +350); front share 0.495. At the start of the final descent the pitch trim
+  fell to about 0 and rebuilt over about 0.5 s, as the roll trim did before.
+- Image quality 15-17 at take-off.
+- 15:18 flight: battery 3.81 V before, 3.15 V at spin-up.
+
+One more hover (15:20). Joe: "landed 7 cm left back, with a pretty even
+take-off". Analysis (Claude): right side's share 0.500, front share 0.494;
+pitch +0.68° in the initial climb and +0.63° in the final descent. Battery
+3.79 V before, lowest reading 3.05 V. Image quality 26 at take-off.
+ Battery 3.94 V before; 3.39 V at spin-up; 3.50-3.56 V
+  in the hover. Image quality 23 at take-off.
 
 ## Next session
 *What the results decide: another session, or the milestone is done.*
