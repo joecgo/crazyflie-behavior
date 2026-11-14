@@ -73,6 +73,52 @@ Joe measured where each flight landed from the mark, not the sideways shift at t
 - Battery at rest fell from 3.82 to 3.78 V over the three flights; minimum
   under load 3.33, 3.35 and 3.28 V.
 
+## Analysis (Claude, 2026-11-13)
+
+From the logs and the firmware 2026.08 source, not observations. Scripts in
+`drafts/ff4/` (not in the repository).
+
+- **The initial climb:** lift-off (the down range up 1.5 cm) at 0.53, 0.43 and
+  0.43 s, and the climb done 1.45, 0.80 and 0.70 s after the take-off: the
+  thrust base of 43,000
+  ([ADR-0061](../../decisions/0061-thrust-base-set-at-connect.md)) fixed the
+  slow climbs (backlog #78). No dip after the hand-over to the high-level
+  climb (backlog #69): the drone kept rising 0.6-1.6 cm.
+- **Balance:** with the spare M1 propeller, M1 and M3 carried the same share
+  of the thrust command (within 0.9 points), and the motors cancelled almost
+  no steady torque (as a centre-of-mass offset, under 0.5 mm). The yaw
+  imbalance remains: (m1+m3)/(m2+m4) was 1.26-1.31 in the hovers (backlog #83).
+- **Sideways movement, by the position estimate (cm).** Below 0.10 m the
+  firmware's flow model overstates movement, so each value is the estimate
+  corrected for that, with the estimate as logged in brackets. The logs see
+  little of the first and last 10 cm of height, and their totals differ from
+  Joe's tape by about 5-12 cm.
+
+  | # | Climb (m/s) | Take-off, floor to hover | In the 5 s hover | Landing, request to motors off | Whole flight | Joe's tape |
+  |---|---|---|---|---|---|---|
+  | 1 | 0.1 | 3 back (8) | 3 back and left | 6 back (9) | 11 back (18) | 7, right and slightly back |
+  | 2 | 0.2 | 2.5 right (5) | 4 left | 4 back and right (8) | 2 (9, back and right) | 9, right and slightly back |
+  | 3 | 0.4 | 3 forward and right (6) | 2.5 right | 2 forward (3) | 6 forward and right (8) | 3.5, right |
+
+- **At the hand-over** (the end of the initial climb, good flow) the drone
+  was moving sideways at 0.04, 0.05 and 0.11 m/s, each time mostly to the
+  right. The high-level climb's position hold stopped it within 2.3-3.3 cm.
+- **The landing approach ended 10-11 cm above the final descent height**
+  (0.26-0.27 m against 0.15-0.17 m), with the drone still descending at
+  0.45 m/s: the plan's time ran out first (backlog #93). The level final
+  descent then lasted 1.35-1.40 s, started with 0.02-0.06 m/s of sideways
+  speed, and moved the drone 3.3-5.5 cm before it was under 0.10 m.
+
+  ![Height against time in flight 3's landing, and the same landing in a model with the down range ending the approach](figures/2026-11-12-first-flight-4-landing-approach.svg)
+
+- **Battery at spin-up:** the first reading after the motors started was
+  3.16, 3.10 and 3.05 V, under the 3.20 V low-battery limit for up to about
+  0.2 s. The once-a-second reading the safety pre-check judges came
+  0.07-0.08 s before each take-off, so it missed the dip (backlog #91).
+- **The take-off block** added no lateness: in its 2 s the worst tick
+  lateness was 1.8 ms, with no overrun, and the position estimate and down
+  range were at most 25 ms old (the stale limit is 0.25 s).
+
 ## Next
 - Code changes:
 - ADRs to write or revisit: backlog #68, #81

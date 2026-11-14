@@ -116,16 +116,66 @@ The rescue landing wasn't run. The laptop's power plan and the code review befor
 - Take-off speeds: flown, one flight at each of 0.1, 0.2 and 0.4 m/s; a second 0.2 m/s attempt was refused on the floor and isn't counted. All three reached the hover. Landed 7, 9 and 3.5 cm from the mark (Joe). Pass (Joe).
 - Hover: flew the full 60 s and landed; straight take-off, drifted left on the landing, 6 cm from the mark (Joe). Heard the chirps, probably not the final Charge melody (a bug, backlog #92). Pass (Joe).
 
+## Analysis (Claude, 2026-11-13)
+*From the logs and the firmware 2026.08 source, not observations. Each flying test's log has its own part.*
+
+- **The thrust base of 43,000 works**
+  ([ADR-0061](../../decisions/0061-thrust-base-set-at-connect.md)): hover
+  thrust commands of 43,005-43,458, lift-off in 0.4-0.5 s at every speed, no
+  dip after the hand-over (backlog #69), and the climbs are no longer slow
+  (#78).
+- **The M1 propeller swap balanced roll and pitch.** Before it M1 alone ran
+  high and the drone tilted 0.9-1.9° front-right at lift-off; after it the
+  motors cancelled almost no steady torque. The yaw imbalance remains (#83).
+- **The landing approach ends 10-12 cm above the final descent height** in
+  every landing from a hover: the plan's time runs out while the drone lags
+  the plan, so the level final descent lasts about 1.35 s instead of about
+  0.8 s (#93; chart in the
+  [Take-off speeds log](../field-tests/2026-11-12-first-flight-4-take-off-speeds.md)).
+- **The battery dips under the 3.20 V low-battery limit at spin-up** (3.05-3.16 V
+  from 3.77-3.82 V at rest, for up to about 0.2 s). The programs' once-a-second
+  reading comes just before the take-off, so it missed the dip in all six
+  flights. A reading at the limit did stop the Hover's tick loop during its
+  landing (#91).
+- **Velocity uncertainty** sat at 0.031 m/s in the hovers, two thirds of
+  [ADR-0064](../../decisions/0064-in-flight-flow-limit-grows-with-height.md)'s
+  limit at 0.5 m.
+- **`--take-off-log` added no lateness,** by the plan's own check: in the
+  take-off block's 2 s (the Bench and the three Take-off speeds flights) no
+  overrun, no stale-data failure, worst tick lateness 1.8 ms, data at most
+  25 ms old.
+- **Sideways movement by phase, by the position estimate (cm).** Corrected for
+  the flow model below 0.10 m, with the estimate as logged in brackets. The
+  logs see little of the first and last 10 cm of height, and their totals
+  differ from Joe's tape by about 5-12 cm, so the tape stays the measure.
+
+  | Flight | Take-off, floor to hover | In the hover | Landing, request to motors off | Whole flight | Joe's tape |
+  |---|---|---|---|---|---|
+  | Failsafe low | under 1 (2), to the fault | - | not in the snapshots; about 7 forward and right by the logged tilt | - | 20, forward and right |
+  | Failsafe high | 24 forward and right, to the cap landing | - | 26 forward and right (36) | 50 (55) | 59 |
+  | Take-off speeds 1, 0.1 m/s | 3 back (8) | 3 back and left | 6 back (9) | 11 back (18) | 7, right and slightly back |
+  | Take-off speeds 2, 0.2 m/s | 2.5 right (5) | 4 left | 4 back and right (8) | 2 (9) | 9, right and slightly back |
+  | Take-off speeds 3, 0.4 m/s | 3 forward and right (6) | 2.5 right | 2 forward (3) | 6 forward and right (8) | 3.5, right |
+  | Hover, 0.4 m/s | 6 forward and right (12) | 3 back | approach 4; final descent not in the snapshots, 6-14 left by the logged tilt | - | 6; drifted left on the landing |
+
+  After the swap the drone left the initial climb at 0.04-0.11 m/s (good
+  flow), each time partly to the right, and the level final descent started
+  with 0.02-0.06 m/s. Take-off and landing each moved it a few centimeters
+  (#68).
+
 ## Next session
 *What the results decide: another session, or the milestone is done.*
 
-- Session 5 flies the rescue landing, which the plan listed and session 4
-  didn't run (Joe, 2026-11-13).
-- Before more flights, Joe analyses session 4's logs in a separate session
-  (take-off tilt and torque from the take-off block, the Hover's velocity
-  uncertainty against ADR-0064's limit, the estimate runaway before each reset,
-  the Bench's latency check against the plan). Which tests follow depends on
-  that.
+- The rescue landing, which the plan listed and session 4 didn't run, was to
+  fly in session 5 (Joe, 2026-11-13). Session 5 flew eight hover flights and
+  didn't run it.
+- The logs' analysis is above (2026-11-13). Joe's goal for the next planned
+  session after it (2026-11-13): finish First flight, with take-offs and
+  landings within 5 cm in low light, the initial climb at 0.4 m/s, 5 s hovers
+  at several heights and both failsafe tests; no more take-off speed tests.
+  That plan is now session 6's ([draft plan](draft-first-flight-6.md)): Joe
+  flew more tests on 2026-11-13, recorded as session 5. Whether session 6
+  flies the rescue landing is open.
 - Open from this session: where the drone lands against the light (backlog
   #68, #78), the estimate running away on the floor (#81), the M2 and M4
   propellers (#83), the battery margin for a 60 s hover (#91), the Multi-ranger

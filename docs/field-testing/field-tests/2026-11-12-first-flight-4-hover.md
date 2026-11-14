@@ -58,7 +58,48 @@ What happened, especially anything surprising. Include numbers.
   already landing.
 - Estimate before the reset at connect: (4.6, -0.06) m at 0.01 m/s.
 
+## Analysis (Claude, 2026-11-13)
+
+From the logs and the firmware 2026.08 source, not observations. Scripts in
+`drafts/ff4/` (not in the repository).
+
+- **Sideways movement, by the position estimate** (corrected for the flow
+  model below 0.10 m, with the estimate as logged in brackets): the take-off
+  moved the drone about 6 cm forward and right (12) by the time it hovered.
+  Over the 59 s hover it ended 3 cm from where it started, inside a patch of
+  6 x 7.5 cm. The landing approach moved it 4 cm. The final descent isn't in
+  the snapshots (next point); by the logged tilt and the speed it started
+  with, it went 6-14 cm to the left: rough, but the direction Joe saw.
+- **The landing finished inside `disconnect()`.** 0.05 s into the final
+  descent the battery read 3.20 V (braking from 0.46 m/s raises the thrust),
+  the safety pre-check failed and the tick loop stopped, so the adapter's
+  shutdown landing flew the last 1.3 s. The hover test's "landed" line never
+  came, and the final descent has no snapshots (backlog #91).
+- **The landing approach ended at 0.280 m,** 12 cm above the final descent
+  height of 0.162 m (backlog #93; chart in the
+  [Take-off speeds log](2026-11-12-first-flight-4-take-off-speeds.md)).
+- **Velocity uncertainty**
+  ([ADR-0064](../../decisions/0064-in-flight-flow-limit-grows-with-height.md)):
+  mean 0.031 m/s, highest 0.034, flat over the 60 s, against a limit of about
+  0.05 m/s at 0.5 m: 68% of the limit at most. Across this session's flights
+  it grew about 0.05 m/s per meter of height (0.012 at 0.1 m, 0.031 at
+  0.5 m), half the growth of the limit; nothing is measured above 0.52 m.
+- **Battery:** 3.31 V under load early in the hover, falling 1.0 mV/s (0.06 V
+  a minute); mean 3.28 V, a sag of 0.49 V from the 3.77 V at rest; 3.61 V at
+  rest after landing, just under the 3.62 V take-off limit. At spin-up the
+  first two readings were 3.11 and 3.17 V.
+- **The two overruns** (ticks 51.6 and 76.2 ms late, 32 s apart): the
+  diagnostic block's lines from cflib's thread paused at the same moments, so
+  the whole process stalled, not only the tick loop. The position estimate
+  was 83 and 100 ms old at those ticks; the stale limit is 0.25 s (backlog
+  #70).
+- **Thrust and balance:** the hover's thrust command averaged 43,458, within
+  about 1% of the thrust base. Roll and pitch were balanced (as a
+  centre-of-mass offset, 0.04 mm); (m1+m3)/(m2+m4) was 1.24 (backlog #83).
+- **The estimate on the floor:** the 5 s chirp wait moved it 3 cm before the
+  take-off (session 3: 2.2 m, backlog #81).
+
 ## Next
 - Code changes:
-- ADRs to write or revisit: backlog #91, ADR-0051 (a take-off at 3.76 V reached the landing limit in a 60 s hover)
+- ADRs to write or revisit: backlog #91, ADR-0051 (a take-off at 3.76 V reached the landing limit in a 60 s hover); backlog #93 (the landing approach), #70 (the two overruns)
 - Next session's goal:

@@ -54,6 +54,29 @@ What happened, especially anything surprising. Include numbers.
 - The settle-cap landing before the hover happened in First flight 3's Failsafe
   high too (backlog #78).
 
+## Analysis (Claude, 2026-11-13)
+
+From the logs and the firmware 2026.08 source, not observations. Scripts in
+`drafts/ff4/` (not in the repository).
+
+- **Why it was landed in the climb:** from lift-off the motors had to cancel
+  a steady front-right torque. M1, with its old propeller, carried 34.2% of
+  the thrust command against M3's 30.7% (as a centre-of-mass offset, 1.2 mm
+  right and 1.1 mm forward), and the drone sat 0.9-1.9° right side down and
+  nose down for about 0.8 s. With good flow (velocity uncertainty
+  0.010-0.017 m/s) the speed estimate rose to 0.24 m/s forward and right, so
+  it never stayed under the 0.15 m/s settle speed for the 0.2 s it needs, and
+  the adapter landed the drone at the cap, still moving at 0.19 m/s. Real
+  movement, not bad flow (backlog #68).
+- **Sideways movement, by the position estimate:** 24 cm forward and right in
+  the 1.2 s of the climb above 0.10 m. The level final descent started with
+  that 0.19 m/s and moved the drone another 26 cm (36 as logged; below 0.10 m
+  the flow model overstates movement). In all 50-55 cm forward and right,
+  against Joe's 59 cm.
+- **Battery at spin-up:** 3.23 V in the first reading, from 3.89 V at rest.
+- The four flights after the M1 propeller swap showed no such torque (the
+  [Take-off speeds log](2026-11-12-first-flight-4-take-off-speeds.md)).
+
 ## Next
 - Code changes:
 - ADRs to write or revisit: backlog #68, #78, #81
