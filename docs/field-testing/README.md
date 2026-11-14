@@ -1,6 +1,6 @@
 # Field testing
 
-> **Status, updated 2026-11-13:** a vertical slice: two rooms (the living
+> **Status, updated 2026-11-14:** a vertical slice: two rooms (the living
 > room and the kitchen), working toward hide-and-seek. Pass criteria are light for now. First
 > hardware session on 2026-11-04 ([First flight 1](sessions/2026-11-04-first-flight-1.md)):
 > the Bench; Failsafe high with the forged fault; a 60 s Hover through the
@@ -162,6 +162,14 @@ observed.
 
 Every session records the **git commit** (hash) that flew, so any result can be
 traced to the exact code. Commit before flying, and never fly uncommitted code.
+
+**Starting a program on the drone:** Joe starts it himself, with a **run
+button**, from PyCharm's run configurations, or by typing the command into a
+terminal. Claude gives the exact command line but doesn't start it. Claude's terminal tool sends Ctrl-C
+if the shell doesn't confirm a command within 2 s, and connecting to the drone
+takes longer, so the program is cancelled before it connects (2026-11-14, the
+propeller test, twice). Mock runs at the desk aren't affected: Claude runs
+those to completion.
 
 After an abnormal end (a crash, an unexpected landing, a failsafe that fired
 when it shouldn't have), no more flights that session. Write it up first.
