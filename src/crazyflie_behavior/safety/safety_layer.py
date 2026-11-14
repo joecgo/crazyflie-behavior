@@ -95,7 +95,7 @@ def _checked_values(snapshot: Snapshot) -> list[_CheckedValue]:
     ]
 
 
-def _previous_battery_reading_counts_as_low(previous: Stamped[float] | None) -> bool:
+def _was_previous_battery_reading_low(previous: Stamped[float] | None) -> bool:
     """For the low-battery limit's two readings in a row (ADR-0069). Missing or not finite counts as low,
     so the latest reading decides alone."""
     return previous is None or not math.isfinite(previous.value) or previous.value < LOW_BATTERY_VOLTAGE
@@ -123,7 +123,7 @@ def safety_pre_check(snapshot: Snapshot) -> list[str]:
     elif (
         battery is not None
         and battery.value < LOW_BATTERY_VOLTAGE
-        and _previous_battery_reading_counts_as_low(snapshot.previous_battery_voltage)
+        and _was_previous_battery_reading_low(snapshot.previous_battery_voltage)
     ):
         failures.append(f"battery at {battery.value:.2f} V (land below {LOW_BATTERY_VOLTAGE:.2f} V)")
     status = snapshot.drone_status
