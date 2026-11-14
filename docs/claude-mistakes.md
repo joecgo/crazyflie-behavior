@@ -31,14 +31,14 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 5 | 18 |
 | recommendation | 7 | 6 |
 | environment | 4 | 9 |
-| communication | 7 | 36 |
+| communication | 8 | 37 |
 | testing | 0 | 12 |
 | process | 5 | 19 |
-| **Total** | **32** | **120** |
+| **Total** | **33** | **121** |
 
-Of the 32 I pointed out, a later Claude review would probably have caught
-none, maybe 7, and probably not 25. So far, 7 of the 13 recommendation
-mistakes needed me, and 7 of the 43 communication mistakes. The first
+Of the 33 I pointed out, a later Claude review would probably have caught
+none, maybe 7, and probably not 26. So far, 7 of the 13 recommendation
+mistakes needed me, and 8 of the 44 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -49,6 +49,13 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### 2026-11-14: A flight command without `--crazyflie`
+
+- **What happened:** for session 6's test 3 I gave Joe the hover command copied from the mock-run checklist, with no `--crazyflie`, so it would have run the mock adapter, not the drone. Joe reported "it didn't do anything". His terminal tab was also still busy with a fourth propeller test waiting to connect.
+- **Would a Claude review have caught it?** No: it's a command given in chat, not code.
+- **Kind:** communication.
+- **Takeaway:** a command for a real flight is checked against the program's own usage lines (the `--crazyflie` flag) before it's given, never copied from the mock-run list.
 
 ### 2026-11-12: A recording started before Joe was ready
 
@@ -573,6 +580,12 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-14: Motor outputs read as the thrust command
+
+- **What happened:** in session 6 I told Joe the hover's "thrust command" averaged about 46,300-47,000, above the plan's 44,500 check and well above session 4's 43,000-43,500. I'd averaged the diagnostic block's `motors` values, which are motor outputs, not the thrust command the plan and session 4 measured. Session 4's motor outputs were 47,900-50,300, so today's are not higher. Caught while comparing the logs across sessions.
+- **Kind:** communication.
+- **Takeaway:** before comparing a number with a threshold or an earlier session, check that it's the same logged variable.
 
 ### 2026-11-14: The forged drone changed, but not its ADR or glossary row
 
