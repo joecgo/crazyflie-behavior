@@ -9,7 +9,8 @@ spreads between the two rooms (Joe, 2026-11-12).
 
 Used for the Hover in
 [First flight 1](../sessions/2026-11-04-first-flight-1.md) and for every test in
-[First flight 4](../sessions/2026-11-12-first-flight-4.md), at the center of the room.
+[First flight 4](../sessions/2026-11-12-first-flight-4.md) and
+[First flight 5](../sessions/2026-11-13-first-flight-5.md), at the center of the room.
 
 ## Locations
 

@@ -1,6 +1,6 @@
 # Field testing
 
-> **Status, updated 2026-11-12:** a vertical slice: two rooms (the living
+> **Status, updated 2026-11-13:** a vertical slice: two rooms (the living
 > room and the kitchen), working toward hide-and-seek. Pass criteria are light for now. First
 > hardware session on 2026-11-04 ([First flight 1](sessions/2026-11-04-first-flight-1.md)):
 > the Bench; Failsafe high with the forged fault; a 60 s Hover through the
@@ -27,7 +27,20 @@
 > all three speeds (0.1, 0.2, 0.4 m/s) reached the hover and landed 3.5-9 cm from the mark,
 > one flight each. The 60 s Hover completed, but the battery fell from 3.76 V
 > to the 3.20 V landing limit. The Multi-ranger probably doesn't see window
-> glass (Joe's assumption).
+> glass (Joe's assumption). Analysis of its logs (2026-11-13): the thrust base
+> of 43,000 fixed the slow climbs, the new M1 propeller balanced the take-off,
+> and the landing approach ends about 10 cm above the final descent height
+> (backlog #93). [First flight 5](sessions/2026-11-13-first-flight-5.md)
+> (2026-11-13, daylight, no plan written before flying): eight Hover flights
+> at 0.4 m/s, all hovered and landed, generally 7-15 cm from the mark; a fail
+> (Joe: "propeller issues"). The motor balance changed from flight to flight,
+> the hover took 3-7% more thrust than the thrust base, the climb pauses at
+> about 0.3 m, and M4's propeller test vibration jumped (#83). That puts the
+> drone's hardware first: one time-boxed pass, new propellers on all four
+> motors, before session 6's 5 cm flights (Joe, #83). Session 6 is being planned to finish First flight
+> ([draft plan](sessions/draft-first-flight-6.md), revised against session 5's
+> logs): both failsafe tests and 5 s hovers at several heights, landing
+> within 5 cm of the take-off mark in low light.
 
 Real flights are where the design gets proven or broken. This folder is the
 record: every field test gets a test log and every session a session doc,
@@ -103,8 +116,8 @@ Two so far, both static (nothing moves while the drone flies):
 
 - [Living room](environments/living-room.md) (ID `living-room`), the
   hide-and-seek room.
-- [Kitchen](environments/kitchen.md) (ID `kitchen`), used only for the Hover in
-  First flight 1.
+- [Kitchen](environments/kitchen.md) (ID `kitchen`), used for the Hover in
+  First flight 1 and for every test in First flight 4 and 5.
 
 Flight quality depends on the room (the flow deck needs floor texture and
 light, and range sensors struggle with glass, mirrors and dark surfaces), so
