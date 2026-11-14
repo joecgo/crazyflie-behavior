@@ -6,14 +6,14 @@ through the same `TelemetryBuffer` as every other adapter.
 
 It mocks the Crazyflie adapter, so it uses that adapter's numbers for the
 bad-flow zone (ADR-0048, ADR-0055). A take-off climbs level at its initial
-climb speed (`LEVEL_VERTICAL_SPEED` unless set, ADR-0059) to the final descent height, then teleports to its
+climb speed (`DEFAULT_INITIAL_CLIMB_SPEED` unless set, ADR-0059) to the final descent height, then teleports to its
 height. The mock's flow is perfect where it arrives, so the speed settles as
 soon as it does: at `SETTLE_MIN_DOWN_RANGE` on a lit floor, giving the lowest
 final descent height. A test can darken the floor with `set_dark_floor` (no
 flow below a height) or cut the flow with `cut_flow`: the velocity uncertainty
 is then high, and with no flow by `SETTLE_CAP_HEIGHT` the drone lands, as the
 Crazyflie adapter does (ADR-0054). A landing teleports down to the final descent height, then descends level at
-`LEVEL_VERTICAL_SPEED` to the floor. During those level parts it ignores every
+`FINAL_DESCENT_SPEED` to the floor. During those level parts it ignores every
 command but land and the motor stops, as the Crazyflie adapter does (ADR-0056).
 
 `update_take_off_and_landing` moves the fake drone by the snapshot's `dt`, for
@@ -37,7 +37,8 @@ again each tick, until a test makes it go quiet with `stop_telemetry`.
 import math
 
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
-    LEVEL_VERTICAL_SPEED,
+    DEFAULT_INITIAL_CLIMB_SPEED,
+    FINAL_DESCENT_SPEED,
     MAX_FINAL_DESCENT_HEIGHT,
     SETTLE_CAP_HEIGHT,
     SETTLE_MIN_DOWN_RANGE,
@@ -77,7 +78,7 @@ class MockAdapter(DroneInterface):
     """A fake drone that does exactly what it's told, instantly."""
 
     def __init__(
-        self, clock: Clock, *, take_over_flight: bool = False, initial_climb_speed: float = LEVEL_VERTICAL_SPEED
+        self, clock: Clock, *, take_over_flight: bool = False, initial_climb_speed: float = DEFAULT_INITIAL_CLIMB_SPEED
     ) -> None:
         """`take_over_flight`: the rescue landing's setting (ADR-0038). `connect()` then finds the
         drone armed and hovering at `TAKEN_OVER_HEIGHT`, as if a program had been lost with it
@@ -283,7 +284,7 @@ class MockAdapter(DroneInterface):
         self._position = Vector3(self._position.x, self._position.y, min(self._position.z, self._final_descent_height))
         self._climb_height = None
         self._is_in_final_descent = True
-        self._start_level_part(-LEVEL_VERTICAL_SPEED)
+        self._start_level_part(-FINAL_DESCENT_SPEED)
 
     def _has_flow(self) -> bool:
         return not self._is_flow_cut and self._position.z >= self._dark_floor_height

@@ -32,7 +32,7 @@ def test_the_hover_program_flies_the_hover_test_on_the_mock_adapter(
 
     assert exit_code == 0
     log_text = the_log_file_text(tmp_path / "logs")
-    assert "Hover program, the mock adapter, hovering 0.1 s, climbing at 0.2 m/s" in log_text
+    assert "Hover program, the mock adapter, hovering 0.1 s at 0.5 m, climbing at 0.4 m/s" in log_text
     assert "Sending Arm()" in log_text
     assert "Sending TakeOff(height=0.5)" in log_text
     assert "Hovering for 0.1 s" in log_text
@@ -71,7 +71,7 @@ def test_with_chirp_the_buzzer_commands_reach_the_drone(tmp_path: Path, monkeypa
     assert drone.tone_pitches[0] == pytest.approx(note_pitch("G", 4))
     assert drone.tone_pitches[-1] == pytest.approx(note_pitch("G", 5))
     log_text = the_log_file_text(tmp_path / "logs")
-    assert "Hover program, the mock adapter, hovering 0.1 s, climbing at 0.2 m/s, with chirps" in log_text
+    assert "Hover program, the mock adapter, hovering 0.1 s at 0.5 m, climbing at 0.4 m/s, with chirps" in log_text
     assert "Hover test: done." in log_text
 
 
@@ -188,11 +188,11 @@ def test_climb_speed_reaches_the_drone_and_the_log(tmp_path: Path, monkeypatch: 
 
     monkeypatch.setattr(hover_module, "make_drone", make_mock_adapter)
 
-    exit_code = main(["--hover-seconds", "0", "--climb-speed", "0.4"])
+    exit_code = main(["--hover-seconds", "0", "--climb-speed", "0.3"])
 
     assert exit_code == 0
-    assert climb_speeds == [0.4]
-    assert "climbing at 0.4 m/s" in the_log_file_text(tmp_path / "logs")
+    assert climb_speeds == [0.3]
+    assert "climbing at 0.3 m/s" in the_log_file_text(tmp_path / "logs")
 
 
 @pytest.mark.parametrize(("arguments", "expected"), [([], False), (["--take-off-log"], True)])
@@ -219,6 +219,40 @@ def test_the_take_off_log_option_reaches_make_drone_and_the_description(
 
     assert take_off_logs == [expected]
     assert descriptions[0].endswith(", with the take-off block (the mock adapter has none)") == expected
+
+
+def test_take_off_height_reaches_the_hover_test_and_the_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    exit_code = main(["--hover-seconds", "0", "--take-off-height", "0.75"])
+
+    assert exit_code == 0
+    log_text = the_log_file_text(tmp_path / "logs")
+    assert "hovering 0 s at 0.75 m" in log_text
+    assert "Sending TakeOff(height=0.75)" in log_text
+    assert "Hover test: landed. Done." in log_text  # it reached that height
+
+
+@pytest.mark.parametrize("take_off_height", ["0.3", "1.1", "nan"])
+def test_a_take_off_height_outside_the_range_is_refused_before_connecting(
+    take_off_height: str, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    drones_made: list[bool] = []
+
+    def make_mock_adapter(
+        use_crazyflie: bool, clock: Clock, *, initial_climb_speed: float, take_off_log: bool
+    ) -> DroneInterface:
+        drones_made.append(use_crazyflie)
+        return MockAdapter(clock, initial_climb_speed=initial_climb_speed)
+
+    monkeypatch.setattr(hover_module, "make_drone", make_mock_adapter)
+
+    with pytest.raises(SystemExit) as stopped:
+        main(["--crazyflie", "--take-off-height", take_off_height])
+
+    assert stopped.value.code == 2
+    assert "--take-off-height: The take-off height must be 0.4-1 m" in capsys.readouterr().err
+    assert drones_made == []
 
 
 @pytest.mark.parametrize("climb_speed", ["0.05", "0.5", "nan"])

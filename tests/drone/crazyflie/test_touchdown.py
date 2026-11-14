@@ -39,6 +39,7 @@ def snapshot_with(
             down=None if down is None else Stamped(down, down_arrived, None),
         ),
         battery_voltage=None,
+        previous_battery_voltage=None,
         drone_status=None,
         is_in_initial_climb=False,
         may_be_flying=False,

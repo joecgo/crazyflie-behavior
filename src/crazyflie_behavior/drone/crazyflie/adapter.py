@@ -41,7 +41,8 @@ from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.crtp.crtpstack import CRTPPacket, CRTPPort
 
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
-    LEVEL_VERTICAL_SPEED,
+    DEFAULT_INITIAL_CLIMB_SPEED,
+    FINAL_DESCENT_SPEED,
     MAX_FINAL_DESCENT_HEIGHT,
     SETTLE_CAP_HEIGHT,
     SettleDetector,
@@ -99,6 +100,11 @@ TAKE_OFF_PERIOD_MS = 10
 """The take-off block, for the debug log only (ADR-0063)."""
 TAKE_OFF_BLOCK_DURATION = 2.0
 """Seconds the take-off block runs from the end of connect and from each take-off (ADR-0065)."""
+LANDING_APPROACH_AIM_BELOW = 0.05
+"""How far below the final descent height the landing approach aims, in meters (ADR-0068)."""
+LANDING_APPROACH_BACKUP = 1.0
+"""Seconds after the landing approach's `go_to` ends before the final descent starts anyway, if
+the down range hasn't started it (ADR-0068)."""
 
 # --- PLACEHOLDERS, NOT DECISIONS ---------------------------------------------
 # Flight parameters wait on speed envelopes (ADR-0005) and the safety layer.
@@ -257,7 +263,7 @@ class CrazyflieAdapter(DroneInterface):
         cache_directory: str = "./cache",
         *,
         take_over_flight: bool = False,
-        initial_climb_speed: float = LEVEL_VERTICAL_SPEED,
+        initial_climb_speed: float = DEFAULT_INITIAL_CLIMB_SPEED,
         take_off_log: bool = False,
     ) -> None:
         """`take_over_flight`: only the rescue landing sets this (ADR-0038). `connect()` then
@@ -308,7 +314,8 @@ class CrazyflieAdapter(DroneInterface):
         once per streak."""
         self._landing_phase = _LandingPhase.NOT_LANDING
         self._landing_approach_ends_at = 0.0
-        """When the landing approach should be over. Meaningful while LANDING_APPROACH."""
+        """When the landing approach ends if the down range hasn't ended it: its backup (ADR-0068).
+        Meaningful while LANDING_APPROACH."""
         self._is_final_descent_level = False
         """Meaningful while FINAL_DESCENT: level on the down range, or the slow high-level descent."""
         self._final_descent_deadline = 0.0
@@ -880,7 +887,7 @@ class CrazyflieAdapter(DroneInterface):
             self._go_to_height(self._take_off_height)
 
     def _start_landing_approach(self) -> None:
-        """A high-level move down to the final descent height, or the final descent at once if already there."""
+        """A high-level move aimed below the final descent height, or the final descent at once if already there."""
         self._touchdown_detector = TouchdownDetector()
         down = self._latest_fresh_down_distance()
         if down is not None and down.value <= self._final_descent_height:
@@ -898,10 +905,12 @@ class CrazyflieAdapter(DroneInterface):
                 commander.go_to(0.0, 0.0, -HEIGHT_IF_UNKNOWN, DEFAULT_YAW_RAD, duration, relative=True)
             else:
                 here = position_estimate.value
-                height = min(here.z, self._final_descent_height)
+                height = min(here.z, self._final_descent_height - LANDING_APPROACH_AIM_BELOW)
                 duration = move_duration(here.z - height, VERTICAL_SPEED, MIN_MOVE_DURATION)
                 commander.go_to(here.x, here.y, height, DEFAULT_YAW_RAD, duration)
-        self._landing_approach_ends_at = self._clock.now() + duration
+        # The drone trails the `go_to`, so the down range, not the `go_to`'s end, should start
+        # the final descent (ADR-0068).
+        self._landing_approach_ends_at = self._clock.now() + duration + LANDING_APPROACH_BACKUP
         self._landing_phase = _LandingPhase.LANDING_APPROACH
 
     def _cancel_landing(self) -> None:
@@ -919,9 +928,14 @@ class CrazyflieAdapter(DroneInterface):
         match self._landing_phase:
             case _LandingPhase.LANDING_APPROACH:
                 down = fresh_down_distance(snapshot, now)
-                if now >= self._landing_approach_ends_at or (
-                    down is not None and down.value <= self._final_descent_height
-                ):
+                if down is not None and down.value <= self._final_descent_height:
+                    self._start_final_descent(down)
+                elif now >= self._landing_approach_ends_at:
+                    logger.warning(
+                        "The down range hasn't reached the final descent height %g s after the "
+                        "landing approach's go_to ended. Starting the final descent.",
+                        LANDING_APPROACH_BACKUP,
+                    )
                     self._start_final_descent(down)
             case _LandingPhase.FINAL_DESCENT:
                 if self._touchdown_detector.touchdown_confirmed(now):
@@ -934,7 +948,7 @@ class CrazyflieAdapter(DroneInterface):
                     )
                     self._stop_motors()
                 elif self._is_final_descent_level:
-                    self._send_level_setpoint(-LEVEL_VERTICAL_SPEED)
+                    self._send_level_setpoint(-FINAL_DESCENT_SPEED)
             case _LandingPhase.NOT_LANDING:
                 pass  # handled by the early return above
 
@@ -954,9 +968,9 @@ class CrazyflieAdapter(DroneInterface):
         highest = max((height for height in heights if height is not None), default=None)
         if down is not None:
             self._is_final_descent_level = True
-            self._final_descent_deadline = final_descent_deadline(now, highest, LEVEL_VERTICAL_SPEED)
+            self._final_descent_deadline = final_descent_deadline(now, highest, FINAL_DESCENT_SPEED)
             logger.info("Final descent: level, from %.3f m by the down range.", down.value)
-            self._send_level_setpoint(-LEVEL_VERTICAL_SPEED)
+            self._send_level_setpoint(-FINAL_DESCENT_SPEED)
             return
         self._is_final_descent_level = False
         self._final_descent_deadline = final_descent_deadline(now, highest, SLOW_DESCENT_SPEED)

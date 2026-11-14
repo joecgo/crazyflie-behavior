@@ -19,7 +19,7 @@ from types import FrameType, TracebackType
 from typing import Any, Self, TextIO
 
 from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_BLOCK_DURATION, TAKE_OFF_PERIOD_MS, CrazyflieAdapter
-from crazyflie_behavior.drone.crazyflie.bad_flow_zone import LEVEL_VERTICAL_SPEED
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import DEFAULT_INITIAL_CLIMB_SPEED
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_loop import HangWatchdog, TickLoop, TickStep
@@ -56,7 +56,7 @@ def make_drone(
     clock: Clock,
     *,
     take_over_flight: bool = False,
-    initial_climb_speed: float = LEVEL_VERTICAL_SPEED,
+    initial_climb_speed: float = DEFAULT_INITIAL_CLIMB_SPEED,
     take_off_log: bool = False,
 ) -> DroneInterface:
     """The real Crazyflie only when asked for, otherwise the mock adapter (ADR-0028).

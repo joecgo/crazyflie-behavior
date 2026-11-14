@@ -84,6 +84,21 @@ def test_nothing_received_yet_shows_as_none() -> None:
     assert snapshot.range_readings == RangeReadings(None, None, None, None, None, None)
 
 
+def test_a_battery_reading_becomes_the_previous_one_when_the_next_arrives() -> None:
+    clock = SimClock(start=1.0)
+    buffer = TelemetryBuffer(clock)
+    buffer.write_battery_voltage(3.9, drone_time=0.5)
+    first = buffer.snapshot(dt=0.0, is_in_initial_climb=False, may_be_flying=False)
+    clock.advance(1.0)
+
+    buffer.write_battery_voltage(3.8, drone_time=1.5)
+    second = buffer.snapshot(dt=0.0, is_in_initial_climb=False, may_be_flying=False)
+
+    assert first.previous_battery_voltage is None
+    assert second.previous_battery_voltage == Stamped(3.9, arrival_time=1.0, drone_time=0.5)
+    assert second.battery_voltage == Stamped(3.8, arrival_time=2.0, drone_time=1.5)
+
+
 def test_a_snapshot_does_not_change_when_new_telemetry_arrives() -> None:
     buffer = TelemetryBuffer(SimClock())
     buffer.write_battery_voltage(3.9, drone_time=None)
@@ -225,7 +240,8 @@ def count_not_yet_arrived(value: object) -> int:
 def test_missing_values_covers_every_value_in_the_snapshot() -> None:
     # A snapshot value left out of missing_values would let connect() return before it arrives (ADR-0031).
     buffer = TelemetryBuffer(SimClock())
+    snapshot = buffer.snapshot(dt=0.0, is_in_initial_climb=False, may_be_flying=False)
+    # Except the previous battery reading: connect doesn't wait for a second one (ADR-0069).
+    with_a_previous_reading = dataclasses.replace(snapshot, previous_battery_voltage=Stamped(4.0, 0.0, 0.0))
 
-    assert len(buffer.missing_values()) == count_not_yet_arrived(
-        buffer.snapshot(dt=0.0, is_in_initial_climb=False, may_be_flying=False)
-    )
+    assert len(buffer.missing_values()) == count_not_yet_arrived(with_a_previous_reading)

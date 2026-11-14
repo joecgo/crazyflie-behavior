@@ -774,7 +774,7 @@ def test_taking_over_keeps_the_position_the_drone_already_reported(
     assert position_estimate.value.z == pytest.approx(0.4)
 
 
-def test_after_taking_over_land_runs_the_normal_landing_to_the_cap_not_just_a_motor_stop(
+def test_after_taking_over_land_runs_the_normal_landing_not_just_a_motor_stop(
     taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
 ) -> None:
     # No take-off of ours, so no settle height: the final descent height is the cap (ADR-0056).
@@ -782,6 +782,7 @@ def test_after_taking_over_land_runs_the_normal_landing_to_the_cap_not_just_a_mo
     fake_cflib.samples["state"]["supervisor.info"] = FLYING
     fake_cflib.samples["down"]["range.zrange"] = 600.0
     taking_over_adapter.connect()
+    aim = MAX_FINAL_DESCENT_HEIGHT - adapter_module.LANDING_APPROACH_AIM_BELOW
 
     taking_over_adapter.land()
 
@@ -789,9 +790,9 @@ def test_after_taking_over_land_runs_the_normal_landing_to_the_cap_not_just_a_mo
     commander.go_to.assert_called_once_with(
         0.0,
         0.0,
-        MAX_FINAL_DESCENT_HEIGHT,
+        pytest.approx(aim),
         adapter_module.DEFAULT_YAW_RAD,
-        pytest.approx((0.6 - MAX_FINAL_DESCENT_HEIGHT) / adapter_module.VERTICAL_SPEED),
+        pytest.approx((0.6 - aim) / adapter_module.VERTICAL_SPEED),
     )
     commander.stop.assert_not_called()
 

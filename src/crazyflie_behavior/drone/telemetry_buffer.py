@@ -37,6 +37,7 @@ class TelemetryBuffer:
         self._velocity_uncertainty: Stamped[float] | None = None
         self._range_readings: dict[RangeDirection, Stamped[RangeReading]] = {}
         self._battery_voltage: Stamped[float] | None = None
+        self._previous_battery_voltage: Stamped[float] | None = None
         self._drone_status: Stamped[DroneStatus] | None = None
 
     # --- Writers: called by adapters, from any thread -------------------------
@@ -76,6 +77,7 @@ class TelemetryBuffer:
     def write_battery_voltage(self, voltage: float, drone_time: float | None) -> None:
         stamped = Stamped(voltage, self._clock.now(), drone_time)
         with self._lock:
+            self._previous_battery_voltage = self._battery_voltage
             self._battery_voltage = stamped
 
     def write_drone_status(self, status: DroneStatus, drone_time: float | None) -> None:
@@ -150,6 +152,7 @@ class TelemetryBuffer:
             velocity_uncertainty = self._velocity_uncertainty
             range_readings = dict(self._range_readings)
             battery_voltage = self._battery_voltage
+            previous_battery_voltage = self._previous_battery_voltage
             drone_status = self._drone_status
             time = self._clock.now()
 
@@ -168,6 +171,7 @@ class TelemetryBuffer:
                 down=range_readings.get(RangeDirection.DOWN),
             ),
             battery_voltage=battery_voltage,
+            previous_battery_voltage=previous_battery_voltage,
             drone_status=drone_status,
             is_in_initial_climb=is_in_initial_climb,
             may_be_flying=may_be_flying,

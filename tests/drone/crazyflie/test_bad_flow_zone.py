@@ -5,7 +5,7 @@ import math
 import pytest
 
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
-    LEVEL_VERTICAL_SPEED,
+    DEFAULT_INITIAL_CLIMB_SPEED,
     MAX_FINAL_DESCENT_HEIGHT,
     MAX_INITIAL_CLIMB_SPEED,
     MIN_FINAL_DESCENT_HEIGHT,
@@ -62,6 +62,7 @@ def snapshot_at(
             down=None if down is None else Stamped(RangeReading.at_distance(down), time, None),
         ),
         battery_voltage=None,
+        previous_battery_voltage=None,
         drone_status=None,
         is_in_initial_climb=False,
         may_be_flying=False,
@@ -244,7 +245,7 @@ def test_a_missing_velocity_uncertainty_breaks_the_hold() -> None:
 # --- The initial climb's speed (ADR-0059) -------------------------------------------
 
 
-@pytest.mark.parametrize("climb_speed", [MIN_INITIAL_CLIMB_SPEED, LEVEL_VERTICAL_SPEED, MAX_INITIAL_CLIMB_SPEED])
+@pytest.mark.parametrize("climb_speed", [MIN_INITIAL_CLIMB_SPEED, DEFAULT_INITIAL_CLIMB_SPEED, MAX_INITIAL_CLIMB_SPEED])
 def test_an_initial_climb_speed_in_the_range_is_accepted(climb_speed: float) -> None:
     check_initial_climb_speed(climb_speed)
 

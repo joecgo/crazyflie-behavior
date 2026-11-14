@@ -1,15 +1,17 @@
 """The hover program (ADR-0030): runs the hover test once, for the Hover field test.
 
-Arm, take off to `TAKE_OFF_HEIGHT`, hover, land. It uses the mock adapter
-unless it's run with --crazyflie. With --chirp, the hover test also chirps
-and ends with "Charge" (ADR-0053). --climb-speed sets the initial climb's
-speed, for take-off speed tests (ADR-0059):
+Arm, take off, hover, land. It uses the mock adapter unless it's run with
+--crazyflie. With --chirp, the hover test also chirps and ends with "Charge"
+(ADR-0053). --climb-speed sets the initial climb's speed, for take-off speed
+tests (ADR-0059). --take-off-height sets the height to take off to and hover
+at (ADR-0071):
 
     .venv\\Scripts\\python -m crazyflie_behavior.programs.hover
     .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie
     .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie --hover-seconds 60
     .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie --chirp
-    .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie --climb-speed 0.4
+    .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie --climb-speed 0.2
+    .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie --hover-seconds 5 --take-off-height 1.0
     .venv\\Scripts\\python -m crazyflie_behavior.programs.hover --crazyflie --take-off-log
 
 Each snapshot goes to the log file; the console shows the hover test's steps
@@ -24,9 +26,17 @@ cut short (ADR-0062). The log shows the cause, not the exit code (ADR-0066).
 import argparse
 import sys
 
-from crazyflie_behavior.behaviors.hover_test import CHIRP_PERIOD, DEFAULT_HOVER_DURATION, TAKE_OFF_HEIGHT, HoverTest
+from crazyflie_behavior.behaviors.hover_test import (
+    CHIRP_PERIOD,
+    DEFAULT_HOVER_DURATION,
+    MAX_TAKE_OFF_HEIGHT,
+    MIN_TAKE_OFF_HEIGHT,
+    TAKE_OFF_HEIGHT,
+    HoverTest,
+    check_take_off_height,
+)
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
-    LEVEL_VERTICAL_SPEED,
+    DEFAULT_INITIAL_CLIMB_SPEED,
     MAX_INITIAL_CLIMB_SPEED,
     MIN_INITIAL_CLIMB_SPEED,
     check_initial_climb_speed,
@@ -46,9 +56,7 @@ from crazyflie_behavior.timing.clock import RealClock
 
 def main(arguments: list[str] | None = None) -> int:
     """Run the hover test once. Returns the program's exit code."""
-    parser = argparse.ArgumentParser(
-        prog="hover", description=f"Arm, take off to {TAKE_OFF_HEIGHT:g} m, hover, land (the Hover field test)."
-    )
+    parser = argparse.ArgumentParser(prog="hover", description="Arm, take off, hover, land (the Hover field test).")
     parser.add_argument(
         "--crazyflie",
         action="store_true",
@@ -69,11 +77,21 @@ def main(arguments: list[str] | None = None) -> int:
     parser.add_argument(
         "--climb-speed",
         type=float,
-        default=LEVEL_VERTICAL_SPEED,
+        default=DEFAULT_INITIAL_CLIMB_SPEED,
         metavar="M_PER_S",
         help=(
             f"the initial climb's speed, {MIN_INITIAL_CLIMB_SPEED:g}-{MAX_INITIAL_CLIMB_SPEED:g} m/s "
-            f"(default: {LEVEL_VERTICAL_SPEED:g}); the landing keeps its own"
+            f"(default: {DEFAULT_INITIAL_CLIMB_SPEED:g}); the landing keeps its own"
+        ),
+    )
+    parser.add_argument(
+        "--take-off-height",
+        type=float,
+        default=TAKE_OFF_HEIGHT,
+        metavar="METERS",
+        help=(
+            f"the height to take off to and hover at, {MIN_TAKE_OFF_HEIGHT:g}-{MAX_TAKE_OFF_HEIGHT:g} m "
+            f"(default: {TAKE_OFF_HEIGHT:g})"
         ),
     )
     add_take_off_log_option(parser)
@@ -82,9 +100,15 @@ def main(arguments: list[str] | None = None) -> int:
     hover_duration: float = parsed_arguments.hover_seconds
     chirp: bool = parsed_arguments.chirp
     climb_speed: float = parsed_arguments.climb_speed
+    take_off_height: float = parsed_arguments.take_off_height
     take_off_log: bool = parsed_arguments.take_off_log
+    # Checked first, so a bad height isn't reported as a bad --hover-seconds.
     try:
-        hover_test = HoverTest(hover_duration, chirp=chirp)
+        check_take_off_height(take_off_height)
+    except ValueError as error:
+        parser.error(f"--take-off-height: {error}")
+    try:
+        hover_test = HoverTest(hover_duration, take_off_height=take_off_height, chirp=chirp)
     except ValueError as error:
         parser.error(f"--hover-seconds: {error}")
     try:
@@ -95,7 +119,10 @@ def main(arguments: list[str] | None = None) -> int:
     drone = make_drone(use_crazyflie, clock, initial_climb_speed=climb_speed, take_off_log=take_off_log)
     tick_step = BehaviorTickStep(drone, SafetyLayer(drone), hover_test)
     adapter_name = "the Crazyflie" if use_crazyflie else "the mock adapter"
-    description = f"Hover program, {adapter_name}, hovering {hover_duration:g} s, climbing at {climb_speed:g} m/s"
+    description = (
+        f"Hover program, {adapter_name}, hovering {hover_duration:g} s at {take_off_height:g} m, "
+        f"climbing at {climb_speed:g} m/s"
+    )
     if chirp:
         description += ", with chirps"
     if take_off_log:

@@ -136,6 +136,8 @@ class Snapshot:
     range_readings: RangeReadings
     battery_voltage: Stamped[float] | None
     """Battery voltage in volts."""
+    previous_battery_voltage: Stamped[float] | None
+    """The battery reading before `battery_voltage`, in volts (ADR-0069). None until a second one arrives."""
     drone_status: Stamped[DroneStatus] | None
     is_in_initial_climb: bool
     """Whether the initial climb is running, as the adapter knew when it took the snapshot (ADR-0054)."""

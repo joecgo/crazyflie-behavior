@@ -19,7 +19,7 @@ from crazyflie_behavior.drone.crazyflie.adapter import (
     TAKE_OFF_STATUS_GRACE,
     CrazyflieAdapter,
 )
-from crazyflie_behavior.drone.crazyflie.bad_flow_zone import LEVEL_VERTICAL_SPEED, MAX_FINAL_DESCENT_HEIGHT
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import DEFAULT_INITIAL_CLIMB_SPEED, MAX_FINAL_DESCENT_HEIGHT
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
 from crazyflie_behavior.timing.clock import SimClock
@@ -67,11 +67,11 @@ def fly_above_the_bad_flow_zone(
         if height > 1.0:
             pytest.fail("the initial climb never handed over")
         clock.advance(TICK)
-        height += LEVEL_VERTICAL_SPEED * TICK
+        height += DEFAULT_INITIAL_CLIMB_SPEED * TICK
         telemetry = adapter._telemetry
         if with_position:
             telemetry.write_position_estimate(Vector3(0.5, -0.25, height), None)
-        telemetry.write_velocity_estimate(Vector3(0.0, 0.0, LEVEL_VERTICAL_SPEED), None)
+        telemetry.write_velocity_estimate(Vector3(0.0, 0.0, DEFAULT_INITIAL_CLIMB_SPEED), None)
         telemetry.write_velocity_uncertainty(0.01, None)
         telemetry.write_drone_status(FLYING, None)
         telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(height)}, None)

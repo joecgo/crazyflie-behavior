@@ -18,12 +18,15 @@ import pytest
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
 from crazyflie_behavior.drone.crazyflie.adapter import (
     DEFAULT_YAW_RAD,
+    LANDING_APPROACH_AIM_BELOW,
+    LANDING_APPROACH_BACKUP,
+    MIN_MOVE_DURATION,
     NOT_FLYING_TIME_LIMIT,
     TAKE_OFF_STATUS_GRACE,
     VERTICAL_SPEED,
     CrazyflieAdapter,
 )
-from crazyflie_behavior.drone.crazyflie.bad_flow_zone import LEVEL_VERTICAL_SPEED
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import DEFAULT_INITIAL_CLIMB_SPEED, FINAL_DESCENT_SPEED
 from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE
 from crazyflie_behavior.drone.crazyflie.touchdown import (
     FINAL_DESCENT_MARGIN,
@@ -80,11 +83,11 @@ def fly_above_the_bad_flow_zone(
         if height > 1.0:
             pytest.fail("the initial climb never handed over")
         clock.advance(TICK)
-        height += LEVEL_VERTICAL_SPEED * TICK
+        height += DEFAULT_INITIAL_CLIMB_SPEED * TICK
         telemetry = adapter._telemetry
         if with_position:
             telemetry.write_position_estimate(Vector3(0.5, -0.25, height), None)
-        telemetry.write_velocity_estimate(Vector3(0.0, 0.0, LEVEL_VERTICAL_SPEED), None)
+        telemetry.write_velocity_estimate(Vector3(0.0, 0.0, DEFAULT_INITIAL_CLIMB_SPEED), None)
         telemetry.write_velocity_uncertainty(0.01, None)
         telemetry.write_drone_status(FLYING, None)
         telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(height)}, None)
@@ -155,11 +158,11 @@ def land_and_wait_for_the_landing_approach(adapter: CrazyflieAdapter, clock: Sim
 # --- The landing approach -------------------------------------------------------------
 
 
-def test_the_landing_approach_is_a_go_to_down_to_the_final_descent_height_not_the_firmware_landing(
+def test_the_landing_approach_is_a_go_to_aimed_below_the_final_descent_height_not_the_firmware_landing(
     adapter: CrazyflieAdapter, fake_link: MagicMock
 ) -> None:
     # The firmware's landing switches the motors off when it ends (ADR-0032).
-    height = adapter._final_descent_height
+    height = adapter._final_descent_height - LANDING_APPROACH_AIM_BELOW
 
     adapter.land()
 
@@ -182,7 +185,7 @@ def test_after_an_estimate_that_isnt_finite_the_landing_approach_goes_to_the_las
         "supervisor.info": float(1 << 4),  # flying
     }
     adapter._on_state(1500, nan_state, MagicMock())
-    height = adapter._final_descent_height
+    height = adapter._final_descent_height - LANDING_APPROACH_AIM_BELOW
 
     adapter.land()
 
@@ -212,14 +215,70 @@ def test_without_a_position_estimate_the_landing_approach_goes_straight_down(
 
 
 def test_the_landing_approach_ends_early_when_the_down_range_reaches_the_final_descent_height(
-    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
+    landing_starts = clock.now()
     adapter.land()
+    go_to_duration = fake_link.cf.high_level_commander.go_to.call_args.args[4]
 
     tick(adapter, clock, RangeReading.at_distance(adapter._final_descent_height))
 
-    assert clock.now() < adapter._landing_approach_ends_at
-    assert level_setpoints(fake_link) == [pytest.approx(-LEVEL_VERTICAL_SPEED)]
+    assert clock.now() < landing_starts + go_to_duration
+    assert "hasn't reached the final descent height" not in caplog.text
+    assert level_setpoints(fake_link) == [pytest.approx(-FINAL_DESCENT_SPEED)]
+
+
+@pytest.mark.parametrize("with_position", [True, False], ids=["estimate", "no estimate"])
+def test_the_landing_approach_waits_a_backup_past_the_end_of_its_go_to_for_the_down_range(
+    clock: SimClock, fake_link: MagicMock, with_position: bool, caplog: pytest.LogCaptureFixture
+) -> None:
+    # The drone trails the `go_to`, so it is still above the final descent height when the `go_to` ends (ADR-0068).
+    adapter = CrazyflieAdapter(clock)
+    adapter._sync_crazyflie = fake_link
+    fly_above_the_bad_flow_zone(adapter, clock, fake_link, with_position=with_position)
+    if with_position:
+        adapter._telemetry.write_position_estimate(Vector3(0.5, -0.25, 1.0), None)
+    read_down(adapter, RangeReading.at_distance(1.0))
+    still_above = RangeReading.at_distance(adapter._final_descent_height + 0.05)
+    landing_starts = clock.now()
+    adapter.land()
+    go_to_duration = fake_link.cf.high_level_commander.go_to.call_args.args[4]
+    backup_ends = landing_starts + go_to_duration + LANDING_APPROACH_BACKUP
+
+    clock.sleep_until(backup_ends - 1.5 * TICK)
+    tick(adapter, clock, still_above)
+    assert level_setpoints(fake_link) == []
+    assert "hasn't reached the final descent height" not in caplog.text
+
+    tick(adapter, clock, still_above)
+    assert level_setpoints(fake_link) == [pytest.approx(-FINAL_DESCENT_SPEED)]
+    assert "hasn't reached the final descent height" in caplog.text
+
+
+def test_the_down_range_reaching_the_final_descent_height_at_the_backup_time_ends_the_landing_approach_with_no_warning(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    landing_starts = clock.now()
+    adapter.land()
+    go_to_duration = fake_link.cf.high_level_commander.go_to.call_args.args[4]
+
+    clock.sleep_until(landing_starts + go_to_duration + LANDING_APPROACH_BACKUP)
+    tick(adapter, clock, RangeReading.at_distance(adapter._final_descent_height))
+
+    assert level_setpoints(fake_link) == [pytest.approx(-FINAL_DESCENT_SPEED)]
+    assert "hasn't reached the final descent height" not in caplog.text
+
+
+def test_the_landing_approach_does_not_climb_to_its_aim(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
+    # The estimate already reads below the aim, but the down range says above the final descent height.
+    below_the_aim = adapter._final_descent_height - LANDING_APPROACH_AIM_BELOW - 0.02
+    adapter._telemetry.write_position_estimate(Vector3(0.5, -0.25, below_the_aim), None)
+
+    adapter.land()
+
+    fake_link.cf.high_level_commander.go_to.assert_called_once_with(
+        0.5, -0.25, below_the_aim, DEFAULT_YAW_RAD, MIN_MOVE_DURATION
+    )
 
 
 def test_a_landing_already_at_the_final_descent_height_skips_the_landing_approach(
@@ -230,7 +289,7 @@ def test_a_landing_already_at_the_final_descent_height_skips_the_landing_approac
     adapter.land()
 
     fake_link.cf.high_level_commander.go_to.assert_not_called()
-    assert level_setpoints(fake_link) == [pytest.approx(-LEVEL_VERTICAL_SPEED)]
+    assert level_setpoints(fake_link) == [pytest.approx(-FINAL_DESCENT_SPEED)]
 
 
 def test_the_motors_keep_running_when_the_landing_approach_ends_without_touchdown(
@@ -241,7 +300,7 @@ def test_the_motors_keep_running_when_the_landing_approach_ends_without_touchdow
     tick(adapter, clock, RangeReading.at_distance(0.6))  # the height estimate was stale: still well up
 
     assert not motors_stopped(fake_link)
-    assert level_setpoints(fake_link) == [pytest.approx(-LEVEL_VERTICAL_SPEED)]
+    assert level_setpoints(fake_link) == [pytest.approx(-FINAL_DESCENT_SPEED)]
 
 
 def test_a_new_command_cancels_the_landing_approach(
@@ -266,7 +325,7 @@ def test_the_final_descent_is_level_one_setpoint_each_tick(
 
     tick_for(adapter, clock, 1.0, RangeReading.at_distance(0.6))
 
-    assert level_setpoints(fake_link) == [pytest.approx(-LEVEL_VERTICAL_SPEED)] * round(1.0 / TICK)
+    assert level_setpoints(fake_link) == [pytest.approx(-FINAL_DESCENT_SPEED)] * round(1.0 / TICK)
     assert slow_descent_moves(fake_link) == []
     fake_link.cf.commander.send_notify_setpoint_stop.assert_not_called()
 
@@ -314,8 +373,8 @@ def test_a_down_range_lost_mid_descent_keeps_it_level_until_its_time_limit(
     while not motors_stopped(fake_link):
         tick(adapter, clock, RangeReading.invalid())
 
-    assert clock.now() == pytest.approx(final_descent_starts + 0.6 / LEVEL_VERTICAL_SPEED + FINAL_DESCENT_MARGIN)
-    assert all(speed == pytest.approx(-LEVEL_VERTICAL_SPEED) for speed in level_setpoints(fake_link))
+    assert clock.now() == pytest.approx(final_descent_starts + 0.6 / FINAL_DESCENT_SPEED + FINAL_DESCENT_MARGIN)
+    assert all(speed == pytest.approx(-FINAL_DESCENT_SPEED) for speed in level_setpoints(fake_link))
     assert slow_descent_moves(fake_link) == []
 
 
@@ -335,7 +394,7 @@ def test_a_short_outlier_does_not_shorten_the_time_limit(
     while not motors_stopped(fake_link):
         tick(adapter, clock, RangeReading.invalid())
 
-    assert clock.now() >= final_descent_starts + 0.9 / LEVEL_VERTICAL_SPEED
+    assert clock.now() >= final_descent_starts + 0.9 / FINAL_DESCENT_SPEED
 
 
 def test_without_a_usable_down_range_the_final_descent_is_one_slow_high_level_descent(
@@ -376,7 +435,7 @@ def test_a_land_during_the_final_descent_does_not_restart_the_landing(
     tick(adapter, clock, RangeReading.at_distance(0.19))
 
     assert len(landing_approach_moves(fake_link)) == 1  # no new approach back up to the final descent height
-    assert level_setpoints(fake_link) == [pytest.approx(-LEVEL_VERTICAL_SPEED)] * 2
+    assert level_setpoints(fake_link) == [pytest.approx(-FINAL_DESCENT_SPEED)] * 2
 
 
 def test_commands_during_the_final_descent_are_ignored_and_logged_once(

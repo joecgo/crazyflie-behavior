@@ -1,6 +1,6 @@
 """The hover test (ADR-0030): the behavior for the Hover field test.
 
-Arm, take off to `TAKE_OFF_HEIGHT`, hover, land, then report done. Each step
+Arm, take off (to `TAKE_OFF_HEIGHT` unless set, ADR-0071), hover, land, then report done. Each step
 waits until the snapshot shows it happened, because commands take effect after
 they're sent (latency), and the waits for arming and taking off have time limits.
 
@@ -36,7 +36,11 @@ from crazyflie_behavior.snapshot import Snapshot
 logger = logging.getLogger(__name__)
 
 TAKE_OFF_HEIGHT = 0.5
-"""Meters, as the Hover field test asks."""
+"""Meters: the default, as the Hover field test asks."""
+MIN_TAKE_OFF_HEIGHT = 0.4
+"""Meters: the lowest take-off height the hover test accepts (ADR-0071)."""
+MAX_TAKE_OFF_HEIGHT = 1.0
+"""Meters: the highest take-off height the hover test accepts (ADR-0071)."""
 DEFAULT_HOVER_DURATION = 10.0
 """Seconds."""
 
@@ -46,8 +50,8 @@ HEIGHT_TOLERANCE = 0.1
 ARM_TIME_LIMIT = 2.0
 """Seconds for the drone status to show armed."""
 TAKE_OFF_TIME_LIMIT = 5.0
-"""Seconds to reach the take-off height, with a margin over the take-off's worst case of
-about 3.7 s (the level climb, then the high-level climb)."""
+"""Seconds to reach the take-off height. At the default initial climb speed, the take-off's
+worst case is about 4.5 s to MAX_TAKE_OFF_HEIGHT (the level climb, then the high-level climb)."""
 # ------------------------------------------------------------------------------
 
 # The chirp schedule (ADR-0053).
@@ -126,15 +130,31 @@ _IN_FLIGHT_STEPS = {_Step.TAKING_OFF, _Step.HOVERING, _Step.LANDING}
 """The steps that chirp every `CHIRP_PERIOD`: from the take-off request until the drone status says landed."""
 
 
-class HoverTest(Behavior):
-    """Arm, take off to `TAKE_OFF_HEIGHT`, hover, land, then report done. Optionally with chirps."""
+def check_take_off_height(height: float) -> None:
+    """Raises ValueError unless the height is in the accepted range (ADR-0071)."""
+    if not MIN_TAKE_OFF_HEIGHT <= height <= MAX_TAKE_OFF_HEIGHT:
+        low, high = MIN_TAKE_OFF_HEIGHT, MAX_TAKE_OFF_HEIGHT
+        raise ValueError(f"The take-off height must be {low:g}-{high:g} m: {height}")
 
-    def __init__(self, hover_duration: float = DEFAULT_HOVER_DURATION, *, chirp: bool = False) -> None:
-        """`hover_duration`: seconds to hover once at the take-off height. `chirp`: chirp
-        on the floor, in flight and after landing, then play "Charge" (ADR-0053)."""
+
+class HoverTest(Behavior):
+    """Arm, take off, hover, land, then report done. Optionally with chirps."""
+
+    def __init__(
+        self,
+        hover_duration: float = DEFAULT_HOVER_DURATION,
+        *,
+        take_off_height: float = TAKE_OFF_HEIGHT,
+        chirp: bool = False,
+    ) -> None:
+        """`hover_duration`: seconds to hover once at the take-off height. `take_off_height`:
+        meters (ADR-0071). `chirp`: chirp on the floor, in flight and after landing, then play
+        "Charge" (ADR-0053). Raises ValueError for a duration or height out of range."""
         if not (math.isfinite(hover_duration) and hover_duration >= 0.0):
             raise ValueError(f"Hover duration must be zero or more seconds: {hover_duration}")
+        check_take_off_height(take_off_height)
         self._hover_duration = hover_duration
+        self._take_off_height = take_off_height
         self._chirps = chirp
         self._step = _Step.FLOOR_CHIRP if chirp else _Step.START
         self._step_started_at = 0.0
@@ -177,19 +197,20 @@ class HoverTest(Behavior):
                 self._arm(ask_safety_layer, now)
             case _Step.ARMING:
                 if status.value.is_armed:
-                    if self._ask(ask_safety_layer, TakeOff(TAKE_OFF_HEIGHT), now):
-                        logger.info("Hover test: armed. Taking off to %.2f m", TAKE_OFF_HEIGHT)
+                    if self._ask(ask_safety_layer, TakeOff(self._take_off_height), now):
+                        logger.info("Hover test: armed. Taking off to %.2f m", self._take_off_height)
                         self._start_step(_Step.TAKING_OFF, now)
                         self._next_chirp_at = now + CHIRP_PERIOD
                 elif time_in_step > ARM_TIME_LIMIT:
                     self._fail(f"the drone didn't report armed within {ARM_TIME_LIMIT:g} s", now)
             case _Step.TAKING_OFF:
-                if abs(height - TAKE_OFF_HEIGHT) <= HEIGHT_TOLERANCE:
+                if abs(height - self._take_off_height) <= HEIGHT_TOLERANCE:
                     logger.info("Hover test: at %.2f m. Hovering for %g s", height, self._hover_duration)
                     self._start_step(_Step.HOVERING, now)
                 elif time_in_step > TAKE_OFF_TIME_LIMIT:
                     self._fail(
-                        f"not at {TAKE_OFF_HEIGHT:.2f} m after {TAKE_OFF_TIME_LIMIT:g} s (at {height:.2f} m). Landing.",
+                        f"not at {self._take_off_height:.2f} m after {TAKE_OFF_TIME_LIMIT:g} s "
+                        f"(at {height:.2f} m). Landing.",
                         now,
                     )
                     self._land(ask_safety_layer, now)

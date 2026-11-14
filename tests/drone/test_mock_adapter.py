@@ -3,7 +3,8 @@ import math
 import pytest
 
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
-    LEVEL_VERTICAL_SPEED,
+    DEFAULT_INITIAL_CLIMB_SPEED,
+    FINAL_DESCENT_SPEED,
     MAX_FINAL_DESCENT_HEIGHT,
     MIN_FINAL_DESCENT_HEIGHT,
     SETTLE_CAP_HEIGHT,
@@ -28,8 +29,10 @@ from crazyflie_behavior.snapshot import (
 from crazyflie_behavior.timing.clock import SimClock
 
 TICK = 0.05
-LEVEL_STEP = LEVEL_VERTICAL_SPEED * TICK
-"""Meters climbed or descended per tick in a level part."""
+CLIMB_STEP = DEFAULT_INITIAL_CLIMB_SPEED * TICK
+"""Meters climbed per tick in the initial climb."""
+DESCENT_STEP = FINAL_DESCENT_SPEED * TICK
+"""Meters descended per tick in the final descent."""
 
 
 def tick(drone: MockAdapter, clock: SimClock, dt: float = TICK) -> None:
@@ -104,7 +107,7 @@ def test_take_off_climbs_level_to_the_lowest_final_descent_height_then_is_at_its
         heights.append(height_now(drone))
         assert status_of(snapshot_now(drone)).is_flying
 
-    assert heights[:-1] == [pytest.approx(n * LEVEL_STEP) for n in range(1, len(heights))]
+    assert heights[:-1] == [pytest.approx(n * CLIMB_STEP) for n in range(1, len(heights))]
     assert heights[-1] == 0.8  # the high-level climb to the height, teleported
     assert position_of(snapshot_now(drone)).x == 0.0
 
@@ -143,7 +146,7 @@ def test_commands_during_the_initial_climb_are_ignored() -> None:
     drone.hover()
     tick(drone, clock)
 
-    assert xyz(position_of(snapshot_now(drone))) == pytest.approx((0.0, 0.0, 2 * LEVEL_STEP))
+    assert xyz(position_of(snapshot_now(drone))) == pytest.approx((0.0, 0.0, 2 * CLIMB_STEP))
 
 
 def test_an_initial_climb_without_updates_for_too_long_drops_the_drone() -> None:
@@ -170,8 +173,8 @@ def test_land_teleports_to_the_final_descent_height_then_descends_level_to_the_f
     drone.land()
     heights = tick_until_landed(drone, clock)
 
-    assert heights[0] == pytest.approx(MIN_FINAL_DESCENT_HEIGHT - LEVEL_STEP)
-    assert heights[:-1] == [pytest.approx(MIN_FINAL_DESCENT_HEIGHT - n * LEVEL_STEP) for n in range(1, len(heights))]
+    assert heights[0] == pytest.approx(MIN_FINAL_DESCENT_HEIGHT - DESCENT_STEP)
+    assert heights[:-1] == [pytest.approx(MIN_FINAL_DESCENT_HEIGHT - n * DESCENT_STEP) for n in range(1, len(heights))]
     assert heights[-1] == 0.0
 
 
@@ -184,7 +187,7 @@ def test_after_a_take_over_the_landing_descends_from_the_cap() -> None:
     drone.land()
     tick(drone, clock)
 
-    assert height_now(drone) == pytest.approx(MAX_FINAL_DESCENT_HEIGHT - LEVEL_STEP)
+    assert height_now(drone) == pytest.approx(MAX_FINAL_DESCENT_HEIGHT - DESCENT_STEP)
 
 
 def test_land_during_the_initial_climb_descends_level_from_where_it_is() -> None:
@@ -199,7 +202,7 @@ def test_land_during_the_initial_climb_descends_level_from_where_it_is() -> None
     drone.land()
     heights = tick_until_landed(drone, clock)
 
-    assert heights[0] == pytest.approx(4 * LEVEL_STEP)
+    assert heights[0] == pytest.approx(5 * CLIMB_STEP - DESCENT_STEP)
     assert heights[-1] == 0.0
 
 
@@ -216,7 +219,9 @@ def test_commands_during_the_final_descent_are_ignored() -> None:
     drone.land()
     tick(drone, clock)
 
-    assert xyz(position_of(snapshot_now(drone))) == pytest.approx((0.0, 0.0, MIN_FINAL_DESCENT_HEIGHT - 2 * LEVEL_STEP))
+    assert xyz(position_of(snapshot_now(drone))) == pytest.approx(
+        (0.0, 0.0, MIN_FINAL_DESCENT_HEIGHT - 2 * DESCENT_STEP)
+    )
 
 
 def test_disconnecting_finishes_a_landing_at_once() -> None:
@@ -659,7 +664,7 @@ def test_a_climb_over_a_dark_floor_lower_than_the_cap_settles_where_flow_arrives
     drone.take_off(0.8)
     heights = climb(drone, clock)
 
-    assert heights[-2] == pytest.approx(final_descent_height(0.2), abs=LEVEL_STEP)
+    assert heights[-2] == pytest.approx(final_descent_height(0.2), abs=CLIMB_STEP)
     assert heights[-1] == pytest.approx(0.8)
 
 
@@ -671,7 +676,7 @@ def test_a_climb_over_a_dark_floor_higher_than_the_cap_lands() -> None:
     drone.take_off(0.8)
     heights = climb(drone, clock) + tick_until_landed(drone, clock)
 
-    assert max(heights) == pytest.approx(SETTLE_CAP_HEIGHT, abs=LEVEL_STEP)
+    assert max(heights) == pytest.approx(SETTLE_CAP_HEIGHT, abs=CLIMB_STEP)
     assert not status_of(snapshot_now(drone)).is_flying
 
 
@@ -681,7 +686,7 @@ def test_a_flow_cut_after_the_settle_height_doesnt_undo_it() -> None:
     settle_height = SETTLE_CAP_HEIGHT - 0.03  # its final descent height is above the cap
     drone.set_dark_floor(settle_height)
     drone.take_off(0.8)
-    while height_now(drone) < SETTLE_CAP_HEIGHT - LEVEL_STEP:
+    while height_now(drone) < SETTLE_CAP_HEIGHT - CLIMB_STEP:
         tick(drone, clock)
 
     drone.cut_flow()
@@ -745,7 +750,7 @@ def test_an_estimate_reset_in_flight_is_ignored() -> None:
 
 def test_take_off_climbs_level_at_a_set_initial_climb_speed() -> None:
     clock = SimClock()
-    drone = MockAdapter(clock, initial_climb_speed=0.4)
+    drone = MockAdapter(clock, initial_climb_speed=0.3)  # neither the default nor the final descent's
     drone.connect()
     drone.arm()
 
@@ -753,7 +758,7 @@ def test_take_off_climbs_level_at_a_set_initial_climb_speed() -> None:
     tick(drone, clock)
     tick(drone, clock)
 
-    assert height_now(drone) == pytest.approx(2 * 0.4 * TICK)
+    assert height_now(drone) == pytest.approx(2 * 0.3 * TICK)
 
 
 def test_an_initial_climb_speed_outside_the_range_is_refused() -> None:

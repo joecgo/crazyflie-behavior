@@ -103,6 +103,7 @@ def test_a_failed_pre_check_skips_the_behavior_but_not_take_off_and_landing_and_
     drone = RecordingDrone(clock, events)
     drone.connect()
     drone.set_battery_voltage(3.0)
+    drone.set_battery_voltage(3.0)  # two readings in a row (ADR-0069)
     tick_step = BehaviorTickStep(drone, RecordingSafetyLayer(drone, events), RecordingBehavior(events))
 
     is_done = tick_step.run(clock.now(), TICK_PERIOD)
@@ -163,6 +164,7 @@ def test_a_low_battery_mid_hover_lands_the_drone_and_ends_the_flight(
         clock.advance(TICK_PERIOD)
 
     drone.set_battery_voltage(3.1)
+    drone.set_battery_voltage(3.1)  # two readings in a row (ADR-0069)
     is_done = tick_step.run(clock.now(), TICK_PERIOD)
 
     assert is_done

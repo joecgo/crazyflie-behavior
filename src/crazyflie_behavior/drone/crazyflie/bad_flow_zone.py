@@ -10,8 +10,10 @@ from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY
 from crazyflie_behavior.snapshot import Snapshot
 
 # PLACEHOLDERS, to verify in flight (ADR-0048, ADR-0056).
-LEVEL_VERTICAL_SPEED = 0.2
-"""Meters per second: down in the level final descent, and the initial climb's default."""
+FINAL_DESCENT_SPEED = 0.2
+"""Meters per second: down in the level final descent (ADR-0070)."""
+DEFAULT_INITIAL_CLIMB_SPEED = 0.4
+"""Meters per second: the initial climb's speed unless a program sets it (ADR-0070)."""
 MIN_INITIAL_CLIMB_SPEED = 0.1
 """Meters per second: the slowest initial climb an adapter accepts (ADR-0059)."""
 MAX_INITIAL_CLIMB_SPEED = 0.4

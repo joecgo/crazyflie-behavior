@@ -14,10 +14,13 @@ from crazyflie_behavior.behaviors.hover_test import (
     CHIRP_PERIOD,
     FLOOR_CHIRP_WAIT,
     LANDED_CHIRP_DELAY,
+    MAX_TAKE_OFF_HEIGHT,
+    MIN_TAKE_OFF_HEIGHT,
     SILENCE_HOLD,
     TAKE_OFF_HEIGHT,
     TAKE_OFF_TIME_LIMIT,
     HoverTest,
+    check_take_off_height,
     note_pitch,
 )
 from crazyflie_behavior.geometry import Vector3
@@ -61,6 +64,7 @@ def snapshot(time: float, status: DroneStatus, height: float = 0.0) -> Snapshot:
         velocity_uncertainty=fresh(0.01),
         range_readings=RangeReadings(None, None, None, None, None, fresh(RangeReading.at_distance(height))),
         battery_voltage=fresh(4.0),
+        previous_battery_voltage=None,
         drone_status=fresh(status),
         is_in_initial_climb=False,
         may_be_flying=status.is_flying,
@@ -256,6 +260,65 @@ def test_it_makes_each_request_once() -> None:
 def test_a_hover_duration_that_is_negative_or_endless_is_a_bug(hover_duration: float) -> None:
     with pytest.raises(ValueError, match="Hover duration"):
         HoverTest(hover_duration)
+
+
+# --- A set take-off height (ADR-0071) --------------------------------------------------
+
+SET_HEIGHT = 1.0
+"""Meters: a take-off height other than the default."""
+
+
+def test_with_a_set_take_off_height_it_takes_off_to_that_height() -> None:
+    safety_layer = SafetyLayerStandIn()
+    hover_test = HoverTest(take_off_height=SET_HEIGHT)
+    hover_test.tick(snapshot(0.0, ON_THE_FLOOR), safety_layer)
+
+    hover_test.tick(snapshot(0.25, ARMED), safety_layer)
+
+    assert safety_layer.requests == [Arm(), TakeOff(SET_HEIGHT)]
+
+
+def test_with_a_set_take_off_height_it_starts_hovering_only_close_to_that_height() -> None:
+    safety_layer = SafetyLayerStandIn()
+    hover_test = HoverTest(hover_duration=0.0, take_off_height=SET_HEIGHT)
+    hover_test.tick(snapshot(0.0, ON_THE_FLOOR), safety_layer)
+    hover_test.tick(snapshot(0.25, ARMED), safety_layer)
+
+    hover_test.tick(snapshot(0.5, FLYING, height=TAKE_OFF_HEIGHT), safety_layer)  # the default height
+    hover_test.tick(snapshot(0.75, FLYING, height=SET_HEIGHT), safety_layer)
+    requests_when_it_got_there = list(safety_layer.requests)
+    hover_test.tick(snapshot(1.0, FLYING, height=SET_HEIGHT), safety_layer)
+
+    assert requests_when_it_got_there == [Arm(), TakeOff(SET_HEIGHT)]
+    assert safety_layer.requests[-1] == Land()  # hovered for 0 s, so it lands
+
+
+def test_with_a_set_take_off_height_the_time_limit_failure_names_that_height(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    safety_layer = SafetyLayerStandIn()
+    hover_test = HoverTest(take_off_height=SET_HEIGHT)
+    hover_test.tick(snapshot(0.0, ON_THE_FLOOR), safety_layer)
+    hover_test.tick(snapshot(0.25, ARMED), safety_layer)  # take-off starts
+
+    hover_test.tick(snapshot(0.5 + TAKE_OFF_TIME_LIMIT, FLYING, TAKE_OFF_HEIGHT), safety_layer)
+
+    assert safety_layer.requests[-1] == Land()
+    assert errors_in(caplog) == ["Hover test failed: not at 1.00 m after 5 s (at 0.50 m). Landing."]
+
+
+@pytest.mark.parametrize("height", [MIN_TAKE_OFF_HEIGHT, TAKE_OFF_HEIGHT, MAX_TAKE_OFF_HEIGHT])
+def test_a_take_off_height_in_the_range_is_accepted(height: float) -> None:
+    check_take_off_height(height)
+    HoverTest(take_off_height=height)
+
+
+@pytest.mark.parametrize("height", [0.39, 1.01, 0.0, -0.5, math.nan, math.inf])
+def test_a_take_off_height_outside_the_range_is_refused(height: float) -> None:
+    with pytest.raises(ValueError, match=r"The take-off height must be 0\.4-1 m"):
+        check_take_off_height(height)
+    with pytest.raises(ValueError, match=r"The take-off height must be 0\.4-1 m"):
+        HoverTest(take_off_height=height)
 
 
 # --- With chirps (ADR-0053) -----------------------------------------------------------

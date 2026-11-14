@@ -67,12 +67,15 @@ def snapshot(
     down_age: float = 0.0,
     battery_voltage: float = 4.0,
     battery_age: float = 0.0,
+    previous_battery_voltage: float | None = None,
     velocity_uncertainty: float = 0.01,
     velocity_uncertainty_age: float = 0.0,
     is_in_initial_climb: bool = False,
     may_be_flying: bool | None = None,
 ) -> Snapshot:
     """A hand-built snapshot: everything fresh and the battery charged, unless asked otherwise.
+
+    The previous battery reading, if any, arrived a second before the latest.
 
     `may_be_flying` follows the status unless set.
     """
@@ -92,6 +95,9 @@ def snapshot(
             down=stamped(RangeReading.at_distance(height), down_age),
         ),
         battery_voltage=stamped(battery_voltage, battery_age),
+        previous_battery_voltage=(
+            None if previous_battery_voltage is None else stamped(previous_battery_voltage, battery_age + 1.0)
+        ),
         drone_status=stamped(status, status_age),
         is_in_initial_climb=is_in_initial_climb,
         may_be_flying=status.is_flying if may_be_flying is None else may_be_flying,
@@ -175,6 +181,39 @@ def test_a_battery_below_the_landing_voltage_fails() -> None:
     ]
 
 
+# A low reading needs a low one before it (ADR-0069). The one-reading test above has no previous reading.
+
+
+def test_two_battery_readings_in_a_row_below_the_low_battery_limit_fail() -> None:
+    low = LOW_BATTERY_VOLTAGE - 0.01
+
+    assert safety_pre_check(snapshot(battery_voltage=low, previous_battery_voltage=low)) == [
+        "battery at 3.19 V (land below 3.20 V)"
+    ]
+
+
+def test_one_low_battery_reading_after_one_at_the_limit_passes() -> None:
+    low = LOW_BATTERY_VOLTAGE - 0.01
+
+    assert safety_pre_check(snapshot(battery_voltage=low, previous_battery_voltage=LOW_BATTERY_VOLTAGE)) == []
+
+
+def test_a_battery_reading_at_the_limit_after_a_low_one_passes() -> None:
+    previous_low = LOW_BATTERY_VOLTAGE - 0.01
+
+    assert safety_pre_check(snapshot(battery_voltage=LOW_BATTERY_VOLTAGE, previous_battery_voltage=previous_low)) == []
+
+
+@pytest.mark.parametrize("previous", [math.nan, math.inf])
+def test_a_previous_battery_reading_that_isnt_finite_counts_as_low(previous: float) -> None:
+    low = LOW_BATTERY_VOLTAGE - 0.01
+
+    assert safety_pre_check(snapshot(battery_voltage=low, previous_battery_voltage=previous)) == [
+        "battery at 3.19 V (land below 3.20 V)"
+    ]
+    assert safety_pre_check(snapshot(battery_voltage=LOW_BATTERY_VOLTAGE, previous_battery_voltage=previous)) == []
+
+
 @pytest.mark.parametrize("voltage", [math.nan, math.inf])
 def test_a_battery_voltage_that_isnt_finite_fails(voltage: float) -> None:
     assert safety_pre_check(snapshot(battery_voltage=voltage)) == [f"battery voltage isn't finite: {voltage} V"]
@@ -227,6 +266,15 @@ def test_a_take_off_is_approved_at_the_take_off_voltage_and_refused_below_it() -
     assert judge(TakeOff(0.5), snapshot(ARMED, battery_voltage=TAKE_OFF_BATTERY_VOLTAGE - 0.01)).reason == (
         "battery at 3.61 V (take off from 3.62 V)"
     )
+
+
+def test_a_take_off_is_judged_on_the_latest_battery_reading_alone() -> None:
+    below = TAKE_OFF_BATTERY_VOLTAGE - 0.01
+    after_a_low_one = snapshot(ARMED, battery_voltage=TAKE_OFF_BATTERY_VOLTAGE, previous_battery_voltage=below)
+    after_a_high_one = snapshot(ARMED, battery_voltage=below, previous_battery_voltage=TAKE_OFF_BATTERY_VOLTAGE)
+
+    assert judge(TakeOff(0.5), after_a_low_one).is_approved
+    assert judge(TakeOff(0.5), after_a_high_one).reason == "battery at 3.61 V (take off from 3.62 V)"
 
 
 def test_a_take_off_is_refused_without_a_battery_voltage() -> None:

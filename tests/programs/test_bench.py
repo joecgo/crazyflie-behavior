@@ -143,6 +143,7 @@ def test_the_summary_says_when_a_value_has_not_arrived_yet() -> None:
         velocity_uncertainty=None,
         range_readings=no_readings,
         battery_voltage=None,
+        previous_battery_voltage=None,
         drone_status=None,
         is_in_initial_climb=False,
         may_be_flying=False,

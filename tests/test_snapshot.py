@@ -45,6 +45,7 @@ def test_a_snapshot_cannot_be_modified() -> None:
         velocity_uncertainty=None,
         range_readings=no_ranges,
         battery_voltage=None,
+        previous_battery_voltage=None,
         drone_status=None,
         is_in_initial_climb=False,
         may_be_flying=False,

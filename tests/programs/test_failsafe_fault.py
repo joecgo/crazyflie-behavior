@@ -40,6 +40,8 @@ class StandInDrone(DroneInterface):
         self.status = FLYING
         self.height = HEIGHT
         self.battery_voltage: Stamped[float] | None = Stamped(3.9, arrival_time=0.0, drone_time=None)
+        self.previous_battery_voltage: float | None = 3.95
+        """The previous battery reading's value; it arrives a second before the snapshot's time."""
         self.down: RangeReading | None = None
         """The down range reading; None means a distance equal to the height."""
         self.down_arrival_time: float | None = None
@@ -106,6 +108,11 @@ class StandInDrone(DroneInterface):
             velocity_uncertainty=fresh(0.01),
             range_readings=RangeReadings(None, None, None, None, None, self._down_reading(time)),
             battery_voltage=None if self.battery_voltage is None else fresh(self.battery_voltage.value),
+            previous_battery_voltage=(
+                None
+                if self.previous_battery_voltage is None
+                else Stamped(self.previous_battery_voltage, arrival_time=time - 1.0, drone_time=time - 1.0)
+            ),
             drone_status=fresh(self.status),
             is_in_initial_climb=False,
             may_be_flying=self.status.is_flying,
@@ -149,7 +156,7 @@ def test_snapshots_are_the_real_ones_until_the_drone_has_hovered_for_the_hover_d
     assert not wrapper.has_forged_battery_voltage
 
 
-def test_after_the_hover_duration_the_battery_voltage_is_forged_and_nothing_else() -> None:
+def test_after_the_hover_duration_both_battery_readings_are_forged_and_nothing_else() -> None:
     stand_in, wrapper = hovered_drone()
     time = 1.0 + HOVER_DURATION_BEFORE_FAULT
     real = snapshot_at(time, stand_in)
@@ -162,8 +169,17 @@ def test_after_the_hover_duration_the_battery_voltage_is_forged_and_nothing_else
     assert snapshot.battery_voltage.value == FORGED_BATTERY_VOLTAGE
     # The timestamps stay real, so the forged value is as fresh as the real one: only its value is a lie.
     assert snapshot.battery_voltage.arrival_time == real.battery_voltage.arrival_time
-    assert replace(snapshot, battery_voltage=real.battery_voltage) == real  # every other field is real
+    # The previous reading is forged too, so the pre-check fails at once (ADR-0069).
+    assert snapshot.previous_battery_voltage is not None
+    assert real.previous_battery_voltage is not None
+    assert snapshot.previous_battery_voltage.value == FORGED_BATTERY_VOLTAGE
+    assert snapshot.previous_battery_voltage.arrival_time == real.previous_battery_voltage.arrival_time
+    every_other_field_real = replace(
+        snapshot, battery_voltage=real.battery_voltage, previous_battery_voltage=real.previous_battery_voltage
+    )
+    assert every_other_field_real == real
     assert real.battery_voltage.value == 3.9  # the real snapshot isn't modified
+    assert real.previous_battery_voltage.value == 3.95
 
 
 def test_the_forged_snapshot_fails_the_real_safety_pre_check_for_the_battery_only() -> None:
@@ -257,6 +273,17 @@ def test_a_missing_battery_voltage_is_left_missing_for_the_pre_check_to_fail_on(
 
     assert snapshot.battery_voltage is None
     assert not wrapper.has_forged_battery_voltage
+
+
+def test_a_missing_previous_battery_reading_is_left_missing_and_the_forged_one_fails_alone() -> None:
+    stand_in, wrapper = hovered_drone()
+    stand_in.previous_battery_voltage = None
+
+    snapshot = snapshot_at(1.0 + HOVER_DURATION_BEFORE_FAULT, stand_in, wrapper)
+
+    assert snapshot.previous_battery_voltage is None
+    assert forged(snapshot)
+    assert safety_pre_check(snapshot)[0].startswith("battery at 3.00 V")
 
 
 def test_every_command_goes_to_the_real_drone_unchanged() -> None:

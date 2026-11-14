@@ -2,9 +2,9 @@
 
 A wrapper around a drone. It hands the safety layer the real snapshot until its
 trigger fires (the drone has hovered for a while, or is climbing and is clear
-of the floor, ADR-0049), then the same snapshot with the battery voltage
-replaced by one below the safety pre-check's limit, so the real pre-check fails
-and the real failsafe lands the drone. Every other field stays real, down range
+of the floor, ADR-0049), then the same snapshot with both battery readings
+replaced by a voltage below the safety pre-check's limit, so the real pre-check
+fails at once (ADR-0069) and the real failsafe lands the drone. Every other field stays real, down range
 included: the landing uses it for touchdown (ADR-0032). Everything else is
 delegated to the real drone.
 
@@ -91,8 +91,14 @@ class ForgedLowBatteryDrone(DroneInterface):
         if not self._has_forged:
             logger.warning("FAULT INJECTED: battery voltage forged")
             self._has_forged = True
-        # The snapshot is frozen: this is a copy with one value replaced, keeping the real timestamps.
-        return replace(snapshot, battery_voltage=replace(battery_voltage, value=FORGED_BATTERY_VOLTAGE))
+        # The snapshot is frozen: this is a copy with the battery readings replaced, keeping the real
+        # timestamps. Both are forged, so the pre-check fails at once (ADR-0069).
+        previous = snapshot.previous_battery_voltage
+        return replace(
+            snapshot,
+            battery_voltage=replace(battery_voltage, value=FORGED_BATTERY_VOLTAGE),
+            previous_battery_voltage=None if previous is None else replace(previous, value=FORGED_BATTERY_VOLTAGE),
+        )
 
     def _has_fault_started(self, snapshot: Snapshot) -> bool:
         """Whether this snapshot is at or after the trigger. The trigger latches: once started, it stays started."""
