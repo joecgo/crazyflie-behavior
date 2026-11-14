@@ -68,6 +68,9 @@ one tick took.
   function that sends commands or changes state says so in its name. Work
   that has to run every tick gets its own call, decided like any interface
   change, not hidden in a function that already runs each tick.
+- **A function that only answers yes or no asks a question:** `is_finite`,
+  `has_failed`, `_is_hovering`. A function that does work and returns a
+  bool, such as `tick`, keeps its verb.
 - **Name what the code receives, not the raw input that usually sends it:**
   the interrupt signal, not Ctrl+C; a command, not its key. Only instructions
   for the operator name the key to press.
