@@ -1,6 +1,6 @@
 # 0056: ADR-0048 as built: low take-off targets are a bug, the initial climb has a time limit, commands wait out the level parts
 
-- **Status:** Accepted. Amends [ADR-0048](0048-level-through-the-bad-flow-zone.md): the rules below, and its field-test plan. Closes backlog #56.
+- **Status:** Accepted. Amends [ADR-0048](0048-level-through-the-bad-flow-zone.md): the rules below, and its field-test plan. Closes backlog #56. Amended by [ADR-0068](0068-landing-approach-aims-below-the-final-descent-height.md), 2026-11-13: the landing approach's aim, and its time limit, now a backup.
 - **Date:** 2026-11-07
 - **Origin:** Mixed. Raising for low targets, the cap as the minimum, the climb time limit, ignoring commands while level, the cap as the final descent height without a take-off, and the settle hold's 0.10 m start: AI recommendations accepted. No separate initial-climb test, and no flashlight in session 2: mine.
 

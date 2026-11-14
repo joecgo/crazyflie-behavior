@@ -29,16 +29,16 @@ decisions are recorded), *communication* (how Claude explains things).
 |---|---|---|
 | design | 4 | 20 |
 | safety design | 5 | 18 |
-| recommendation | 7 | 5 |
+| recommendation | 7 | 6 |
 | environment | 4 | 9 |
-| communication | 7 | 34 |
+| communication | 7 | 36 |
 | testing | 0 | 12 |
-| process | 5 | 17 |
-| **Total** | **32** | **115** |
+| process | 5 | 19 |
+| **Total** | **32** | **120** |
 
 Of the 32 I pointed out, a later Claude review would probably have caught
-none, maybe 7, and probably not 25. So far, 7 of the 12 recommendation
-mistakes needed me, and 7 of the 41 communication mistakes. The first
+none, maybe 7, and probably not 25. So far, 7 of the 13 recommendation
+mistakes needed me, and 7 of the 43 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -573,6 +573,71 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-14: The forged drone changed, but not its ADR or glossary row
+
+- **What happened:** building ADR-0069, I made the forged low battery drone
+  forge both battery readings. ADR-0041's "as built" still said it replaces
+  only `battery_voltage`, its status line had no "Amended by ADR-0069" (and
+  ADR-0069's status didn't name ADR-0041), and the glossary's *Fault
+  injection* row still says it "replaces one value in the snapshot".
+- **How it was caught:** `/project-review` of ADR-0069's code.
+- **Kind:** process.
+- **Takeaway:** when code changes what an older ADR's "as built" describes,
+  search the ADRs and the glossary for the old wording. The review checklist
+  already asks this.
+
+### 2026-11-14: A helper and a test whose names said something else
+
+- **What happened:** the safety pre-check's helper for the previous battery
+  reading was named `_was_battery_low`, though it returns true for a missing
+  reading, and its docstring called the previous reading "the low-battery
+  limit's second reading in a row", when it's the first of the two. A new
+  test named "above the limit" used a reading at the limit.
+- **How it was caught:** `/project-review` of ADR-0069's code.
+- **Kind:** communication.
+- **Takeaway:** check a new name against every case it returns true for, and
+  a test's name against its values.
+
+### 2026-11-13: A flight started without reading how the last one ended
+
+- **What happened:** in First flight 5 I started flight 8 after reading only
+  the last three lines of flight 7's terminal output ("Disconnected"). Flight
+  7 had ended on a failed safety pre-check ("the drone reports it has
+  tumbled"), and its tick loop stopped before "Charge". The README says no
+  more flights after an abnormal end until it is written up. It turned out
+  harmless: Joe had picked the drone up after it landed. That wasn't known
+  when flight 8 started.
+- **How it was caught:** the First flight 5 analysis, reading flight 7's log.
+- **Kind:** process.
+- **Takeaway:** before starting another flight, read how the last one ended:
+  the tick loop's and the safety layer's last lines, not only the disconnect.
+
+### 2026-11-13: A chance worked out for a battery reading that arrives at a fixed time
+
+- **What happened:** the First flight 4 analysis and backlog #91 said the
+  once-a-second battery reading falls in the dip at spin-up in "roughly 5-15%
+  of take-offs". In all six flights that reading came 0.07-0.17 s before the
+  take-off and the next about 0.9 s after it: `connect()` ends on the first
+  battery reading, and the programs take off right after. Today's programs
+  miss the dip by their timing; only a take-off at another moment could read
+  it. The same note said the voltage was back above 3.20 V within 0.1-0.15 s;
+  two flights had two readings in a row under it.
+- **How it was caught:** listing each flight's battery readings by time, to
+  weigh the options for #91.
+- **Kind:** communication.
+- **Takeaway:** before giving a chance that a reading falls somewhere, list
+  when the readings fell.
+
+### 2026-11-13: An option offered for the landing approach that the code already has
+
+- **What happened:** the handoff and backlog #93 listed "end the approach when
+  the down range reaches the final descent height" as the change to make. The
+  adapter's `_update_landing` already ends the approach on that reading; the
+  plan's time runs out first because the drone lags the plan.
+- **How it was caught:** reading the adapter before weighing the options.
+- **Kind:** recommendation.
+- **Takeaway:** read the code path before writing an option for it.
 
 ### 2026-11-13: Hover heights taken from the moment the hover started
 

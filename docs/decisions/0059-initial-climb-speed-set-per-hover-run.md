@@ -1,6 +1,6 @@
 # 0059: The hover program sets the initial climb's speed, 0.1-0.4 m/s, for take-off speed tests
 
-- **Status:** Accepted. Amends [ADR-0048](0048-level-through-the-bad-flow-zone.md): the initial climb's speed can differ from the final descent's, and the initial climb's time limit scales with it.
+- **Status:** Accepted. Amends [ADR-0048](0048-level-through-the-bad-flow-zone.md): the initial climb's speed can differ from the final descent's, and the initial climb's time limit scales with it. Amended by [ADR-0070](0070-initial-climb-default-0-4-m-per-s.md), 2026-11-13: the default climb speed is 0.4 m/s.
 - **Date:** 2026-11-09
 - **Origin:** Mixed. Testing take-off speeds in low light, steady speeds first, and a flag on the hover program for the climb only: mine. The adapter setting, the 0.1-0.4 m/s range and the scaled time limit: AI recommendations accepted.
 

@@ -1,6 +1,6 @@
 # 0051: Land below 3.2 V in flight; take off only above 3.2 V plus the sag
 
-- **Status:** Accepted. Amends [ADR-0030](0030-minimal-safety-layer-for-first-flight.md): the low-battery limit is set, and its firmware backup is corrected. Closes backlog #50.
+- **Status:** Accepted. Amends [ADR-0030](0030-minimal-safety-layer-for-first-flight.md): the low-battery limit is set, and its firmware backup is corrected. Closes backlog #50. Amended by [ADR-0069](0069-low-battery-needs-two-readings-in-a-row.md), 2026-11-13: the in-flight limit needs two low readings in a row.
 - **Date:** 2026-11-05
 - **Origin:** Mixed. Landing at 3.2 V and a separate take-off limit set by a sag value: mine, over the AI's recommendation to keep 3.40 V until measured. A sag value of 0.42 V: mine, over the AI's 0.51 V. Judging the limit on the take-off request, checking the hardware docs first and a planned test below 3.37 V: AI recommendations accepted.
 
