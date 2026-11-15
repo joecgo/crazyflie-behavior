@@ -1,6 +1,6 @@
 # 0070: The initial climb's default speed is 0.4 m/s; the final descent keeps 0.2 m/s
 
-- **Status:** Accepted. Amends [ADR-0059](0059-initial-climb-speed-set-per-hover-run.md): the default climb speed. Closes backlog #95 and #78.
+- **Status:** Accepted. Amends [ADR-0059](0059-initial-climb-speed-set-per-hover-run.md): the default climb speed. Closes backlog #95 and #78. Amended by [ADR-0072](0072-final-descent-0-3-m-per-s.md), 2026-11-14: the final descent flies at 0.3 m/s.
 - **Date:** 2026-11-13
 - **Origin:** Mixed. 0.4 m/s as the default: mine. Splitting the constant: AI recommendation accepted. Closing #78: AI recommendation accepted.
 

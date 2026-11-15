@@ -80,5 +80,6 @@ This column is honest about which ideas were mine.
 | [0069](0069-low-battery-needs-two-readings-in-a-row.md) | The low-battery limit needs two readings in a row, with the snapshot carrying the previous one; the sag value stays 0.42 V; amends 0051 and 0030 | Mixed: two readings in a row was an AI recommendation accepted; keeping 0.42 V was mine, over the AI's 0.5 V |
 | [0070](0070-initial-climb-default-0-4-m-per-s.md) | The initial climb's default speed is 0.4 m/s, so the failsafe tests fly it; the final descent keeps 0.2 m/s with its own constant; amends 0059 | Mixed: 0.4 m/s was mine; splitting the constant was an AI recommendation accepted |
 | [0071](0071-hover-program-sets-the-take-off-height.md) | The hover program sets the take-off height, 0.4-1.0 m (default 0.5), with the hover test's 5 s limit unchanged; the failsafe program stays at 0.5 m | Mixed: hovers at several heights were mine; the flag, range and limit were AI recommendations accepted |
+| [0072](0072-final-descent-0-3-m-per-s.md) | The final descent flies at 0.3 m/s; amends 0070 | Mine, over the AI's pushback on the evidence (one flight each, light and battery changed) |
 
 Open questions waiting for a decision: [decision backlog](../decision-backlog.md).
