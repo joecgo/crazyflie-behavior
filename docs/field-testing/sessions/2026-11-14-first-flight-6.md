@@ -1,4 +1,4 @@
-# Draft: first-flight-6
+# First flight 6
 
 > A draft plan, written 2026-11-13 by Claude from Joe's goals for the session
 > (below). Lines marked **Open** are Joe's to decide. When the session has a
@@ -372,8 +372,44 @@ One more hover (15:20). Joe: "landed 7 cm left back, with a pretty even
 take-off". Analysis (Claude): right side's share 0.500, front share 0.494;
 pitch +0.68° in the initial climb and +0.63° in the final descent. Battery
 3.79 V before, lowest reading 3.05 V. Image quality 26 at take-off.
+
+### Local test change: faster final descent
+
+Joe raised `FINAL_DESCENT_SPEED` (`drone/crazyflie/bad_flow_zone.py`) from
+0.2 to 0.3 m/s to try to reduce the landing error. Uncommitted, no ADR; for
+this session's tests only. Every flight below uses 0.3 m/s unless noted.
+
+### Lighting
+
+Joe: "i would say it was daylight for all previous tests in session 6 and now
+it is night with all the lights on in kitchen center". The flights above were
+in daylight; the flights below are at night under the kitchen-center lights.
+
+Joe: the battery is charged "a little bit, but it isnt full".
+
+### Remaining tests (night, 0.3 m/s final descent)
+
+Propeller test output (pasted by Joe):
+
+| M1 | M2 | M3 | M4 | Sag M1-M4 (V) | Noise floor |
+|---|---|---|---|---|---|
+| 9.39 (5.85) | 12.38 (14.92) | 2.91 (0.71) | 8.89 (6.35) | 0.41 0.40 0.42 0.41 | 0.0033 |
+
+It also printed "ESTKALMAN: WARNING: Kalman prediction rate off (39)".
+
+One flight per condition (the plan had three at 0.5 m and two each at 0.75 m
+and 1.0 m). Joe: "failsafe low 7cm back right / failsafe high 7cm back right /
+bench 0.5 10cm back right / bench 0.75 8cm back right / bench 1 10cm back
+right".
+
+Logs not yet analyzed.
  Battery 3.94 V before; 3.39 V at spin-up; 3.50-3.56 V
   in the hover. Image quality 23 at take-off.
 
 ## Next session
 *What the results decide: another session, or the milestone is done.*
+
+Joe (2026-11-14): out of time for more flights, so the session ends here. He
+judged the faster landing successful: the final descent is now 0.3 m/s
+([ADR-0072](../../decisions/0072-final-descent-0-3-m-per-s.md), with the
+confounds recorded there). Landing clearance (#102) is next.

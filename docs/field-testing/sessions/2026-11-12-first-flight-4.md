@@ -173,7 +173,7 @@ The rescue landing wasn't run. The laptop's power plan and the code review befor
   session after it (2026-11-13): finish First flight, with take-offs and
   landings within 5 cm in low light, the initial climb at 0.4 m/s, 5 s hovers
   at several heights and both failsafe tests; no more take-off speed tests.
-  That plan is now session 6's ([draft plan](draft-first-flight-6.md)): Joe
+  That plan is now session 6's ([draft plan](2026-11-14-first-flight-6.md)): Joe
   flew more tests on 2026-11-13, recorded as session 5. Whether session 6
   flies the rescue landing is open.
 - Open from this session: where the drone lands against the light (backlog

@@ -116,7 +116,7 @@ checked.
   session 6's 5 cm flights: new propellers on all four motors, one propeller
   test, one hover; the M4 motor swapped only if it still reads high; then
   stop.
-- Session 6's [draft plan](draft-first-flight-6.md) was written before these
+- Session 6's [draft plan](2026-11-14-first-flight-6.md) was written before these
   results; its own note says to revise it against them.
 - The rescue landing wasn't flown. Joe's call (2026-11-13) was to fly it in
   the next session, so it carries to session 6; whether it flies there is
