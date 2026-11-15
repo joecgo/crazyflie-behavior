@@ -44,7 +44,10 @@
 > hovers at 0.5, 0.75 and 1.0 m (one flight each) landed 7-10 cm back right.
 > The final descent is now 0.3 m/s
 > ([ADR-0072](../decisions/0072-final-descent-0-3-m-per-s.md)). The 5 cm goal
-> was not met; landing clearance (#102) decides what closes First flight.
+> was not met and is dropped, so First flight is done: the landings drift
+> because the firmware restarts the controller's trim when the level final
+> descent starts, and a landing target needs 25 cm clear in every direction
+> ([ADR-0073](../decisions/0073-landing-drift-accepted-25-cm-clearance.md)).
 
 Real flights are where the design gets proven or broken. This folder is the
 record: every field test gets a test log and every session a session doc,

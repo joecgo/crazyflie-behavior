@@ -208,7 +208,8 @@ Terms for the first game ([ADR-0016](decisions/0016-first-game-hide-and-seek-dro
 | **Waiting area** | Where the player waits during a hiding flight: right behind the launch point, with a safety gate between it and the play area. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
 | **Play area** | The space the drone flies and hides in. Nobody is in it while the drone flies. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
 | **Mapping run** | A flight before play, with the play area clear, that builds the map the hiding flights use. Up to about 5 minutes. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
-| **Hiding spot** | A place on the floor where the drone lands to hide, with at least one wall between it and the launch point. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
+| **Hiding spot** | A place on the floor where the drone lands to hide, with at least one wall between it and the launch point and the landing clearance around it. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md), [0073](decisions/0073-landing-drift-accepted-25-cm-clearance.md) |
+| **Landing clearance** | The free circle a landing target needs: no walls or obstacles within it in any direction. The drone's radius plus its landing error: 25 cm. | [0073](decisions/0073-landing-drift-accepted-25-cm-clearance.md) |
 | **Found** | The player picks up the hidden drone, which shows as the down reading jumping and the motion sensors spiking. The drone lights its LEDs and the PC plays a fanfare. | [0016](decisions/0016-first-game-hide-and-seek-drone-lands.md) |
 | **Hint** | Every 15 s until the drone is found, it flashes its LEDs and chirps, so the player can find it. | [0017](decisions/0017-hint-chirps-from-buzzer-deck.md) |
 
