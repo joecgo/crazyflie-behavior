@@ -31,14 +31,14 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 5 | 18 |
 | recommendation | 7 | 6 |
 | environment | 4 | 9 |
-| communication | 8 | 37 |
+| communication | 8 | 38 |
 | testing | 0 | 12 |
 | process | 5 | 19 |
-| **Total** | **33** | **121** |
+| **Total** | **33** | **122** |
 
 Of the 33 I pointed out, a later Claude review would probably have caught
 none, maybe 7, and probably not 26. So far, 7 of the 13 recommendation
-mistakes needed me, and 8 of the 44 communication mistakes. The first
+mistakes needed me, and 8 of the 46 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
 source checks find mistakes in code, tests and records, including Windows
@@ -580,6 +580,12 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### 2026-11-14: One flight's battery line filed under other flights
+
+- **What happened:** recording session 6's night flights, I left a line about the 14:51 turned-around flight ("Battery 3.94 V before; 3.39 V at spin-up; 3.50-3.56 V in the hover. Image quality 23 at take-off.") after "Logs not yet analyzed." under the night flights, where it read as their battery. Its spin-up value was also the dip's second reading, not its lowest (3.27 V). Caught while analyzing the night flights, whose logs read 4.01-4.10 V before each flight.
+- **Kind:** communication.
+- **Takeaway:** after editing a session log, read each analysis line back against its heading and its log.
 
 ### 2026-11-14: Motor outputs read as the thrust command
 

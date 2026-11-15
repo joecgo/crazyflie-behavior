@@ -257,7 +257,8 @@ like there is more vibration".
   10-15 cm drift, for a total of 20 cm to the right (relative to the drone)".
 - Analysis (Claude, from the log): hover motor outputs M1 about 52,600, M2
   41,900, M3 51,600, M4 40,800 (mean about 46,700), the same split between
-  the pairs as test 3.
+  the pairs as test 3. Battery 3.94 V before; 3.27 V at spin-up; 3.50-3.56 V
+  in the hover. Image quality 23 at take-off.
 
 ### Level check across sessions 4-6 (analysis, Claude, 2026-11-14)
 
@@ -402,9 +403,42 @@ and 1.0 m). Joe: "failsafe low 7cm back right / failsafe high 7cm back right /
 bench 0.5 10cm back right / bench 0.75 8cm back right / bench 1 10cm back
 right".
 
-Logs not yet analyzed.
- Battery 3.94 V before; 3.39 V at spin-up; 3.50-3.56 V
-  in the hover. Image quality 23 at take-off.
+Analysis (Claude, from the logs and the firmware source, 2026-11-14):
+
+- Battery 4.01-4.10 V before each flight; image quality 10-31 at take-off;
+  no tick overruns.
+- **The trim is lost at the start of every final descent after a landing
+  approach.** The switch from the high-level commander to the level
+  setpoints is a setpoint mode change, and firmware 2026.08 then restarts
+  every controller integral, the rate integrals that hold the trim included
+  (`controllerPid`, `controllerPidReinitialize`; the same restart as the
+  thrust's, backlog #69). In all eight such final descents since the M1
+  motor swap, the pitch trim fell from -1,480 to -3,340 to between -450 and
+  +150 within 0.1 s, then rebuilt over about 0.5 s (the firmware's rate gains,
+  250 and 500, give a 0.5 s time constant): the whole level part at 0.3 m/s.
+  Failsafe low, whose final descent continues the initial climb's level
+  setpoints with no mode change, kept its trim (-805, then -692). A negative
+  pitch trim holds the nose down against a nose-up push, so without it the
+  drone tilts back. The hover's pitch trim since the swap: about -1,500 to
+  -2,700 (Failsafe high about -900).
+- **The final descent starts mid-correction.** In the last 0.3 s of the four
+  landing approaches, the position hold was rolling the drone right (attitude
+  setpoint +1.4 to +4.0°, against ±0.5° in the hovers), and in the three
+  hovers the speed estimate at the start of the final descent was 0.05-0.10
+  m/s. The level part brakes neither.
+- **The level part was shorter at 0.3 m/s:** in the three hovers, 0.45 s
+  from the final descent start to a down range under 2 cm, against
+  0.85-0.95 s at 0.2 m/s (15:15-15:20).
+- **Dead reckoning of the level part** (the logged tilt at 10 Hz plus the
+  speed estimate at its start): 2-6 cm at 0.3 m/s, 5-12 cm at 0.2 m/s. On its
+  larger axis it points the way Joe measured in 12 of the 13 flights since
+  14:45 with a measured landing. The exception is Failsafe low: about 2 cm by dead reckoning
+  against Joe's 7 cm back right, so several cm of a landing error can come
+  from outside the level flight (the spin-up on the floor, the touchdown) or
+  from tilt the 10 Hz samples miss.
+- Signs, checked in the firmware source: a positive roll lowers the right
+  side and a positive pitch raises the nose (`kalman_core.c`'s legacy
+  attitude, `power_distribution_quadrotor.c`).
 
 ## Next session
 *What the results decide: another session, or the milestone is done.*
@@ -412,4 +446,7 @@ Logs not yet analyzed.
 Joe (2026-11-14): out of time for more flights, so the session ends here. He
 judged the faster landing successful: the final descent is now 0.3 m/s
 ([ADR-0072](../../decisions/0072-final-descent-0-3-m-per-s.md), with the
-confounds recorded there). Landing clearance (#102) is next.
+confounds recorded there). After the analysis, Joe accepted the landing
+drift: the 5 cm goal is dropped, a landing target needs 25 cm clear in every
+direction, and **First flight is done**
+([ADR-0073](../../decisions/0073-landing-drift-accepted-25-cm-clearance.md)).
