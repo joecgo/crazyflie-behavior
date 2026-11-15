@@ -37,10 +37,14 @@
 > the hover took 3-7% more thrust than the thrust base, the climb pauses at
 > about 0.3 m, and M4's propeller test vibration jumped (#83). That puts the
 > drone's hardware first: one time-boxed pass, new propellers on all four
-> motors, before session 6's 5 cm flights (Joe, #83). Session 6 is being planned to finish First flight
-> ([draft plan](sessions/draft-first-flight-6.md), revised against session 5's
-> logs): both failsafe tests and 5 s hovers at several heights, landing
-> within 5 cm of the take-off mark in low light.
+> motors, before session 6's 5 cm flights (Joe, #83). [First flight 6](sessions/2026-11-14-first-flight-6.md)
+> (2026-11-14; daylight, then night): new propellers on M4 and M2 and the M1
+> motor replaced balanced the sides. Hovers at 0.2 m/s final descent landed
+> 7-16 cm from the mark, mostly toward the back; at 0.3 m/s both failsafes and
+> hovers at 0.5, 0.75 and 1.0 m (one flight each) landed 7-10 cm back right.
+> The final descent is now 0.3 m/s
+> ([ADR-0072](../decisions/0072-final-descent-0-3-m-per-s.md)). The 5 cm goal
+> was not met; landing clearance (#102) decides what closes First flight.
 
 Real flights are where the design gets proven or broken. This folder is the
 record: every field test gets a test log and every session a session doc,
