@@ -9,8 +9,8 @@ A mistake is something wrong by what was known or written down at the time.
 A recommendation I decide against, or a rule I change later, isn't one.
 
 Two sections, newest first in each:
-- **Mistakes I had to point out.** Each says whether a later Claude review
-  would probably have caught it anyway.
+- **Mistakes I had to point out.** Entries before 2026-11-16 also say
+  whether a later Claude review would probably have caught it anyway.
 - **Mistakes Claude caught itself**, at a later step (a code review, planting
   bugs to prove the tests, or while writing the code).
 
@@ -36,8 +36,9 @@ decisions are recorded), *communication* (how Claude explains things).
 | process | 5 | 19 |
 | **Total** | **33** | **122** |
 
-Of the 33 I pointed out, a later Claude review would probably have caught
-none, maybe 7, and probably not 26. So far, 7 of the 13 recommendation
+Of the 33 I pointed out up to 2026-11-16, a later Claude review would
+probably have caught none, maybe 7, and probably not 26 (that question
+isn't asked for new entries). So far, 7 of the 13 recommendation
 mistakes needed me, and 8 of the 46 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and

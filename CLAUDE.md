@@ -132,10 +132,8 @@ ignores one:
   record. Keep it accurate as the project grows.
 - **Log Claude's mistakes.** When the user catches a Claude mistake, or Claude
   catches its own, add an entry to `docs/claude-mistakes.md`, in the section
-  for who caught it, and update its at-a-glance table. For a mistake the user
-  pointed out, say honestly whether a later Claude review would probably
-  have caught it. When the takeaway applies to code reviews, add it to
-  `REVIEW.md` as a question. A mistake is something wrong by what was known
+  for who caught it, and update its at-a-glance table. When the takeaway
+  applies to code reviews, add it to `REVIEW.md` as a question. A mistake is something wrong by what was known
   or written down at the time: a false claim, a bug, a broken ADR or rule, a
   missed case, or an explanation that misled. A recommendation the user
   decides against, a rule the user later changes, or a preference stated for
@@ -171,6 +169,10 @@ ignores one:
   GitHub from their phone. Afterwards, Claude adds the review to the log.
 - Follow `docs/coding-style.md`: strict typing, units in names, the cflib
   boundary ([ADR-0004](docs/decisions/0004-strict-typing-ruff-and-units-in-names.md)).
+- **One writer for the shared records.** The mistakes log, the decision
+  backlog, `REVIEW.md` and the work log are written by one work session at a
+  time. A second session leaves its edits as text in `drafts/` for the first
+  to apply, so no edit is lost to two writers.
 - Commit in small steps, especially when flight parameters or behavior change,
   so a bad flight can be rolled back.
 - Behavior logic must never import cflib ([ADR-0002](docs/decisions/0002-behavior-depends-only-on-drone-interface.md)).
