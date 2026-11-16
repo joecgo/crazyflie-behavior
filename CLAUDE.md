@@ -202,9 +202,9 @@ number, so renumbering means updating those guards.
 - Follow `docs/coding-style.md`: strict typing, units in names, the cflib
   boundary ([ADR-0004](docs/decisions/0004-strict-typing-ruff-and-units-in-names.md)).
 - **One writer for the shared records.** The mistakes log, the decision
-  backlog, `REVIEW.md` and the work log are written by one work session at a
-  time. A second session leaves its edits as text in `drafts/` for the first
-  to apply, so no edit is lost to two writers.
+  backlog, `REVIEW.md`, the work log and the next-up brief are written by one
+  work session at a time. A second work session leaves its edits as text in
+  `drafts/` for the first to apply, so no edit is lost to two writers.
 - Commit in small steps, especially when flight parameters or behavior change,
   so a bad flight can be rolled back.
 - Behavior logic must never import cflib ([ADR-0002](docs/decisions/0002-behavior-depends-only-on-drone-interface.md)).
@@ -237,11 +237,14 @@ number, so renumbering means updating those guards.
   runs `/code-review`, then the checks that skill doesn't know about: the ADRs,
   the glossary, failure handling and `REVIEW.md`, the checklist built from the
   mistakes log (`.claude/skills/project-review/`).
+- **`/review-packet`** before one of the user's code reviews, right after `/project-review`: the review packet for its pull request.
 - **`dataviz`** for field-test and simulator analysis charts (drift over time,
   sensor noise by surface, sim-vs-real overlays).
-- Later, once the workflows have repeated a few times, consider project skills
-  built with `skill-creator`: `/decide` (question → ADR → glossary) and
-  `/debrief` (flight data → analysis → test log).
+- **`/decide`** for an open question: options, pitfalls, then the ADR, index row, glossary proposal and backlog change.
+- **`/debrief`** after a session: flight data to analysis, charts and a test log draft.
+- **`/field-session`** to start a session: mock runs, run buttons, steps before and during, data needed after.
+- **`/handoff`** to pass unfinished work to a fresh work session as a work order.
+- **`/wrap-up`** at the end of a work session: work log, records, commit list, next-up brief.
 
 ## Environment
 
