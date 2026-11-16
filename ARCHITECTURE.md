@@ -59,15 +59,27 @@ request through the safety layer to the drone. Nothing skips a step.
 ### When to split a module
 
 Size is not a reason: one module doing many related things is fine when its
-parts share state, dependencies and reasons to change (ADR-0074). Split a part
-out when any of these is true of it:
+parts share state, dependencies and reasons to change, because splitting them
+only adds interfaces to pass that state through. Size is only a stand-in for
+the properties below (ADR-0074). Split a part out when any of these is true
+of it:
 
-1. It needs fewer dependencies than the module (for example, no cflib).
-2. Another module needs it.
-3. It runs on a different thread than the rest.
-4. It has its own state and invariants, which the rest touches through few
-   calls.
-5. It changes for a different reason.
+1. **It needs fewer dependencies than the file.** The take-off and landing
+   logic needs no cflib, but it sits in a file that imports cflib, so it can
+   only run with cflib present. This one is checkable by the import fitness
+   tests.
+2. **Another module needs it.** The section 7 target has the mock adapter
+   running the Crazyflie adapter's take-off and landing code. It cannot do
+   that while the code sits inside `CrazyflieAdapter`.
+3. **It runs on a different thread.** Code called from cflib callbacks and
+   code called from the tick should not share a file's worth of private state.
+   Putting the cross-thread part in one small module makes what crosses the
+   thread visible.
+4. **It has its own state and invariants.** If the rest of the file touches
+   that state through only a few calls, it is already a separate thing. The
+   `_LandingPhase` state machine looks like this.
+5. **It changes for a different reason.** A cflib or firmware update changes
+   the link and log-block code, while a field test changes landing tuning.
 
 Don't split when the parts share most of their state and the split would
 mostly create wide interfaces. By review: no fitness function.
