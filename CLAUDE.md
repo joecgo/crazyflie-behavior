@@ -141,6 +141,33 @@ ignores one:
   decides against, a rule the user later changes, or a preference stated for
   the first time is not a mistake.
 
+## Working rules from the mistakes log
+
+For mistakes no code review can catch. An entry's guard names its rule by
+number, so renumbering means updating those guards.
+
+1. A fact about the firmware, cflib, Python, Windows or the hardware, or a
+   number the code computes: check the facts register or read the source
+   first, or say it isn't checked.
+2. Before quoting a doc, an ADR or code, read it, not its title, number or an
+   old comment.
+3. Before a record says a decision is built, find its code and its test.
+4. A number from field data comes from the whole log over the part it
+   describes: not a cut-off extraction, a bound or another flight.
+5. Before recommending, search the backlog and the ADR index for the topic.
+   Each option says what it fixes and why to choose it.
+6. Before naming or explaining something, check the glossary. Propose a
+   missing term before using it.
+7. Read a rule or the user's words plainly before acting on them or
+   correcting the user.
+8. List choices made while building for the user to confirm; never settle
+   one silently.
+9. A run that needs the user's hands starts when the user says go, and the
+   command given is complete.
+10. Run `/project-review` before committing changes to the safety layer, the
+    Crazyflie adapter or the tick loop, and never push a commit that fails
+    its tests.
+
 ## Shared language
 
 - Write "continuous integration" in full in docs and conversation, not "CI".

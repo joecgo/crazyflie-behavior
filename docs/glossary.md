@@ -210,6 +210,7 @@ How the project tracks Claude's mistakes and the checks they lead to ([mistakes 
 | **Question ID** | `Q-01` onward: the label of a question in the review checklist. Each question ends with the mistake IDs it came from. |
 | **Pattern** | How a mistake went wrong, from a short fixed list in the mistakes log (for example *records-ahead-of-code*). Kind says what sort of work went wrong; pattern says how. |
 | **Guard** | What stops a mistake from happening again: a question ID, a test or fitness function (by its path), a working rule, or "none yet". |
+| **Working rule** | A one-line rule in `CLAUDE.md`'s "Working rules from the mistakes log", for a mistake no code review can catch. A mistake's guard names it by number, as `working rule 3`. |
 | **Facts register** | [`docs/verified-facts.md`](verified-facts.md): each fact about cflib, the firmware, Python or Windows that the project relies on, with its source file and lines, the version, the date checked, and what relies on it. A fact not in it is checked before it's said or written, then added. |
 | **Escalation ladder** | When a pattern earns a mechanism. First time: a question. Second: a helper, a test or a template line. Third: a fitness function, a lint or a design change, and the question retires. |
 

@@ -112,17 +112,17 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
-| M-157 | 2026-11-14 | One flight's battery line filed under other flights | communication | reading-field-data | none yet |
-| M-156 | 2026-11-14 | Motor outputs read as the thrust command | communication | reading-field-data | none yet |
+| M-157 | 2026-11-14 | One flight's battery line filed under other flights | communication | reading-field-data | working rule 4 |
+| M-156 | 2026-11-14 | Motor outputs read as the thrust command | communication | reading-field-data | working rule 4 |
 | M-155 | 2026-11-14 | The forged drone changed, but not its ADR or glossary row | process | records-ahead-of-code | Q-35 |
 | M-154 | 2026-11-14 | A helper and a test whose names said something else | communication | vocabulary | none yet |
-| M-153 | 2026-11-14 | A flight command without `--crazyflie` | communication | how-I-work | none yet |
+| M-153 | 2026-11-14 | A flight command without `--crazyflie` | communication | how-I-work | working rule 9 |
 | M-152 | 2026-11-13 | Two backlog rows said ADR-0035's console thread was built | process | records-ahead-of-code | Q-39 |
 | M-151 | 2026-11-13 | A flight started without reading how the last one ended | process | reading-field-data | none yet |
 | M-150 | 2026-11-13 | A chance worked out for a battery reading that arrives at a fixed time | communication | reading-field-data | none yet |
-| M-149 | 2026-11-13 | An option offered for the landing approach that the code already has | recommendation | recommendation | none yet |
-| M-148 | 2026-11-13 | Hover heights taken from the moment the hover started | communication | reading-field-data | none yet |
-| M-147 | 2026-11-12 | A time limit quoted from memory | communication | said-without-checking | none yet |
+| M-149 | 2026-11-13 | An option offered for the landing approach that the code already has | recommendation | recommendation | working rule 5 |
+| M-148 | 2026-11-13 | Hover heights taken from the moment the hover started | communication | reading-field-data | working rule 4 |
+| M-147 | 2026-11-12 | A time limit quoted from memory | communication | said-without-checking | working rule 1 |
 | M-146 | 2026-11-12 | The hover test waited for a drone status that comes too late | design | window-between-steps | Q-15 |
 | M-145 | 2026-11-12 | "Fails the connect, on the floor" for a block the rescue landing starts too | safety design | safety-judgment | Q-22 |
 | M-144 | 2026-11-12 | Wording that ADR-0062 and ADR-0064 left behind | communication | records-ahead-of-code | Q-35 |
@@ -143,57 +143,57 @@ times so far).
 | M-129 | 2026-11-12 | The reset's link check could go stale before the write | design | window-between-steps | Q-03 |
 | M-128 | 2026-11-12 | A boundary fix with no test at the boundary | testing | weak-test | Q-48 |
 | M-127 | 2026-11-12 | "As soon as the motors stop" for a flag that knows only our stop | communication | safety-judgment | Q-50 |
-| M-126 | 2026-11-12 | A recording started before Joe was ready | process | how-I-work | none yet |
+| M-126 | 2026-11-12 | A recording started before Joe was ready | process | how-I-work | working rule 9 |
 | M-125 | 2026-11-10 | One no-flow limit for an uncertainty that grows with height | safety design | safety-judgment | Q-08 |
 | M-124 | 2026-11-10 | The altHold climb chosen without reading what its controller does at a switch | design | said-without-checking | Q-07 |
 | M-123 | 2026-11-10 | One limit read two ways, and messages that seemed to contradict it | design | message-misstates-outcome | Q-48 |
 | M-122 | 2026-11-10 | A comment and an ADR line that promised more than the code | process | records-ahead-of-code | Q-49 |
-| M-121 | 2026-11-10 | Choices made while building, not recorded, and new terms not proposed | process | how-I-work | none yet |
+| M-121 | 2026-11-10 | Choices made while building, not recorded, and new terms not proposed | process | how-I-work | working rule 8 |
 | M-120 | 2026-11-10 | The mock found the settle height again every tick | testing | weak-test | Q-09 |
 | M-119 | 2026-11-10 | An old status logged as current, and a reset logged before it was sent | communication | message-misstates-outcome | none yet |
-| M-118 | 2026-11-10 | A cut-off extraction read as the touchdown | communication | reading-field-data | none yet |
+| M-118 | 2026-11-10 | A cut-off extraction read as the touchdown | communication | reading-field-data | working rule 4 |
 | M-117 | 2026-11-10 | Session 2's light blamed on a check that didn't exist yet | communication | reading-field-data | none yet |
 | M-116 | 2026-11-09 | A 0.05 s margin on the climb time limit, not flagged | safety design | reading-field-data | none yet |
-| M-115 | 2026-11-09 | ADR-0054 described from its number, not its text | communication | said-without-checking | none yet |
+| M-115 | 2026-11-09 | ADR-0054 described from its number, not its text | communication | said-without-checking | working rule 2 |
 | M-114 | 2026-11-08 | "In this light it never did", for a run with no flow data | communication | reading-field-data | none yet |
-| M-113 | 2026-11-08 | "First flight 1 didn't hit it", with cflib's close unchecked | communication | said-without-checking | none yet |
+| M-113 | 2026-11-08 | "First flight 1 didn't hit it", with cflib's close unchecked | communication | said-without-checking | working rule 1 |
 | M-112 | 2026-11-08 | The level final descent's motor stop locks the drone | safety design | said-without-checking | Q-06 |
-| M-111 | 2026-11-07 | "About 4.5 s" for the no-flow uncertainty, read from an upper bound | communication | reading-field-data | none yet |
+| M-111 | 2026-11-07 | "About 4.5 s" for the no-flow uncertainty, read from an upper bound | communication | reading-field-data | working rule 4 |
 | M-110 | 2026-11-07 | Extra usage spent without a cost estimate or a usage check | process | how-I-work | none yet |
 | M-109 | 2026-11-07 | Landing work hidden in take_snapshot, never decided | design | how-I-work | Q-34 |
 | M-108 | 2026-11-06 | "About 8" parameter writes for "Charge", counted one per note | communication | said-without-checking | none yet |
 | M-107 | 2026-11-06 | A pre-check rule that would end the game at a dark hiding spot | safety design | safety-judgment | Q-24 |
-| M-106 | 2026-11-06 | A sound effect's number read from an out-of-date comment | communication | said-without-checking | none yet |
+| M-106 | 2026-11-06 | A sound effect's number read from an out-of-date comment | communication | said-without-checking | working rule 2 |
 | M-105 | 2026-11-06 | A hand-over order justified by a cflib call it doesn't match | safety design | said-without-checking | Q-02 |
 | M-104 | 2026-11-06 | ADR-0041 amended twice without its status line saying so | process | records-ahead-of-code | Q-33 |
 | M-103 | 2026-11-05 | The Crazyflie's weight in the glossary, with no source | environment | said-without-checking | Q-01 |
 | M-102 | 2026-11-05 | A firmware shutdown at 3.0 V that the default build leaves out | safety design | said-without-checking | Q-03 |
 | M-101 | 2026-11-05 | `kalman.varPX` called the position variance | communication | said-without-checking | Q-01 |
 | M-100 | 2026-11-05 | "Touchdown never confirmed", read from a log line that wasn't there | testing | reading-field-data | none yet |
-| M-099 | 2026-11-05 | Explaining a finding with words the glossary doesn't have | communication | vocabulary | none yet |
+| M-099 | 2026-11-05 | Explaining a finding with words the glossary doesn't have | communication | vocabulary | working rule 6 |
 | M-098 | 2026-11-04 | A go/no-go rule of "the motion flag set in most samples" | communication | reading-field-data | none yet |
 | M-097 | 2026-11-04 | A Bench criterion of 0.5 s for a value that streams at 1 Hz | testing | reading-field-data | none yet |
 | M-096 | 2026-11-04 | The Flow deck's maximum shutter read as "too dark" | communication | reading-field-data | none yet |
 | M-095 | 2026-11-04 | "A red LED that keeps blinking means a failed self-test" | environment | said-without-checking | Q-01 |
 | M-094 | 2026-11-04 | WinUSB for the Crazyradio, and "the README says WinUSB" | environment | said-without-checking | Q-01 |
-| M-093 | 2026-11-04 | A battery connector named from memory | environment | said-without-checking | none yet |
+| M-093 | 2026-11-04 | A battery connector named from memory | environment | said-without-checking | working rule 1 |
 | M-092 | 2026-11-04 | ADR-0046 applied without searching for the old wording | process | records-ahead-of-code | Q-35 |
 | M-091 | 2026-11-04 | A shortened log line that dropped the outcome | communication | message-misstates-outcome | Q-44 |
 | M-090 | 2026-11-04 | Restoring a planted bug with `git checkout` discarded edits | testing | how-I-work | none yet |
 | M-089 | 2026-11-04 | "No test enforces it" said without looking at the tests | communication | said-without-checking | none yet |
 | M-088 | 2026-11-04 | "Can only be a clock bug", and a cost overstated | design | said-without-checking | none yet |
 | M-087 | 2026-11-04 | "Isn't known to be flying", the opposite of the rule | communication | safety-judgment | Q-50, Q-51 |
-| M-086 | 2026-11-04 | Comments that said more than their code | communication | records-ahead-of-code | none yet |
+| M-086 | 2026-11-04 | Comments that said more than their code | communication | records-ahead-of-code | working rule 3 |
 | M-085 | 2026-11-04 | A time-limit message that read the telemetry again after the check | design | message-misstates-outcome | Q-26 |
 | M-084 | 2026-11-04 | A take-over message that assumed the drone was flying | communication | message-misstates-outcome | Q-43 |
 | M-083 | 2026-11-04 | A "known risk" that cflib's own guard rules out | recommendation | said-without-checking | Q-03 |
 | M-082 | 2026-11-04 | Records that claimed more than the code or the source showed | communication | message-misstates-outcome | Q-52 |
 | M-081 | 2026-11-04 | An ADR amendment without the documents and the test that follow from it | process | records-ahead-of-code | Q-36 |
 | M-080 | 2026-11-04 | The battery placed under the board, from memory | environment | said-without-checking | none yet |
-| M-079 | 2026-11-04 | A right understanding "corrected" | communication | how-I-work | none yet |
-| M-078 | 2026-11-04 | A commit rule that says "before" a review, read as "during" | process | how-I-work | none yet |
-| M-077 | 2026-11-03 | Crazyflie adapter code committed without `/project-review` | process | how-I-work | none yet |
-| M-076 | 2026-11-03 | Docstrings that a change left behind | communication | records-ahead-of-code | none yet |
+| M-079 | 2026-11-04 | A right understanding "corrected" | communication | how-I-work | working rule 7 |
+| M-078 | 2026-11-04 | A commit rule that says "before" a review, read as "during" | process | how-I-work | working rule 7 |
+| M-077 | 2026-11-03 | Crazyflie adapter code committed without `/project-review` | process | how-I-work | working rule 10 |
+| M-076 | 2026-11-03 | Docstrings that a change left behind | communication | records-ahead-of-code | working rule 3 |
 | M-075 | 2026-11-03 | An emergency stop that said "not delivered" when it may have been | communication | message-misstates-outcome | Q-43 |
 | M-074 | 2026-11-03 | A once-per-streak log line whose streak never ended | design | leftover-state | Q-18 |
 | M-073 | 2026-11-03 | A new connection that kept the last one's landing | safety design | leftover-state | Q-17 |
@@ -203,17 +203,17 @@ times so far).
 | M-069 | 2026-11-03 | An emergency stop that said "Sent." when nothing was | safety design | message-misstates-outcome | Q-52 |
 | M-068 | 2026-11-03 | A rescue landing that exited 0 when the rescue failed | design | message-misstates-outcome | Q-52 |
 | M-067 | 2026-11-03 | A mitigation in ADR-0044 that the code didn't provide | safety design | records-ahead-of-code | none yet |
-| M-066 | 2026-11-03 | ADR-0043 described the old field-testing README wrongly | process | said-without-checking | none yet |
+| M-066 | 2026-11-03 | ADR-0043 described the old field-testing README wrongly | process | said-without-checking | working rule 2 |
 | M-065 | 2026-11-03 | A test fake that streamed only once | testing | weak-test | Q-09 |
-| M-064 | 2026-11-03 | New vocabulary in code names before proposing it | process | vocabulary | none yet |
+| M-064 | 2026-11-03 | New vocabulary in code names before proposing it | process | vocabulary | working rule 6 |
 | M-063 | 2026-11-03 | "No landing command can work" on a NaN estimate | safety design | said-without-checking | Q-02 |
 | M-062 | 2026-11-03 | An idea of mine credited to the AI | process | how-I-work | none yet |
 | M-061 | 2026-11-02 | A work-log row raised without its total | process | how-I-work | none yet |
-| M-060 | 2026-11-02 | A tick period quoted from memory | communication | said-without-checking | none yet |
-| M-059 | 2026-11-02 | A watchdog recommended that the backlog already ruled out | recommendation | recommendation | none yet |
+| M-060 | 2026-11-02 | A tick period quoted from memory | communication | said-without-checking | working rule 1 |
+| M-059 | 2026-11-02 | A watchdog recommended that the backlog already ruled out | recommendation | recommendation | working rule 5 |
 | M-058 | 2026-11-02 | A refusal that drops the drone it protects | safety design | safety-judgment | Q-21 |
 | M-057 | 2026-11-02 | Manual arming called a barrier that doesn't rely on our code | safety design | safety-judgment | Q-12 |
-| M-056 | 2026-11-02 | A pushed commit that doesn't pass its own tests | process | how-I-work | none yet |
+| M-056 | 2026-11-02 | A pushed commit that doesn't pass its own tests | process | how-I-work | working rule 10 |
 | M-055 | 2026-11-02 | A failsafe whose landing used the value that failed it | safety design | safety-judgment | Q-12 |
 | M-054 | 2026-11-02 | Wording in the NaN change that missed the project's rules | communication | records-ahead-of-code | none yet |
 | M-053 | 2026-11-02 | The gap between two lines, a fifth time | design | window-between-steps | Q-19 |
@@ -222,18 +222,18 @@ times so far).
 | M-050 | 2026-11-02 | A review skill whose steps clashed with the skill it runs | process | how-I-work | none yet |
 | M-049 | 2026-11-02 | Follow-up commits pushed to a pull request already merged | process | how-I-work | none yet |
 | M-048 | 2026-11-02 | "Nothing is scheduled" said without checking | environment | said-without-checking | none yet |
-| M-047 | 2026-11-02 | Options offered that didn't fix the problem | recommendation | recommendation | none yet |
+| M-047 | 2026-11-02 | Options offered that didn't fix the problem | recommendation | recommendation | working rule 5 |
 | M-046 | 2026-11-01 | A safety gap deferred without checking the planned control that opens it | safety design | safety-judgment | Q-23 |
-| M-045 | 2026-11-01 | A rename recommended without checking how the project already says it | recommendation | recommendation | none yet |
+| M-045 | 2026-11-01 | A rename recommended without checking how the project already says it | recommendation | recommendation | working rule 5 |
 | M-044 | 2026-11-01 | Code called dead without following every path to it | recommendation | recommendation | none yet |
 | M-043 | 2026-11-01 | A parameter named with a glossary term that means something else | communication | vocabulary | Q-41 |
 | M-042 | 2026-11-01 | Cloud setup advice from memory | environment | said-without-checking | none yet |
-| M-041 | 2026-11-01 | Code reviews that skipped the review checklist | process | how-I-work | none yet |
+| M-041 | 2026-11-01 | Code reviews that skipped the review checklist | process | how-I-work | working rule 10 |
 | M-040 | 2026-11-01 | The gap between two lines, a fourth time | design | window-between-steps | Q-19 |
 | M-039 | 2026-11-01 | A tick that raised left no timing behind | design | window-between-steps | none yet |
 | M-038 | 2026-11-01 | A cost from Linux in a comment, with no source | environment | environment | none yet |
 | M-037 | 2026-11-01 | A gap described without reading the code that closes it | safety design | safety-judgment | Q-20 |
-| M-036 | 2026-11-01 | A backlog item written and dropped without checking or measuring | recommendation | recommendation | none yet |
+| M-036 | 2026-11-01 | A backlog item written and dropped without checking or measuring | recommendation | recommendation | working rule 5 |
 | M-035 | 2026-11-01 | A key named where the code handles a signal | communication | vocabulary | Q-42 |
 | M-034 | 2026-11-01 | A local named for when it was fetched, not what it holds | communication | vocabulary | none yet |
 | M-033 | 2026-11-01 | A behavior's failure rule chosen without asking | design | how-I-work | Q-13 |
@@ -281,7 +281,7 @@ times so far).
 - **Would a Claude review have caught it?** No: it's a command given in chat, not code.
 - **Kind:** communication.
 - **Pattern:** how-I-work.
-- **Guard:** none yet.
+- **Guard:** working rule 9.
 - **Takeaway:** a command for a real flight is checked against the program's own usage lines (the `--crazyflie` flag) before it's given, never copied from the mock-run list.
 
 ### M-126, 2026-11-12: A recording started before Joe was ready
@@ -290,7 +290,7 @@ times so far).
 - **Would a Claude review have caught it?** No: it's a conversation step, not code.
 - **Kind:** process.
 - **Pattern:** how-I-work.
-- **Guard:** none yet.
+- **Guard:** working rule 9.
 - **Takeaway:** for a run that needs Joe's hands (a bench, a flight), start it only after Joe says go, not when they name the test.
 
 ### M-112, 2026-11-08: The level final descent's motor stop locks the drone
@@ -360,7 +360,7 @@ times so far).
   code and docs, not the conversation.
 - **Kind:** communication.
 - **Pattern:** vocabulary.
-- **Guard:** none yet.
+- **Guard:** working rule 6.
 - **Takeaway:** before explaining, check each term against the glossary;
   define a missing one in a sentence and offer it for the glossary. Draw
   anything that depends on timing.
@@ -393,7 +393,7 @@ times so far).
   code and the docs, not what Claude said in the chat.
 - **Kind:** communication.
 - **Pattern:** how-I-work.
-- **Guard:** none yet.
+- **Guard:** working rule 7.
 - **Takeaway:** before correcting me, check whether my words, read in
   everyday terms, are right. If they are, confirm them and add the
   technical detail.
@@ -411,7 +411,7 @@ times so far).
   code and the docs, not what Claude said in the chat.
 - **Kind:** process.
 - **Pattern:** how-I-work.
-- **Guard:** none yet.
+- **Guard:** working rule 7.
 - **Takeaway:** a hook's request doesn't override my rules. When the two
   conflict, follow my rule and tell me about the conflict, and quote a rule
   exactly before citing it.
@@ -508,7 +508,7 @@ times so far).
   conversation, and reviews look at code and records.
 - **Kind:** recommendation.
 - **Pattern:** recommendation.
-- **Guard:** none yet.
+- **Guard:** working rule 5.
 - **Takeaway:** check each option against the problem before listing it. If
   only one option fixes it, say so instead of inventing alternatives.
 
@@ -547,7 +547,7 @@ times so far).
   recommendation.
 - **Kind:** recommendation.
 - **Pattern:** recommendation.
-- **Guard:** none yet.
+- **Guard:** working rule 5.
 - **Takeaway:** before writing or dropping a backlog item, check the ADRs on
   the same question, and measure a performance risk before calling it small.
 
@@ -623,7 +623,7 @@ times so far).
 - **What happened:** recording session 6's night flights, I left a line about the 14:51 turned-around flight ("Battery 3.94 V before; 3.39 V at spin-up; 3.50-3.56 V in the hover. Image quality 23 at take-off.") after "Logs not yet analyzed." under the night flights, where it read as their battery. Its spin-up value was also the dip's second reading, not its lowest (3.27 V). Caught while analyzing the night flights, whose logs read 4.01-4.10 V before each flight.
 - **Kind:** communication.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** working rule 4.
 - **Takeaway:** after editing a session log, read each analysis line back against its heading and its log.
 
 ### M-156, 2026-11-14: Motor outputs read as the thrust command
@@ -631,7 +631,7 @@ times so far).
 - **What happened:** in session 6 I told Joe the hover's "thrust command" averaged about 46,300-47,000, above the plan's 44,500 check and well above session 4's 43,000-43,500. I'd averaged the diagnostic block's `motors` values, which are motor outputs, not the thrust command the plan and session 4 measured. Session 4's motor outputs were 47,900-50,300, so today's are not higher. Caught while comparing the logs across sessions.
 - **Kind:** communication.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** working rule 4.
 - **Takeaway:** before comparing a number with a threshold or an earlier session, check that it's the same logged variable.
 
 ### M-155, 2026-11-14: The forged drone changed, but not its ADR or glossary row
@@ -723,7 +723,7 @@ times so far).
 - **How it was caught:** reading the adapter before weighing the options.
 - **Kind:** recommendation.
 - **Pattern:** recommendation.
-- **Guard:** none yet.
+- **Guard:** working rule 5.
 - **Takeaway:** read the code path before writing an option for it.
 
 ### M-148, 2026-11-13: Hover heights taken from the moment the hover started
@@ -736,7 +736,7 @@ times so far).
   mean down range.
 - **Kind:** communication.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** working rule 4.
 - **Takeaway:** a number in "Computed from the logs" comes from the data over
   the part it describes, not from a log line written at one moment of it.
 
@@ -746,7 +746,7 @@ times so far).
 - **How it was caught:** reading `initial_climb_time_limit` while checking the climb speed limit.
 - **Kind:** communication.
 - **Pattern:** said-without-checking.
-- **Guard:** none yet.
+- **Guard:** working rule 1.
 - **Takeaway:** when quoting a number the code computes, read the formula first.
 
 ### M-146, 2026-11-12: The hover test waited for a drone status that comes too late
@@ -1106,7 +1106,7 @@ times so far).
 - **How it was caught:** the project review of ADR-0054's code.
 - **Kind:** process.
 - **Pattern:** how-I-work.
-- **Guard:** none yet.
+- **Guard:** working rule 8.
 - **Takeaway:** before the commit, list each rule, threshold and new word the
   code uses that the ADR and glossary don't, and bring them to me.
 
@@ -1147,7 +1147,7 @@ times so far).
 - **How it was caught:** re-reading the flight's log for the handoff.
 - **Kind:** communication.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** working rule 4.
 - **Takeaway:** check that an extraction reaches the moment it's quoted
   for, and compare flights only from numbers already checked.
 
@@ -1192,7 +1192,7 @@ times so far).
   file name didn't match.
 - **Kind:** communication.
 - **Pattern:** said-without-checking.
-- **Guard:** none yet.
+- **Guard:** working rule 2.
 - **Takeaway:** before citing what an ADR decides, read its title and
   Decision section, not a code comment that mentions it.
 
@@ -1224,7 +1224,7 @@ times so far).
 - **How it was caught:** reading `close_link()` while writing ADR-0058.
 - **Kind:** communication.
 - **Pattern:** said-without-checking.
-- **Guard:** none yet.
+- **Guard:** working rule 1.
 - **Takeaway:** before explaining why an earlier case worked, check every
   call on its path, the library's close and cleanup included.
 
@@ -1239,7 +1239,7 @@ times so far).
 - **How it was caught:** answering my question whether the 5 s can be shorter.
 - **Kind:** communication.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** working rule 4.
 - **Takeaway:** when a number comes from a pass/fail check, say whether it's a
   bound or a measurement.
 
@@ -1283,7 +1283,7 @@ times so far).
   tune.
 - **Kind:** communication.
 - **Pattern:** said-without-checking.
-- **Guard:** none yet.
+- **Guard:** working rule 2.
 - **Takeaway:** a number that indexes a table is read from the table, not
   from a comment that describes it.
 
@@ -1466,7 +1466,7 @@ times so far).
 - **How it was caught:** the datasheet I pasted.
 - **Kind:** environment.
 - **Pattern:** said-without-checking.
-- **Guard:** none yet.
+- **Guard:** working rule 1.
 - **Takeaway:** for connectors and polarity, the check is the physical fit and
   the + marking, and the maker's docs; never a part number from memory.
 
@@ -1573,7 +1573,7 @@ times so far).
   Both comments are fixed, and backlog #45 now notes the in-flight case.
 - **Kind:** communication.
 - **Pattern:** records-ahead-of-code.
-- **Guard:** none yet.
+- **Guard:** working rule 3.
 - **Takeaway:** when a decision shows a reason is wrong, search for the
   comments that give that reason, not only the code it changed.
 
@@ -1679,7 +1679,7 @@ times so far).
 - **How it was caught:** Claude, at the end of the session.
 - **Kind:** process.
 - **Pattern:** how-I-work.
-- **Guard:** none yet.
+- **Guard:** working rule 10.
 - **Takeaway:** before each commit, check whether it touches the safety
   layer, the Crazyflie adapter or the tick loop. If it does, review first,
   or ask before committing without one.
@@ -1700,7 +1700,7 @@ times so far).
   #8), the second one by the fresh-context read.
 - **Kind:** communication.
 - **Pattern:** records-ahead-of-code.
-- **Guard:** none yet.
+- **Guard:** working rule 3.
 - **Takeaway:** when a decision changes what a function does, search for
   every docstring that describes it, the interface's included, and fix a
   claim everywhere it was copied, not only where it was found.
@@ -1838,7 +1838,7 @@ times so far).
 - **Caught at:** the first end-of-run review of pull request #8.
 - **Kind:** process.
 - **Pattern:** said-without-checking.
-- **Guard:** none yet.
+- **Guard:** working rule 2.
 - **Takeaway:** when an ADR describes what it replaces, quote or re-read
   the old text rather than summarizing it from memory.
 
@@ -1864,7 +1864,7 @@ times so far).
 - **Caught at:** the first end-of-run review of pull request #8.
 - **Kind:** process.
 - **Pattern:** vocabulary.
-- **Guard:** none yet.
+- **Guard:** working rule 6.
 - **Takeaway:** in an unattended run, propose the term in the pull request
   and use a plain description in code until it's accepted, or record the
   name as a choice for Joe to confirm before using it.
@@ -1893,7 +1893,7 @@ times so far).
   recorded.
 - **Kind:** communication.
 - **Pattern:** said-without-checking.
-- **Guard:** none yet.
+- **Guard:** working rule 1.
 - **Takeaway:** look up project constants before quoting them, even in
   conversation.
 
@@ -1910,7 +1910,7 @@ times so far).
   found #26 before adding a new backlog item.
 - **Kind:** recommendation.
 - **Pattern:** recommendation.
-- **Guard:** none yet.
+- **Guard:** working rule 5.
 - **Takeaway:** before proposing options, search the backlog and ADRs for the
   same problem; an earlier finding may already rule an option out.
 
@@ -1959,7 +1959,7 @@ times so far).
   commits before and after it pass.
 - **Kind:** process.
 - **Pattern:** how-I-work.
-- **Guard:** none yet.
+- **Guard:** working rule 10.
 - **Takeaway:** commit in dependency order and run the tests at every commit
   before pushing, so any commit can be rolled back to.
 
@@ -2082,7 +2082,7 @@ times so far).
 - **Caught at:** searching for the old names before making the change.
 - **Kind:** recommendation.
 - **Pattern:** recommendation.
-- **Guard:** none yet.
+- **Guard:** working rule 5.
 - **Takeaway:** before recommending a rename, search how the rest of the
   project already says it.
 
@@ -2141,7 +2141,7 @@ times so far).
   in my reviews.
 - **Kind:** process.
 - **Pattern:** how-I-work.
-- **Guard:** none yet.
+- **Guard:** working rule 10.
 - **Takeaway:** the skill doesn't know this project's checklist, ADRs or
   glossary; a review here must bring them in itself. The project skill
   `/project-review` now does.
