@@ -9,10 +9,28 @@ Milestones so far:
   project's own code (the Hover field test): tools and process, the
   architecture, the drone interface, the tick loop and the first programs.
   Reached when that first hover passes.
+  - Goal: a reliable take-off, hover and landing.
 - **Airworthy:** the refactor toward ARCHITECTURE.md's target, simulated
   flights and replay tests, a review and docs process that works for Joe and
   Claude, and a project tour. Reached when the First flight suite passes on
-  the refactored code and the tour is published.
+  the refactored code and the tour is published. Goals, each with when it's
+  done:
+  1. Refactor toward the target. Done when every row of ARCHITECTURE.md
+     section 7 is built or deferred, each through its own ADR.
+  2. Each new rule says how it's enforced: a fitness function, a test, a
+     review question, or nothing, with the reason. Done when no new rule is
+     silent about it.
+  3. The review and docs process. Done when each of the 2026-11-13 workflow
+     recommendations (W1-W16) is adopted, deferred or rejected.
+  4. Simulated flights and replay tests. Done when the programs fly in the
+     simulator and recorded real flights replay, both in continuous
+     integration.
+  5. No flight regresses. A baseline is recorded before the refactor, and the
+     First flight suite is flown partway through (after the take-off and
+     landing refactor) and at the end. Done when the final session passes.
+  6. The project tour. Done when it's published.
+  7. Joe reviews all the code line by line, aside from tests. Done when
+     REVIEW.md's review log covers every file that isn't a test.
 
 | Date | Hours | Milestone | Worked on |
 |---|---|---|---|
