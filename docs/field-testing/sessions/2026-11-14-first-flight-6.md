@@ -1,17 +1,15 @@
 # First flight 6
 
-> A draft plan, written 2026-11-13 by Claude from Joe's goals for the session
-> (below). Lines marked **Open** are Joe's to decide. When the session has a
-> date, this file is renamed `YYYY-MM-DD-first-flight-6.md` and its test logs
-> are drafted from the template.
->
-> **Revised 2026-11-13 against session 5**
-> ([First flight 5](2026-11-13-first-flight-5.md), flown 2026-11-13 between
-> this plan's goal and its first draft). Session 5's numbers here are Claude's
-> analysis of its logs.
+> Flown 2026-11-14. The plan was written 2026-11-13 by Claude from Joe's
+> goals and revised against [First flight 5](2026-11-13-first-flight-5.md).
+> The items it left **Open** were never decided before flying; on 2026-11-16
+> Joe deferred them to the next milestone (backlog #105). The pass criterion,
+> a landing within 15 cm, was set by Joe on 2026-11-16, after flying.
 
-A session is one trip with one or more field tests, flown in order. Each
-field test has its own log in [`../field-tests/`](../field-tests/).
+Test logs: [Failsafe low](../field-tests/2026-11-14-first-flight-6-failsafe-low.md),
+[Failsafe high](../field-tests/2026-11-14-first-flight-6-failsafe-high.md),
+[Hover](../field-tests/2026-11-14-first-flight-6-hover.md) (every hover
+flight, all heights).
 
 - **Milestone:** First flight, session 6
 - **Environment:** [Kitchen](../environments/kitchen.md), center of the room, all lights on, at night: the setup of session 4's last four flights (**Open:** see "Low light")
@@ -207,7 +205,10 @@ and session 5's logs.
 ## Before the session
 *Done at the desk, not at the session. If any code changes after these runs, run them again.*
 
-- **Commit to fly:** `d12975a`
+- **Commit to fly:** `d12975a`. The night flights (from 15:54) also flew one
+  uncommitted change, the final descent at 0.3 m/s, against the README's
+  rule; it was committed afterwards as `18ecb7a`
+  ([ADR-0072](../../decisions/0072-final-descent-0-3-m-per-s.md)).
 - [x] Mock adapter run of each test's program on that commit passed (2026-11-14, exit code 0, no tick overruns):
   - [x] `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at climb`
   - [x] `.venv\Scripts\python -m crazyflie_behavior.programs.failsafe --fault-at hover`
@@ -217,6 +218,17 @@ and session 5's logs.
 
 ## Results
 *From the operator or the recordings, never from an AI. One line per test: passed, failed or not flown.*
+
+Joe (2026-11-16): the criterion is a landing within 15 cm; the final flights,
+at 0.3 m/s, all passed.
+
+- Propeller test: run (the hardware check).
+- Bench: not flown.
+- Hover (0.5, 0.75 and 1.0 m): pass at 0.3 m/s, 8-10 cm (Joe); the daylight
+  flights at 0.2 m/s failed (Joe).
+- Failsafe low: pass (Joe), 7 cm back right.
+- Failsafe high: pass (Joe), 7 cm back right.
+- Rescue landing: not flown, out of time (Joe).
 
 ### Propeller test runs
 
