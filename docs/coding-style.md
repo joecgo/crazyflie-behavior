@@ -95,6 +95,23 @@ one tick took.
   always scoped to one rule and with a reason:
   `# pyright: ignore[reportUnknownMemberType]  # cflib is untyped`.
 
+## Module boundaries
+
+[ARCHITECTURE.md](../ARCHITECTURE.md) lists the boundaries and what crosses
+each.
+
+- **Only project types cross a boundary:** the frozen records in
+  `snapshot.py`, `geometry.py` and `safety/requests.py`, and the interfaces.
+  Never a cflib object, a `dict` of raw values or an untyped value.
+- **Convert where data enters.** The module that receives outside data (a log
+  packet, a parameter, a command-line option) turns it into a project type,
+  in SI units, before handing it on.
+- **A refusal is a value, not an exception.** A request the safety layer or
+  the drone won't carry out comes back as a verdict, or shows in a later
+  snapshot. Exceptions are for bugs and broken connections. One raised in a
+  tick isn't caught there: it rises to the program, which lands and logs it
+  ([ADR-0026](decisions/0026-tick-loop-calls-one-tick-step.md)).
+
 ## Docstrings and comments
 
 - **Public classes and functions** get a docstring: one line saying what it

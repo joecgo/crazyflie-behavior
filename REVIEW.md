@@ -163,6 +163,33 @@ takeaway applies to reviews, it's added here as a question.
 Takeaways about recommendations and explanations stay in the mistakes log
 only: they're for me, when I weigh Claude's options.
 
+## Architecture and boundary audit
+
+Run after every refactor phase, on `git diff <phase start>..HEAD`, with
+[ARCHITECTURE.md](ARCHITECTURE.md) open. Unlike the questions above, these
+come from its rules, not from the mistakes log.
+
+- **Imports.** Do the fitness functions pass (`pytest tests/architecture`)?
+  Does the diff add an import that points the wrong way in ARCHITECTURE.md's
+  table: cflib or a clock in a behavior, the safety layer or the tick loop;
+  `safety/`, `behaviors/` or `loop/` from `drone/`; `tools/` from `src/`?
+  Does a rule the phase adds have a fitness function?
+- **Boundaries.** Did a signature at a boundary change (`DroneInterface`,
+  `Snapshot`, the request types, `Verdict`, `Behavior.tick`, `TickStep.run`,
+  `Clock`)? Was that the phase's stated job? Does a cflib object, a raw
+  `dict` or an untyped value now cross one?
+- **The tick.** Is its order unchanged, with the safety pre-check before
+  behaviors and the take-off and landing update on every tick? Can any call
+  the diff adds to a tick, a command or a cflib callback wait?
+- **Safety gates.** Does every command still pass through the safety layer?
+  Does every way a flight ends still land or stop, and is the link of a drone
+  that may be flying still closed without cflib's `close_link()`?
+- **Move-only commits.** Are the test bodies unchanged, and the cflib calls
+  in the same order?
+- **Scope.** Does `git diff --stat` show ARCHITECTURE.md, or a file outside
+  the phase's list? Was each asked for? Does the diff build something
+  ARCHITECTURE.md marks [target] before its ADR is accepted?
+
 ## My reviews
 
 Each review covers only what's new since the one before: new files line by

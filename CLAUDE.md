@@ -51,6 +51,49 @@ for platforms that aren't used yet or can't be tested.
   concept would reach behavior code.** Explain what it would tie behaviors to
   and the cost of changing it later, then let the user decide.
 
+## Architecture and boundaries
+
+[ARCHITECTURE.md](ARCHITECTURE.md) maps the layers, the boundaries between
+them and the rules they keep, and holds the refactor's target. It summarizes
+the ADRs: an accepted ADR wins where the two disagree.
+
+**Never:**
+
+- Import cflib outside `drone/crazyflie/` and `tools/`, or `tools/` from
+  `src/`.
+- Let a behavior import the drone package, a clock, or anything in `safety/`
+  but `requests.py`.
+- Send a command to the drone from outside the safety layer and the drone
+  package.
+- Add a wait, a sleep or a blocking read to a tick, a command or a cflib
+  callback. Only `connect()` and `disconnect()` may block.
+- Pass a cflib object or an untyped value across a module boundary.
+- Stop the motors of a drone that may be flying before touchdown is confirmed
+  or the final descent's time limit, or close its link with cflib's
+  `close_link()`.
+
+**Always:**
+
+- Keep the tick's order: snapshot, safety pre-check, the take-off and landing
+  update, behaviors, send. The pre-check gates the behaviors, and the update
+  runs on every tick.
+- Decide from the tick's snapshot and its time, and treat a missing, stale or
+  non-finite value as unsafe.
+
+**The contract:**
+
+- Read ARCHITECTURE.md before changing an interface, a module boundary, an
+  import between packages, the order of a tick, or what crosses a thread.
+- Don't move a module boundary, widen an interface or edit ARCHITECTURE.md
+  unless the user asked for exactly that. If a task conflicts with it, stop
+  and ask.
+- What it marks **[target]** isn't decided: it needs the user's decision and
+  an ADR before any code.
+
+**What to read when:** ARCHITECTURE.md for structure; `docs/coding-style.md`
+before writing code; `REVIEW.md` for a review, and its architecture audit
+after every refactor phase.
+
 ## Focus areas
 
 These are the real-robot problems this project is built around. Design work
