@@ -56,6 +56,22 @@ request through the safety layer to the drone. Nothing skips a step.
 | `programs/` | Putting it together: the clock, the drone, the safety layer, the behavior and the loop; logging; the interrupt signal; exit codes (ADR-0028). `failsafe_fault.py` holds fault injection, for test programs only (ADR-0041). |
 | `tools/` (repository root) | Standalone scripts that may use cflib. `src/` never imports them (ADR-0002). |
 
+### When to split a module
+
+Size is not a reason: one module doing many related things is fine when its
+parts share state, dependencies and reasons to change (ADR-0074). Split a part
+out when any of these is true of it:
+
+1. It needs fewer dependencies than the module (for example, no cflib).
+2. Another module needs it.
+3. It runs on a different thread than the rest.
+4. It has its own state and invariants, which the rest touches through few
+   calls.
+5. It changes for a different reason.
+
+Don't split when the parts share most of their state and the split would
+mostly create wide interfaces. By review: no fitness function.
+
 ## 3. Boundaries and contracts
 
 | Boundary | Contract | Rules |
