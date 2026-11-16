@@ -231,8 +231,8 @@ tier.
 - A `reviewed` branch on GitHub marks the last reviewed commit. The first
   review creates it at `0846826`.
 - Before a review, Claude commits and pushes `main`, then pushes a branch
-  `review/<date>` at `main`'s last commit, runs `/project-review packet` on
-  `reviewed..review/<date>`, and opens a pull request from that branch into
+  `review/<date>` at `main`'s last commit, runs `/project-review`, then
+  `/review-packet`, on `reviewed..review/<date>`, and opens a pull request from that branch into
   `reviewed`. Its description gives the range and the review packet's path
   in `drafts/`.
 - Nothing is pushed to the review branch once it's open (M-049). Work,
