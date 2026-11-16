@@ -73,16 +73,16 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 18 |
 | recommendation | 7 | 6 |
 | environment | 4 | 9 |
-| communication | 8 | 39 |
+| communication | 8 | 41 |
 | testing | 0 | 12 |
 | process | 5 | 20 |
-| **Total** | **33** | **124** |
+| **Total** | **33** | **126** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 30 |
+| said-without-checking | 32 |
 | how-I-work | 20 |
 | safety-judgment | 16 |
 | reading-field-data | 14 |
@@ -112,14 +112,16 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-159 | 2026-11-16 | "Was lost" for a script the hand-off said may be gone | communication | said-without-checking | working rule 2 |
+| M-158 | 2026-11-16 | A log's program line placed by one sample | communication | said-without-checking | working rule 1 |
 | M-157 | 2026-11-14 | One flight's battery line filed under other flights | communication | reading-field-data | working rule 4 |
 | M-156 | 2026-11-14 | Motor outputs read as the thrust command | communication | reading-field-data | working rule 4 |
 | M-155 | 2026-11-14 | The forged drone changed, but not its ADR or glossary row | process | records-ahead-of-code | Q-35 |
 | M-154 | 2026-11-14 | A helper and a test whose names said something else | communication | vocabulary | none yet |
 | M-153 | 2026-11-14 | A flight command without `--crazyflie` | communication | how-I-work | working rule 9 |
 | M-152 | 2026-11-13 | Two backlog rows said ADR-0035's console thread was built | process | records-ahead-of-code | Q-39 |
-| M-151 | 2026-11-13 | A flight started without reading how the last one ended | process | reading-field-data | none yet |
-| M-150 | 2026-11-13 | A chance worked out for a battery reading that arrives at a fixed time | communication | reading-field-data | none yet |
+| M-151 | 2026-11-13 | A flight started without reading how the last one ended | process | reading-field-data | `/field-session` |
+| M-150 | 2026-11-13 | A chance worked out for a battery reading that arrives at a fixed time | communication | reading-field-data | `/debrief` |
 | M-149 | 2026-11-13 | An option offered for the landing approach that the code already has | recommendation | recommendation | working rule 5 |
 | M-148 | 2026-11-13 | Hover heights taken from the moment the hover started | communication | reading-field-data | working rule 4 |
 | M-147 | 2026-11-12 | A time limit quoted from memory | communication | said-without-checking | working rule 1 |
@@ -152,10 +154,10 @@ times so far).
 | M-120 | 2026-11-10 | The mock found the settle height again every tick | testing | weak-test | Q-09 |
 | M-119 | 2026-11-10 | An old status logged as current, and a reset logged before it was sent | communication | message-misstates-outcome | none yet |
 | M-118 | 2026-11-10 | A cut-off extraction read as the touchdown | communication | reading-field-data | working rule 4 |
-| M-117 | 2026-11-10 | Session 2's light blamed on a check that didn't exist yet | communication | reading-field-data | none yet |
-| M-116 | 2026-11-09 | A 0.05 s margin on the climb time limit, not flagged | safety design | reading-field-data | none yet |
+| M-117 | 2026-11-10 | Session 2's light blamed on a check that didn't exist yet | communication | reading-field-data | `/debrief` |
+| M-116 | 2026-11-09 | A 0.05 s margin on the climb time limit, not flagged | safety design | reading-field-data | `/debrief` |
 | M-115 | 2026-11-09 | ADR-0054 described from its number, not its text | communication | said-without-checking | working rule 2 |
-| M-114 | 2026-11-08 | "In this light it never did", for a run with no flow data | communication | reading-field-data | none yet |
+| M-114 | 2026-11-08 | "In this light it never did", for a run with no flow data | communication | reading-field-data | `/debrief` |
 | M-113 | 2026-11-08 | "First flight 1 didn't hit it", with cflib's close unchecked | communication | said-without-checking | working rule 1 |
 | M-112 | 2026-11-08 | The level final descent's motor stop locks the drone | safety design | said-without-checking | Q-06 |
 | M-111 | 2026-11-07 | "About 4.5 s" for the no-flow uncertainty, read from an upper bound | communication | reading-field-data | working rule 4 |
@@ -169,11 +171,11 @@ times so far).
 | M-103 | 2026-11-05 | The Crazyflie's weight in the glossary, with no source | environment | said-without-checking | Q-01 |
 | M-102 | 2026-11-05 | A firmware shutdown at 3.0 V that the default build leaves out | safety design | said-without-checking | Q-03 |
 | M-101 | 2026-11-05 | `kalman.varPX` called the position variance | communication | said-without-checking | Q-01 |
-| M-100 | 2026-11-05 | "Touchdown never confirmed", read from a log line that wasn't there | testing | reading-field-data | none yet |
+| M-100 | 2026-11-05 | "Touchdown never confirmed", read from a log line that wasn't there | testing | reading-field-data | `/debrief` |
 | M-099 | 2026-11-05 | Explaining a finding with words the glossary doesn't have | communication | vocabulary | working rule 6 |
-| M-098 | 2026-11-04 | A go/no-go rule of "the motion flag set in most samples" | communication | reading-field-data | none yet |
-| M-097 | 2026-11-04 | A Bench criterion of 0.5 s for a value that streams at 1 Hz | testing | reading-field-data | none yet |
-| M-096 | 2026-11-04 | The Flow deck's maximum shutter read as "too dark" | communication | reading-field-data | none yet |
+| M-098 | 2026-11-04 | A go/no-go rule of "the motion flag set in most samples" | communication | reading-field-data | `/debrief` |
+| M-097 | 2026-11-04 | A Bench criterion of 0.5 s for a value that streams at 1 Hz | testing | reading-field-data | `/debrief` |
+| M-096 | 2026-11-04 | The Flow deck's maximum shutter read as "too dark" | communication | reading-field-data | `/debrief` |
 | M-095 | 2026-11-04 | "A red LED that keeps blinking means a failed self-test" | environment | said-without-checking | Q-01 |
 | M-094 | 2026-11-04 | WinUSB for the Crazyradio, and "the README says WinUSB" | environment | said-without-checking | Q-01 |
 | M-093 | 2026-11-04 | A battery connector named from memory | environment | said-without-checking | working rule 1 |
@@ -618,6 +620,22 @@ times so far).
 
 ## Mistakes Claude caught itself
 
+### M-159, 2026-11-16: "Was lost" for a script the hand-off said may be gone
+
+- **What happened:** drafting `/debrief` (W13, section F), I wrote that session 6's analysis script "was lost" in a scratchpad. Session 6's hand-off says it was in the old session's scratchpad "and may be gone"; nobody checked. Caught by re-reading the hand-off's line before reporting the skill.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 2.
+- **Takeaway:** when a doc hedges, the paraphrase keeps the hedge.
+
+### M-158, 2026-11-16: A log's program line placed by one sample
+
+- **What happened:** drafting `/field-session` (W13, section E), I wrote that a flight's log names "the Crazyflie" on its third line, from one real hover log. In a mock run's log the program line is the second: the "QuickEdit is off" line before it isn't always written. Caught by checking a mock run's log before reporting the skill.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 1.
+- **Takeaway:** a claim about what the code writes is checked against each case it covers (a mock run and a flight), not one sample.
+
 ### M-157, 2026-11-14: One flight's battery line filed under other flights
 
 - **What happened:** recording session 6's night flights, I left a line about the 14:51 turned-around flight ("Battery 3.94 V before; 3.39 V at spin-up; 3.50-3.56 V in the hover. Image quality 23 at take-off.") after "Logs not yet analyzed." under the night flights, where it read as their battery. Its spin-up value was also the dip's second reading, not its lowest (3.27 V). Caught while analyzing the night flights, whose logs read 4.01-4.10 V before each flight.
@@ -692,7 +710,7 @@ times so far).
 - **How it was caught:** the First flight 5 analysis, reading flight 7's log.
 - **Kind:** process.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** `/field-session`.
 - **Takeaway:** before starting another flight, read how the last one ended:
   the tick loop's and the safety layer's last lines, not only the disconnect.
 
@@ -710,7 +728,7 @@ times so far).
   weigh the options for #91.
 - **Kind:** communication.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** `/debrief`.
 - **Takeaway:** before giving a chance that a reading falls somewhere, list
   when the readings fell.
 
@@ -1161,7 +1179,7 @@ times so far).
 - **How it was caught:** checking the timeline for the handoff.
 - **Kind:** communication.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** `/debrief`.
 - **Takeaway:** before linking a finding to an earlier session, check the
   code that session flew had the feature.
 
@@ -1176,7 +1194,7 @@ times so far).
 - **How it was caught:** analyzing First flight 3's Failsafe high log.
 - **Kind:** safety design.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** `/debrief`.
 - **Takeaway:** when a flight shows how long a step took, compare it with
   that step's time limit and say the margin.
 
@@ -1209,7 +1227,7 @@ times so far).
   failsafe run's log lacked.
 - **Kind:** communication.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** `/debrief`.
 - **Takeaway:** before naming the cause of a field failure, check the log
   holds the data that shows it; otherwise say it's a likely cause.
 
@@ -1384,7 +1402,7 @@ times so far).
   snapshots through `TouchdownDetector`.
 - **Kind:** testing.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** `/debrief`.
 - **Takeaway:** a missing log line shows nothing until the code is checked to
   log that outcome. Before naming a cause from a flight log, replay the
   recorded data through the real code.
@@ -1399,7 +1417,7 @@ times so far).
 - **How it was caught:** the next check's data, before the flight.
 - **Kind:** communication.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** `/debrief`.
 - **Takeaway:** a go/no-go rule names the quantity that matters (here, the
   velocity variance staying small), not a sign that only went with it once.
 
@@ -1413,7 +1431,7 @@ times so far).
   Bench logs, then checking the safety layer's limits.
 - **Kind:** testing.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** `/debrief`.
 - **Takeaway:** a pass criterion about telemetry ages takes each value's
   limit from the code, not one round number.
 
@@ -1426,7 +1444,7 @@ times so far).
 - **How it was caught:** the next check's data.
 - **Kind:** communication.
 - **Pattern:** reading-field-data.
-- **Guard:** none yet.
+- **Guard:** `/debrief`.
 - **Takeaway:** call a reading the cause only after a case where it differs;
   until then, call it a hypothesis.
 
