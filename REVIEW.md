@@ -4,7 +4,12 @@ Questions every code review asks, on top of looking for ordinary bugs: in
 Claude's `/project-review` (step 6) and in my own reviews.
 Each one comes from a takeaway in the [mistakes log](docs/claude-mistakes.md),
 so reviews look for the kinds of mistakes Claude has made before. When a new
-takeaway applies to reviews, it's added here as a question.
+takeaway applies to reviews, it's added here as a question, unless the
+escalation ladder in the mistakes log calls for a mechanism instead.
+
+Each question has a question ID and ends with the mistake IDs it came from.
+A new question takes the next free number; a retired one keeps its number,
+struck through, with the mechanism that replaced it.
 
 A review walks only the sections for the paths it touches:
 
@@ -20,159 +25,159 @@ A review walks only the sections for the paths it touches:
 
 ## Facts about the hardware and libraries
 
-- Was each claim about how the firmware, cflib, Python or Windows behaves
+- **Q-01.** Was each claim about how the firmware, cflib, Python or Windows behaves
   checked, not recalled? If a decision or safety code rests on it, its ADR
   names the file it was checked in. Docstrings and comments don't cite
-  sources.
-- Does a checked claim say only what its source showed? "This path fails" is
-  not "every path fails" unless the other paths were checked too.
-- For each library call the code relies on: what does it do on a timeout or
+  sources. (M-021, M-094, M-095, M-101, M-103, M-137)
+- **Q-02.** Does a checked claim say only what its source showed? "This path fails" is
+  not "every path fails" unless the other paths were checked too. (M-063, M-105)
+- **Q-03.** For each library call the code relies on: what does it do on a timeout or
   an error? Is that checked in the source, including the `if` that guards the
   call (not only what the function does when it runs)? For firmware, also the
   `#ifdef` or build option around the function's body, in the build flashed.
   Can what a guard checks (the link is up) change on another thread before
-  the call runs?
-- A library call relied on for one step (create a log block, not start it):
+  the call runs? (M-002, M-083, M-102, M-129)
+- **Q-04.** A library call relied on for one step (create a log block, not start it):
   what does the library do on its own afterwards, such as when the drone's
-  reply arrives?
-- Windows-only code: is it checked against Windows' documented behavior, and
+  reply arrives? (M-139)
+- **Q-05.** Windows-only code: is it checked against Windows' documented behavior, and
   is every Windows call's result checked? Continuous integration runs on
-  Linux.
-- For each way a flight ends (landing, failsafe, disarm, link close): which
+  Linux. (M-017, M-052)
+- **Q-06.** For each way a flight ends (landing, failsafe, disarm, link close): which
   firmware supervisor state does the drone end in, checked in the source, and
-  can it arm again without a reboot?
-- Code that switches the firmware between setpoint types (a setpoint stream,
+  can it arm again without a reboot? (M-112)
+- **Q-07.** Code that switches the firmware between setpoint types (a setpoint stream,
   the high-level commander): was the controller's source read for what the
   switch does (integrals restarted, base values, where a planned move
-  starts), and does the code or its ADR allow for it?
-- A fixed limit on an estimator's output (an uncertainty, a speed): was the
+  starts), and does the code or its ADR allow for it? (M-124)
+- **Q-08.** A fixed limit on an estimator's output (an uncertainty, a speed): was the
   firmware's model read for what else the output depends on (height, time
-  since a reset), and does the limit hold at every height where it's checked?
+  since a reset), and does the limit hold at every height where it's checked? (M-125)
 
 ## Fakes and the real drone
 
-- For each fake (the mock adapter, a test's fake): how does the real adapter
+- **Q-09.** For each fake (the mock adapter, a test's fake): how does the real adapter
   differ at start-up, and in the moments after each command? Are those
-  moments tested?
-- Can a fake loop forever? It needs a limit, so a broken test fails instead of
-  hanging.
+  moments tested? (M-023, M-065, M-120)
+- **Q-10.** Can a fake loop forever? It needs a limit, so a broken test fails instead of
+  hanging. (M-012)
 
 ## Failures
 
-- For each failure mode: how is it detected, how is it logged, and what
-  handles it?
-- For each backup: what is it computed from, and is that the thing that just
+- **Q-11.** For each failure mode: how is it detected, how is it logged, and what
+  handles it? (M-005)
+- **Q-12.** For each backup: what is it computed from, and is that the thing that just
   failed? For a failsafe a check triggers, follow the failed value through
-  the failsafe's own action.
-- For each failure or refusal the code handles: does it stop, retry or carry
-  on, and does that follow ADR-0020 (or ADR-0033, for a field test)?
-- A decision made from telemetry: what does it do when the value is missing,
-  old or not a number? Is that the safe choice for that decision?
-- A verdict read from the drone status (landed, armed): can the run end
+  the failsafe's own action. (M-001, M-055, M-057)
+- **Q-13.** For each failure or refusal the code handles: does it stop, retry or carry
+  on, and does that follow ADR-0020 (or ADR-0033, for a field test)? (M-033)
+- **Q-14.** A decision made from telemetry: what does it do when the value is missing,
+  old or not a number? Is that the safe choice for that decision? (M-030, M-032)
+- **Q-15.** A verdict read from the drone status (landed, armed): can the run end
   during the status's lag, such as its 2 s of flying after a motor stop,
-  before the verdict is recorded?
-- For a check like "has it arrived?" or "is it ready?": could state left by
-  an earlier run or connection satisfy it?
-- Code that resets state for a new connection or run: is every field the
+  before the verdict is recorded? (M-146)
+- **Q-16.** For a check like "has it arrived?" or "is it ready?": could state left by
+  an earlier run or connection satisfy it? (M-025)
+- **Q-17.** Code that resets state for a new connection or run: is every field the
   constructor sets either reset or kept on purpose? Check against the field
-  list, not memory.
-- A flag that limits a log line to once per streak: is it cleared on every
-  path that ends the streak, not only the usual one?
-- For each cleanup path: what if an interruption lands between two lines (log
+  list, not memory. (M-073)
+- **Q-18.** A flag that limits a log line to once per streak: is it cleared on every
+  path that ends the streak, not only the usual one? (M-074)
+- **Q-19.** For each cleanup path: what if an interruption lands between two lines (log
   lines included), or comes twice? Is everything that needs cleaning up started inside the `try`
-  that cleans it up?
-- A claim about what happens after a failure: is the code path read to its
-  end, through the program's shutdown?
-- For each error or cleanup path that closes the link: could the drone be
+  that cleans it up? (M-018, M-020, M-040, M-053)
+- **Q-20.** A claim about what happens after a failure: is the code path read to its
+  end, through the program's shutdown? (M-037)
+- **Q-21.** For each error or cleanup path that closes the link: could the drone be
   flying then? cflib's `close_link()` sends a zero-thrust setpoint first,
   while its link is still open (ADR-0038; the condition was checked in the
-  source on 2026-11-04).
-- A claim that a failure happens on the floor: does every program that
+  source on 2026-11-04). (M-058)
+- **Q-22.** A claim that a failure happens on the floor: does every program that
   reaches it start on the floor? The rescue landing connects to a flying
-  drone.
-- A safety gap that's deferred: does an accepted ADR plan a feature that
-  would open it first?
-- A new safety pre-check condition: what does it do on a landed drone? A
+  drone. (M-145)
+- **Q-23.** A safety gap that's deferred: does an accepted ADR plan a feature that
+  would open it first? (M-046)
+- **Q-24.** A new safety pre-check condition: what does it do on a landed drone? A
   failed pre-check ends the flight for good (ADR-0030), so a condition that
   can fail on the floor (a drone landed in the dark) belongs in the take-off
-  rule.
+  rule. (M-107)
 
 ## Time
 
-- A wait with a deadline: what happens just before and just after it, and
-  what does a failing cleanup do to the error meant to be shown?
-- A wait whose error message reads live state: does the message use the
-  result of the check that timed out, not a fresh read?
-- A loop: check the first tick, the last tick and the time between ticks, not
-  just the middle.
-- A mechanism such as the interrupt signal or a timeout: what does it do by
-  default, and what does a second one do?
-- A window meant to be measured or watched (a log block run at connect): is
-  whatever measures it already running, given every wait before it?
+- **Q-25.** A wait with a deadline: what happens just before and just after it, and
+  what does a failing cleanup do to the error meant to be shown? (M-019)
+- **Q-26.** A wait whose error message reads live state: does the message use the
+  result of the check that timed out, not a fresh read? (M-085)
+- **Q-27.** A loop: check the first tick, the last tick and the time between ticks, not
+  just the middle. (M-013)
+- **Q-28.** A mechanism such as the interrupt signal or a timeout: what does it do by
+  default, and what does a second one do? (M-014)
+- **Q-29.** A window meant to be measured or watched (a log block run at connect): is
+  whatever measures it already running, given every wait before it? (M-140)
 
 ## How I run things
 
-- Controls and failure paths: do they work the way I run the program
-  (PyCharm's Run window, a terminal window, the phone)?
-- Logging: is it checked with a real library attached, and with the program
-  started the way I start it?
+- **Q-30.** Controls and failure paths: do they work the way I run the program
+  (PyCharm's Run window, a terminal window, the phone)? (M-008)
+- **Q-31.** Logging: is it checked with a real library attached, and with the program
+  started the way I start it? (M-016)
 
 ## Rules and records
 
-- "Only", "never", "always": what exactly does it apply to? If it's a rule
+- **Q-32.** "Only", "never", "always": what exactly does it apply to? If it's a rule
   about the code, is there a fitness function, and does it read at least one
-  real file? Is each form its scanner handles exercised by a test?
-- A decision that makes an exception to an older ADR: is the older ADR's
+  real file? Is each form its scanner handles exercised by a test? (M-007, M-022, M-072)
+- **Q-33.** A decision that makes an exception to an older ADR: is the older ADR's
   status line marked? Does it take up an option an older ADR rejected, or
-  go against an open backlog item on the same subject?
-- Does each function do only what its name and its ADR say? Extra work in a
+  go against an open backlog item on the same subject? (M-011, M-104, M-130)
+- **Q-34.** Does each function do only what its name and its ADR say? Extra work in a
   query (a snapshot that moves the landing on) is a design decision: which
-  ADR approved it?
-- A change to what a value or term means: was the old wording searched for
-  across the code, the glossary and the ADRs?
-- An ADR amendment that changes how a test passes: do the test log drafts'
-  pass criteria and checklists match it, and is there a test for the new rule?
-- Does each test an ADR lists say what the code does at that value
-  (approves, refuses, skips a check), as its branches read?
-- Does every term in a new name or comment appear in the glossary, even one
-  that other docs already use? Does its definition still match the code?
-- A record that says a decision is built ("now runs", "already"): were its
-  code and its test found, not taken from the ADR's status?
-- Does each new glossary row agree with its ADR, including the risks the ADR
-  accepts, and with the analysis its facts come from?
-- Does a new name use a glossary term's word for something else?
-- Does a name, comment or log message name a raw input (a key) where the
-  code receives a signal or command?
-- Does each log message's stated cause hold on every path that reaches it?
-- Is every new log or console message one short sentence an operator could
+  ADR approved it? (M-109)
+- **Q-35.** A change to what a value or term means: was the old wording searched for
+  across the code, the glossary and the ADRs? (M-092, M-144, M-155)
+- **Q-36.** An ADR amendment that changes how a test passes: do the test log drafts'
+  pass criteria and checklists match it, and is there a test for the new rule? (M-081)
+- **Q-37.** Does each test an ADR lists say what the code does at that value
+  (approves, refuses, skips a check), as its branches read? (M-141)
+- **Q-38.** Does every term in a new name or comment appear in the glossary, even one
+  that other docs already use? Does its definition still match the code? (M-028, M-031, M-131)
+- **Q-39.** A record that says a decision is built ("now runs", "already"): were its
+  code and its test found, not taken from the ADR's status? (M-152)
+- **Q-40.** Does each new glossary row agree with its ADR, including the risks the ADR
+  accepts, and with the analysis its facts come from? (M-136)
+- **Q-41.** Does a new name use a glossary term's word for something else? (M-043)
+- **Q-42.** Does a name, comment or log message name a raw input (a key) where the
+  code receives a signal or command? (M-035)
+- **Q-43.** Does each log message's stated cause hold on every path that reaches it? (M-051, M-075, M-084)
+- **Q-44.** Is every new log or console message one short sentence an operator could
   read mid-flight, with the reasons left in a comment or the ADR? Does a
-  shortened message still say the outcome (failed, not confirmed, refused)?
-- Does each outcome a test log needs (touchdown confirmed, motors stopped)
+  shortened message still say the outcome (failed, not confirmed, refused)? (M-091)
+- **Q-45.** Does each outcome a test log needs (touchdown confirmed, motors stopped)
   log its own line, success included? A log that only speaks up on trouble
-  reads as if the good outcome never happened.
-- Does new wording name a milestone, quote a constant's value, or describe
+  reads as if the good outcome never happened. (M-135)
+- **Q-46.** Does new wording name a milestone, quote a constant's value, or describe
   something temporary without `TODO:`? (An assumption still to check in a
   field test is marked VERIFY instead, as the Crazyflie adapter's docstring
-  says. The glossary may give a specific value, but only as an example.)
-- Is any new constant a copy of a value that follows from another one?
-- Is each limit defined once, and compared the same way ("under" or "up
+  says. The glossary may give a specific value, but only as an example.) (source not recorded)
+- **Q-47.** Is any new constant a copy of a value that follows from another one? (M-071)
+- **Q-48.** Is each limit defined once, and compared the same way ("under" or "up
   to") in every check that uses it? Does each message about it say which
   side the value must be on? Does each check have a test at exactly the
-  limit?
-- When a change removes a wait or a check, do the comments and ADR lines
+  limit? (M-123, M-128)
+- **Q-49.** When a change removes a wait or a check, do the comments and ADR lines
   that relied on it still hold? Is each ADR line the code leaves unbuilt
-  marked, with its backlog item?
-- A docstring, comment or message that describes a safety judgment: which
-  way does the judgment fail when unsure, and does the wording say the same?
-- Review fixes are new code: did anything review the lines a fix commit
-  added, wording included?
-- A tool or program whose job is one outcome (a stop, a rescue, a pass): does
+  marked, with its backlog item? (M-122)
+- **Q-50.** A docstring, comment or message that describes a safety judgment: which
+  way does the judgment fail when unsure, and does the wording say the same? (M-087, M-127)
+- **Q-51.** Review fixes are new code: did anything review the lines a fix commit
+  added, wording included? (M-087)
+- **Q-52.** A tool or program whose job is one outcome (a stop, a rescue, a pass): does
   it report success only when that outcome happened, through its exit code
   as well as its message? When a record says an action "stopped" or "landed",
   does it say what observed that? A command the adapter sent is not a command
-  that arrived: cflib drops packets without an error once the link is lost.
-- New tests: are they proven by bug planting
-  ([coding style](docs/coding-style.md))?
+  that arrived: cflib drops packets without an error once the link is lost. (M-068, M-069, M-082)
+- **Q-53.** New tests: are they proven by bug planting
+  ([coding style](docs/coding-style.md))? (M-015)
 
 Takeaways about recommendations and explanations stay in the mistakes log
 only: they're for me, when I weigh Claude's options.

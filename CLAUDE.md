@@ -132,8 +132,10 @@ ignores one:
   record. Keep it accurate as the project grows.
 - **Log Claude's mistakes.** When the user catches a Claude mistake, or Claude
   catches its own, add an entry to `docs/claude-mistakes.md`, in the section
-  for who caught it, and update its at-a-glance table. When the takeaway
-  applies to code reviews, add it to `REVIEW.md` as a question. A mistake is something wrong by what was known
+  for who caught it, with its kind, pattern and guard, then run
+  `python tools/mistakes_log.py write`. When the takeaway applies to code
+  reviews, follow the log's escalation ladder: a `REVIEW.md` question, or a
+  mechanism when the pattern repeats. A mistake is something wrong by what was known
   or written down at the time: a false claim, a bug, a broken ADR or rule, a
   missed case, or an explanation that misled. A recommendation the user
   decides against, a rule the user later changes, or a preference stated for

@@ -200,6 +200,18 @@ only an example: "For example, about 43,300 for this drone".
 | **First flight** | The project's first milestone: everything up to the drone's first hover through the project's own code (the Hover field test). Code "minimal for First flight" does only what that hover needs. |
 | **Airworthy** | The project's second milestone: the refactor toward ARCHITECTURE.md's target, simulated flights and replay tests, the review and docs process, and a project tour. Reached when the First flight suite passes on the refactored code and the tour is published. |
 
+## Review and records
+
+How the project tracks Claude's mistakes and the checks they lead to ([mistakes log](claude-mistakes.md), [review checklist](../REVIEW.md)).
+
+| Term | Definition |
+|---|---|
+| **Mistake ID** | `M-001` onward: the label of an entry in the mistakes log. A script numbers entries oldest first, across both sections, and an ID never changes once given. |
+| **Question ID** | `Q-01` onward: the label of a question in the review checklist. Each question ends with the mistake IDs it came from. |
+| **Pattern** | How a mistake went wrong, from a short fixed list in the mistakes log (for example *records-ahead-of-code*). Kind says what sort of work went wrong; pattern says how. |
+| **Guard** | What stops a mistake from happening again: a question ID, a test or fitness function (by its path), a working rule, or "none yet". |
+| **Escalation ladder** | When a pattern earns a mechanism. First time: a question. Second: a helper, a test or a template line. Third: a fitness function, a lint or a design change, and the question retires. |
+
 ## Hide-and-seek
 
 Terms for the first game ([ADR-0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)).

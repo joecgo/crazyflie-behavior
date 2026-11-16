@@ -80,7 +80,8 @@ file, a line, the claim, and what it costs if it stays.
    its own rule and says which in its docstring (ADR-0033).
 6. **The checklist.** Read `REVIEW.md` now, since it grows with every review.
    Find the sections for the touched paths in the map at its top, and walk
-   only those. If a touched path matches no row, stop and ask.
+   only those. If a touched path matches no row, stop and ask. Name each
+   question a finding matched by its question ID.
 7. **Fresh-context read, only with `fresh`.** Start one general-purpose agent
    with this brief and nothing else from the conversation: the paths of the
    touched files, and "You haven't seen any discussion of this code. Read
@@ -101,6 +102,8 @@ file, a line, the claim, and what it costs if it stays.
 
 - When a finding is confirmed (fixed, or the user agrees it's real) and the
   code was Claude's, add it to `docs/claude-mistakes.md` under "Mistakes
-  Claude caught itself" and update its at-a-glance table, as CLAUDE.md asks.
-  If its takeaway applies to reviews, add it to `REVIEW.md` as a question.
+  Claude caught itself", with its kind, pattern and guard, as CLAUDE.md
+  asks, then run `python tools/mistakes_log.py write`. If its takeaway
+  applies to reviews, follow the escalation ladder in the mistakes log: a
+  question in `REVIEW.md`, or a mechanism when the pattern repeats.
 - After fixes, call `ReportFindings` again with each finding's outcome.

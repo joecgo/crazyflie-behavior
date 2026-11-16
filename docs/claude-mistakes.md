@@ -14,8 +14,12 @@ Two sections, newest first in each:
 - **Mistakes Claude caught itself**, at a later step (a code review, planting
   bugs to prove the tests, or while writing the code).
 
-Takeaways that apply to code reviews also become questions in the
-[review checklist](../REVIEW.md).
+This file holds the current month's entries. Older months are in
+[claude-mistakes/](claude-mistakes/), and the index below lists every entry.
+
+Each entry has a mistake ID, a kind, a pattern and a guard. Takeaways that
+apply to code reviews become questions in the [review
+checklist](../REVIEW.md), and each question names the entries it came from.
 
 **Kinds of work:** *design* (how parts fit together), *safety design*,
 *recommendation* (an option Claude pushed on a false fact, a missed
@@ -23,8 +27,46 @@ constraint, or no real reason), *environment*
 (assumptions about my machine, time zone or tools), *testing*, *process* (how
 decisions are recorded), *communication* (how Claude explains things).
 
+**Patterns:**
+
+- *said-without-checking*: a fact, number or claim from memory.
+- *records-ahead-of-code*: a doc, comment or ADR says more than the code.
+- *safety-judgment*: a backup shares the failure, or a check fails the
+  unsafe way.
+- *weak-test*: a test that can't fail, a kind fake, no test at the limit.
+- *how-I-work*: acting before a go-ahead, skipping a step, usage.
+- *recommendation*: an option with no reason, or one already ruled out.
+- *window-between-steps*: cleanup gaps, loop edges, a status's lag.
+- *vocabulary*: a term that isn't in the glossary, or is used for something
+  else.
+- *message-misstates-outcome*: a log line or exit code says the wrong thing.
+- *environment*: Windows, PyCharm, the time zone.
+- *reading-field-data*: a number taken from the wrong part of a log.
+- *leftover-state*: state from an earlier connection, a streak that never
+  ends.
+
+**Escalation ladder.** When a new entry's pattern already has entries, its
+takeaway climbs a step instead of only adding a question:
+
+1. First time: the entry and a review question.
+2. Second time: a helper, a test or a template line that makes the mistake
+   harder.
+3. Third time: a fitness function, a lint or a design change that makes it
+   impossible or caught by a machine. The question retires, and the
+   entries' guard names the mechanism.
+
+Only mechanisms that are cheap to set up and keep are built; for a pattern
+where none is, the entry says so and the question stays. Most patterns
+are past their third entry already; the mechanisms planned for them are in
+the 2026-11-13 workflow and code recommendations.
+
+**Upkeep.** `python tools/mistakes_log.py write` gives new entries their IDs
+and rebuilds the tables below; a test fails when they're out of date. New
+entries go at the top of their section without an ID.
+
 ## At a glance
 
+<!-- generated: kinds -->
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 4 | 20 |
@@ -35,10 +77,28 @@ decisions are recorded), *communication* (how Claude explains things).
 | testing | 0 | 12 |
 | process | 5 | 20 |
 | **Total** | **33** | **124** |
+<!-- end generated -->
+
+<!-- generated: patterns -->
+| Pattern | Entries |
+|---|---|
+| said-without-checking | 30 |
+| how-I-work | 20 |
+| safety-judgment | 16 |
+| reading-field-data | 14 |
+| records-ahead-of-code | 14 |
+| recommendation | 12 |
+| message-misstates-outcome | 12 |
+| vocabulary | 10 |
+| window-between-steps | 10 |
+| weak-test | 10 |
+| environment | 6 |
+| leftover-state | 3 |
+<!-- end generated -->
 
 Of the 33 I pointed out up to 2026-11-16, a later Claude review would
 probably have caught none, maybe 7, and probably not 26 (that question
-isn't asked for new entries). So far, 7 of the 13 recommendation
+isn't asked for new entries). Up to then, 7 of the 13 recommendation
 mistakes needed me, and 8 of the 46 communication mistakes. The first
 hardware session (2026-11-04) added four hardware facts said in chat from
 memory, against the review checklist's first rule. Claude's own reviews, planted bugs and
@@ -47,25 +107,193 @@ details and a firmware claim that two ADRs rested on. A repeating
 pattern: an interruption landing between two lines of cleanup code (five
 times so far).
 
+## Index
+
+<!-- generated: index -->
+| ID | Date | Title | Kind | Pattern | Guard |
+|---|---|---|---|---|---|
+| M-157 | 2026-11-14 | One flight's battery line filed under other flights | communication | reading-field-data | none yet |
+| M-156 | 2026-11-14 | Motor outputs read as the thrust command | communication | reading-field-data | none yet |
+| M-155 | 2026-11-14 | The forged drone changed, but not its ADR or glossary row | process | records-ahead-of-code | Q-35 |
+| M-154 | 2026-11-14 | A helper and a test whose names said something else | communication | vocabulary | none yet |
+| M-153 | 2026-11-14 | A flight command without `--crazyflie` | communication | how-I-work | none yet |
+| M-152 | 2026-11-13 | Two backlog rows said ADR-0035's console thread was built | process | records-ahead-of-code | Q-39 |
+| M-151 | 2026-11-13 | A flight started without reading how the last one ended | process | reading-field-data | none yet |
+| M-150 | 2026-11-13 | A chance worked out for a battery reading that arrives at a fixed time | communication | reading-field-data | none yet |
+| M-149 | 2026-11-13 | An option offered for the landing approach that the code already has | recommendation | recommendation | none yet |
+| M-148 | 2026-11-13 | Hover heights taken from the moment the hover started | communication | reading-field-data | none yet |
+| M-147 | 2026-11-12 | A time limit quoted from memory | communication | said-without-checking | none yet |
+| M-146 | 2026-11-12 | The hover test waited for a drone status that comes too late | design | window-between-steps | Q-15 |
+| M-145 | 2026-11-12 | "Fails the connect, on the floor" for a block the rescue landing starts too | safety design | safety-judgment | Q-22 |
+| M-144 | 2026-11-12 | Wording that ADR-0062 and ADR-0064 left behind | communication | records-ahead-of-code | Q-35 |
+| M-143 | 2026-11-12 | A second copy of the staleness rule | design | safety-judgment | none yet |
+| M-142 | 2026-11-12 | A work-log total that missed three changes to a day's hours | process | how-I-work | none yet |
+| M-141 | 2026-11-12 | ADR-0064's test list said the take-off rule refuses at 0.03 | communication | records-ahead-of-code | Q-37 |
+| M-140 | 2026-11-12 | A recommended run at connect that the Bench would only half see | recommendation | recommendation | Q-29 |
+| M-139 | 2026-11-12 | ADR-0063 designed around a log block created but not started | design | said-without-checking | Q-04 |
+| M-138 | 2026-11-12 | A recap that called the torque a match for the battery move | communication | said-without-checking | none yet |
+| M-137 | 2026-11-12 | An estimate reset described as starting with large uncertainty | communication | said-without-checking | Q-01 |
+| M-136 | 2026-11-12 | Two glossary rows for ADR-0061 that didn't match it | communication | vocabulary | Q-40 |
+| M-135 | 2026-11-12 | A thrust base report logged the same whether it confirmed or not | communication | message-misstates-outcome | Q-45 |
+| M-134 | 2026-11-12 | "Estimate reset." logged before a write that can fail | communication | message-misstates-outcome | none yet |
+| M-133 | 2026-11-12 | A two-cause failure branch tested for one cause | testing | weak-test | none yet |
+| M-132 | 2026-11-12 | A review finding against the adapter's VERIFY convention | communication | how-I-work | none yet |
+| M-131 | 2026-11-12 | "No glossary change" for a term whose meaning grew | process | vocabulary | Q-38 |
+| M-130 | 2026-11-12 | An ADR that took up an older ADR's rejected option, unmarked | process | records-ahead-of-code | Q-33 |
+| M-129 | 2026-11-12 | The reset's link check could go stale before the write | design | window-between-steps | Q-03 |
+| M-128 | 2026-11-12 | A boundary fix with no test at the boundary | testing | weak-test | Q-48 |
+| M-127 | 2026-11-12 | "As soon as the motors stop" for a flag that knows only our stop | communication | safety-judgment | Q-50 |
+| M-126 | 2026-11-12 | A recording started before Joe was ready | process | how-I-work | none yet |
+| M-125 | 2026-11-10 | One no-flow limit for an uncertainty that grows with height | safety design | safety-judgment | Q-08 |
+| M-124 | 2026-11-10 | The altHold climb chosen without reading what its controller does at a switch | design | said-without-checking | Q-07 |
+| M-123 | 2026-11-10 | One limit read two ways, and messages that seemed to contradict it | design | message-misstates-outcome | Q-48 |
+| M-122 | 2026-11-10 | A comment and an ADR line that promised more than the code | process | records-ahead-of-code | Q-49 |
+| M-121 | 2026-11-10 | Choices made while building, not recorded, and new terms not proposed | process | how-I-work | none yet |
+| M-120 | 2026-11-10 | The mock found the settle height again every tick | testing | weak-test | Q-09 |
+| M-119 | 2026-11-10 | An old status logged as current, and a reset logged before it was sent | communication | message-misstates-outcome | none yet |
+| M-118 | 2026-11-10 | A cut-off extraction read as the touchdown | communication | reading-field-data | none yet |
+| M-117 | 2026-11-10 | Session 2's light blamed on a check that didn't exist yet | communication | reading-field-data | none yet |
+| M-116 | 2026-11-09 | A 0.05 s margin on the climb time limit, not flagged | safety design | reading-field-data | none yet |
+| M-115 | 2026-11-09 | ADR-0054 described from its number, not its text | communication | said-without-checking | none yet |
+| M-114 | 2026-11-08 | "In this light it never did", for a run with no flow data | communication | reading-field-data | none yet |
+| M-113 | 2026-11-08 | "First flight 1 didn't hit it", with cflib's close unchecked | communication | said-without-checking | none yet |
+| M-112 | 2026-11-08 | The level final descent's motor stop locks the drone | safety design | said-without-checking | Q-06 |
+| M-111 | 2026-11-07 | "About 4.5 s" for the no-flow uncertainty, read from an upper bound | communication | reading-field-data | none yet |
+| M-110 | 2026-11-07 | Extra usage spent without a cost estimate or a usage check | process | how-I-work | none yet |
+| M-109 | 2026-11-07 | Landing work hidden in take_snapshot, never decided | design | how-I-work | Q-34 |
+| M-108 | 2026-11-06 | "About 8" parameter writes for "Charge", counted one per note | communication | said-without-checking | none yet |
+| M-107 | 2026-11-06 | A pre-check rule that would end the game at a dark hiding spot | safety design | safety-judgment | Q-24 |
+| M-106 | 2026-11-06 | A sound effect's number read from an out-of-date comment | communication | said-without-checking | none yet |
+| M-105 | 2026-11-06 | A hand-over order justified by a cflib call it doesn't match | safety design | said-without-checking | Q-02 |
+| M-104 | 2026-11-06 | ADR-0041 amended twice without its status line saying so | process | records-ahead-of-code | Q-33 |
+| M-103 | 2026-11-05 | The Crazyflie's weight in the glossary, with no source | environment | said-without-checking | Q-01 |
+| M-102 | 2026-11-05 | A firmware shutdown at 3.0 V that the default build leaves out | safety design | said-without-checking | Q-03 |
+| M-101 | 2026-11-05 | `kalman.varPX` called the position variance | communication | said-without-checking | Q-01 |
+| M-100 | 2026-11-05 | "Touchdown never confirmed", read from a log line that wasn't there | testing | reading-field-data | none yet |
+| M-099 | 2026-11-05 | Explaining a finding with words the glossary doesn't have | communication | vocabulary | none yet |
+| M-098 | 2026-11-04 | A go/no-go rule of "the motion flag set in most samples" | communication | reading-field-data | none yet |
+| M-097 | 2026-11-04 | A Bench criterion of 0.5 s for a value that streams at 1 Hz | testing | reading-field-data | none yet |
+| M-096 | 2026-11-04 | The Flow deck's maximum shutter read as "too dark" | communication | reading-field-data | none yet |
+| M-095 | 2026-11-04 | "A red LED that keeps blinking means a failed self-test" | environment | said-without-checking | Q-01 |
+| M-094 | 2026-11-04 | WinUSB for the Crazyradio, and "the README says WinUSB" | environment | said-without-checking | Q-01 |
+| M-093 | 2026-11-04 | A battery connector named from memory | environment | said-without-checking | none yet |
+| M-092 | 2026-11-04 | ADR-0046 applied without searching for the old wording | process | records-ahead-of-code | Q-35 |
+| M-091 | 2026-11-04 | A shortened log line that dropped the outcome | communication | message-misstates-outcome | Q-44 |
+| M-090 | 2026-11-04 | Restoring a planted bug with `git checkout` discarded edits | testing | how-I-work | none yet |
+| M-089 | 2026-11-04 | "No test enforces it" said without looking at the tests | communication | said-without-checking | none yet |
+| M-088 | 2026-11-04 | "Can only be a clock bug", and a cost overstated | design | said-without-checking | none yet |
+| M-087 | 2026-11-04 | "Isn't known to be flying", the opposite of the rule | communication | safety-judgment | Q-50, Q-51 |
+| M-086 | 2026-11-04 | Comments that said more than their code | communication | records-ahead-of-code | none yet |
+| M-085 | 2026-11-04 | A time-limit message that read the telemetry again after the check | design | message-misstates-outcome | Q-26 |
+| M-084 | 2026-11-04 | A take-over message that assumed the drone was flying | communication | message-misstates-outcome | Q-43 |
+| M-083 | 2026-11-04 | A "known risk" that cflib's own guard rules out | recommendation | said-without-checking | Q-03 |
+| M-082 | 2026-11-04 | Records that claimed more than the code or the source showed | communication | message-misstates-outcome | Q-52 |
+| M-081 | 2026-11-04 | An ADR amendment without the documents and the test that follow from it | process | records-ahead-of-code | Q-36 |
+| M-080 | 2026-11-04 | The battery placed under the board, from memory | environment | said-without-checking | none yet |
+| M-079 | 2026-11-04 | A right understanding "corrected" | communication | how-I-work | none yet |
+| M-078 | 2026-11-04 | A commit rule that says "before" a review, read as "during" | process | how-I-work | none yet |
+| M-077 | 2026-11-03 | Crazyflie adapter code committed without `/project-review` | process | how-I-work | none yet |
+| M-076 | 2026-11-03 | Docstrings that a change left behind | communication | records-ahead-of-code | none yet |
+| M-075 | 2026-11-03 | An emergency stop that said "not delivered" when it may have been | communication | message-misstates-outcome | Q-43 |
+| M-074 | 2026-11-03 | A once-per-streak log line whose streak never ended | design | leftover-state | Q-18 |
+| M-073 | 2026-11-03 | A new connection that kept the last one's landing | safety design | leftover-state | Q-17 |
+| M-072 | 2026-11-03 | Fitness functions with blind spots | testing | weak-test | Q-32 |
+| M-071 | 2026-11-03 | Two constants that must agree, with no test between them | testing | weak-test | Q-47 |
+| M-070 | 2026-11-03 | A taken-over flight given the take-off grace period | safety design | safety-judgment | none yet |
+| M-069 | 2026-11-03 | An emergency stop that said "Sent." when nothing was | safety design | message-misstates-outcome | Q-52 |
+| M-068 | 2026-11-03 | A rescue landing that exited 0 when the rescue failed | design | message-misstates-outcome | Q-52 |
+| M-067 | 2026-11-03 | A mitigation in ADR-0044 that the code didn't provide | safety design | records-ahead-of-code | none yet |
+| M-066 | 2026-11-03 | ADR-0043 described the old field-testing README wrongly | process | said-without-checking | none yet |
+| M-065 | 2026-11-03 | A test fake that streamed only once | testing | weak-test | Q-09 |
+| M-064 | 2026-11-03 | New vocabulary in code names before proposing it | process | vocabulary | none yet |
+| M-063 | 2026-11-03 | "No landing command can work" on a NaN estimate | safety design | said-without-checking | Q-02 |
+| M-062 | 2026-11-03 | An idea of mine credited to the AI | process | how-I-work | none yet |
+| M-061 | 2026-11-02 | A work-log row raised without its total | process | how-I-work | none yet |
+| M-060 | 2026-11-02 | A tick period quoted from memory | communication | said-without-checking | none yet |
+| M-059 | 2026-11-02 | A watchdog recommended that the backlog already ruled out | recommendation | recommendation | none yet |
+| M-058 | 2026-11-02 | A refusal that drops the drone it protects | safety design | safety-judgment | Q-21 |
+| M-057 | 2026-11-02 | Manual arming called a barrier that doesn't rely on our code | safety design | safety-judgment | Q-12 |
+| M-056 | 2026-11-02 | A pushed commit that doesn't pass its own tests | process | how-I-work | none yet |
+| M-055 | 2026-11-02 | A failsafe whose landing used the value that failed it | safety design | safety-judgment | Q-12 |
+| M-054 | 2026-11-02 | Wording in the NaN change that missed the project's rules | communication | records-ahead-of-code | none yet |
+| M-053 | 2026-11-02 | The gap between two lines, a fifth time | design | window-between-steps | Q-19 |
+| M-052 | 2026-11-02 | A Windows call whose failure went unnoticed | environment | environment | Q-05 |
+| M-051 | 2026-11-02 | A log message and a docstring narrower than the code | communication | message-misstates-outcome | Q-43 |
+| M-050 | 2026-11-02 | A review skill whose steps clashed with the skill it runs | process | how-I-work | none yet |
+| M-049 | 2026-11-02 | Follow-up commits pushed to a pull request already merged | process | how-I-work | none yet |
+| M-048 | 2026-11-02 | "Nothing is scheduled" said without checking | environment | said-without-checking | none yet |
+| M-047 | 2026-11-02 | Options offered that didn't fix the problem | recommendation | recommendation | none yet |
+| M-046 | 2026-11-01 | A safety gap deferred without checking the planned control that opens it | safety design | safety-judgment | Q-23 |
+| M-045 | 2026-11-01 | A rename recommended without checking how the project already says it | recommendation | recommendation | none yet |
+| M-044 | 2026-11-01 | Code called dead without following every path to it | recommendation | recommendation | none yet |
+| M-043 | 2026-11-01 | A parameter named with a glossary term that means something else | communication | vocabulary | Q-41 |
+| M-042 | 2026-11-01 | Cloud setup advice from memory | environment | said-without-checking | none yet |
+| M-041 | 2026-11-01 | Code reviews that skipped the review checklist | process | how-I-work | none yet |
+| M-040 | 2026-11-01 | The gap between two lines, a fourth time | design | window-between-steps | Q-19 |
+| M-039 | 2026-11-01 | A tick that raised left no timing behind | design | window-between-steps | none yet |
+| M-038 | 2026-11-01 | A cost from Linux in a comment, with no source | environment | environment | none yet |
+| M-037 | 2026-11-01 | A gap described without reading the code that closes it | safety design | safety-judgment | Q-20 |
+| M-036 | 2026-11-01 | A backlog item written and dropped without checking or measuring | recommendation | recommendation | none yet |
+| M-035 | 2026-11-01 | A key named where the code handles a signal | communication | vocabulary | Q-42 |
+| M-034 | 2026-11-01 | A local named for when it was fetched, not what it holds | communication | vocabulary | none yet |
+| M-033 | 2026-11-01 | A behavior's failure rule chosen without asking | design | how-I-work | Q-13 |
+| [M-032](claude-mistakes/2026-10.md) | 2026-10-31 | A battery check that a NaN voltage would pass | safety design | safety-judgment | Q-14 |
+| [M-031](claude-mistakes/2026-10.md) | 2026-10-31 | A glossary definition the code outgrew | process | vocabulary | Q-38 |
+| [M-030](claude-mistakes/2026-10.md) | 2026-10-31 | A landing guard that trusted an old drone status | safety design | safety-judgment | Q-14 |
+| [M-029](claude-mistakes/2026-10.md) | 2026-10-31 | A quiz instead of an answer | communication | how-I-work | none yet |
+| [M-028](claude-mistakes/2026-10.md) | 2026-10-31 | Unclear docstrings that lean on terms not in the glossary | communication | vocabulary | Q-38 |
+| [M-027](claude-mistakes/2026-10.md) | 2026-10-31 | Recommending against accepted ADRs for vague reasons | recommendation | recommendation | none yet |
+| [M-026](claude-mistakes/2026-10.md) | 2026-10-31 | An option with no reason to choose it | recommendation | recommendation | none yet |
+| [M-025](claude-mistakes/2026-10.md) | 2026-10-30 | A wait that a previous connection could satisfy | design | leftover-state | Q-16 |
+| [M-024](claude-mistakes/2026-10.md) | 2026-10-30 | A reason copied from cflib's waits to a plain sleep | environment | said-without-checking | none yet |
+| [M-023](claude-mistakes/2026-10.md) | 2026-10-30 | A safety pre-check that only passed with the mock adapter | design | weak-test | Q-09 |
+| [M-022](claude-mistakes/2026-10.md) | 2026-10-30 | Rules stated in code that no fitness function checked | testing | weak-test | Q-32 |
+| [M-021](claude-mistakes/2026-10.md) | 2026-10-30 | Two ADRs built on an unchecked firmware claim | safety design | said-without-checking | Q-01 |
+| [M-020](claude-mistakes/2026-10.md) | 2026-10-30 | The same gap between two lines, again | design | window-between-steps | Q-19 |
+| [M-019](claude-mistakes/2026-10.md) | 2026-10-30 | Edge cases in the connect time limits | design | window-between-steps | Q-25 |
+| [M-018](claude-mistakes/2026-10.md) | 2026-10-29 | Cleanup gaps around connecting | design | window-between-steps | Q-19 |
+| [M-017](claude-mistakes/2026-10.md) | 2026-10-29 | Windows details in the start-up code | environment | environment | Q-05 |
+| [M-016](claude-mistakes/2026-10.md) | 2026-10-29 | Debug logging for every library, and a logger named `__main__` | design | environment | Q-31 |
+| [M-015](claude-mistakes/2026-10.md) | 2026-10-29 | Tests that couldn't fail cleanly | testing | weak-test | Q-53 |
+| [M-014](claude-mistakes/2026-10.md) | 2026-10-29 | Ctrl+C described two ways in one ADR | safety design | window-between-steps | Q-28 |
+| [M-013](claude-mistakes/2026-10.md) | 2026-10-29 | Gaps at the edges of the tick loop | design | window-between-steps | Q-27 |
+| [M-012](claude-mistakes/2026-10.md) | 2026-10-29 | Test fakes that hang instead of failing | testing | weak-test | Q-10 |
+| [M-011](claude-mistakes/2026-10.md) | 2026-10-29 | An exception to an older ADR without marking it | process | records-ahead-of-code | Q-33 |
+| [M-010](claude-mistakes/2026-10.md) | 2026-10-29 | A logging recommendation that ignored what was already known | recommendation | recommendation | none yet |
+| [M-009](claude-mistakes/2026-10.md) | 2026-10-29 | Stretched UE analogies | communication | how-I-work | none yet |
+| [M-008](claude-mistakes/2026-10.md) | 2026-10-29 | A stop control designed for a terminal, not for PyCharm | environment | environment | Q-30 |
+| [M-007](claude-mistakes/2026-10.md) | 2026-10-29 | Only one command request per tick | design | said-without-checking | Q-32 |
+| [M-006](claude-mistakes/2026-10.md) | 2026-10-29 | Holding back measurements because of an undecided item | recommendation | recommendation | none yet |
+| [M-005](claude-mistakes/2026-10.md) | 2026-10-29 | A hang can't be detected | safety design | safety-judgment | Q-11 |
+| [M-004](claude-mistakes/2026-10.md) | 2026-10-27 | Dates in the wrong time zone | environment | environment | none yet |
+| [M-003](claude-mistakes/2026-10.md) | 2026-10-27 | Waiting for the next slot after an overrun | recommendation | recommendation | none yet |
+| [M-002](claude-mistakes/2026-10.md) | 2026-10-24 | Trusting a cflib read that returns old data on a timeout | design | said-without-checking | Q-03 |
+| [M-001](claude-mistakes/2026-10.md) | 2026-10-24 | A backup that fails together with what it backs up | safety design | safety-judgment | Q-12 |
+<!-- end generated -->
+
 ---
 
 ## Mistakes I had to point out
 
-### 2026-11-14: A flight command without `--crazyflie`
+### M-153, 2026-11-14: A flight command without `--crazyflie`
 
 - **What happened:** for session 6's test 3 I gave Joe the hover command copied from the mock-run checklist, with no `--crazyflie`, so it would have run the mock adapter, not the drone. Joe reported "it didn't do anything". His terminal tab was also still busy with a fourth propeller test waiting to connect.
 - **Would a Claude review have caught it?** No: it's a command given in chat, not code.
 - **Kind:** communication.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** a command for a real flight is checked against the program's own usage lines (the `--crazyflie` flag) before it's given, never copied from the mock-run list.
 
-### 2026-11-12: A recording started before Joe was ready
+### M-126, 2026-11-12: A recording started before Joe was ready
 
 - **What happened:** after Joe said the next bench would use `--take-off-log`, I started the bench at once. Joe was not at the window yet and only held the drone there at the end, so most of that run was unusable ("I didn't realize you started"). Earlier I had told Joe to say "start" first.
 - **Would a Claude review have caught it?** No: it's a conversation step, not code.
 - **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** for a run that needs Joe's hands (a bench, a flight), start it only after Joe says go, not when they name the test.
 
-### 2026-11-08: The level final descent's motor stop locks the drone
+### M-112, 2026-11-08: The level final descent's motor stop locks the drone
 
 - **What happened:** the level final descent (ADR-0048, ADR-0056) ends with
   `send_stop_setpoint`, which keeps the firmware's setpoint priority above
@@ -79,10 +307,12 @@ times so far).
 - **Would a later Claude review have caught it?** Maybe: only a review that
   read the firmware's supervisor for "what state does the drone end in".
 - **Kind:** safety design.
+- **Pattern:** said-without-checking.
+- **Guard:** Q-06.
 - **Takeaway:** for every way a flight ends, check in the firmware source
   which supervisor state the drone ends in, and that it can arm again.
 
-### 2026-11-07: Extra usage spent without a cost estimate or a usage check
+### M-110, 2026-11-07: Extra usage spent without a cost estimate or a usage check
 
 - **What happened:** the project review's brief said to check `get_usage`
   now and then and stop if a limit got tight. With the 5-hour limit used up,
@@ -93,11 +323,13 @@ times so far).
 - **Would a later Claude review have caught it?** No: it isn't in the code
   or the docs.
 - **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** before working on extra usage, give a cost estimate in
   dollars, then check usage every few steps. Every step re-reads the whole
   context, so fewer, bigger steps cost less.
 
-### 2026-11-07: Landing work hidden in take_snapshot, never decided
+### M-109, 2026-11-07: Landing work hidden in take_snapshot, never decided
 
 - **What happened:** the first code (2026-10-20) made `take_snapshot` move
   the landing on: it stopped the motors when the landing was due, and later
@@ -110,11 +342,13 @@ times so far).
 - **Would a later Claude review have caught it?** Probably not: writing
   ADR-0040, Claude looked straight at it and didn't flag it.
 - **Kind:** design.
+- **Pattern:** how-I-work.
+- **Guard:** Q-34.
 - **Takeaway:** a function does what its name and its ADR say. Extra work
   that needs a place to run (here, every tick) is a design decision to
   raise, not a reason to hide it in a function that already runs.
 
-### 2026-11-05: Explaining a finding with words the glossary doesn't have
+### M-099, 2026-11-05: Explaining a finding with words the glossary doesn't have
 
 - **What happened:** explaining why touchdown looked unconfirmed (backlog
   #51), Claude used words that aren't in the glossary ("replay",
@@ -125,11 +359,13 @@ times so far).
 - **Would a later Claude review have caught it?** Probably not: reviews read
   code and docs, not the conversation.
 - **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** none yet.
 - **Takeaway:** before explaining, check each term against the glossary;
   define a missing one in a sentence and offer it for the glossary. Draw
   anything that depends on timing.
 
-### 2026-11-04: The battery placed under the board, from memory
+### M-080, 2026-11-04: The battery placed under the board, from memory
 
 - **What happened:** walking me through the hardware setup, Claude said the
   battery goes underneath the Crazyflie, between the board and the Flow
@@ -138,11 +374,13 @@ times so far).
 - **Would a Claude review have caught it?** Probably not: reviews read the
   code and the docs, not what Claude said in the chat.
 - **Kind:** environment.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** for hardware setup steps, look up the maker's docs before
   answering, not after I find the answer doesn't fit. A hedge doesn't make
   a guess safe to act on.
 
-### 2026-11-04: A right understanding "corrected"
+### M-079, 2026-11-04: A right understanding "corrected"
 
 - **What happened:** reviewing the adapter's `hover()` on the floor
   (ADR-0039), I said I hadn't realized a drone would fail if it hovered on
@@ -154,11 +392,13 @@ times so far).
 - **Would a Claude review have caught it?** Probably not: reviews read the
   code and the docs, not what Claude said in the chat.
 - **Kind:** communication.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** before correcting me, check whether my words, read in
   everyday terms, are right. If they are, confirm them and add the
   technical detail.
 
-### 2026-11-04: A commit rule that says "before" a review, read as "during"
+### M-078, 2026-11-04: A commit rule that says "before" a review, read as "during"
 
 - **What happened:** in the middle of my third code review, a stop hook in
   the cloud environment asked Claude to commit and push. Claude committed
@@ -170,11 +410,13 @@ times so far).
 - **Would a Claude review have caught it?** Probably not: reviews read the
   code and the docs, not what Claude said in the chat.
 - **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** a hook's request doesn't override my rules. When the two
   conflict, follow my rule and tell me about the conflict, and quote a rule
   exactly before citing it.
 
-### 2026-11-03: "No landing command can work" on a NaN estimate
+### M-063, 2026-11-03: "No landing command can work" on a NaN estimate
 
 - **What happened:** for backlog #41, Claude said a drone whose position
   estimate is NaN "can't follow any landing command", and wrote it into
@@ -190,10 +432,12 @@ times so far).
   sourced and the decision stayed right, so a review would likely have
   accepted it.
 - **Kind:** safety design.
+- **Pattern:** said-without-checking.
+- **Guard:** Q-02.
 - **Takeaway:** when a source shows one path fails, say "this path", not
   "every path", unless the other paths were checked too.
 
-### 2026-11-03: An idea of mine credited to the AI
+### M-062, 2026-11-03: An idea of mine credited to the AI
 
 - **What happened:** `docs/next-up.md` (written by Claude on 2026-11-03)
   said "Origin: Joe's usage; the AI proposed the split" for the split
@@ -206,10 +450,12 @@ times so far).
 - **Would a Claude review have caught it?** Probably not: only I know who
   suggested it.
 - **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** when who suggested something isn't recorded, say so and
   ask; don't fill in an origin.
 
-### 2026-11-02: Follow-up commits pushed to a pull request already merged
+### M-049, 2026-11-02: Follow-up commits pushed to a pull request already merged
 
 - **What happened:** I merged pull request #5 seconds after Claude opened
   it. Claude then pushed three more commits to its branch and rewrote its
@@ -222,10 +468,12 @@ times so far).
 - **Would a Claude review have caught it?** Probably not: reviews look at
   the code and records, not at a pull request's state.
 - **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** before pushing to a pull request's branch or editing its
   description, check that it's still open.
 
-### 2026-11-02: "Nothing is scheduled" said without checking
+### M-048, 2026-11-02: "Nothing is scheduled" said without checking
 
 - **What happened:** I asked whether there was enough information for the
   cloud run at noon on 2026-11-03 to work without me. Claude answered that
@@ -240,10 +488,12 @@ times so far).
 - **Would a Claude review have caught it?** Probably not: it was said in
   conversation, and reviews look at code and records.
 - **Kind:** environment.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** before saying something does or doesn't exist (a schedule,
   a session, a file), look it up, and read the file the question is about.
 
-### 2026-11-02: Options offered that didn't fix the problem
+### M-047, 2026-11-02: Options offered that didn't fix the problem
 
 - **What happened:** for backlog #36, after finding that closing the link
   drops a flying drone, Claude offered three ways to close it. B (always take
@@ -257,10 +507,12 @@ times so far).
 - **Would a Claude review have caught it?** Probably not: the options were in
   conversation, and reviews look at code and records.
 - **Kind:** recommendation.
+- **Pattern:** recommendation.
+- **Guard:** none yet.
 - **Takeaway:** check each option against the problem before listing it. If
   only one option fixes it, say so instead of inventing alternatives.
 
-### 2026-11-01: A gap described without reading the code that closes it
+### M-037, 2026-11-01: A gap described without reading the code that closes it
 
 - **What happened:** in my second code review, Claude described a gap in the
   hover test (gap (a), my explain-back question): after a failed pre-check,
@@ -275,10 +527,12 @@ times so far).
   `start_up.py` would see the shutdown, but the claim was in conversation,
   not in a file a review reads.
 - **Kind:** safety design.
+- **Pattern:** safety-judgment.
+- **Guard:** Q-20.
 - **Takeaway:** before describing what happens after a failure, read the
   code path to its end, including the program's shutdown.
 
-### 2026-11-01: A backlog item written and dropped without checking or measuring
+### M-036, 2026-11-01: A backlog item written and dropped without checking or measuring
 
 - **What happened:** Claude wrote backlog #33 (logging runs inside the tick)
   without checking ADR-0028, which had already chosen plain logging and
@@ -292,10 +546,12 @@ times so far).
 - **Would a Claude review have caught it?** Probably not: it was a
   recommendation.
 - **Kind:** recommendation.
+- **Pattern:** recommendation.
+- **Guard:** none yet.
 - **Takeaway:** before writing or dropping a backlog item, check the ADRs on
   the same question, and measure a performance risk before calling it small.
 
-### 2026-11-01: A key named where the code handles a signal
+### M-035, 2026-11-01: A key named where the code handles a signal
 
 - **What happened:** code, tests and log messages said "Ctrl+C" for what the
   program actually receives: the operating system's interrupt signal
@@ -312,12 +568,14 @@ times so far).
   same everywhere, accepted ADRs included, and "Ctrl+C" is the everyday name
   for this signal in command-line programs.
 - **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** Q-42.
 - **Takeaway:** name what the code receives (a signal, a command), not the
   raw input that usually sends it; only instructions for the operator name
   the key. The glossary now has *Interrupt signal*, and the coding style has
   the rule.
 
-### 2026-11-01: A local named for when it was fetched, not what it holds
+### M-034, 2026-11-01: A local named for when it was fetched, not what it holds
 
 - **What happened:** in the Crazyflie adapter, three functions called the
   position estimate `latest`, although the coding style already said to
@@ -329,10 +587,12 @@ times so far).
 - **Would a Claude review have caught it?** Maybe: the rule was written down,
   but no review question asks about local names.
 - **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** none yet.
 - **Takeaway:** the naming rule applies to local variables too. The coding
   style now says so, with `latest` as the example.
 
-### 2026-11-01: A behavior's failure rule chosen without asking
+### M-033, 2026-11-01: A behavior's failure rule chosen without asking
 
 - **What happened:** Claude wrote the hover test so that its first refused
   request ends the test, and pinned that with a test, without asking me and
@@ -349,252 +609,32 @@ times so far).
   deliberate and had its own test, and no review question asked whether a
   behavior's failure handling follows ADR-0020.
 - **Kind:** design.
+- **Pattern:** how-I-work.
+- **Guard:** Q-13.
 - **Takeaway:** a rule for what code does on a failure (stop, retry or carry
   on) is a decision: check it against ADR-0020 and ask.
-
-### 2026-10-31: A quiz instead of an answer
-
-- **What happened:** I asked Claude where a backlog #8 decision from my other
-  session overlapped the review. Claude saw that one of its claims (a failed
-  pre-check right after take-off lets the take-off continue to 0.5 m) doesn't
-  match the code. Instead of saying why, it treated the claim as if it were
-  my explain-back answer, gave me a hint, and asked a second question in the
-  same reply. I couldn't tell what it was asking.
-- **Why it was wrong:** I had asked for the overlaps, to pass them on, and an
-  ADR was about to record the wrong reason. Explain-back questions check my
-  understanding after an explanation; they aren't a reason to hold back an
-  answer I asked for. Two questions in one reply also left it unclear which
-  to answer.
-- **How I caught it:** I said I didn't understand what Claude was asking.
-- **Would a Claude review have caught it?** Probably not: reviews check code
-  and records, not conversations.
-- **Kind:** communication.
-- **Takeaway:** when I ask for information, give it directly. Ask
-  explain-back questions only about what Claude explained, and one question
-  at a time.
-
-### 2026-10-31: Unclear docstrings that lean on terms not in the glossary
-
-- **What happened:** two docstrings in the safety package confused me in one
-  review. `safety/requests.py` said "First flight approves arm, take off,
-  hover and land", as if the milestone approved requests, when the safety
-  layer does. `safety/safety_layer.py` said the operator's "land now" and
-  "hover" "join the pre-check with the operator controls, not built yet",
-  which doesn't say what joins what, or when. None of the terms had a
-  glossary entry: *First flight* was defined only in the work log, *operator
-  controls* only in ADR-0027, and *operator* is used in the glossary but
-  never defined.
-- **Why it was wrong:** a code comment should make sense to someone who
-  knows only the code and the glossary, and CLAUDE.md says names and
-  comments use glossary terms.
-- **How I caught it:** in my second code review, I asked what each sentence
-  meant.
-- **Would a Claude review have caught it?** Probably not: Claude's own
-  high-level `/code-review` had already passed both files, and the review
-  checklist had no question about terms outside the glossary.
-- **Kind:** communication.
-- **Takeaway:** a term used in code needs a glossary entry, even one the docs
-  already use, and a note about unbuilt work says plainly what will change.
-  The glossary now has *First flight* (in a new Milestones section),
-  *operator* and *operator controls*, and the review checklist asks about
-  glossary terms.
-
-### 2026-10-31: Recommending against accepted ADRs for vague reasons
-
-- **What happened:** for backlog #31 (landing), Claude recommended trusting
-  the firmware's landing (option A), which gives up ADR-0012's guarantee and
-  retires ADR-0019's final descent, over landing with a `go_to` so the
-  touchdown check stops the motors (option B), which is what those ADRs
-  intended. Its reasons were vague or wrong: "B relies on behavior nobody has
-  tested", when nothing in the project has run on hardware yet and B's only
-  new physical moment is about 0.3 s more at the floor with the motors
-  running; and "more code", when B's landing code already exists. The cloud
-  session leaned towards A first, and Claude repeated it without checking.
-- **Would a later Claude review have caught it?** Probably not: reviews look
-  at code and records, not at the reasons behind a recommendation.
-- **Kind:** recommendation.
-- **Takeaway:** when accepted ADRs already answer a question, keeping them is
-  the default. Recommending a change needs a concrete reason, and "untested"
-  must say exactly what is untested and why it matters.
-
-### 2026-10-31: An option with no reason to choose it
-
-- **What happened:** for backlog #31, Claude listed option C (descend to
-  10 cm, confirm, then stop the motors), copied from the backlog's options to
-  explore, without saying why anyone would pick it. Its only conceivable
-  advantage, less time on the floor with the motors running, is none: the
-  firmware's own landing reaches the floor with the motors running too, and
-  B's extra time there is the 0.3 s touchdown hold. C also cuts the motors in
-  mid-air on purpose, which ADR-0019 exists to prevent.
-- **Would a later Claude review have caught it?** Probably not, for the same
-  reason.
-- **Kind:** recommendation.
-- **Takeaway:** give every option the reason someone would choose it. An
-  option with none is dropped, not listed.
-
-### 2026-10-29: A logging recommendation that ignored what was already known
-
-- **What happened:** for backlog #27, Claude recommended writing log messages
-  on background threads. Both options were on the table, but the
-  recommendation didn't weigh two things Claude already knew: I run programs
-  in PyCharm, where the console freeze doesn't happen (Claude had written
-  that into backlog #27 itself), and the project measures first before adding
-  complexity, as with the garbage collector and spin-waiting (ADR-0024).
-- **Why it was wrong:** it recommended more code and moving parts against an
-  unmeasured risk, and an option that loses the last log lines when the
-  program is killed. My SSD was new information; the rest wasn't.
-- **How I caught it:** I asked why the simpler option wasn't recommended.
-- **Would a Claude review have caught it?** Probably not: it was a
-  recommendation.
-- **Kind:** recommendation.
-- **Takeaway:** when Claude recommends the more complex option, ask whether
-  the risk has been measured, and how the project handled similar risks.
-
-### 2026-10-29: Stretched UE analogies
-
-- **What happened:** Claude kept offering UE analogies even where none really
-  fit, such as a frozen console for the drone lock, or a "player is dead"
-  flag for the kill latch.
-- **Why it was wrong:** a stretched analogy can mislead more than it helps.
-- **How I caught it:** the analogies read as forced.
-- **Would a Claude review have caught it?** Probably not: reviews check code,
-  not explanations.
-- **Kind:** communication.
-- **Takeaway:** when no UE analogy fits, say so. The glossary now says "No UE
-  analogy" for those terms.
-
-### 2026-10-29: A stop control designed for a terminal, not for PyCharm
-
-- **What happened:** Claude designed stopping around Ctrl+C, the terminal
-  convention, without checking how I run programs. CLAUDE.md says PyCharm:
-  in its Run window, Ctrl+C copies text, and the Stop button may end the
-  program outright, skipping the landing.
-- **How I caught it:** I asked whether Ctrl+C could be pressed by accident
-  while copying, and Claude found the PyCharm gap while answering.
-- **Would a Claude review have caught it?** Maybe: a review of the start-up
-  code against CLAUDE.md's Environment section could have, but no code existed
-  yet.
-- **Kind:** environment.
-- **Takeaway:** for any control or failure path, ask how I actually run the
-  program: PyCharm, a terminal window, or the phone.
-
-### 2026-10-29: Only one command request per tick
-
-- **What happened:** in the new safety-layer request design, Claude said only
-  one command request could be sent per tick.
-- **Why it was wrong:** that's true for movement (one velocity at a time), but
-  Claude applied it to every command. A buzzer chirp or an LED change can go
-  out in the same tick as a movement. The fix: command slots, one request per
-  slot per tick.
-- **How I caught it:** I asked why a buzzer command couldn't go with a move.
-- **Would a Claude review have caught it?** Probably not: the limit would have
-  been built into the design, and reviews check code against the design.
-- **Kind:** design. A constraint generalized beyond where it applies.
-- **Takeaway:** when Claude states a limit ("only one", "never", "always"),
-  ask what it applies to.
-
-### 2026-10-29: Holding back measurements because of an undecided item
-
-- **What happened:** Claude recommended keeping each tick's timing
-  measurements in memory and logging only a summary, because where flight
-  data is saved (backlog #11) wasn't decided.
-- **Why it was wrong:** a pending decision shouldn't shape the code. Logging
-  each tick immediately gives context around any error, and where the log
-  goes is set separately at startup.
-- **How I caught it:** the reason didn't hold up when I asked about it.
-- **Would a Claude review have caught it?** Probably not: it was a
-  recommendation, and the code would have followed it.
-- **Kind:** recommendation.
-- **Takeaway:** when a recommendation's reason is "that's not decided yet",
-  ask whether the decision can be made now instead.
-
-### 2026-10-29: A hang can't be detected
-
-- **What happened:** Claude wrote that the tick loop can't interrupt a hung
-  tick, and only discussed acting on a hang. It missed that detecting one is
-  cheap and standard (a watchdog, like UE's hang detector; Python has
-  `faulthandler.dump_traceback_later`). Its overrun warning only fires when a
-  tick ends, and a hung tick never ends.
-- **How I caught it:** I asked how UE detects a hang.
-- **Would a Claude review have caught it?** Maybe: the tick loop's review
-  checked what the hang watchdog covers, but only once there was one.
-- **Kind:** safety design. A missed option.
-- **Takeaway:** for every failure mode, ask separately how it's detected,
-  logged and handled.
-
-### 2026-10-27: Dates in the wrong time zone
-
-- **What happened:** the cloud session's clock runs on UTC, so the work log,
-  ADR-0022 to 0024 and backlog #26 were dated the next day.
-- **How I caught it:** the work log showed tomorrow's date.
-- **Would a Claude review have caught it?** Probably not: nothing in a diff
-  shows which time zone a date is in.
-- **Kind:** environment. Claude assumed the machine's clock matched my time
-  zone.
-- **Takeaway:** CLAUDE.md now says dates use Pacific time.
-
-### 2026-10-27: Waiting for the next slot after an overrun
-
-- **What happened:** for tick timing, Claude first recommended that after an
-  overrun the loop wait for the next 50 ms slot.
-- **Why it was wrong:** after a long tick, waiting up to another 50 ms makes
-  the drone slower to respond, for no benefit. My version: start the next
-  tick at once ([ADR-0024](decisions/0024-tick-timing-strategy.md)).
-- **How I caught it:** comparing it with a game loop.
-- **Would a Claude review have caught it?** Probably not: it was a
-  recommendation, judged against game-loop experience.
-- **Kind:** recommendation.
-- **Takeaway:** check Claude's timing recommendations against how game loops
-  already solve the problem.
-
-### 2026-10-24: Trusting a cflib read that returns old data on a timeout
-
-- **What happened:** the Crazyflie adapter Claude wrote polled drone status
-  with cflib's `read_bitfield()` and stamped every result as fresh. On a
-  timeout, that call doesn't raise: it returns the last value, or 0 if it
-  never had one. A stale status looked current, and a missing one read as
-  "all flags false".
-- **How I caught it:** in my code review. Fixed by streaming status instead
-  ([ADR-0021](decisions/0021-drone-status-streams-with-the-state.md)).
-- **Would a Claude review have caught it?** Maybe: a review that reads the
-  library's source for each call the code relies on could have.
-- **Kind:** design. Assumed a library call fails loudly without checking its
-  source.
-- **Takeaway:** for every library call Claude relies on, ask what it does on a
-  timeout or error, and check the answer in the source.
-
-### 2026-10-24: A backup that fails together with what it backs up
-
-- **What happened:** Claude recommended letting the position estimate's
-  height confirm touchdown when the down range had nothing usable
-  ([ADR-0012](decisions/0012-landing-confirms-touchdown.md)). On a Crazyflie
-  that height comes mostly from the same down sensor, so when the sensor
-  fails, the backup fails too, and the motors could be cut in mid-air.
-- **How I caught it:** in my code review. Fixed by
-  [ADR-0019](decisions/0019-final-descent-when-touchdown-unconfirmed.md).
-- **Would a Claude review have caught it?** Maybe: the failure-mode checks
-  every safety ADR now has ask exactly this, but they came afterwards.
-- **Kind:** safety design. A backup sharing the primary's failure.
-- **Takeaway:** for every backup, ask what it's computed from, and whether
-  that's the same thing that just failed.
 
 ---
 
 ## Mistakes Claude caught itself
 
-### 2026-11-14: One flight's battery line filed under other flights
+### M-157, 2026-11-14: One flight's battery line filed under other flights
 
 - **What happened:** recording session 6's night flights, I left a line about the 14:51 turned-around flight ("Battery 3.94 V before; 3.39 V at spin-up; 3.50-3.56 V in the hover. Image quality 23 at take-off.") after "Logs not yet analyzed." under the night flights, where it read as their battery. Its spin-up value was also the dip's second reading, not its lowest (3.27 V). Caught while analyzing the night flights, whose logs read 4.01-4.10 V before each flight.
 - **Kind:** communication.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** after editing a session log, read each analysis line back against its heading and its log.
 
-### 2026-11-14: Motor outputs read as the thrust command
+### M-156, 2026-11-14: Motor outputs read as the thrust command
 
 - **What happened:** in session 6 I told Joe the hover's "thrust command" averaged about 46,300-47,000, above the plan's 44,500 check and well above session 4's 43,000-43,500. I'd averaged the diagnostic block's `motors` values, which are motor outputs, not the thrust command the plan and session 4 measured. Session 4's motor outputs were 47,900-50,300, so today's are not higher. Caught while comparing the logs across sessions.
 - **Kind:** communication.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** before comparing a number with a threshold or an earlier session, check that it's the same logged variable.
 
-### 2026-11-14: The forged drone changed, but not its ADR or glossary row
+### M-155, 2026-11-14: The forged drone changed, but not its ADR or glossary row
 
 - **What happened:** building ADR-0069, I made the forged low battery drone
   forge both battery readings. ADR-0041's "as built" still said it replaces
@@ -603,11 +643,13 @@ times so far).
   injection* row still says it "replaces one value in the snapshot".
 - **How it was caught:** `/project-review` of ADR-0069's code.
 - **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-35.
 - **Takeaway:** when code changes what an older ADR's "as built" describes,
   search the ADRs and the glossary for the old wording. The review checklist
   already asks this.
 
-### 2026-11-14: A helper and a test whose names said something else
+### M-154, 2026-11-14: A helper and a test whose names said something else
 
 - **What happened:** the safety pre-check's helper for the previous battery
   reading was named `_was_battery_low`, though it returns true for a missing
@@ -616,10 +658,12 @@ times so far).
   test named "above the limit" used a reading at the limit.
 - **How it was caught:** `/project-review` of ADR-0069's code.
 - **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** none yet.
 - **Takeaway:** check a new name against every case it returns true for, and
   a test's name against its values.
 
-### 2026-11-13: Two backlog rows said ADR-0035's console thread was built
+### M-152, 2026-11-13: Two backlog rows said ADR-0035's console thread was built
 
 - **What happened:** ADR-0035 (accepted 2026-11-01) puts console output
   behind a `QueueHandler` on a background thread. It was never built:
@@ -631,10 +675,12 @@ times so far).
 - **How it was caught:** the 2026-11-13 codebase review, reading
   `start_up.py` beside the ADR index, then `git log -S"QueueHandler"`.
 - **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-39.
 - **Takeaway:** before a record says a decision is built, find its code and
   its test. An accepted ADR is a decision, not a build.
 
-### 2026-11-13: A flight started without reading how the last one ended
+### M-151, 2026-11-13: A flight started without reading how the last one ended
 
 - **What happened:** in First flight 5 I started flight 8 after reading only
   the last three lines of flight 7's terminal output ("Disconnected"). Flight
@@ -645,10 +691,12 @@ times so far).
   when flight 8 started.
 - **How it was caught:** the First flight 5 analysis, reading flight 7's log.
 - **Kind:** process.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** before starting another flight, read how the last one ended:
   the tick loop's and the safety layer's last lines, not only the disconnect.
 
-### 2026-11-13: A chance worked out for a battery reading that arrives at a fixed time
+### M-150, 2026-11-13: A chance worked out for a battery reading that arrives at a fixed time
 
 - **What happened:** the First flight 4 analysis and backlog #91 said the
   once-a-second battery reading falls in the dip at spin-up in "roughly 5-15%
@@ -661,10 +709,12 @@ times so far).
 - **How it was caught:** listing each flight's battery readings by time, to
   weigh the options for #91.
 - **Kind:** communication.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** before giving a chance that a reading falls somewhere, list
   when the readings fell.
 
-### 2026-11-13: An option offered for the landing approach that the code already has
+### M-149, 2026-11-13: An option offered for the landing approach that the code already has
 
 - **What happened:** the handoff and backlog #93 listed "end the approach when
   the down range reaches the final descent height" as the change to make. The
@@ -672,9 +722,11 @@ times so far).
   plan's time runs out first because the drone lags the plan.
 - **How it was caught:** reading the adapter before weighing the options.
 - **Kind:** recommendation.
+- **Pattern:** recommendation.
+- **Guard:** none yet.
 - **Takeaway:** read the code path before writing an option for it.
 
-### 2026-11-13: Hover heights taken from the moment the hover started
+### M-148, 2026-11-13: Hover heights taken from the moment the hover started
 
 - **What happened:** First flight 4's Take-off speeds log said the flights
   hovered at 0.42, 0.41 and 0.40 m, and the Hover log at 0.41 m. Those are the
@@ -683,17 +735,21 @@ times so far).
 - **How it was caught:** the First flight 4 analysis, computing each hover's
   mean down range.
 - **Kind:** communication.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** a number in "Computed from the logs" comes from the data over
   the part it describes, not from a log line written at one moment of it.
 
-### 2026-11-12: A time limit quoted from memory
+### M-147, 2026-11-12: A time limit quoted from memory
 
 - **What happened:** I said a 0.6 m/s initial climb would have a time limit of about 1.2 s. The code's formula (`MAX_FINAL_DESCENT_HEIGHT / climb_speed + 1.0`) gives 1.5 s. I corrected it in the next message.
 - **How it was caught:** reading `initial_climb_time_limit` while checking the climb speed limit.
 - **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** when quoting a number the code computes, read the formula first.
 
-### 2026-11-12: The hover test waited for a drone status that comes too late
+### M-146, 2026-11-12: The hover test waited for a drone status that comes too late
 
 - **What happened:** ADR-0062's `has_failed` counted the hover test's
   landing only once the drone status said landed. That status keeps saying
@@ -705,10 +761,12 @@ times so far).
   session 4 code, checked against the tick step. The landing now counts once
   the snapshot's *may be flying* turns false (ADR-0062 clarified).
 - **Kind:** design.
+- **Pattern:** window-between-steps.
+- **Guard:** Q-15.
 - **Takeaway:** a verdict read from the drone status: can the run end during
   the status's lag, before the verdict is recorded?
 
-### 2026-11-12: "Fails the connect, on the floor" for a block the rescue landing starts too
+### M-145, 2026-11-12: "Fails the connect, on the floor" for a block the rescue landing starts too
 
 - **What happened:** ADR-0063 said a missing controller variable fails the
   connect on the floor, as ADR-0050 said for the diagnostic block. Both
@@ -718,10 +776,12 @@ times so far).
 - **How it was caught:** the project review of the session 4 code.
   ADR-0067: a take-over starts neither block.
 - **Kind:** safety design.
+- **Pattern:** safety-judgment.
+- **Guard:** Q-22.
 - **Takeaway:** a claim that a failure happens on the floor: does every
   program that reaches it start on the floor?
 
-### 2026-11-12: Wording that ADR-0062 and ADR-0064 left behind
+### M-144, 2026-11-12: Wording that ADR-0062 and ADR-0064 left behind
 
 - **What happened:** `FLOW_VELOCITY_UNCERTAINTY`'s docstring still said a
   velocity uncertainty under it means flow, with no word of ADR-0064's
@@ -729,10 +789,12 @@ times so far).
   cause of exit 1 where `has_failed` has three.
 - **How it was caught:** the project review of the session 4 code.
 - **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-35.
 - **Takeaway:** the review checklist already asks for the old wording to be
   searched when a value's meaning changes; this was that miss.
 
-### 2026-11-12: A second copy of the staleness rule
+### M-143, 2026-11-12: A second copy of the staleness rule
 
 - **What happened:** `_known_height` in the safety layer compared the
   position estimate's age with `STALE_AFTER` itself, next to `_staleness`,
@@ -741,10 +803,12 @@ times so far).
 - **How it was caught:** `/code-review` in the project review of the
   session 4 code. It now calls `_staleness`.
 - **Kind:** design.
+- **Pattern:** safety-judgment.
+- **Guard:** none yet.
 - **Takeaway:** a new check on a value the pre-check already judges: reuse
   that judgment instead of restating it.
 
-### 2026-11-12: A work-log total that missed three changes to a day's hours
+### M-142, 2026-11-12: A work-log total that missed three changes to a day's hours
 
 - **What happened:** three updates to the work log changed a row's hours
   without the milestone total: 2026-11-09 raised by 0.5, then 2026-11-12
@@ -752,10 +816,12 @@ times so far).
   up to 64.0. The 2026-11-02 row had already fixed one such miss.
 - **How it was caught:** summing the rows before adding a session's hours.
 - **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** after changing any row's hours, recompute the total from
   every row, not from the change alone.
 
-### 2026-11-12: ADR-0064's test list said the take-off rule refuses at 0.03
+### M-141, 2026-11-12: ADR-0064's test list said the take-off rule refuses at 0.03
 
 - **What happened:** ADR-0064's Consequences listed the test "the take-off
   rule still refuses at 0.03". The take-off rule never refuses for the
@@ -767,10 +833,12 @@ times so far).
   The test now checks that the threshold stays 0.03 at any height, and the
   ADR's line says so.
 - **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-37.
 - **Takeaway:** describe a test by what the code does at that value
   (approves, refuses, skips a check), read from its branches.
 
-### 2026-11-12: A recommended run at connect that the Bench would only half see
+### M-140, 2026-11-12: A recommended run at connect that the Bench would only half see
 
 - **What happened:** backlog #85's recommended option C ran the take-off
   block for 2 s at connect so the Bench could measure its radio load. Created
@@ -780,10 +848,12 @@ times so far).
 - **How it was caught:** tracing the connect sequence before asking Joe.
   ADR-0065 creates the block last in connect.
 - **Kind:** recommendation.
+- **Pattern:** recommendation.
+- **Guard:** Q-29.
 - **Takeaway:** for a window meant to be measured, check that whatever
   measures it is already running, given every wait before it.
 
-### 2026-11-12: ADR-0063 designed around a log block created but not started
+### M-139, 2026-11-12: ADR-0063 designed around a log block created but not started
 
 - **What happened:** ADR-0063 said the take-off block is created at connect
   and started at the take-off. cflib 0.1.34 starts every block as soon as the
@@ -793,10 +863,12 @@ times so far).
 - **How it was caught:** the source check the handoff asked for before the
   build. ADR-0065 records the fix.
 - **Kind:** design.
+- **Pattern:** said-without-checking.
+- **Guard:** Q-04.
 - **Takeaway:** for a library call a design relies on for one step, read what
   the library does on its own afterwards too, such as when the reply arrives.
 
-### 2026-11-12: A recap that called the torque a match for the battery move
+### M-138, 2026-11-12: A recap that called the torque a match for the battery move
 
 - **What happened:** a wrap-up said the 2026-11-09 front-right torque was
   "matching the battery move" when Joe had only said the battery moved, not
@@ -805,10 +877,12 @@ times so far).
   second reading.
 - **How it was caught:** reading Joe's answer against the data.
 - **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** a recap says only what's established; a claim still waiting
   on a check stays a question.
 
-### 2026-11-12: An estimate reset described as starting with large uncertainty
+### M-137, 2026-11-12: An estimate reset described as starting with large uncertainty
 
 - **What happened:** asked what moving the estimate reset to just before the
   take-off (#81) would cause, Claude said the reset starts "with large
@@ -820,10 +894,12 @@ times so far).
 - **How it was caught:** checking the source after Joe asked whether #81 is
   needed at all.
 - **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** Q-01.
 - **Takeaway:** check every firmware claim in an explanation against the
   source and the glossary, the side points as well as the main one.
 
-### 2026-11-12: Two glossary rows for ADR-0061 that didn't match it
+### M-136, 2026-11-12: Two glossary rows for ADR-0061 that didn't match it
 
 - **What happened:** *Thrust base* said the adapter sets it "just under"
   the hover thrust, though ADR-0061 accepts it may sit above, and left out
@@ -832,39 +908,47 @@ times so far).
   compensation: the analysis had to undo it.
 - **How it was caught:** the project review of 9f98d17..f35aa64.
 - **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** Q-40.
 - **Takeaway:** check each new glossary row against its ADR's accepted risks
   and the analysis it came from.
 
-### 2026-11-12: A thrust base report logged the same whether it confirmed or not
+### M-135, 2026-11-12: A thrust base report logged the same whether it confirmed or not
 
 - **What happened:** the adapter logged "The drone reports a thrust base of
   X." at INFO for any X, so a wrong value showed only in the take-off
   warning.
 - **How it was caught:** the project review of 9f98d17..f35aa64.
 - **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** Q-45.
 - **Takeaway:** a log line about a check says its outcome.
 
-### 2026-11-12: "Estimate reset." logged before a write that can fail
+### M-134, 2026-11-12: "Estimate reset." logged before a write that can fail
 
 - **What happened:** the review fix for the reset's link race (f35aa64) added
   a failure path after the "Estimate reset. Before it: ..." line, so a failed
   write logged a reset and then "not sent".
 - **How it was caught:** the project review of 9f98d17..f35aa64.
 - **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** none yet.
 - **Takeaway:** when a fix adds a failure path, re-read the log lines before
   it.
 
-### 2026-11-12: A two-cause failure branch tested for one cause
+### M-133, 2026-11-12: A two-cause failure branch tested for one cause
 
 - **What happened:** the same fix gave the reset's failure two causes ("the
   link is closed", "the firmware can't write it") but tested only the first,
   so always naming the link passed every test.
 - **How it was caught:** the project review of 9f98d17..f35aa64.
 - **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** none yet.
 - **Takeaway:** a branch that picks between messages needs a test per
   message.
 
-### 2026-11-12: A review finding against the adapter's VERIFY convention
+### M-132, 2026-11-12: A review finding against the adapter's VERIFY convention
 
 - **What happened:** a low-effort project review of 9f98d17..f35aa64 said
   THRUST_BASE's "VERIFY from each hover's motor outputs" should start with
@@ -872,10 +956,12 @@ times so far).
   for assumptions still to check in field tests; the review didn't read it.
 - **How it was caught:** the same review, run again at a higher effort.
 - **Kind:** communication.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** before flagging a marker or a wording style, check whether
   the file or the coding style already sets a convention for it.
 
-### 2026-11-12: "No glossary change" for a term whose meaning grew
+### M-131, 2026-11-12: "No glossary change" for a term whose meaning grew
 
 - **What happened:** ADR-0060 said *May be flying* needed no glossary change,
   but the snapshot now carries it from every adapter, while the glossary
@@ -884,10 +970,12 @@ times so far).
   reading ADR-0060 replaced.
 - **How it was caught:** the project review of fdad2db.
 - **Kind:** process.
+- **Pattern:** vocabulary.
+- **Guard:** Q-38.
 - **Takeaway:** when a decision moves a value to a new place or changes when
   a check runs, re-read the glossary rows that name it.
 
-### 2026-11-12: An ADR that took up an older ADR's rejected option, unmarked
+### M-130, 2026-11-12: An ADR that took up an older ADR's rejected option, unmarked
 
 - **What happened:** ADR-0060 (2026-11-10) put the adapter's "may be
   flying" in the snapshot for the safety pre-check. That's part of
@@ -896,10 +984,12 @@ times so far).
   status line nor #8 said so, though the review checklist asks for it.
 - **How it was caught:** the project review of fdad2db.
 - **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-33.
 - **Takeaway:** before writing an ADR, check the options the ADRs it touches
   rejected, and the backlog items on the same subject.
 
-### 2026-11-12: The reset's link check could go stale before the write
+### M-129, 2026-11-12: The reset's link check could go stale before the write
 
 - **What happened:** the review fixes for ADR-0054's code (fdad2db) moved the
   estimate reset's log after its "link closed" check, but left the write
@@ -908,10 +998,12 @@ times so far).
   the tick loop. The thrust base write (95693eb) already caught both.
 - **How it was caught:** the project review of fdad2db.
 - **Kind:** design.
+- **Pattern:** window-between-steps.
+- **Guard:** Q-03.
 - **Takeaway:** a check before a library call can go false on another thread
   before the call runs; handle the call's own failure too.
 
-### 2026-11-12: A boundary fix with no test at the boundary
+### M-128, 2026-11-12: A boundary fix with no test at the boundary
 
 - **What happened:** fdad2db changed the reset log's floor speed comparison
   from "up to" to "under", but its only test used 0.3 m/s, far over the
@@ -919,9 +1011,11 @@ times so far).
 - **How it was caught:** the project review of fdad2db, then planting the
   bug.
 - **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** Q-48.
 - **Takeaway:** a change to a comparison needs a test at exactly the limit.
 
-### 2026-11-12: "As soon as the motors stop" for a flag that knows only our stop
+### M-127, 2026-11-12: "As soon as the motors stop" for a flag that knows only our stop
 
 - **What happened:** fdad2db's docstring for the snapshot's `may_be_flying`
   said it turns false as soon as the motors stop. It turns false when our
@@ -929,10 +1023,12 @@ times so far).
   status, lag included.
 - **How it was caught:** the project review of fdad2db.
 - **Kind:** communication.
+- **Pattern:** safety-judgment.
+- **Guard:** Q-50.
 - **Takeaway:** in a docstring about a safety judgment, say whose action
   changes it.
 
-### 2026-11-10: One no-flow limit for an uncertainty that grows with height
+### M-125, 2026-11-10: One no-flow limit for an uncertainty that grows with height
 
 - **What happened:** ADR-0054 set one velocity uncertainty limit for "no
   flow", 0.03 m/s, at every height. The firmware's flow model, read on
@@ -943,11 +1039,13 @@ times so far).
   (backlog #80). Logged on 2026-11-12, after three hovers flown for fun on
   2026-11-10, two with a flashlight under the drone, followed the same curve.
 - **Kind:** safety design.
+- **Pattern:** safety-judgment.
+- **Guard:** Q-08.
 - **Takeaway:** before setting a fixed limit on an estimator's uncertainty,
   read its model for what else the uncertainty depends on, and check the
   limit at every height where it's used.
 
-### 2026-11-10: The altHold climb chosen without reading what its controller does at a switch
+### M-124, 2026-11-10: The altHold climb chosen without reading what its controller does at a switch
 
 - **What happened:** ADR-0048 (2026-11-05) described the altHold option as
   "the height controller tracks the vertical speed estimate", citing
@@ -962,11 +1060,13 @@ times so far).
 - **How it was caught:** analyzing First flight 3, by fitting the firmware's
   formula to the thrust command reconstructed from the motor logs.
 - **Kind:** design.
+- **Pattern:** said-without-checking.
+- **Guard:** Q-07.
 - **Takeaway:** before relying on a firmware setpoint type, read what its
   controller does when that setpoint starts and stops (integrals, base
   values, the planner's start), not only which inputs it ignores.
 
-### 2026-11-10: One limit read two ways, and messages that seemed to contradict it
+### M-123, 2026-11-10: One limit read two ways, and messages that seemed to contradict it
 
 - **What happened:** in ADR-0054's code, the safety pre-check passed a
   velocity uncertainty of exactly 0.03 m/s, while the take-off rule and the
@@ -976,10 +1076,12 @@ times so far).
   "0.050 m/s (under 0.05)" read as if the value were within its limit.
 - **How it was caught:** the project review of ADR-0054's code.
 - **Kind:** design.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** Q-48.
 - **Takeaway:** define each limit once, compare it the same way everywhere,
   and have each message say which side the value must be on.
 
-### 2026-11-10: A comment and an ADR line that promised more than the code
+### M-122, 2026-11-10: A comment and an ADR line that promised more than the code
 
 - **What happened:** after ADR-0054 removed the wait for the estimate at
   connect, a comment still said no position from before the reset is used,
@@ -988,11 +1090,13 @@ times so far).
   didn't say so.
 - **How it was caught:** the project review of ADR-0054's code.
 - **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-49.
 - **Takeaway:** when a change removes a wait, re-read the comments that
   relied on it; when code leaves part of an ADR unbuilt, mark that line with
   its backlog item.
 
-### 2026-11-10: Choices made while building, not recorded, and new terms not proposed
+### M-121, 2026-11-10: Choices made while building, not recorded, and new terms not proposed
 
 - **What happened:** ADR-0054's code put `FLOW_VELOCITY_UNCERTAINTY` in the
   drone interface module, chose the reset log's "implausible" threshold, and
@@ -1001,10 +1105,12 @@ times so far).
   "image quality" and "low light", which weren't glossary terms.
 - **How it was caught:** the project review of ADR-0054's code.
 - **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** before the commit, list each rule, threshold and new word the
   code uses that the ADR and glossary don't, and bring them to me.
 
-### 2026-11-10: The mock found the settle height again every tick
+### M-120, 2026-11-10: The mock found the settle height again every tick
 
 - **What happened:** the Crazyflie adapter keeps the settle height once
   found, but the mock adapter recomputed it every tick, so a flow cut after
@@ -1012,10 +1118,12 @@ times so far).
   one.
 - **How it was caught:** the project review of ADR-0054's code.
 - **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** Q-09.
 - **Takeaway:** for each state the real adapter keeps once set, check that
   the mock keeps it too.
 
-### 2026-11-10: An old status logged as current, and a reset logged before it was sent
+### M-119, 2026-11-10: An old status logged as current, and a reset logged before it was sent
 
 - **What happened:** the arm log said "The drone reports" for a drone status
   of any age. The estimate reset logged the estimate it erases, then "not
@@ -1024,10 +1132,12 @@ times so far).
   (the limit), and a docstring quoted First flight 2's readings.
 - **How it was caught:** the project review of ADR-0054's code.
 - **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** none yet.
 - **Takeaway:** a log line about telemetry gives its age, and an action is
   logged only on the path where it happens.
 
-### 2026-11-10: A cut-off extraction read as the touchdown
+### M-118, 2026-11-10: A cut-off extraction read as the touchdown
 
 - **What happened:** Claude's printout of Take-off speeds flight 1's
   estimate stopped at 3.15 s, 0.25 s before touchdown, and Claude logged
@@ -1036,10 +1146,12 @@ times so far).
   half on the landing "like flight 1"; flight 1's was about a third.
 - **How it was caught:** re-reading the flight's log for the handoff.
 - **Kind:** communication.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** check that an extraction reaches the moment it's quoted
   for, and compare flights only from numbers already checked.
 
-### 2026-11-10: Session 2's light blamed on a check that didn't exist yet
+### M-117, 2026-11-10: Session 2's light blamed on a check that didn't exist yet
 
 - **What happened:** reporting the velocity uncertainty limit that landed a
   0.5 m hover in First flight 3 (backlog #80), Claude said it "may also
@@ -1048,10 +1160,12 @@ times so far).
   settle at connect.
 - **How it was caught:** checking the timeline for the handoff.
 - **Kind:** communication.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** before linking a finding to an earlier session, check the
   code that session flew had the feature.
 
-### 2026-11-09: A 0.05 s margin on the climb time limit, not flagged
+### M-116, 2026-11-09: A 0.05 s margin on the climb time limit, not flagged
 
 - **What happened:** analyzing First flight 2's Failsafe high, Claude
   recorded that the initial climb ended 2.45 s after the take-off, but didn't
@@ -1061,10 +1175,12 @@ times so far).
   before the hover, so Failsafe high didn't test the failsafe.
 - **How it was caught:** analyzing First flight 3's Failsafe high log.
 - **Kind:** safety design.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** when a flight shows how long a step took, compare it with
   that step's time limit and say the margin.
 
-### 2026-11-09: ADR-0054 described from its number, not its text
+### M-115, 2026-11-09: ADR-0054 described from its number, not its text
 
 - **What happened:** arguing for the owed `/project-review` before First
   flight 3's Failsafe low, Claude said ADR-0054 changed how the initial
@@ -1075,10 +1191,12 @@ times so far).
 - **How it was caught:** linking the ADR in the drafted test log, where its
   file name didn't match.
 - **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** before citing what an ADR decides, read its title and
   Decision section, not a code comment that mentions it.
 
-### 2026-11-08: "In this light it never did", for a run with no flow data
+### M-114, 2026-11-08: "In this light it never did", for a run with no flow data
 
 - **What happened:** First flight 3's Failsafe low run stopped at connect
   ("Settling the position estimate took longer than 20 s"). Claude told me the
@@ -1090,10 +1208,12 @@ times so far).
 - **How it was caught:** reading the Hover run's log, which had flow data the
   failsafe run's log lacked.
 - **Kind:** communication.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** before naming the cause of a field failure, check the log
   holds the data that shows it; otherwise say it's a likely cause.
 
-### 2026-11-08: "First flight 1 didn't hit it", with cflib's close unchecked
+### M-113, 2026-11-08: "First flight 1 didn't hit it", with cflib's close unchecked
 
 - **What happened:** explaining the lock behind backlog #67, Claude said
   First flight 1's landings couldn't have locked the drone. It hadn't read
@@ -1103,10 +1223,12 @@ times so far).
   wasn't checked. Corrected in chat before the ADR was written.
 - **How it was caught:** reading `close_link()` while writing ADR-0058.
 - **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** before explaining why an earlier case worked, check every
   call on its path, the library's close and cleanup included.
 
-### 2026-11-07: "About 4.5 s" for the no-flow uncertainty, read from an upper bound
+### M-111, 2026-11-07: "About 4.5 s" for the no-flow uncertainty, read from an upper bound
 
 - **What happened:** explaining ADR-0054's 5 s wait, Claude told me a no-flow
   drone's velocity uncertainty takes about 4.5 s to pass 0.03 m/s. Bench run
@@ -1116,10 +1238,12 @@ times so far).
   anything was decided on it.
 - **How it was caught:** answering my question whether the 5 s can be shorter.
 - **Kind:** communication.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** when a number comes from a pass/fail check, say whether it's a
   bound or a measurement.
 
-### 2026-11-06: "About 8" parameter writes for "Charge", counted one per note
+### M-108, 2026-11-06: "About 8" parameter writes for "Charge", counted one per note
 
 - **What happened:** ADR-0053 said each chirp or note is one parameter write,
   about 8 for "Charge". A tone writes the pitch and then the effect, as the
@@ -1127,10 +1251,12 @@ times so far).
   and the silence. Fixed in the ADR before any code ran on the drone.
 - **How it was caught:** writing the Crazyflie adapter's tone command.
 - **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** a count of writes or packets is taken from the calls the
   code makes for each event, not from the number of events.
 
-### 2026-11-06: A pre-check rule that would end the game at a dark hiding spot
+### M-107, 2026-11-06: A pre-check rule that would end the game at a dark hiding spot
 
 - **What happened:** for backlog #48, Claude recommended that a high
   velocity uncertainty fail the safety pre-check, without saying what it does
@@ -1140,11 +1266,13 @@ times so far).
   it only in flight, and the take-off rule on the floor (ADR-0054).
 - **How it was caught:** answering my question about when the two checks run.
 - **Kind:** safety design.
+- **Pattern:** safety-judgment.
+- **Guard:** Q-24.
 - **Takeaway:** for each new pre-check condition, ask what it does on a
   landed drone. A condition that can fail on the floor belongs in the
   take-off rule.
 
-### 2026-11-06: A sound effect's number read from an out-of-date comment
+### M-106, 2026-11-06: A sound effect's number read from an out-of-date comment
 
 - **What happened:** Claude told me that `sound.effect` 11 plays the steady
   tone at `sound.freq`. That number came from the parameter's doc comment in
@@ -1154,10 +1282,12 @@ times so far).
 - **How it was caught:** reading the effects table to choose the end-of-test
   tune.
 - **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** a number that indexes a table is read from the table, not
   from a comment that describes it.
 
-### 2026-11-06: A hand-over order justified by a cflib call it doesn't match
+### M-105, 2026-11-06: A hand-over order justified by a cflib call it doesn't match
 
 - **What happened:** since the first adapter code (2026-10-20),
   `_release_velocity_streaming()` has released the setpoint stream before
@@ -1170,11 +1300,13 @@ times so far).
 - **How it was caught:** checking cflib's `motion_commander.py` while
   explaining backlog #56.
 - **Kind:** safety design.
+- **Pattern:** said-without-checking.
+- **Guard:** Q-02.
 - **Takeaway:** when code cites a library as precedent, check that the
   library does it in the same situation. The review checklist's first two
   questions already ask for this.
 
-### 2026-11-06: ADR-0041 amended twice without its status line saying so
+### M-104, 2026-11-06: ADR-0041 amended twice without its status line saying so
 
 - **What happened:** ADR-0049 (Failsafe low forges its fault during the
   climb, and the program takes `--fault-at` instead of a height) and ADR-0051
@@ -1184,20 +1316,24 @@ times so far).
 - **How it was caught:** Claude, building ADR-0051 (the forged value) and
   then marking the status line (ADR-0049).
 - **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-33.
 - **Takeaway:** none new: the checklist already asks whether the older ADR's
   status line is marked. Mark it in the same commit as the new ADR.
 
-### 2026-11-05: The Crazyflie's weight in the glossary, with no source
+### M-103, 2026-11-05: The Crazyflie's weight in the glossary, with no source
 
 - **What happened:** the glossary's first version (2026-10-18) gives the
   Crazyflie 2.1+ as 27 g. Bitcraze's product page and datasheet for the 2.1+
   give a take-off weight of 29 g.
 - **How it was caught:** reading Bitcraze's specs for backlog #50.
 - **Kind:** environment.
+- **Pattern:** said-without-checking.
+- **Guard:** Q-01.
 - **Takeaway:** the review checklist's first rule already covers it: hardware
   facts are checked, not recalled, glossary entries included.
 
-### 2026-11-05: A firmware shutdown at 3.0 V that the default build leaves out
+### M-102, 2026-11-05: A firmware shutdown at 3.0 V that the default build leaves out
 
 - **What happened:** ADR-0030 lists a firmware backup, and the docstring of
   `LOW_BATTERY_VOLTAGE` repeats it: after 5 s at 3.0 V the firmware shuts
@@ -1211,12 +1347,14 @@ times so far).
 - **How it was caught:** checking the firmware's battery handling at 2026.08
   for backlog #50.
 - **Kind:** safety design.
+- **Pattern:** said-without-checking.
+- **Guard:** Q-03.
 - **Takeaway:** a claim that the firmware "does X" needs the body of the
   function called, and any `#ifdef` or build option around it, checked
   against the build flashed. The review checklist's question about the
   guarding `if` now covers build options.
 
-### 2026-11-05: `kalman.varPX` called the position variance
+### M-101, 2026-11-05: `kalman.varPX` called the position variance
 
 - **What happened:** in backlog #48, four test logs of 2026-11-04 and a
   takeaway below, Claude called `kalman.varPX` the position variance. The
@@ -1226,11 +1364,13 @@ times so far).
   arrives and is wrong, which ruled it out as the measure for ADR-0048.
 - **How it was caught:** checking the firmware source for ADR-0048.
 - **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** Q-01.
 - **Takeaway:** name a log variable by what the firmware source says it
   holds, not by its name. The review checklist's first question already
   asks for this.
 
-### 2026-11-05: "Touchdown never confirmed", read from a log line that wasn't there
+### M-100, 2026-11-05: "Touchdown never confirmed", read from a log line that wasn't there
 
 - **What happened:** analyzing the first flights, Claude wrote in three test
   logs and backlog #51 that touchdown was never confirmed, and that the
@@ -1243,11 +1383,13 @@ times so far).
 - **How it was caught:** starting on the fix for #51, by replaying the logged
   snapshots through `TouchdownDetector`.
 - **Kind:** testing.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** a missing log line shows nothing until the code is checked to
   log that outcome. Before naming a cause from a flight log, replay the
   recorded data through the real code.
 
-### 2026-11-04: A go/no-go rule of "the motion flag set in most samples"
+### M-098, 2026-11-04: A go/no-go rule of "the motion flag set in most samples"
 
 - **What happened:** for the pre-flight Flow deck check, Claude said the
   drone was fit to fly when the motion flag was set in most samples. With a
@@ -1256,10 +1398,12 @@ times so far).
   steady. The flag being set while still had been sensor noise.
 - **How it was caught:** the next check's data, before the flight.
 - **Kind:** communication.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** a go/no-go rule names the quantity that matters (here, the
   velocity variance staying small), not a sign that only went with it once.
 
-### 2026-11-04: A Bench criterion of 0.5 s for a value that streams at 1 Hz
+### M-097, 2026-11-04: A Bench criterion of 0.5 s for a value that streams at 1 Hz
 
 - **What happened:** the Bench test log's pass criterion said no value may be
   older than 0.5 s. The battery voltage streams once a second by design
@@ -1268,10 +1412,12 @@ times so far).
 - **How it was caught:** computing the oldest age of each value from the
   Bench logs, then checking the safety layer's limits.
 - **Kind:** testing.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** a pass criterion about telemetry ages takes each value's
   limit from the code, not one round number.
 
-### 2026-11-04: The Flow deck's maximum shutter read as "too dark"
+### M-096, 2026-11-04: The Flow deck's maximum shutter read as "too dark"
 
 - **What happened:** analyzing why the estimate wouldn't settle, Claude said
   `motion.shutter = 8191` (the maximum) meant the Flow deck hardly saw any
@@ -1279,10 +1425,12 @@ times so far).
   8191. The real difference was the motion flag and the surface quality.
 - **How it was caught:** the next check's data.
 - **Kind:** communication.
+- **Pattern:** reading-field-data.
+- **Guard:** none yet.
 - **Takeaway:** call a reading the cause only after a case where it differs;
   until then, call it a hypothesis.
 
-### 2026-11-04: "A red LED that keeps blinking means a failed self-test"
+### M-095, 2026-11-04: "A red LED that keeps blinking means a failed self-test"
 
 - **What happened:** during the first power-on, Claude said a red LED that
   keeps blinking probably means the self-test failed. Bitcraze's docs say a
@@ -1291,10 +1439,12 @@ times so far).
 - **How it was caught:** looking up the LED sequences when I described the
   pattern, before telling me what it meant.
 - **Kind:** environment.
+- **Pattern:** said-without-checking.
+- **Guard:** Q-01.
 - **Takeaway:** the same as for the battery placement: hardware facts come
   from the maker's docs, also in chat.
 
-### 2026-11-04: WinUSB for the Crazyradio, and "the README says WinUSB"
+### M-094, 2026-11-04: WinUSB for the Crazyradio, and "the README says WinUSB"
 
 - **What happened:** Claude told me to install the WinUSB driver with Zadig,
   and later said the README asks for WinUSB. It doesn't name a driver. cflib
@@ -1304,19 +1454,23 @@ times so far).
 - **How it was caught:** checking the installed cflib source before I picked
   the driver.
 - **Kind:** environment.
+- **Pattern:** said-without-checking.
+- **Guard:** Q-01.
 - **Takeaway:** check the installed cflib source, as CLAUDE.md says, and quote
   the repo's docs only after reading them.
 
-### 2026-11-04: A battery connector named from memory
+### M-093, 2026-11-04: A battery connector named from memory
 
 - **What happened:** Claude said the Crazyflie's battery connector is a 2-pin
   JST-PH 2.0 mm. My battery's datasheet says Molex 51005, and it fits.
 - **How it was caught:** the datasheet I pasted.
 - **Kind:** environment.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** for connectors and polarity, the check is the physical fit and
   the + marking, and the maker's docs; never a part number from memory.
 
-### 2026-11-04: ADR-0046 applied without searching for the old wording
+### M-092, 2026-11-04: ADR-0046 applied without searching for the old wording
 
 - **What happened:** ADR-0046 changed the snapshot's time from the tick's
   start to a clock reading after the copy. Claude updated the code it named
@@ -1327,21 +1481,25 @@ times so far).
 - **How it was caught:** `/project-review` (its `/code-review` step and the
   ADR check) before committing my third code review's fixes.
 - **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-35.
 - **Takeaway:** when a change alters what a value means, search for the old
   wording everywhere (code, glossary, ADRs) before calling it done. When
   trimming a docstring, keep each piece of guidance that's still true.
 
-### 2026-11-04: A shortened log line that dropped the outcome
+### M-091, 2026-11-04: A shortened log line that dropped the outcome
 
 - **What happened:** the short-message sweep turned the failsafe test's last
   line, "landed. Done (the test failed).", into "landed. Done.". That step is
   reached only after a failure, so the operator's last line read like a pass.
 - **How it was caught:** `/project-review`, before committing.
 - **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** Q-44.
 - **Takeaway:** shortening a message removes reasons, never the outcome
   (failed, not confirmed, refused).
 
-### 2026-11-04: Restoring a planted bug with `git checkout` discarded edits
+### M-090, 2026-11-04: Restoring a planted bug with `git checkout` discarded edits
 
 - **What happened:** while proving a new test by bug planting, Claude
   restored the planted file with `git checkout`, which also threw away that
@@ -1349,10 +1507,12 @@ times so far).
   re-applied them.
 - **How it was caught:** Claude, checking the file's diff right after.
 - **Kind:** testing.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** before planting a bug in a file with uncommitted work, copy
   it and restore from the copy; never `git checkout` it.
 
-### 2026-11-04: "No test enforces it" said without looking at the tests
+### M-089, 2026-11-04: "No test enforces it" said without looking at the tests
 
 - **What happened:** reviewing the rescue landing program in my third code
   review, Claude said that only the rescue landing passing
@@ -1362,9 +1522,11 @@ times so far).
   architecture tests).
 - **How it was caught:** Claude, listing the test names for the same review.
 - **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** before saying a rule has no test, search the tests for it.
 
-### 2026-11-04: "Can only be a clock bug", and a cost overstated
+### M-088, 2026-11-04: "Can only be a clock bug", and a cost overstated
 
 - **What happened:** ADR-0042, the glossary's *Negative age* and the safety
   layer's warning said an age more negative than a tick period can only be a
@@ -1377,10 +1539,12 @@ times so far).
   come from the future, during my third code review. ADR-0046 now reads the
   time after the copy, so negative ages can't happen.
 - **Kind:** design.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** "can only be" needs every path checked, threads and stalls
   included. Weigh an option's cost against what it would really change.
 
-### 2026-11-04: "Isn't known to be flying", the opposite of the rule
+### M-087, 2026-11-04: "Isn't known to be flying", the opposite of the rule
 
 - **What happened:** the `hover()` docstring in the drone interface, the
   adapter's "Hover ignored" log message and the docstring of its streak flag
@@ -1393,10 +1557,12 @@ times so far).
   review. Fixed: the docstrings use *may be flying*, and the log message is
   now one short sentence.
 - **Kind:** communication.
+- **Pattern:** safety-judgment.
+- **Guard:** Q-50, Q-51.
 - **Takeaway:** wording that describes a safety judgment must say which way
   it fails when unsure. Review fixes are new code and need a review too.
 
-### 2026-11-04: Comments that said more than their code
+### M-086, 2026-11-04: Comments that said more than their code
 
 - **What happened:** fixing the take-over message, Claude wrote a comment
   saying none of the estimates was finite, though the branch runs when either
@@ -1406,10 +1572,12 @@ times so far).
 - **How it was caught:** Claude, in the `/project-review` before committing.
   Both comments are fixed, and backlog #45 now notes the in-flight case.
 - **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** none yet.
 - **Takeaway:** when a decision shows a reason is wrong, search for the
   comments that give that reason, not only the code it changed.
 
-### 2026-11-04: A time-limit message that read the telemetry again after the check
+### M-085, 2026-11-04: A time-limit message that read the telemetry again after the check
 
 - **What happened:** for ADR-0045, `_first_telemetry_time_limit_message`
   called `missing_values()` again after the wait's last check. A value
@@ -1420,11 +1588,13 @@ times so far).
   the message now uses the list from the check that timed out, with a test
   proven by bug planting.
 - **Kind:** design.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** Q-26.
 - **Takeaway:** a wait's error message describes the state that timed out:
   hand it the result of the last check, not a fresh read. Now a question in
   the review checklist.
 
-### 2026-11-04: A take-over message that assumed the drone was flying
+### M-084, 2026-11-04: A take-over message that assumed the drone was flying
 
 - **What happened:** the ADR-0045 message said "The drone can't land under
   control", and its comment and a test comment said the drone was flying.
@@ -1434,11 +1604,13 @@ times so far).
 - **How it was caught:** Claude, in `/project-review`. Fixed: the message says
   "If the drone is in the air", and the warning says "any earlier finite one".
 - **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** Q-43.
 - **Takeaway:** the checklist's "Does each log message's stated cause hold on
   every path?" already asks this; follow the paths into the case the
   message's author didn't picture.
 
-### 2026-11-04: A "known risk" that cflib's own guard rules out
+### M-083, 2026-11-04: A "known risk" that cflib's own guard rules out
 
 - **What happened:** for the next-up run's question 4, Claude said that
   cflib's `SyncCrazyflie.open_link` calls `close_link()` after a failed
@@ -1453,11 +1625,13 @@ times so far).
 - **How it was caught:** Claude, in `/project-review` (a fresh code review
   reading cflib's source). Backlog #43 is removed and ADR-0038 says so.
 - **Kind:** recommendation.
+- **Pattern:** said-without-checking.
+- **Guard:** Q-03.
 - **Takeaway:** a claim that a library "does X when Y fails" needs the
   condition around the call checked, not only the function's body. The
   review checklist's library-call question now says so.
 
-### 2026-11-04: Records that claimed more than the code or the source showed
+### M-082, 2026-11-04: Records that claimed more than the code or the source showed
 
 - **What happened:** ADR-0041's amendment and the failsafe program's
   docstring said exit code 0 means the landing finished "with the motors
@@ -1469,11 +1643,13 @@ times so far).
 - **How it was caught:** Claude, in `/project-review`. The exit code's claim
   is corrected; detecting a lost link is backlog #46.
 - **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** Q-52.
 - **Takeaway:** when a record says an action "stopped" or "landed", name what
   observed it. A command sent over the radio is not a command that arrived.
   The checklist question about success and exit codes now says so.
 
-### 2026-11-04: An ADR amendment without the documents and the test that follow from it
+### M-081, 2026-11-04: An ADR amendment without the documents and the test that follow from it
 
 - **What happened:** after ADR-0041 was amended (the program judges the pass,
   and exit code 0 includes `disconnect()` returning), the Failsafe low and
@@ -1485,11 +1661,13 @@ times so far).
   drone, which went further than even ADR-0038's claim.
 - **How it was caught:** Claude, in `/project-review`.
 - **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-36.
 - **Takeaway:** an amendment is done when every document that restates the
   rule matches it (test log drafts, README procedures, status lines) and the
   test for the new rule exists. The checklist now asks about test log drafts.
 
-### 2026-11-03: Crazyflie adapter code committed without `/project-review`
+### M-077, 2026-11-03: Crazyflie adapter code committed without `/project-review`
 
 - **What happened:** building ADR-0045, Claude changed the Crazyflie
   adapter (a new time-out message for a take-over connect, then a comment)
@@ -1500,11 +1678,13 @@ times so far).
   the rescue landing's path.
 - **How it was caught:** Claude, at the end of the session.
 - **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** before each commit, check whether it touches the safety
   layer, the Crazyflie adapter or the tick loop. If it does, review first,
   or ask before committing without one.
 
-### 2026-11-03: Docstrings that a change left behind
+### M-076, 2026-11-03: Docstrings that a change left behind
 
 - **What happened:** after ADR-0038 and ADR-0039, the `DroneInterface`
   docstrings still said `disconnect()` always leaves the drone on the
@@ -1519,21 +1699,25 @@ times so far).
 - **Caught at:** the end-of-run reviews of the next-up run (pull request
   #8), the second one by the fresh-context read.
 - **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** none yet.
 - **Takeaway:** when a decision changes what a function does, search for
   every docstring that describes it, the interface's included, and fix a
   claim everywhere it was copied, not only where it was found.
 
-### 2026-11-03: An emergency stop that said "not delivered" when it may have been
+### M-075, 2026-11-03: An emergency stop that said "not delivered" when it may have been
 
 - **What happened:** `tools/emergency_stop.py` printed "the radio did not
   deliver the emergency stop" whenever the stop wasn't confirmed, also when
   the radio took every packet and only reported a link error on the way.
 - **Caught at:** the second end-of-run review of pull request #8.
 - **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** Q-43.
 - **Takeaway:** a failure message names every way to reach it (REVIEW.md:
   the stated cause holds on every path).
 
-### 2026-11-03: A once-per-streak log line whose streak never ended
+### M-074, 2026-11-03: A once-per-streak log line whose streak never ended
 
 - **What happened:** the adapter's "Hover ignored" line (ADR-0039) was
   limited to once per streak, but the flag was cleared only by `connect()`
@@ -1543,10 +1727,12 @@ times so far).
 - **Caught at:** the second end-of-run review of pull request #8, reproduced
   with a script.
 - **Kind:** design.
+- **Pattern:** leftover-state.
+- **Guard:** Q-18.
 - **Takeaway:** a once-per-streak flag is cleared on every path that ends
   the streak (now a REVIEW.md question).
 
-### 2026-11-03: A new connection that kept the last one's landing
+### M-073, 2026-11-03: A new connection that kept the last one's landing
 
 - **What happened:** `connect()` started resetting per-connection state for
   ADR-0038 (airborne, the drone status, the telemetry) but not the landing
@@ -1558,10 +1744,12 @@ times so far).
 - **Caught at:** the second end-of-run review of pull request #8, reproduced
   with the tests' fake cflib.
 - **Kind:** safety design.
+- **Pattern:** leftover-state.
+- **Guard:** Q-17.
 - **Takeaway:** state reset for a new connection is checked against the
   constructor's field list (now a REVIEW.md question).
 
-### 2026-11-03: Fitness functions with blind spots
+### M-072, 2026-11-03: Fitness functions with blind spots
 
 - **What happened:** the scanner behind ADR-0041's fitness function handled
   four import forms, but tests exercised only one: planting a bug in the
@@ -1573,11 +1761,13 @@ times so far).
 - **Caught at:** the first end-of-run review of pull request #8 (left
   unfinished), fixed after the second.
 - **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** Q-32.
 - **Takeaway:** a fitness function's scanner gets a test for each form it
   handles, on a made-up file; every structural "only" in a new ADR gets its
   fitness function in the same change.
 
-### 2026-11-03: Two constants that must agree, with no test between them
+### M-071, 2026-11-03: Two constants that must agree, with no test between them
 
 - **What happened:** the failsafe test's `FAULT_TIME_LIMIT` (10 s) must
   exceed the wrapper's `HOVER_DURATION_BEFORE_FAULT` (3 s), or the test
@@ -1586,10 +1776,12 @@ times so far).
 - **Caught at:** the first end-of-run review of pull request #8, fixed after
   the second.
 - **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** Q-47.
 - **Takeaway:** when one placeholder only works relative to another, a test
   says so, and the docstrings point to the constant instead of copying it.
 
-### 2026-11-03: A taken-over flight given the take-off grace period
+### M-070, 2026-11-03: A taken-over flight given the take-off grace period
 
 - **What happened:** taking over a flight (ADR-0038) started the 1 s take-off
   grace period without reading the status, so a rescue run on an armed
@@ -1597,29 +1789,35 @@ times so far).
   "Never").
 - **Caught at:** the first end-of-run review of pull request #8.
 - **Kind:** safety design.
+- **Pattern:** safety-judgment.
+- **Guard:** none yet.
 - **Takeaway:** a new way into a state ("as if we had sent the take-off")
   is checked against every rule that state's usual entry carries.
 
-### 2026-11-03: An emergency stop that said "Sent." when nothing was
+### M-069, 2026-11-03: An emergency stop that said "Sent." when nothing was
 
 - **What happened:** `tools/emergency_stop.py` ignored `send_packet()`'s
   result and printed "Sent." after about 38 s of silence when nothing
   reached the drone (reproduced against cflib's real `RadioDriver`).
 - **Caught at:** the first end-of-run review of pull request #8.
 - **Kind:** safety design.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** Q-52.
 - **Takeaway:** a tool whose job is one outcome reports success only when
   that outcome happened (now a REVIEW.md question).
 
-### 2026-11-03: A rescue landing that exited 0 when the rescue failed
+### M-068, 2026-11-03: A rescue landing that exited 0 when the rescue failed
 
 - **What happened:** the rescue landing program returned exit code 0 after
   a refused landing or its time limit.
 - **Caught at:** the first end-of-run review of pull request #8.
 - **Kind:** design.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** Q-52.
 - **Takeaway:** the same as the emergency stop's: the exit code is part of
   the report.
 
-### 2026-11-03: A mitigation in ADR-0044 that the code didn't provide
+### M-067, 2026-11-03: A mitigation in ADR-0044 that the code didn't provide
 
 - **What happened:** ADR-0044 said "nothing in our code sends it a
   setpoint" during the Bench, but `disconnect()` on a drone on the floor
@@ -1627,30 +1825,36 @@ times so far).
   estimate.
 - **Caught at:** the first end-of-run review of pull request #8.
 - **Kind:** safety design.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** none yet.
 - **Takeaway:** a safety claim in an ADR is checked against the code path
   it describes, end to end, before it's recorded.
 
-### 2026-11-03: ADR-0043 described the old field-testing README wrongly
+### M-066, 2026-11-03: ADR-0043 described the old field-testing README wrongly
 
 - **What happened:** ADR-0043 said the old README's gate and simulator rule
   were different from what it said (the gate belonged to each stage; the
   simulator was required except for Bench and Hover).
 - **Caught at:** the first end-of-run review of pull request #8.
 - **Kind:** process.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** when an ADR describes what it replaces, quote or re-read
   the old text rather than summarizing it from memory.
 
-### 2026-11-03: A test fake that streamed only once
+### M-065, 2026-11-03: A test fake that streamed only once
 
 - **What happened:** the first `FakeCflib` sent each log block's sample once,
   but `connect()` swaps the telemetry buffer after the estimate reset and
   relies on the drone streaming on, so the fake couldn't model it.
 - **Caught at:** while building it.
 - **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** Q-09.
 - **Takeaway:** REVIEW.md's "how does the real adapter differ from the
   fake?" applies to timing too: a real drone keeps streaming.
 
-### 2026-11-03: New vocabulary in code names before proposing it
+### M-064, 2026-11-03: New vocabulary in code names before proposing it
 
 - **What happened:** the unattended run named code with terms the glossary
   lacks (Failsafe test, Forged low battery drone, Take over, Streak, and
@@ -1659,12 +1863,14 @@ times so far).
   it in code.
 - **Caught at:** the first end-of-run review of pull request #8.
 - **Kind:** process.
+- **Pattern:** vocabulary.
+- **Guard:** none yet.
 - **Takeaway:** in an unattended run, propose the term in the pull request
   and use a plain description in code until it's accepted, or record the
   name as a choice for Joe to confirm before using it.
 
 
-### 2026-11-02: A work-log row raised without its total
+### M-061, 2026-11-02: A work-log row raised without its total
 
 - **What happened:** the work-log commit for ADR-0040 and ADR-0042 raised the
   2026-11-02 row from ~2.5 to ~3 hours but left the milestone total at
@@ -1672,10 +1878,12 @@ times so far).
 - **Caught at:** adding the next row to the same day, by summing the rows
   with a script.
 - **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** when a work-log row's hours change, recompute the milestone
   total from the rows, not by adding the change to the old total.
 
-### 2026-11-02: A tick period quoted from memory
+### M-060, 2026-11-02: A tick period quoted from memory
 
 - **What happened:** explaining the negative-ages options, Claude gave one
   tick period as 20 ms at 50 Hz.
@@ -1684,10 +1892,12 @@ times so far).
 - **Caught at:** looking up `TICK_RATE` while writing ADR-0042, before it was
   recorded.
 - **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** look up project constants before quoting them, even in
   conversation.
 
-### 2026-11-02: A watchdog recommended that the backlog already ruled out
+### M-059, 2026-11-02: A watchdog recommended that the backlog already ruled out
 
 - **What happened:** for where landing progress runs (backlog #8), Claude
   recommended D, a hang watchdog thread that lands the drone, and listed a
@@ -1699,10 +1909,12 @@ times so far).
 - **Caught at:** writing up the decision (A, with D backlogged), when Claude
   found #26 before adding a new backlog item.
 - **Kind:** recommendation.
+- **Pattern:** recommendation.
+- **Guard:** none yet.
 - **Takeaway:** before proposing options, search the backlog and ADRs for the
   same problem; an earlier finding may already rule an option out.
 
-### 2026-11-02: A refusal that drops the drone it protects
+### M-058, 2026-11-02: A refusal that drops the drone it protects
 
 - **What happened:** for backlog #36, Claude recommended that `connect()`
   refuse a flying drone, right after noting that any `connect()` failure
@@ -1715,10 +1927,12 @@ times so far).
 - **Caught at:** checking `close_link()` in the cflib source while writing the
   ADR, before it was recorded.
 - **Kind:** safety design.
+- **Pattern:** safety-judgment.
+- **Guard:** Q-21.
 - **Takeaway:** for a new failure path, follow it through its cleanup, and
   check what that cleanup sends to a drone that may be flying.
 
-### 2026-11-02: Manual arming called a barrier that doesn't rely on our code
+### M-057, 2026-11-02: Manual arming called a barrier that doesn't rely on our code
 
 - **What happened:** for backlog #37, Claude said manual arming (our own
   firmware build) gives hide-and-seek "a second barrier that doesn't rely on
@@ -1728,10 +1942,12 @@ times so far).
   is a second step a bug must hit, not a barrier independent of our code.
 - **Caught at:** explaining the claim when I asked what it meant.
 - **Kind:** safety design.
+- **Pattern:** safety-judgment.
+- **Guard:** Q-12.
 - **Takeaway:** before calling a backup independent, name what triggers it
   and check that the primary's failure can't trigger it too.
 
-### 2026-11-02: A pushed commit that doesn't pass its own tests
+### M-056, 2026-11-02: A pushed commit that doesn't pass its own tests
 
 - **What happened:** the review's work was committed by topic, but
   `878c16f` uses `Vector3.is_finite()` and a renamed safety-layer property
@@ -1742,10 +1958,12 @@ times so far).
   the commits had been pushed by then. I left the history as it is: the
   commits before and after it pass.
 - **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** commit in dependency order and run the tests at every commit
   before pushing, so any commit can be rolled back to.
 
-### 2026-11-02: A failsafe whose landing used the value that failed it
+### M-055, 2026-11-02: A failsafe whose landing used the value that failed it
 
 - **What happened:** Claude recommended that the safety pre-check fail on a
   NaN position estimate and land, and built it. But the Crazyflie adapter's
@@ -1757,11 +1975,13 @@ times so far).
   Now the adapter drops an estimate that isn't finite, so the landing goes to
   the last finite one (ADR-0030); tests are proven by bug planting.
 - **Kind:** safety design. A backup sharing the primary's failure.
+- **Pattern:** safety-judgment.
+- **Guard:** Q-12.
 - **Takeaway:** when a check sends a bad value into a failsafe, follow that
   value through the failsafe in the same change. The review checklist
   already asked; the check was skipped while recommending.
 
-### 2026-11-02: Wording in the NaN change that missed the project's rules
+### M-054, 2026-11-02: Wording in the NaN change that missed the project's rules
 
 - **What happened:** in the same change, `Verdict`'s new check packed two
   rules into one comparison, although `judge()` had just moved to plain `if`
@@ -1770,10 +1990,12 @@ times so far).
   the coding style asks.
 - **Caught at:** the same review.
 - **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** none yet.
 - **Takeaway:** a new rule also changes the docstrings that promise what
   callers can rely on; check them in the same change.
 
-### 2026-11-02: The gap between two lines, a fifth time
+### M-053, 2026-11-02: The gap between two lines, a fifth time
 
 - **What happened:** the start-up code put the old interrupt signal handler
   back before logging the end of a run. An interrupt signal during those last
@@ -1786,10 +2008,12 @@ times so far).
   committing my second code review's fixes. Both now happen in the right
   order, with two new tests proven by bug planting.
 - **Kind:** design. Windows of time between two steps.
+- **Pattern:** window-between-steps.
+- **Guard:** Q-19.
 - **Takeaway:** log lines are lines too: keep a signal handler in place until
   the last line it protects, and log inside the `try`.
 
-### 2026-11-02: A Windows call whose failure went unnoticed
+### M-052, 2026-11-02: A Windows call whose failure went unnoticed
 
 - **What happened:** `quick_edit_off` ignored what `SetConsoleMode` returned.
   If turning QuickEdit off failed, the log still said it was off, and
@@ -1799,10 +2023,12 @@ times so far).
   a warning with the Windows error; two new tests (Windows only), proven by
   bug planting.
 - **Kind:** environment.
+- **Pattern:** environment.
+- **Guard:** Q-05.
 - **Takeaway:** check every Windows call's result: called through ctypes, a
   failure is only a return value, never an exception.
 
-### 2026-11-02: A log message and a docstring narrower than the code
+### M-051, 2026-11-02: A log message and a docstring narrower than the code
 
 - **What happened:** an abandoned connect step's late error was logged as
   coming "after its time limit", but a step is also abandoned when the
@@ -1811,10 +2037,12 @@ times so far).
 - **Caught at:** the same review. Now "after it was abandoned" and "returns
   or raises".
 - **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** Q-43.
 - **Takeaway:** check that a log message's cause holds on every path that
   reaches it.
 
-### 2026-11-02: A review skill whose steps clashed with the skill it runs
+### M-050, 2026-11-02: A review skill whose steps clashed with the skill it runs
 
 - **What happened:** `/project-review` runs `/code-review` and keeps its
   findings for one merged report, but `/code-review`'s own instructions say
@@ -1823,10 +2051,12 @@ times so far).
 - **Caught at:** running `/project-review` in the same review. Its step 2 now
   says not to report `/code-review`'s findings separately.
 - **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** when a skill runs another skill, read the inner skill's
   instructions for steps that clash with the outer one's.
 
-### 2026-11-01: A safety gap deferred without checking the planned control that opens it
+### M-046, 2026-11-01: A safety gap deferred without checking the planned control that opens it
 
 - **What happened:** after the gap (a) correction, Claude proposed deferring
   the fix for a hover command that can start the motors of a drone on the
@@ -1837,10 +2067,12 @@ times so far).
   do.
 - **Caught at:** the review session, checking the deferral against the ADRs.
 - **Kind:** safety design.
+- **Pattern:** safety-judgment.
+- **Guard:** Q-23.
 - **Takeaway:** before deferring a safety gap, check the accepted ADRs for
   planned features that would open it, and tie the fix to the first of them.
 
-### 2026-11-01: A rename recommended without checking how the project already says it
+### M-045, 2026-11-01: A rename recommended without checking how the project already says it
 
 - **What happened:** in my second code review, Claude recommended renaming
   `missing_values`' "front range" to "front range reading", the glossary
@@ -1849,10 +2081,12 @@ times so far).
   rename would have made the operator's messages disagree. I accepted it.
 - **Caught at:** searching for the old names before making the change.
 - **Kind:** recommendation.
+- **Pattern:** recommendation.
+- **Guard:** none yet.
 - **Takeaway:** before recommending a rename, search how the rest of the
   project already says it.
 
-### 2026-11-01: Code called dead without following every path to it
+### M-044, 2026-11-01: Code called dead without following every path to it
 
 - **What happened:** in my second code review, Claude recommended dropping
   the writes in the mock adapter's `set_range_reading` and
@@ -1864,10 +2098,12 @@ times so far).
   sets a reading and then stops the telemetry failed. The writes are back,
   with a one-line comment saying why they're needed.
 - **Kind:** recommendation.
+- **Pattern:** recommendation.
+- **Guard:** none yet.
 - **Takeaway:** before calling code dead, follow every path to where its
   result is read, including early returns.
 
-### 2026-11-01: A parameter named with a glossary term that means something else
+### M-043, 2026-11-01: A parameter named with a glossary term that means something else
 
 - **What happened:** `run_with_time_limit` called the "what to check" part of
   its timeout message `hint`, but the glossary's *Hint* is the drone's LED
@@ -1877,10 +2113,12 @@ times so far).
 - **Caught at:** walking me through `time_limit.py` in my second code review.
   It's now `what_to_check`, keyword-only, so every call shows the name.
 - **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** Q-41.
 - **Takeaway:** before naming something, look the word itself up in the
   glossary, not only the concept.
 
-### 2026-11-01: Cloud setup advice from memory
+### M-042, 2026-11-01: Cloud setup advice from memory
 
 - **What happened:** to get `CLAUDE.local.md` into cloud sessions, Claude
   described the cloud setup script from memory: where to find it, and a line
@@ -1889,10 +2127,12 @@ times so far).
   `~/.claude/CLAUDE.md` instead.
 - **Caught at:** looking up the docs after I couldn't find the setup script.
 - **Kind:** environment.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet.
 - **Takeaway:** check how a tool works in its docs before giving
   step-by-step instructions, the same as checking cflib against its source.
 
-### 2026-11-01: Code reviews that skipped the review checklist
+### M-041, 2026-11-01: Code reviews that skipped the review checklist
 
 - **What happened:** CLAUDE.md says every `/code-review` also works through
   `REVIEW.md`. The skill's own steps don't include it, and Claude's two
@@ -1900,11 +2140,13 @@ times so far).
 - **Caught at:** answering my question about why some findings come up only
   in my reviews.
 - **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
 - **Takeaway:** the skill doesn't know this project's checklist, ADRs or
   glossary; a review here must bring them in itself. The project skill
   `/project-review` now does.
 
-### 2026-11-01: The gap between two lines, a fourth time
+### M-040, 2026-11-01: The gap between two lines, a fourth time
 
 - **What happened:** the tick loop added its garbage-collector hook before
   the `try` whose `finally` removes it, with a log call in between. Safe in
@@ -1913,10 +2155,12 @@ times so far).
 - **Caught at:** walking me through `tick_loop.py` in my second code review.
   The hook is now added inside the `try`, and removed only if present.
 - **Kind:** design. Windows of time between two steps.
+- **Pattern:** window-between-steps.
+- **Guard:** Q-19.
 - **Takeaway:** start anything that needs cleaning up inside the `try` that
   cleans it up.
 
-### 2026-11-01: A tick that raised left no timing behind
+### M-039, 2026-11-01: A tick that raised left no timing behind
 
 - **What happened:** when the tick step raised, the tick loop skipped
   recording that tick, so the log and the summary left out its work time and
@@ -1926,10 +2170,12 @@ times so far).
   The tick is now recorded in a `finally`; a new test is proven by bug
   planting.
 - **Kind:** design. Edge cases at the start, end and between ticks.
+- **Pattern:** window-between-steps.
+- **Guard:** none yet.
 - **Takeaway:** on an error path, check that what the normal path records is
   still recorded.
 
-### 2026-11-01: A cost from Linux in a comment, with no source
+### M-038, 2026-11-01: A cost from Linux in a comment, with no source
 
 - **What happened:** a comment said arming the hang watchdog costs "about
   0.1 ms on Linux", with no source, and the program runs on Windows.
@@ -1937,246 +2183,8 @@ times so far).
   Measured on my laptop (0.09 ms median, 0.8 ms worst), and the comment now
   says so.
 - **Kind:** environment. Code that was only run on Linux.
+- **Pattern:** environment.
+- **Guard:** none yet.
 - **Takeaway:** a performance figure says where it was measured, on the
   machine the program runs on.
 
-### 2026-10-31: A battery check that a NaN voltage would pass
-
-- **What happened:** the safety pre-check landed the drone when
-  `battery.value < LOW_BATTERY_VOLTAGE`. Every comparison with NaN is false,
-  so a NaN voltage would have passed the check. `requests.py`, written at the
-  same time, already wrote its check so NaN fails.
-- **Caught at:** walking me through `safety_layer.py` in my second code
-  review. The check is now `not (battery.value >= LOW_BATTERY_VOLTAGE)`, with
-  a test proven by bug planting. The firmware is very unlikely to send a NaN
-  voltage.
-- **Kind:** safety design.
-- **Takeaway:** write a threshold check so a value that isn't a number fails
-  it: test for the safe side and negate, as `requests.py` does.
-
-### 2026-10-31: A glossary definition the code outgrew
-
-- **What happened:** the minimal safety layer (ADR-0030) puts an approved
-  arm request into the movement slot, its only slot, but the glossary's
-  *Command slot* still listed the movement slot's commands without arm.
-- **Caught at:** walking me through `safety_layer.py` in my second code
-  review. The glossary now lists arm.
-- **Kind:** process.
-- **Takeaway:** when code adds to something the glossary lists, update the
-  list in the same commit.
-
-### 2026-10-31: A landing guard that trusted an old drone status
-
-- **What happened:** ADR-0032's `land()` stops the motors instead of landing
-  when the drone isn't flying, judged from the drone status. The first
-  version didn't check the status's age: if the status stream stalled before
-  a take-off showed in it, an old "not flying" would have made `land()` cut
-  the motors with the drone in the air.
-- **Caught at:** Claude's code review, at a high level. A missing or old
-  status now counts as unknown, so the drone lands; a test covers it.
-- **Kind:** safety design.
-- **Takeaway:** a guard that decides from telemetry must say what it does
-  when the value is missing or old, and the safe choice for a missing value
-  isn't always the same as for a "no".
-
-### 2026-10-30: A wait that a previous connection could satisfy
-
-- **What happened:** the wait for the first telemetry (ADR-0031) checks that
-  every value is in the telemetry buffer. But the adapter kept one buffer for
-  its whole life, so connecting a second time found the previous session's
-  values already there: the wait passed at once, and the pre-check would have
-  ended the flight at its first tick on stale values, the very failure the
-  wait exists to prevent.
-- **Caught at:** Claude's code review, at a high level. Each connect now
-  starts a fresh buffer, and a test connects twice.
-- **Kind:** design. State that outlives the session it describes.
-- **Takeaway:** for a check like "has it arrived?" or "is it ready?", ask what
-  state an earlier run or connection could have left behind.
-
-### 2026-10-30: A reason copied from cflib's waits to a plain sleep
-
-- **What happened:** the new wait in `connect()` (ADR-0031) sleeps in 0.1 s
-  slices, and its comment and ADR said that was so Ctrl+C gets through, as
-  with the other connect steps. That reason belongs to cflib's waits
-  (ADR-0029), which Ctrl+C can't interrupt on Windows. A plain `time.sleep`
-  is interrupted by Ctrl+C at once. The Ctrl+C test also only checked that
-  Ctrl+C got through eventually, not promptly.
-- **Caught at:** planting bugs to prove the tests: one long sleep instead of
-  short ones still passed every test. The slices are really for noticing late
-  telemetry promptly; the comment and ADR now say so, and a test checks that
-  late values are noticed within a second.
-- **Kind:** environment. A reason reused without checking that it applies.
-- **Takeaway:** when reusing a reason from another part of the code, check
-  that the mechanism behind it is the same here; and a test of "it gets
-  through" should also check how quickly.
-
-### 2026-10-30: A safety pre-check that only passed with the mock adapter
-
-- **What happened:** the safety pre-check counts a missing value as a
-  failure, and a failure ends the flight. The mock adapter writes every value
-  the moment it connects, so every test passed. The Crazyflie adapter returns
-  from `connect()` before any value has arrived, so on the real drone the
-  hover program would have ended at its first tick without flying. And in the
-  few ticks after a take-off is sent, before the drone status says flying,
-  the failsafe's log line claimed the drone "stays down".
-- **Caught at:** Claude's code review, at a high level. Not fixed yet:
-  backlog #32 and #31.
-- **Kind:** design. Tested against a fake that's kinder than the real thing.
-- **Takeaway:** for every fake, ask how the real adapter differs at start-up
-  and in the moments after each command, and test those moments too.
-
-### 2026-10-30: Rules stated in code that no fitness function checked
-
-- **What happened:** the command request module said "behaviors import this
-  module, never the safety layer itself", and ADR-0008 says only the safety
-  layer sends commands, but no fitness function checked either. The behavior
-  import rules had also been checking an empty folder: `behaviors/` didn't
-  exist until now, so they couldn't fail.
-- **Caught at:** Claude's code review (the first), then while writing the
-  hover test (the second). Both are fitness functions now, with a check that
-  they see real files.
-- **Kind:** testing.
-- **Takeaway:** when code says "never" or "only", write the fitness function
-  in the same commit, and make sure it reads at least one real file.
-
-### 2026-10-30: Two ADRs built on an unchecked firmware claim
-
-- **What happened:** ADR-0012 starts from "after the high-level commander
-  lands, the motors keep running until the adapter stops them". Claude wrote
-  that without checking the firmware, which does the opposite: when a landing
-  trajectory ends, the high-level commander goes idle and asks for the motors
-  off (the same in releases 2022.01, 2023.02 and 2025.02, and today's
-  source). So the motors stop when the planned landing time is up, whether
-  touchdown is confirmed or not. And the final descent (ADR-0019), sent
-  after an unconfirmed touchdown, would start the motors again, even with the
-  drone already on the floor. The Crazyflie adapter's landing code rests on
-  both ADRs. The same day, Claude's first guess at another firmware rule
-  (that a land command on the floor is ignored) was wrong too, but checking
-  the source first caught it before any code was written.
-- **Caught at:** checking the firmware source while building the safety
-  layer's failsafe (ADR-0030), 10 days after ADR-0012. Not fixed yet:
-  backlog #31.
-- **Kind:** safety design. A claim about the hardware from memory, not from
-  the source.
-- **Takeaway:** when an ADR says how the firmware or a library behaves, ask
-  which file it was checked in. The firmware source is public; a claim
-  without a file name is a guess.
-
-### 2026-10-30: The same gap between two lines, again
-
-- **What happened:** the time-limit helper started its thread one line
-  before the `try` that cleans up. A Ctrl+C at that moment skipped the
-  cleanup, so a connection under way wasn't stopped. It's the same pattern
-  as "Cleanup gaps around connecting", the day before.
-- **Caught at:** bug planting: the Ctrl+C tests failed in about one run in
-  two, and the failures led to the gap. A test now injects the Ctrl+C at
-  exactly that moment.
-- **Kind:** design. Windows of time between two steps.
-- **Takeaway:** start anything that needs cleaning up inside the `try` that
-  cleans it up. A test that fails only sometimes is a clue, not noise.
-
-### 2026-10-30: Edge cases in the connect time limits
-
-- **What happened:** in the first version, a step that finished in the last
-  wait slice still counted as a timeout; an error in the cleanup could hide
-  the time-limit message naming the step; a late error was logged without
-  its traceback; and ADR-0029 claimed Ctrl+C gets through within 0.1 s,
-  although closing the link takes a second or two more.
-- **Caught at:** Claude's code review.
-- **Kind:** design.
-- **Takeaway:** for a wait with a deadline, check both edges: just before
-  and just after the deadline, and what a failing cleanup does to the error
-  you meant to show.
-
-### 2026-10-29: Cleanup gaps around connecting
-
-- **What happened:** in the start-up code's first draft, a Ctrl+C in the
-  instant between connecting and installing the Ctrl+C handler would have
-  skipped the disconnect. Then a Ctrl+C during cflib's `open_link` left a
-  half-open link the adapter didn't track, and a second press could cut the
-  cleanup short.
-- **Caught at:** writing the code (the first), then Claude's code review.
-- **Kind:** design. Windows of time between two steps.
-- **Takeaway:** for every cleanup path, check what happens if the
-  interruption lands between two lines, and if it comes twice.
-
-### 2026-10-29: Windows details in the start-up code
-
-- **What happened:** the docs promised that Ctrl+C stops the program at once
-  while connecting, but on Windows, Python 3.12 can't interrupt cflib's waits,
-  which have no time limit (backlog #29, solved by ADR-0029). The QuickEdit code also restored the
-  console mode in a form Windows can ignore, and let ctypes cut a 64-bit
-  handle to 32 bits.
-- **Caught at:** Claude's code review.
-- **Kind:** environment. Code that was only run on Linux.
-- **Takeaway:** for Windows-only code, ask the review to check it against
-  Windows' documented behavior, since continuous integration runs on Linux.
-
-### 2026-10-29: Debug logging for every library, and a logger named `__main__`
-
-- **What happened:** the logging setup turned on debug level for every
-  logger, so cflib would log every radio packet. And run as a program, the
-  bench program's logger is called `__main__`, outside the project's loggers,
-  so its debug lines would have been dropped once that was fixed.
-- **Caught at:** Claude's code review (the first), then while fixing it.
-- **Kind:** design.
-- **Takeaway:** check logging setups with a real library attached and the
-  program started the way I start it.
-
-### 2026-10-29: Tests that couldn't fail cleanly
-
-- **What happened:** when a planted bug made Ctrl+C raise an error, it
-  escaped the test and stopped the whole pytest run instead of failing one
-  test. The QuickEdit test's example console mode already had the bit the
-  planted bug removed, so it couldn't fail at all. An end-to-end test relied
-  on a 0.5 s timer.
-- **Caught at:** planting bugs (the first two), then Claude's code review.
-- **Kind:** testing.
-- **Takeaway:** for each test, plant the bug it's meant to catch, and check
-  that it fails, fails alone, and doesn't depend on timing.
-
-### 2026-10-29: Ctrl+C described two ways in one ADR
-
-- **What happened:** ADR-0026's decision calls Ctrl+C a stop request (finish
-  the tick, then land). Its failure modes say Ctrl+C anywhere in a tick rises
-  like an error. Python's default is the second; the first needs a handler.
-  Neither said what a second press during the landing does: with Python's
-  default, it cuts the landing short, and the Crazyflie adapter's link
-  shutdown then sends zero thrust, which drops the drone.
-- **Caught at:** writing the tick loop. Fixed: Ctrl+C is a stop request, and
-  later presses are ignored (ADR-0026).
-- **Kind:** safety design. An ADR's words didn't match what the language
-  does by default.
-- **Takeaway:** when an ADR names a mechanism (Ctrl+C, a timeout), ask what
-  happens by default, and what a second one does.
-
-### 2026-10-29: Gaps at the edges of the tick loop
-
-- **What happened:** in the tick loop's first draft, the last tick's overrun
-  went unlogged ("done" returned before the check); the hang watchdog stopped
-  before the tick's logging, so a blocked console wouldn't be reported; the
-  watchdog fell back to standard error, though ADR-0026 says the log file;
-  and a stop request waited up to one tick period.
-- **Caught at:** Claude's code review, at a high level.
-- **Kind:** design. Edge cases at the start, end and between ticks.
-- **Takeaway:** when reviewing a loop, check the first tick, the last tick
-  and the time between ticks, not just the middle.
-
-### 2026-10-29: Test fakes that hang instead of failing
-
-- **What happened:** two fake tick steps never reported done. When a planted
-  bug broke the stop request, their tests hung forever instead of failing.
-- **Caught at:** planting bugs to prove the tests.
-- **Kind:** testing.
-- **Takeaway:** a fake that can loop needs a limit. Plant a bug in each path
-  and check the test fails, not hangs.
-
-### 2026-10-29: An exception to an older ADR without marking it
-
-- **What happened:** Claude added "every overrun gets its own warning" to
-  ADR-0026, an exception to ADR-0020's once-per-streak rule, without marking
-  ADR-0020 as amended or updating ADR-0026's origin line.
-- **Caught at:** Claude's code review.
-- **Kind:** process.
-- **Takeaway:** when a decision makes an exception to an older one, mark the
-  older ADR's status line.
