@@ -9,6 +9,10 @@ Milestones so far:
   project's own code (the Hover field test): tools and process, the
   architecture, the drone interface, the tick loop and the first programs.
   Reached when that first hover passes.
+- **Airworthy:** the refactor toward ARCHITECTURE.md's target, simulated
+  flights and replay tests, a review and docs process that works for Joe and
+  Claude, and a project tour. Reached when the First flight suite passes on
+  the refactored code and the tour is published.
 
 | Date | Hours | Milestone | Worked on |
 |---|---|---|---|
@@ -103,4 +107,5 @@ from sensing ([ADR-0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)
 | Milestone | Hours |
 |---|---|
 | First flight | ~77.75 |
+| Airworthy | ~0 |
 | **Total** | **~77.75** |

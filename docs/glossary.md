@@ -169,6 +169,7 @@ only an example: "For example, about 43,300 for this drone".
 | **Rescue landing** | Landing a drone a program lost. A new program connects, takes over the flight without resetting the position estimate, and lands it with the normal landing. | [0038](decisions/0038-connecting-to-a-flying-drone.md) |
 | **Take over (a flight)** | Connect to a drone that may be flying, without resetting its position estimate, and treat it as flying until it lands. Only the rescue landing program does it. | [0038](decisions/0038-connecting-to-a-flying-drone.md) |
 | **Streak** | An unbroken run of the same condition, counted in whatever repeats (ticks, command requests, state packets). It ends the first time the condition doesn't hold. A warning comes once per streak, so a long fault logs once, not every tick. | [0020](decisions/0020-failures-degrade-gracefully.md), [0042](decisions/0042-negative-ages-count-as-fresh.md) |
+| **Project tour** | An interactive guide that walks a reader through the project: what's interesting and unique about it, and how it's designed to be easy to understand and change. Each claim links to its evidence in the repository (an ADR, a test, a flight log or a doc). | — |
 
 ## Buzzer deck
 
@@ -197,6 +198,7 @@ only an example: "For example, about 43,300 for this drone".
 | Term | Definition |
 |---|---|
 | **First flight** | The project's first milestone: everything up to the drone's first hover through the project's own code (the Hover field test). Code "minimal for First flight" does only what that hover needs. |
+| **Airworthy** | The project's second milestone: the refactor toward ARCHITECTURE.md's target, simulated flights and replay tests, the review and docs process, and a project tour. Reached when the First flight suite passes on the refactored code and the tour is published. |
 
 ## Hide-and-seek
 
