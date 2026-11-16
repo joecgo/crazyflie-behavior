@@ -74,9 +74,9 @@ file, a line, the claim, and what it costs if it stays.
    rules. Most code follows ADR-0020: keep going when it's safe, fail safe
    when it isn't, and always log. A behavior written for a field test chooses
    its own rule and says which in its docstring (ADR-0033).
-6. **The checklist.** Read `REVIEW.md` now, since it grows with every review,
-   and go through each of its questions for the touched files. Note which ones
-   apply.
+6. **The checklist.** Read `REVIEW.md` now, since it grows with every review.
+   Find the sections for the touched paths in the map at its top, and walk
+   only those. If a touched path matches no row, stop and ask.
 7. **Fresh-context read, only with `fresh`.** Start one general-purpose agent
    with this brief and nothing else from the conversation: the paths of the
    touched files, and "You haven't seen any discussion of this code. Read

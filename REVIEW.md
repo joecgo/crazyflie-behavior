@@ -6,6 +6,18 @@ Each one comes from a takeaway in the [mistakes log](docs/claude-mistakes.md),
 so reviews look for the kinds of mistakes Claude has made before. When a new
 takeaway applies to reviews, it's added here as a question.
 
+A review walks only the sections for the paths it touches:
+
+| Touched paths | Sections to walk |
+|---|---|
+| `drone/crazyflie/`, `tools/` | Facts about the hardware and libraries; Fakes and the real drone; Failures; Time; Rules and records |
+| `safety/`, `loop/`, `timing/`, `drone/interface.py`, `drone/telemetry_buffer.py`, `snapshot.py`, `geometry.py` | Failures; Time; Rules and records |
+| `behaviors/` | Failures; Rules and records |
+| `programs/` | Failures; Time; How I run things; Rules and records |
+| `drone/mock_adapter.py`, test fakes | Fakes and the real drone |
+| `tests/` | Rules and records (the questions about tests) |
+| docs only | Rules and records |
+
 ## Facts about the hardware and libraries
 
 - Was each claim about how the firmware, cflib, Python or Windows behaves
