@@ -81,7 +81,10 @@ file, a line, the claim, and what it costs if it stays.
 6. **The checklist.** Read `REVIEW.md` now, since it grows with every review.
    Find the sections for the touched paths in the map at its top, and walk
    only those. If a touched path matches no row, stop and ask. Name each
-   question a finding matched by its question ID.
+   question a finding matched by its question ID. For Q-01, check each claim
+   about cflib, the firmware, Python or Windows against the facts register
+   (`docs/verified-facts.md`). A claim not in it is checked in source and
+   added, or reported as unchecked.
 7. **Fresh-context read, only with `fresh`.** Start one general-purpose agent
    with this brief and nothing else from the conversation: the paths of the
    touched files, and "You haven't seen any discussion of this code. Read

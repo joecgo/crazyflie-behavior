@@ -188,6 +188,8 @@ ignores one:
   nothing in `src/` imports `tools/`".
 - Check cflib API details against the installed source
   (`.venv/Lib/site-packages/cflib/`) and `docs/cflib-primer.md`, not memory.
+  Look up any cflib, firmware, Python or Windows fact in the facts register
+  (`docs/verified-facts.md`) first; one not there is checked, then added.
 - Treat real-flight safety as a feature: every flying path needs a guaranteed
   land or stop on error.
 - Real flights follow `docs/field-testing/`: before each session, help draft its

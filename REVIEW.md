@@ -27,7 +27,8 @@ A review walks only the sections for the paths it touches:
 
 - **Q-01.** Was each claim about how the firmware, cflib, Python or Windows behaves
   checked, not recalled? If a decision or safety code rests on it, its ADR
-  names the file it was checked in. Docstrings and comments don't cite
+  names the file it was checked in, and the fact has a row in the facts
+  register (`docs/verified-facts.md`). Docstrings and comments don't cite
   sources. (M-021, M-094, M-095, M-101, M-103, M-137)
 - **Q-02.** Does a checked claim say only what its source showed? "This path fails" is
   not "every path fails" unless the other paths were checked too. (M-063, M-105)
