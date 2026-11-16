@@ -1,6 +1,6 @@
 ---
 name: project-review
-description: "Code review for the crazyflie-behavior repo: runs /code-review for bugs, then this project's own checks (its ADRs, glossary, failure-handling rules and REVIEW.md checklist) and reports one ranked list. Use it instead of a plain /code-review whenever you review changes in this repo, and always before committing changes to the safety layer, the Crazyflie adapter or the tick loop. Arguments: a level (default high), fresh for a fresh-context clarity read, a step budget (default 20), and an optional target (a commit, range or path)."
+description: "Code review for the crazyflie-behavior repo: runs /code-review for bugs, then this project's own checks (its ADRs, glossary, failure-handling rules and REVIEW.md checklist) and reports one ranked list. Use it instead of a plain /code-review whenever you review changes in this repo, and always before committing changes to the safety layer, the Crazyflie adapter or the tick loop. Arguments: a level (default high), fresh for a fresh-context clarity read, packet for a review packet before one of the user's code reviews, a step budget (default 20), and an optional target (a commit, range or path)."
 ---
 
 # Project review
@@ -14,12 +14,17 @@ then the project's own checks, and reports them together.
 
 ## Arguments
 
-`/project-review [level] [fresh] [budget N] [target]`, in any order:
+`/project-review [level] [fresh] [packet] [budget N] [target]`, in any
+order:
 
 - **level:** low, medium, high, xhigh or max, passed to `/code-review`.
   Default high, which CLAUDE.md asks for on safety code.
-- **fresh:** also run the fresh-context read (step 7). Off unless asked,
-  because it starts a separate agent and costs more.
+- **fresh:** also run the fresh-context read (step 7). On when a touched path
+  is in review tier 1 (`REVIEW.md`, "My reviews"); otherwise off unless
+  asked, because it starts a separate agent and costs more.
+- **packet:** also write a review packet (step 9). Used before one of the
+  user's code reviews, on the review's range, as `REVIEW.md` describes.
+  Leave about four steps of the budget for it.
 - **target:** a commit, a range or a path, passed to `/code-review`. Default:
   the uncommitted changes, since reviews here run before committing.
 - **budget N:** the most steps the review takes, where a step is one round
@@ -100,6 +105,30 @@ file, a line, the claim, and what it costs if it stays.
    `/code-review` findings, using categories such as `correctness`, `adr`,
    `glossary`, `failure-handling`, `review-checklist` and `clarity`. Don't fix
    anything unless asked: design findings are the user's call.
+9. **Review packet, only with `packet`.** Write
+   `drafts/review-packet-<date>.md` (Pacific date) for the user to read
+   beside the pull request. Open it with the range and the pull request, then:
+   1. **Reading order.** Each touched file with its review tier and how the
+      user reads it. Within a tier, a file comes after the project files it
+      imports: modules with no project imports first, programs last. Name any
+      path in no tier, with a question about its tier.
+   2. **What changed.** For each file, two lines and the ADR.
+   3. **Where it could be wrong.** Every check the mistakes log says is
+      commonly missed or untested for this change, with no limit: each place
+      in the change where a pattern with many entries could repeat, or where
+      a mistake whose guard is "none yet" could, with the place, what to
+      check and the mistake IDs. Read the log's pattern table and index, not
+      every entry. Then anything else that could be wrong, and why.
+   4. **Facts it relies on.** Each claim about cflib, the firmware, Python or
+      Windows: in the facts register, checked in this review and added, or
+      not checked.
+   5. **New log messages**, each beside the condition that prints it.
+   6. **New and changed tests**, by name and grouped by file, from the diff
+      of `tests/`. The user reads them as a spec.
+   7. **The findings** from step 8, and what happened to each.
+   8. **Explain-back questions:** one for each significant change. Claude
+      judges which changes are significant and says why each counted. Use
+      only glossary terms, and put no answers in the packet.
 
 ## Afterwards
 

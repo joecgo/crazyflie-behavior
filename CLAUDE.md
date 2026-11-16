@@ -194,9 +194,11 @@ number, so renumbering means updating those guards.
   or when a lot of unreviewed code has built up. Claude suggests a review at
   those points. A review covers only what's new since the last one (the
   review log in `REVIEW.md`): new files line by line, changed files as diffs
-  from the last reviewed commit, and tests as a spec, by their names. Before a
-  review, Claude commits and pushes everything, so the user can also review on
-  GitHub from their phone. Afterwards, Claude adds the review to the log.
+  from the last reviewed commit, and tests as a spec, by their names; each
+  path's review tier says how closely. Each review is a pull request, read in
+  PyCharm, with a review packet: before a review, Claude commits and pushes
+  everything, writes the packet and opens the pull request, as `REVIEW.md`
+  ("My reviews") describes. Afterwards, Claude adds the review to the log.
 - Follow `docs/coding-style.md`: strict typing, units in names, the cflib
   boundary ([ADR-0004](docs/decisions/0004-strict-typing-ruff-and-units-in-names.md)).
 - **One writer for the shared records.** The mistakes log, the decision

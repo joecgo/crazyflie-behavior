@@ -214,11 +214,39 @@ come from its rules, not from the mistakes log.
 
 Each review covers only what's new since the one before: new files line by
 line, changed files as diffs from the last reviewed commit, and tests as a
-spec, by their names.
+spec, by their names. A path's review tier says how closely I read it and
+which review Claude runs on it:
 
-| Dates | Reviewed up to | What |
-|---|---|---|
-| 2026-10-22 to 2026-10-27 | `b3bc274` | All the source then (geometry, snapshot, clock, the drone interface, telemetry buffer, mock adapter, conversions, touchdown, the Crazyflie adapter) and the tests, as a spec. Led to ADR-0018 to ADR-0021 and 20 new adapter tests |
-| 2026-10-28 to 2026-11-02 | `366714a` | ADRs 0022 to 0033, the safety layer, the tick loop, behaviors, programs and the drone changes. Led to ADR-0033 and the non-finite-value rule in ADR-0030 |
-| 2026-11-04 | `0846826` | Everything after `366714a`: `cd6e156` plus the five commits after it on this branch. The drone interface and snapshot, the safety layer, the Crazyflie adapter (ADR-0037, ADR-0038, ADR-0039, ADR-0045), the mock adapter and start-up, the failsafe and rescue landing programs and behaviors, the emergency stop tool, wording changes, and the tests as a spec. Led to ADR-0046, three coding-style rules, the glossary's *Stale value* and backlog #45(c) |
-| Next | | Everything after `0846826`, starting with this review's fix commits |
+| Tier | Paths | My read | Claude's review |
+|---|---|---|---|
+| 1 | `safety/`, `loop/`, `drone/crazyflie/`, `drone/interface.py`, `drone/telemetry_buffer.py`, `snapshot.py`, `programs/start_up.py`, `tools/emergency_stop.py` | every line | `/project-review` at the level CLAUDE.md asks for, with `fresh` |
+| 2 | `behaviors/`, the other programs, `drone/mock_adapter.py`, test fakes, `timing/`, `geometry.py`, the other scripts in `tools/` | the diff | `/project-review` at high |
+| 3 | the other tests, docs | names, and the spec list | the path map's questions |
+
+A path in no row is named in the review packet, with a question about its
+tier.
+
+**Each review is a pull request**, read in PyCharm:
+
+- A `reviewed` branch on GitHub marks the last reviewed commit. The first
+  review creates it at `0846826`.
+- Before a review, Claude commits and pushes `main`, then pushes a branch
+  `review/<date>` at `main`'s last commit, runs `/project-review packet` on
+  `reviewed..review/<date>`, and opens a pull request from that branch into
+  `reviewed`. Its description gives the range and the review packet's path
+  in `drafts/`.
+- Nothing is pushed to the review branch once it's open (M-049). Work,
+  flights and review fixes stay on `main`, and the fixes are in the next
+  review.
+- My comments on the pull request are the review's record. When I'm done,
+  it's merged with a merge commit, not squashed or rebased: those make new
+  commits, so the next review's diff would show this one's changes again.
+  The merge moves `reviewed` forward; then the review branch is deleted and
+  the log below gets a row.
+
+| Dates | Reviewed up to | Pull request | What |
+|---|---|---|---|
+| 2026-10-22 to 2026-10-27 | `b3bc274` | none | All the source then (geometry, snapshot, clock, the drone interface, telemetry buffer, mock adapter, conversions, touchdown, the Crazyflie adapter) and the tests, as a spec. Led to ADR-0018 to ADR-0021 and 20 new adapter tests |
+| 2026-10-28 to 2026-11-02 | `366714a` | none | ADRs 0022 to 0033, the safety layer, the tick loop, behaviors, programs and the drone changes. Led to ADR-0033 and the non-finite-value rule in ADR-0030 |
+| 2026-11-04 | `0846826` | none | Everything after `366714a`: `cd6e156` plus the five commits after it on this branch. The drone interface and snapshot, the safety layer, the Crazyflie adapter (ADR-0037, ADR-0038, ADR-0039, ADR-0045), the mock adapter and start-up, the failsafe and rescue landing programs and behaviors, the emergency stop tool, wording changes, and the tests as a spec. Led to ADR-0046, three coding-style rules, the glossary's *Stale value* and backlog #45(c) |
+| Next | | | Everything after `0846826`, starting with this review's fix commits |
