@@ -136,6 +136,8 @@ A review walks only the sections for the paths it touches:
   (approves, refuses, skips a check), as its branches read?
 - Does every term in a new name or comment appear in the glossary, even one
   that other docs already use? Does its definition still match the code?
+- A record that says a decision is built ("now runs", "already"): were its
+  code and its test found, not taken from the ADR's status?
 - Does each new glossary row agree with its ADR, including the risks the ADR
   accepts, and with the analysis its facts come from?
 - Does a new name use a glossary term's word for something else?

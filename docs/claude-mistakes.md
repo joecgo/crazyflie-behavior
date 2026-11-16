@@ -31,10 +31,10 @@ decisions are recorded), *communication* (how Claude explains things).
 | safety design | 5 | 18 |
 | recommendation | 7 | 6 |
 | environment | 4 | 9 |
-| communication | 8 | 38 |
+| communication | 8 | 39 |
 | testing | 0 | 12 |
-| process | 5 | 19 |
-| **Total** | **33** | **122** |
+| process | 5 | 20 |
+| **Total** | **33** | **124** |
 
 Of the 33 I pointed out up to 2026-11-16, a later Claude review would
 probably have caught none, maybe 7, and probably not 26 (that question
@@ -618,6 +618,21 @@ times so far).
 - **Kind:** communication.
 - **Takeaway:** check a new name against every case it returns true for, and
   a test's name against its values.
+
+### 2026-11-13: Two backlog rows said ADR-0035's console thread was built
+
+- **What happened:** ADR-0035 (accepted 2026-11-01) puts console output
+  behind a `QueueHandler` on a background thread. It was never built:
+  `logging_for_run` adds a plain `StreamHandler`, and no commit under `src/`
+  or `tests/` has contained `QueueHandler`. Backlog #25 said "Console output
+  now runs on a background thread", and #87 (2026-11-12) said the console's
+  lines "already are" on one. Backlog #70's stall hunt and #87's options were
+  written on that belief.
+- **How it was caught:** the 2026-11-13 codebase review, reading
+  `start_up.py` beside the ADR index, then `git log -S"QueueHandler"`.
+- **Kind:** process.
+- **Takeaway:** before a record says a decision is built, find its code and
+  its test. An accepted ADR is a decision, not a build.
 
 ### 2026-11-13: A flight started without reading how the last one ended
 
