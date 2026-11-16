@@ -63,6 +63,10 @@ file, a line, the claim, and what it costs if it stays.
    Always eventually. Also flag any rule the code follows that no ADR records,
    such as when to stop, retry or carry on: CLAUDE.md says the user makes
    those decisions, so a rule chosen silently is a finding even if it's good.
+   Then the records: for each record the change touches that says something
+   is built, running or already done (an ADR, the index's Built column, a
+   backlog row, the glossary), find the code and the test. A claim with
+   neither is a finding.
 4. **Names and comments.** Every term in new or changed names, docstrings and
    comments should be in `docs/glossary.md`, and no definition there should
    contradict what the code now does. A comment that copies a fact owned by

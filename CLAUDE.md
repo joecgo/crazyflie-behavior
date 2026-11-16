@@ -157,7 +157,8 @@ ignores one:
   architecture tests), new tests are proven by bug planting
   (`docs/coding-style.md`), the glossary is updated for any new or changed term, the
   relevant ADR is linked, and the commit message names the ADR it implements
-  (e.g. `Implements ADR-0004`).
+  (e.g. `Implements ADR-0004`). An ADR that isn't fully built in the same
+  change gets a backlog row, and its Built column in the ADR index says so.
 - **The user's code reviews.** The user reads the code too, at review points:
   when a milestone's code is complete, before a field-test session, after
   changes to the safety layer, the Crazyflie adapter or the tick loop settle,
