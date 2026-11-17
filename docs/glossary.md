@@ -186,6 +186,7 @@ only an example: "For example, about 43,300 for this drone".
 | **Field test** | One test of the real drone (Bench, Failsafe low, Hover, ...), with a goal and pass criteria, planned and recorded in a test log as [docs/field-testing/](field-testing/README.md) describes ([ADR-0033](decisions/0033-field-tests-choose-their-failure-rule.md), [ADR-0043](decisions/0043-how-field-tests-are-organized.md)). |
 | **Session** | One trip with one or more field tests, flown in order (for example Bench, Failsafe low, Failsafe high, Hover). Its session doc has the planned order, links to its test logs, and what the next session depends on ([ADR-0043](decisions/0043-how-field-tests-are-organized.md)). |
 | **Run button** | A one-line command that Claude gives alone in a `bash` code block, which the Claude desktop app shows with a Run button. The operator clicks it to start a program on the drone, so the operator starts every program on the drone, never Claude ([README](field-testing/README.md), "Sessions and test logs"). |
+| **Mock run** | Running a program on the mock adapter at the desk: the command without `--crazyflie`. Before a session, each test's program gets one on the commit that will fly ([README](field-testing/README.md), "The iteration loop"). |
 | **Test log** | The record of one field test: goal, pass criteria, checklist, observations and analysis, tied to the git commit that flew. Observations come from the operator or recorded data, never from an AI. |
 | **Failsafe low / Failsafe high** | The field tests that fly the failsafe program: it takes off to 0.5 m (the Hover test's default height), then forges a low battery so the safety layer's failsafe lands the drone. Failsafe low forges it during the initial climb; Failsafe high after a hover of about 3 s ([ADR-0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md), [ADR-0049](decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md)). |
 | **Fault injection** | Causing a failure on purpose in a test, to check how the unchanged safety layer responds. The one kind built so far forges values: it replaces values in the snapshot (the forged low battery drone replaces both battery readings, [ADR-0041](decisions/0041-failsafe-tests-inject-a-fault-into-the-pre-check.md), [ADR-0069](decisions/0069-low-battery-needs-two-readings-in-a-row.md)). |
@@ -199,6 +200,31 @@ only an example: "For example, about 43,300 for this drone".
 |---|---|
 | **First flight** | The project's first milestone: everything up to the drone's first hover through the project's own code (the Hover field test). Code "minimal for First flight" does only what that hover needs. |
 | **Airworthy** | The project's second milestone: the refactor toward ARCHITECTURE.md's target, simulated flights and replay tests, the review and docs process, and a project tour. Reached when the First flight suite passes on the refactored code and the tour is published. |
+
+## Review and records
+
+How the project tracks Claude's mistakes and the checks they lead to ([mistakes log](claude-mistakes.md), [review checklist](../REVIEW.md)).
+
+| Term | Definition |
+|---|---|
+| **Mistake ID** | `M-001` onward: the label of an entry in the mistakes log. A script numbers entries oldest first, across both sections, and an ID never changes once given. |
+| **Question ID** | `Q-01` onward: the label of a question in the review checklist. Each question ends with the mistake IDs it came from. |
+| **Pattern** | How a mistake went wrong, from a short fixed list in the mistakes log (for example *records-ahead-of-code*). Kind says what sort of work went wrong; pattern says how. |
+| **Guard** | What stops a mistake from happening again: a question ID, a test or fitness function (by its path), a working rule, or "none yet". |
+| **Working rule** | A one-line rule in `CLAUDE.md`'s "Working rules from the mistakes log", for a mistake no code review can catch. A mistake's guard names it by number, as `working rule 3`. |
+| **Facts register** | [`docs/verified-facts.md`](verified-facts.md): each fact about cflib, the firmware, Python or Windows that the project relies on, with its source file and lines, the version, the date checked, and what relies on it. A fact not in it is checked before it's said or written, then added. |
+| **Escalation ladder** | When a pattern earns a mechanism. First time: a question. Second: a helper, a test or a template line. Third: a fitness function, a lint or a design change, and the question retires. |
+| **Review tier** | How closely a path's changes are read in a code review: tier 1 every line, tier 2 the diff, tier 3 the test names. The review checklist lists the paths in each tier. |
+| **Review packet** | What Claude hands over for a code review: the reading order, what changed in each file and why, where it could be wrong, the facts it rests on, new log messages, new test names, the findings, and explain-back questions. `/review-packet` writes it to `drafts/`. |
+| **Explain-back question** | A question that asks the user to explain a change or a decision in their own words, so they can defend it: in a review packet, and at the end of `/decide`. |
+
+## Work sessions
+
+| Term | Definition |
+|---|---|
+| **Work session** | One conversation with Claude in the desktop app, from its first message to its wrap-up. Not a *session*, which is a field-test trip. |
+| **Work order** | A hand-off that lets a fresh work session carry on: the goal, what to read, what's decided and what isn't, the steps, the tests, when to stop and ask, and when it's done. Written to `drafts/` by `/handoff`. |
+| **Next-up brief** | [`docs/next-up.md`](next-up.md): the project's state on one page, read first by a fresh work session: what was done last, what's in progress and its work order, the next three things, the decisions waiting on the architect, the last commit the architect reviewed, and the date. Rewritten by `/wrap-up`. |
 
 ## Hide-and-seek
 

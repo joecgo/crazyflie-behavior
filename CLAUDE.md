@@ -132,14 +132,41 @@ ignores one:
   record. Keep it accurate as the project grows.
 - **Log Claude's mistakes.** When the user catches a Claude mistake, or Claude
   catches its own, add an entry to `docs/claude-mistakes.md`, in the section
-  for who caught it, and update its at-a-glance table. For a mistake the user
-  pointed out, say honestly whether a later Claude review would probably
-  have caught it. When the takeaway applies to code reviews, add it to
-  `REVIEW.md` as a question. A mistake is something wrong by what was known
+  for who caught it, with its kind, pattern and guard, then run
+  `python tools/mistakes_log.py write`. When the takeaway applies to code
+  reviews, follow the log's escalation ladder: a `REVIEW.md` question, or a
+  mechanism when the pattern repeats. A mistake is something wrong by what was known
   or written down at the time: a false claim, a bug, a broken ADR or rule, a
   missed case, or an explanation that misled. A recommendation the user
   decides against, a rule the user later changes, or a preference stated for
   the first time is not a mistake.
+
+## Working rules from the mistakes log
+
+For mistakes no code review can catch. An entry's guard names its rule by
+number, so renumbering means updating those guards.
+
+1. A fact about the firmware, cflib, Python, Windows or the hardware, or a
+   number the code computes: check the facts register or read the source
+   first, or say it isn't checked.
+2. Before quoting a doc, an ADR or code, read it, not its title, number or an
+   old comment.
+3. Before a record says a decision is built, find its code and its test.
+4. A number from field data comes from the whole log over the part it
+   describes: not a cut-off extraction, a bound or another flight.
+5. Before recommending, search the backlog and the ADR index for the topic.
+   Each option says what it fixes and why to choose it.
+6. Before naming or explaining something, check the glossary. Propose a
+   missing term before using it.
+7. Read a rule or the user's words plainly before acting on them or
+   correcting the user.
+8. List choices made while building for the user to confirm; never settle
+   one silently.
+9. A run that needs the user's hands starts when the user says go, and the
+   command given is complete.
+10. Run `/project-review` before committing changes to the safety layer, the
+    Crazyflie adapter or the tick loop, and never push a commit that fails
+    its tests.
 
 ## Shared language
 
@@ -159,18 +186,25 @@ ignores one:
   architecture tests), new tests are proven by bug planting
   (`docs/coding-style.md`), the glossary is updated for any new or changed term, the
   relevant ADR is linked, and the commit message names the ADR it implements
-  (e.g. `Implements ADR-0004`).
+  (e.g. `Implements ADR-0004`). An ADR that isn't fully built in the same
+  change gets a backlog row, and its Built column in the ADR index says so.
 - **The user's code reviews.** The user reads the code too, at review points:
   when a milestone's code is complete, before a field-test session, after
   changes to the safety layer, the Crazyflie adapter or the tick loop settle,
   or when a lot of unreviewed code has built up. Claude suggests a review at
   those points. A review covers only what's new since the last one (the
   review log in `REVIEW.md`): new files line by line, changed files as diffs
-  from the last reviewed commit, and tests as a spec, by their names. Before a
-  review, Claude commits and pushes everything, so the user can also review on
-  GitHub from their phone. Afterwards, Claude adds the review to the log.
+  from the last reviewed commit, and tests as a spec, by their names; each
+  path's review tier says how closely. Each review is a pull request, read in
+  PyCharm, with a review packet: before a review, Claude commits and pushes
+  everything, writes the packet and opens the pull request, as `REVIEW.md`
+  ("My reviews") describes. Afterwards, Claude adds the review to the log.
 - Follow `docs/coding-style.md`: strict typing, units in names, the cflib
   boundary ([ADR-0004](docs/decisions/0004-strict-typing-ruff-and-units-in-names.md)).
+- **One writer for the shared records.** The mistakes log, the decision
+  backlog, `REVIEW.md`, the work log and the next-up brief are written by one
+  work session at a time. A second work session leaves its edits as text in
+  `drafts/` for the first to apply, so no edit is lost to two writers.
 - Commit in small steps, especially when flight parameters or behavior change,
   so a bad flight can be rolled back.
 - Behavior logic must never import cflib ([ADR-0002](docs/decisions/0002-behavior-depends-only-on-drone-interface.md)).
@@ -183,6 +217,8 @@ ignores one:
   nothing in `src/` imports `tools/`".
 - Check cflib API details against the installed source
   (`.venv/Lib/site-packages/cflib/`) and `docs/cflib-primer.md`, not memory.
+  Look up any cflib, firmware, Python or Windows fact in the facts register
+  (`docs/verified-facts.md`) first; one not there is checked, then added.
 - Treat real-flight safety as a feature: every flying path needs a guaranteed
   land or stop on error.
 - Real flights follow `docs/field-testing/`: before each session, help draft its
@@ -201,11 +237,14 @@ ignores one:
   runs `/code-review`, then the checks that skill doesn't know about: the ADRs,
   the glossary, failure handling and `REVIEW.md`, the checklist built from the
   mistakes log (`.claude/skills/project-review/`).
+- **`/review-packet`** before one of the user's code reviews, right after `/project-review`: the review packet for its pull request.
 - **`dataviz`** for field-test and simulator analysis charts (drift over time,
   sensor noise by surface, sim-vs-real overlays).
-- Later, once the workflows have repeated a few times, consider project skills
-  built with `skill-creator`: `/decide` (question → ADR → glossary) and
-  `/debrief` (flight data → analysis → test log).
+- **`/decide`** for an open question: options, pitfalls, then the ADR, index row, glossary proposal and backlog change.
+- **`/debrief`** after a session: flight data to analysis, charts and a test log draft.
+- **`/field-session`** to start a session: mock runs, run buttons, steps before and during, data needed after.
+- **`/handoff`** to pass unfinished work to a fresh work session as a work order.
+- **`/wrap-up`** at the end of a work session: work log, records, commit list, next-up brief.
 
 ## Environment
 

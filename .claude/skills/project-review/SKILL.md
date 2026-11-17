@@ -14,12 +14,14 @@ then the project's own checks, and reports them together.
 
 ## Arguments
 
-`/project-review [level] [fresh] [budget N] [target]`, in any order:
+`/project-review [level] [fresh] [budget N] [target]`, in any
+order:
 
 - **level:** low, medium, high, xhigh or max, passed to `/code-review`.
   Default high, which CLAUDE.md asks for on safety code.
-- **fresh:** also run the fresh-context read (step 7). Off unless asked,
-  because it starts a separate agent and costs more.
+- **fresh:** also run the fresh-context read (step 7). On when a touched path
+  is in review tier 1 (`REVIEW.md`, "My reviews"); otherwise off unless
+  asked, because it starts a separate agent and costs more.
 - **target:** a commit, a range or a path, passed to `/code-review`. Default:
   the uncommitted changes, since reviews here run before committing.
 - **budget N:** the most steps the review takes, where a step is one round
@@ -63,6 +65,10 @@ file, a line, the claim, and what it costs if it stays.
    Always eventually. Also flag any rule the code follows that no ADR records,
    such as when to stop, retry or carry on: CLAUDE.md says the user makes
    those decisions, so a rule chosen silently is a finding even if it's good.
+   Then the records: for each record the change touches that says something
+   is built, running or already done (an ADR, the index's Built column, a
+   backlog row, the glossary), find the code and the test. A claim with
+   neither is a finding.
 4. **Names and comments.** Every term in new or changed names, docstrings and
    comments should be in `docs/glossary.md`, and no definition there should
    contradict what the code now does. A comment that copies a fact owned by
@@ -74,9 +80,13 @@ file, a line, the claim, and what it costs if it stays.
    rules. Most code follows ADR-0020: keep going when it's safe, fail safe
    when it isn't, and always log. A behavior written for a field test chooses
    its own rule and says which in its docstring (ADR-0033).
-6. **The checklist.** Read `REVIEW.md` now, since it grows with every review,
-   and go through each of its questions for the touched files. Note which ones
-   apply.
+6. **The checklist.** Read `REVIEW.md` now, since it grows with every review.
+   Find the sections for the touched paths in the map at its top, and walk
+   only those. If a touched path matches no row, stop and ask. Name each
+   question a finding matched by its question ID. For Q-01, check each claim
+   about cflib, the firmware, Python or Windows against the facts register
+   (`docs/verified-facts.md`). A claim not in it is checked in source and
+   added, or reported as unchecked.
 7. **Fresh-context read, only with `fresh`.** Start one general-purpose agent
    with this brief and nothing else from the conversation: the paths of the
    touched files, and "You haven't seen any discussion of this code. Read
@@ -95,8 +105,11 @@ file, a line, the claim, and what it costs if it stays.
 
 ## Afterwards
 
+- Before one of the user's code reviews, run `/review-packet` next.
 - When a finding is confirmed (fixed, or the user agrees it's real) and the
   code was Claude's, add it to `docs/claude-mistakes.md` under "Mistakes
-  Claude caught itself" and update its at-a-glance table, as CLAUDE.md asks.
-  If its takeaway applies to reviews, add it to `REVIEW.md` as a question.
+  Claude caught itself", with its kind, pattern and guard, as CLAUDE.md
+  asks, then run `python tools/mistakes_log.py write`. If its takeaway
+  applies to reviews, follow the escalation ladder in the mistakes log: a
+  question in `REVIEW.md`, or a mechanism when the pattern repeats.
 - After fixes, call `ReportFindings` again with each finding's outcome.
