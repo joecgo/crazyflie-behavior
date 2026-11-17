@@ -4,29 +4,37 @@ The project's state on one page, read first by a fresh work session.
 `/wrap-up` rewrites it at the end of each work session.
 
 - **Date:** 2026-11-16 (Pacific)
-- **Last commit:** `618b2c1` Backlog #113; work log for 2026-11-15 and
-  2026-11-16, on branch `w13-project-skills`, in a pull request into `main`
-  for Joe's review. Uncommitted: nothing.
+- **Last commit:** `17ab8b5` Mistakes log: M-160, M-161, on branch
+  `w13-project-skills`, in pull request #23 into `main` for Joe's review.
+  Uncommitted: nothing.
 
 ## Done last
 
+- 2026-11-16: a small review of pull request #23's code. Four fixes to
+  `tools/mistakes_log.py`: `check` now reports stray `### ` headings,
+  unknown patterns and duplicate IDs, and refuses an unknown command. Five
+  tests, each proven by bug planting. M-160 and M-161 logged.
 - 2026-11-16: W13 and W15 built: six project skills (`/wrap-up`,
   `/handoff`, `/review-packet`, `/decide`, `/field-session`, `/debrief`) and
-  this brief. None has been tried in a real work session yet.
-- The nine *reading-field-data* mistakes with no guard now name `/debrief`
-  (M-151: `/field-session`). M-158 and M-159 logged.
+  this brief. `/project-review` and `/wrap-up brief` have now been used once.
 - The 2026-11-13 workflow recommendations (W1 to W16) are all applied,
   deferred or dropped.
 - 2026-11-15: `ARCHITECTURE.md` and ADR-0074, when to split a module.
 
 ## In progress
 
-- The `w13-project-skills` pull request: Joe reviews, then it merges into
+- Pull request #23 (`w13-project-skills`): Joe reviews, then it merges into
   `main`.
+- Three findings left from the review of `tools/mistakes_log.py`: `archive`
+  doesn't validate its month (`2026-1` would match three months); no test
+  for the unknown-kind and no-ID reports or the pattern table; IDs past
+  M-999 don't parse (`check` should now report them).
+- Joe may turn off the `anthropic-skills` plugin in the Claude app to save
+  context. With it on, `get_usage` showed Skills at 7,776 tokens.
 
 ## Next three
 
-1. Joe's review of the W13 pull request, then merge. Sonnet, low.
+1. Joe's review of pull request #23, then merge. Sonnet, low.
 2. Decide 1 below, then build C1 of `drafts/2026-11-13-code-recommendations.md`:
    console output on a background thread (ADR-0035, decided, never built).
    Opus, high.
