@@ -129,6 +129,39 @@ def test_check_reports_an_entry_without_a_guard(script: ModuleType) -> None:
     assert any("no Guard line" in p for p in script.problems(script.all_entries()))
 
 
+def test_check_reports_a_malformed_heading(script: ModuleType) -> None:
+    script.main(["write"])
+    text = script.MAIN.read_text(encoding="utf-8").replace("### M-003, ", "### M-003 ")
+    script.MAIN.write_text(text, encoding="utf-8")
+    assert any("not an entry heading" in p for p in script.problems(script.all_entries()))
+
+
+def test_a_malformed_headings_fields_stay_off_the_entry_above(script: ModuleType) -> None:
+    script.main(["write"])
+    text = script.MAIN.read_text(encoding="utf-8").replace("### M-003, ", "### M-003 ")
+    script.MAIN.write_text(text, encoding="utf-8")
+    patterns = {e.title: e.pattern for e in script.all_entries()}
+    assert patterns["Newer caught"] == "weak-test"
+
+
+def test_check_reports_an_unknown_pattern(script: ModuleType) -> None:
+    script.main(["write"])
+    text = script.MAIN.read_text(encoding="utf-8").replace("**Pattern:** vocabulary.", "**Pattern:** vocabulery.", 1)
+    script.MAIN.write_text(text, encoding="utf-8")
+    assert any("unknown pattern 'vocabulery'" in p for p in script.problems(script.all_entries()))
+
+
+def test_check_reports_a_duplicate_id(script: ModuleType) -> None:
+    script.main(["write"])
+    text = script.MAIN.read_text(encoding="utf-8").replace("### M-003, ", "### M-004, ")
+    script.MAIN.write_text(text, encoding="utf-8")
+    assert "M-004: used by 2 entries" in script.problems(script.all_entries())
+
+
+def test_an_unknown_command_is_refused(script: ModuleType) -> None:
+    assert script.main(["wirte"]) == 2
+
+
 def test_archive_moves_a_month_and_the_index_links_it(script: ModuleType) -> None:
     script.main(["write"])
     script.main(["archive", "2026-10"])

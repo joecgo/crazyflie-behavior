@@ -30,6 +30,21 @@ KINDS = (
     "process",
 )
 
+PATTERNS = (
+    "said-without-checking",
+    "records-ahead-of-code",
+    "safety-judgment",
+    "weak-test",
+    "how-I-work",
+    "recommendation",
+    "window-between-steps",
+    "vocabulary",
+    "message-misstates-outcome",
+    "environment",
+    "reading-field-data",
+    "leftover-state",
+)
+
 HEADING = re.compile(r"^### (?:(M-\d{3}), )?(\d{4}-\d{2}-\d{2}): (.*)$")
 FIELD = re.compile(r"^- \*\*(Kind|Pattern|Guard):\*\* *(.*?)(?:\.\s.*)?\.?\s*$")
 
@@ -54,18 +69,30 @@ def log_files() -> list[Path]:
 def parse(path: Path) -> list[Entry]:
     entries: list[Entry] = []
     section = ""
+    current: Entry | None = None
     for line in path.read_text(encoding="utf-8").splitlines():
         if line in SECTIONS:
             section = line
+            current = None
             continue
         heading = HEADING.match(line)
         if heading:
-            entries.append(Entry(path, section, len(entries), heading[1], heading[2], heading[3], "", "", ""))
+            current = Entry(path, section, len(entries), heading[1], heading[2], heading[3], "", "", "")
+            entries.append(current)
+            continue
+        if line.startswith("### "):
+            current = None  # a stray heading; problems() reports it
             continue
         field = FIELD.match(line)
-        if field and entries:
-            setattr(entries[-1], field[1].lower(), field[2])
+        if field and current is not None:
+            setattr(current, field[1].lower(), field[2])
     return entries
+
+
+def stray_headings(path: Path) -> list[str]:
+    """`### ` lines that aren't entry headings."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    return [line for line in lines if line.startswith("### ") and not HEADING.match(line)]
 
 
 def all_entries() -> list[Entry]:
@@ -142,16 +169,22 @@ def expected_tables(entries: list[Entry]) -> dict[str, str]:
 
 def problems(entries: list[Entry]) -> list[str]:
     found: list[str] = []
+    for path in log_files():
+        found += [f"{path.name}: not an entry heading: {line!r}" for line in stray_headings(path)]
     for e in entries:
         label = e.mistake_id or f"{e.date}: {e.title}"
         if e.kind not in KINDS:
             found.append(f"{label}: unknown kind {e.kind!r}")
         if not e.pattern:
             found.append(f"{label}: no Pattern line")
+        elif e.pattern not in PATTERNS:
+            found.append(f"{label}: unknown pattern {e.pattern!r}")
         if not e.guard:
             found.append(f"{label}: no Guard line")
         if e.mistake_id is None:
             found.append(f"{label}: no ID; run `write`")
+    ids = Counter(e.mistake_id for e in entries if e.mistake_id)
+    found += [f"{mistake_id}: used by {count} entries" for mistake_id, count in ids.items() if count > 1]
     actual = generated(MAIN.read_text(encoding="utf-8"))
     for name, table in expected_tables(entries).items():
         if actual.get(name) != table:
@@ -202,6 +235,9 @@ def archive(month: str) -> None:
 
 def main(arguments: list[str]) -> int:
     command = arguments[0] if arguments else "check"
+    if command not in ("check", "write", "archive"):
+        print(f"unknown command {command!r}\n{__doc__}", file=sys.stderr)
+        return 2
     if command == "archive":
         archive(arguments[1])
         command = "write"
