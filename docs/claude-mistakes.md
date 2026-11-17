@@ -72,27 +72,27 @@ entries go at the top of their section without an ID.
 | design | 4 | 20 |
 | safety design | 5 | 18 |
 | recommendation | 7 | 6 |
-| environment | 4 | 9 |
-| communication | 9 | 41 |
-| testing | 0 | 13 |
-| process | 5 | 20 |
-| **Total** | **34** | **127** |
+| environment | 4 | 10 |
+| communication | 9 | 47 |
+| testing | 0 | 15 |
+| process | 5 | 23 |
+| **Total** | **34** | **139** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 33 |
-| how-I-work | 20 |
+| said-without-checking | 35 |
+| how-I-work | 21 |
+| records-ahead-of-code | 18 |
 | safety-judgment | 16 |
-| reading-field-data | 14 |
-| records-ahead-of-code | 14 |
+| reading-field-data | 15 |
 | recommendation | 12 |
+| weak-test | 12 |
 | message-misstates-outcome | 12 |
-| weak-test | 11 |
-| vocabulary | 10 |
+| vocabulary | 11 |
 | window-between-steps | 10 |
-| environment | 6 |
+| environment | 8 |
 | leftover-state | 3 |
 <!-- end generated -->
 
@@ -112,6 +112,18 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-173 | 2026-11-17 | Docstrings and comments only their author could follow | communication | vocabulary | `/project-review`'s fresh-context read (step 7) |
+| M-172 | 2026-11-17 | An unchecked claim about timed waits in a test comment | communication | said-without-checking | REVIEW.md Q-01 |
+| M-171 | 2026-11-17 | An index row written with the wrong line endings, again | environment | environment | `git diff --stat` after each scripted edit |
+| M-170 | 2026-11-17 | ADR-0078's index row recorded as written but missing | process | records-ahead-of-code | `/project-review` step 3 and REVIEW.md Q-39 |
+| M-169 | 2026-11-17 | The bug-planting script changed a file's line endings | testing | environment | the checksum comparison around the planting |
+| M-168 | 2026-11-17 | The stuck exit's exit code given from one run | communication | said-without-checking | none yet; the facts register row gives every run |
+| M-167 | 2026-11-17 | Backlog edits written while another work session held the backlog | process | how-I-work | none yet |
+| M-166 | 2026-11-17 | Backlog #104's settle heights from part of the logs | communication | reading-field-data | working rule 4 |
+| M-165 | 2026-11-17 | A docstring said nothing waits on a stuck console write | communication | records-ahead-of-code | Q-02 |
+| M-164 | 2026-11-17 | ADR-0075 marked built without the test its Consequences name | process | records-ahead-of-code | Q-39 |
+| M-163 | 2026-11-17 | Two planted bugs counted from the exit code, not the failure | testing | weak-test | none yet |
+| M-162 | 2026-11-17 | A comment gave an ordering a reason the code doesn't have | communication | records-ahead-of-code | a planted bug for each claim a comment makes |
 | M-161 | 2026-11-16 | The mistakes log's check passed malformed entries | testing | weak-test | `tests/tools/test_mistakes_log.py` |
 | M-160 | 2026-11-16 | A pull request's changes read from local `main` | communication | said-without-checking | working rule 1 |
 | M-159 | 2026-11-16 | "Was lost" for a script the hand-off said may be gone | communication | said-without-checking | working rule 2 |
@@ -629,6 +641,102 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-173, 2026-11-17: Docstrings and comments only their author could follow
+
+- **What happened:** C1's second project review (fresh-context read) found `_ConsoleListener`'s docstring naming a `stop` it doesn't override, `stop_within`'s leaving out that it's also True when the thread never started, "Python's logging cleanup at exit" not naming `logging.shutdown`, and two comments (the warning's count, the removed handler) that needed the conversation to follow. Fixed in "Project review C1 (A2)".
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** `/project-review`'s fresh-context read (step 7).
+- **Takeaway:** review fixes are new code, wording included (Q-51 already asks); no new question.
+
+### M-172, 2026-11-17: An unchecked claim about timed waits in a test comment
+
+- **What happened:** in C1's review fixes (finding 7) I gave "A lock wait can return a little early" as the reason for the exit test's 0.05 s margin. It wasn't checked or in the facts register; the clock's resolution on Windows may be the cause. Caught by C1's second project review (Q-01); the comment now says it isn't checked.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** REVIEW.md Q-01.
+- **Takeaway:** the reason for a test's margin is a claim about Python too: check it or say it isn't checked (working rule 1).
+
+### M-171, 2026-11-17: An index row written with the wrong line endings, again
+
+- **What happened:** adding ADR-0078's index row, my script found its place by a bare line feed in a CRLF working copy and inserted a row ending in LF after a stray CR, so Git saw mixed line endings and the whole file as changed. Caught by the diff stat (189 lines for one row); rewritten with CRLF throughout. Repeats M-169.
+- **Kind:** environment.
+- **Pattern:** environment.
+- **Guard:** `git diff --stat` after each scripted edit.
+- **Takeaway:** a script that edits a file keeps the file's line endings and checks the diff stat after. A second time, so the escalation ladder asks for a mechanism: backlog #119.
+
+### M-170, 2026-11-17: ADR-0078's index row recorded as written but missing
+
+- **What happened:** the C1 work order and the next-up brief both said ADR-0078's index row was written; the index had no row for it. Caught by C1's second project review (step 3, the records check); added in "Project review C1 (A2)".
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** `/project-review` step 3 and REVIEW.md Q-39.
+- **Takeaway:** before a work order or the brief says a record is written, find it in the file.
+
+### M-169, 2026-11-17: The bug-planting script changed a file's line endings
+
+- **What happened:** planting bugs for C1's review fixes, my script read each source file with `read_text` and restored it with `write_bytes`, which turned `start_up.py`'s CRLF line endings into LF. Caught by comparing checksums from before and after the planting; writing CRLF back made the checksum match.
+- **Kind:** testing.
+- **Pattern:** environment.
+- **Guard:** the checksum comparison around the planting.
+- **Takeaway:** a script that plants bugs saves and restores each file's bytes, not its text, and compares checksums after.
+
+### M-168, 2026-11-17: The stuck exit's exit code given from one run
+
+- **What happened:** C1's project review (finding 1) and its work order said that a program stuck at exit with a buffered standard error ends with a crash exit code (0xC0000409) once the console reads again. That came from one run. I repeated it to Joe as D-A's pitfall. Two reruns ended with exit code 0: the code depends on timing. Caught by rerunning the exit test before writing its facts register row; Joe kept A1 with the corrected facts (ADR-0078).
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** none yet; the facts register row gives every run.
+- **Takeaway:** an outcome measured once where threads race is reported as one run's result, and run again before a decision rests on it.
+
+### M-167, 2026-11-17: Backlog edits written while another work session held the backlog
+
+- **What happened:** recording ADR-0077 with `/decide`, I wrote the backlog (removed #89, #98 and #104, added #115 and #116) without checking whether another work session held the shared records. The C1 work session had written the backlog, the mistakes log and the next-up brief during my session. Nothing was lost; caught when `git diff --stat` showed files I hadn't touched. I reverted my backlog edits and left them in `drafts/decide-0077-records.md`.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** none yet.
+- **Takeaway:** before writing a shared record, compare `git status` with the session's start; files changed that I didn't touch mean another writer.
+
+### M-166, 2026-11-17: Backlog #104's settle heights from part of the logs
+
+- **What happened:** writing backlog #104 (2026-11-15), I gave every recorded settle height as 0.102-0.117 m and the final descent heights as 0.15-0.17 m. Across all 39 climbs in the logs that settled, they were 0.101-0.144 m and 0.151-0.194 m; most of the higher ones are from First flights 5 and 6. Caught by tallying every log before giving #104's options; the decision (ADR-0077) uses the full range.
+- **Kind:** communication.
+- **Pattern:** reading-field-data.
+- **Guard:** working rule 4.
+- **Takeaway:** a range given for "every" flight is tallied over every log, not carried over from an earlier analysis.
+
+### M-165, 2026-11-17: A docstring said nothing waits on a stuck console write
+
+- **What happened:** in `programs/console_output.py`, `UnlockedConsoleHandler`'s docstring says "so nothing waits on a stuck write", and a test is named `test_python_exit_cleanup_does_not_wait_on_a_stuck_console_write`, while ADR-0075 says Python's last flush of the console "may still wait". The project review's run showed it does wait, when standard error is buffered.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-02.
+- **Takeaway:** a docstring or test name says only what its test showed; "nothing" covers code the test never ran.
+
+### M-164, 2026-11-17: ADR-0075 marked built without the test its Consequences name
+
+- **What happened:** building C1, I changed ADR-0075's Built column in the ADR index to "Yes". Its Consequences name "a test that a program with its console blocked ends within a time limit"; the test I wrote times `logging_for_run`'s exit inside pytest, which can't see Python's final flush of standard error. The project review found it (2026-11-17): a program whose standard error pipe isn't read doesn't end while it stays unread.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-39.
+- **Takeaway:** a Built "Yes" needs each test the ADR's Consequences name, matched by what the test runs, not by its topic.
+
+### M-163, 2026-11-17: Two planted bugs counted from the exit code, not the failure
+
+- **What happened:** bug planting for C1 (ADR-0035, ADR-0075), my script printed "CAUGHT" for any failing run. The plant "the level on the listener's handler only" failed with an `UnboundLocalError` my edit caused, not the assertion; the plant "the exit warning before the handler is removed" deleted the removal instead of moving it. Caught by running both again and reading the failures. Redone, the first is caught by the exit and console-level tests.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** none yet.
+- **Takeaway:** a planted bug counts as caught only when the test fails on the assertion it targets; read the failure, not the exit code.
+
+### M-162, 2026-11-17: A comment gave an ordering a reason the code doesn't have
+
+- **What happened:** in `programs/console_output.py` I wrote that the console's handler comes off the root logger first "so the warning below goes to the log file only". Planting the other order showed no difference: the console's thread stops at the sentinel before the warning is queued. Reworded to the real reason, that no line is queued behind the stop.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** a planted bug for each claim a comment makes.
+- **Takeaway:** a comment's "so that" is a claim; plant its opposite before writing it.
 
 ### M-161, 2026-11-16: The mistakes log's check passed malformed entries
 
