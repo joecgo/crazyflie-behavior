@@ -216,7 +216,7 @@ How the project tracks Claude's mistakes and the checks they lead to ([mistakes 
 | **Facts register** | [`docs/verified-facts.md`](verified-facts.md): each fact about cflib, the firmware, Python or Windows that the project relies on, with its source file and lines, the version, the date checked, and what relies on it. A fact not in it is checked before it's said or written, then added. |
 | **Escalation ladder** | When a pattern earns a mechanism. First time: a question. Second: a helper, a test or a template line. Third: a fitness function, a lint or a design change, and the question retires. |
 | **Review tier** | How closely a path's changes are read in a code review: tier 1 every line, tier 2 the diff, tier 3 the test names. The review checklist lists the paths in each tier. |
-| **Review packet** | What Claude hands over for a code review: the reading order, what changed in each file and why, where it could be wrong, the facts it rests on, new log messages, new test names, the findings, and explain-back questions. `/review-packet` writes it to `drafts/`. |
+| **Review packet** | What Claude hands over for a code review: the reading order of the source files, what changed in each and why, new log messages, new test names, and explain-back questions. `/review-packet` writes it to `drafts/` and posts the findings as comments on the review's pull request. |
 | **Explain-back question** | A question that asks the user to explain a change or a decision in their own words, so they can defend it: in a review packet, and at the end of `/decide`. |
 
 ## Work sessions

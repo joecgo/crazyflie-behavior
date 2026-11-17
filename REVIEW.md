@@ -220,11 +220,11 @@ which review Claude runs on it:
 | Tier | Paths | My read | Claude's review |
 |---|---|---|---|
 | 1 | `safety/`, `loop/`, `drone/crazyflie/`, `drone/interface.py`, `drone/telemetry_buffer.py`, `snapshot.py`, `programs/start_up.py`, `tools/emergency_stop.py` | every line | `/project-review` at the level CLAUDE.md asks for, with `fresh` |
-| 2 | `behaviors/`, the other programs, `drone/mock_adapter.py`, test fakes, `timing/`, `geometry.py`, the other scripts in `tools/` | the diff | `/project-review` at high |
-| 3 | the other tests, docs | names, and the spec list | the path map's questions |
+| 2 | `behaviors/`, the other programs, `drone/mock_adapter.py`, `timing/`, `geometry.py`, the other scripts in `tools/` | the diff | `/project-review` at high |
+| 3 | tests (test fakes included), docs | test names only, from the review packet | test fakes: `/project-review` at high; the rest: the path map's questions |
 
-A path in no row is named in the review packet, with a question about its
-tier.
+A `.py` file outside `tests/` in no row is named in the review packet, with a
+question about its tier.
 
 **Each review is a pull request**, read in PyCharm:
 
@@ -234,11 +234,13 @@ tier.
   `review/<date>` at `main`'s last commit, runs `/project-review`, then
   `/review-packet`, on `reviewed..review/<date>`, and opens a pull request from that branch into
   `reviewed`. Its description gives the range and the review packet's path
-  in `drafts/`.
+  in `drafts/`. Claude posts each finding as a comment at its line,
+  starting with "Claude:", without asking.
 - Nothing is pushed to the review branch once it's open (M-049). Work,
   flights and review fixes stay on `main`, and the fixes are in the next
   review.
-- My comments on the pull request are the review's record. When I'm done,
+- My comments on the pull request are the review's record; Claude's start
+  with "Claude:". When I'm done,
   it's merged with a merge commit, not squashed or rebased: those make new
   commits, so the next review's diff would show this one's changes again.
   The merge moves `reviewed` forward; then the review branch is deleted and
