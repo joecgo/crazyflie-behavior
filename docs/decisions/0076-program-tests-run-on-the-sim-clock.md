@@ -1,0 +1,40 @@
+# 0076: Program tests run on the sim clock, with one real-clock test per program
+
+- **Status:** Accepted
+- **Date:** 2026-11-17
+- **Origin:** AI recommendation accepted.
+
+## Context
+
+Each program's `main()` builds its own `RealClock`, so program tests run in
+real time: 23.3 of the suite's 38.5 s, with waits shortened by patching
+module constants. A laptop stall makes them fail now and then
+([backlog #70](../decision-backlog/070.md)). [ADR-0009](0009-clock-abstraction.md)
+gave every component an injected clock, but the programs never took one.
+This is D9 of `drafts/2026-11-13-code-recommendations.md`, item C5 part 1.
+
+## Options considered
+
+- **A. The sim clock, except one real-clock test per program:** `main()`
+  takes an optional clock; tests pass a `SimClock` and the mock adapter, so
+  the program runs on one thread in milliseconds, the same every time, with
+  its real wait constants. Each program keeps one real-clock test, plus the
+  interrupt signal tests, to prove the real wiring.
+- **B. As today:** real time, patched constants. Nothing to build, but slow
+  and flaky on a stall.
+
+## Decision
+
+A. Tests become fast and repeatable and stop patching constants, while one
+real-clock test per program still covers `RealClock`, threads and signals,
+which a sim clock can't.
+
+## Consequences
+
+- `main(arguments=None, *, clock: Clock | None = None)` in each program;
+  `None` means a `RealClock`.
+- The real-clock tests named "runs as a program" and the interrupt signal
+  tests stay on the real clock, and can still fail on a laptop stall (#70).
+- A sim-clock test can't catch a bug that needs real threads or real timing.
+- Converted tests must still fail for the bug each was first proven with.
+- Not built: backlog #114.
