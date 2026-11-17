@@ -1,6 +1,6 @@
 # 0035: Console output runs on a background thread; log-file writes stay on the tick's thread
 
-- **Status:** Accepted. Amends [ADR-0028](0028-programs-bench-first-plain-logging.md) (plain logging) for the console.
+- **Status:** Accepted. Amends [ADR-0028](0028-programs-bench-first-plain-logging.md) (plain logging) for the console. Amended by [ADR-0075](0075-console-gets-2-s-at-exit-then-a-warning.md): at exit, the console gets 2 s to finish.
 - **Date:** 2026-11-01
 - **Origin:** Mixed. Keeping backlog #33 open and measuring before deciding: mine (Claude had proposed removing it unmeasured). A background thread for the console only: AI recommendation accepted after the measurements.
 
