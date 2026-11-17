@@ -1,6 +1,6 @@
 ---
 name: wrap-up
-description: "Ends a work session in the crazyflie-behavior repo: the work-log row with its hours, the mistakes logged, the backlog updated, the commits proposed in small chunks, a usage note, and the next-up brief (docs/next-up.md) rewritten, with the line the user pastes to start the next work session. Use it whenever the user says they're done, stopping for the day, wrapping up or taking a long break, and at a stopping point once Messages pass about 100k tokens. Argument: brief, to log any mistakes not yet logged, rewrite the next-up brief and give the line to paste, for a stopping point mid-day."
+description: "Ends a work session in the crazyflie-behavior repo: the work-log row with its hours, the mistakes logged, the backlog updated, the commits proposed in small chunks, a usage note, and the next-up brief (docs/next-up.md) rewritten, then the line the user pastes to start the next work session and this conversation cleared for it. Use it whenever the user says they're done, stopping for the day, wrapping up or taking a long break, and at a stopping point once Messages pass about 100k tokens. Argument: brief, to log any mistakes not yet logged, rewrite the next-up brief and give the line to paste, for a stopping point mid-day."
 ---
 
 # Wrap-up
@@ -97,12 +97,19 @@ if one is worth suggesting.
    longer true, but keep each undecided question until it's decided,
    however old. A line saying something is built needs its code and test
    (working rule 3). Then make its commit, if step 4's list was approved,
-   and ask whether to push. End with the line the user pastes to start the
-   next work session, alone in a plain code block:
+   and ask whether to push. Once the user has answered everything, end with
+   the model and effort for the first of "Next three", then the line the user
+   pastes to start the next work session, alone in a plain code block:
 
    ```
-   Read docs/next-up.md, then <the next step>.
+   Read docs/next-up.md and start the first of Next three.
    ```
+
+   Then clear this conversation: call `mcp__ccd_session_mgmt__clear_session`
+   with `self` as the turn's last call. The user approves it, and it takes
+   effect when the turn ends, so the user picks the model and pastes the line
+   into this same app session. Never clear in a turn that asks the user
+   something: their answer would land in the cleared conversation.
 
 ## The brief's shape
 
@@ -148,8 +155,8 @@ point to the rest.
 
 ## Rules this keeps
 
-- The next work session starts from the line the user pastes. Never start a
-  session yourself.
+- The next work session starts from the line the user pastes, in this app
+  session after the clear. Never start a session yourself.
 - No commit, push or pull request without the user's yes.
 - The work-log row and the brief say what was done. Field results in them
   come only from the user or recorded data.

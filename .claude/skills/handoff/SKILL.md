@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: "Passes unfinished work in the crazyflie-behavior repo to a fresh work session: writes a work order to drafts/<item>-handoff.md (the goal, what to read, what's decided and what isn't, the steps, the tests, when to stop and ask, when it's done, the progress so far, and the title the next work session renames itself to, such as W13 (A)), points the next-up brief at it, and gives the user the one line to paste. Use it when the user asks for a hand-off, and at a stopping point once Messages pass about 100k tokens with work left. It never starts a session itself."
+description: "Passes unfinished work in the crazyflie-behavior repo to a fresh work session: writes a work order to drafts/<item>-handoff.md (the goal, what to read, what's decided and what isn't, the steps, the tests, when to stop and ask, when it's done, the progress so far, and the title the next work session renames itself to, such as W13 (A)), points the next-up brief at it, gives the user the one line to paste, and clears this conversation for it. Use it when the user asks for a hand-off, and at a stopping point once Messages pass about 100k tokens with work left that needs a written record. It never starts a session itself."
 ---
 
 # Handoff
@@ -16,8 +16,9 @@ a decision.
 
 - The user asks for a hand-off.
 - At a stopping point once Messages (`get_usage`) pass about 100k tokens
-  with work left (`CLAUDE.local.md`, "Usage limits"). With no work left,
-  `/wrap-up brief` is the right tool instead.
+  with work left that needs a written record. Otherwise the user typing
+  `/compact` is cheaper (`CLAUDE.local.md`, "Usage limits"). With no work
+  left, `/wrap-up brief` is the right tool instead.
 
 ## Steps
 
@@ -51,18 +52,23 @@ a decision.
    rule 3). The model and effort come from the guide in `CLAUDE.local.md`,
    for the hardest step left.
 4. **Point the next-up brief at it.** In `docs/next-up.md`, the "In
-   progress" line for this work names the order's path, and the header's
-   date and "Uncommitted" are brought up to date. The rest of the brief is
+   progress" line for this work names the order's path, the first of "Next
+   three" is `Follow drafts/<item>-handoff.md.`, and the header's date and
+   "Uncommitted" are brought up to date. The rest of the brief is
    `/wrap-up`'s. The brief has one writer at a time (`CLAUDE.md`, "One
    writer"): if another work session holds it, say so and leave the brief
    alone.
-5. **Give the user the line to paste**, alone in a plain code block, and
-   before it the model and effort to switch to, if they differ from this
-   work session's:
+5. **Give the user the line to paste, then clear.** Before the line, the
+   model and effort to pick after the clear, if they differ from this work
+   session's. The line goes alone in a plain code block:
 
    ```
-   Read drafts/<item>-handoff.md and follow it.
+   Read docs/next-up.md and start the first of Next three.
    ```
+
+   If step 4 left the brief alone, the line is
+   `Read drafts/<item>-handoff.md and follow it.` instead. Then clear this
+   conversation, as `/wrap-up`'s step 6 says.
 
 ## The work order's shape
 
@@ -104,7 +110,8 @@ Where the rest goes:
 
 ## Rules this keeps
 
-- Never start a session. The next one starts from the line the user pastes.
+- Never start a session. The next one starts from the line the user pastes,
+  in this app session after the clear.
 - No commit, push or pull request without the user's yes.
 - The user starts every program on the drone. An order that needs a flight
   gives the command; it never runs it.
