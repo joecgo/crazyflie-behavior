@@ -1,6 +1,6 @@
 ---
 name: wrap-up
-description: "Ends a work session in the crazyflie-behavior repo: the work-log row with its hours, the mistakes logged, the backlog updated, the commits proposed in small chunks, a usage note, and the next-up brief (docs/next-up.md) rewritten, then the line the user pastes to start the next work session and this conversation cleared for it. Use it whenever the user says they're done, stopping for the day, wrapping up or taking a long break, and at a stopping point once Messages pass about 100k tokens. Argument: brief, to log any mistakes not yet logged, rewrite the next-up brief and give the line to paste, for a stopping point mid-day."
+description: "Ends a work session in the crazyflie-behavior repo: the work-log row with its hours, the mistakes logged, the backlog updated, the commits proposed in small chunks, a usage note, and the next-up brief (docs/next-up.md) rewritten, then the line the user pastes to start the next work session, and this conversation cleared for it once the user says yes. Use it whenever the user says they're done, stopping for the day, wrapping up or taking a long break, and at a stopping point once Messages pass about 100k tokens. Argument: brief, to log any mistakes not yet logged, rewrite the next-up brief and give the line to paste, for a stopping point mid-day."
 ---
 
 # Wrap-up
@@ -99,18 +99,20 @@ if one is worth suggesting.
    this work session owes and didn't ask (`CLAUDE.local.md`, "Deferred
    explain-backs"), with its notes. A line saying something is built needs its code and test
    (working rule 3). Then make its commit, if step 4's list was approved,
-   and ask whether to push. Once the user has answered everything, end with
-   the model and effort for the first of "Next three", then the line the user
-   pastes to start the next work session, alone in a plain code block:
+   and ask whether to push. Once the user has answered everything, say in a
+   sentence what the first of "Next three" is and why it's next, its model
+   and effort, then the line the user pastes to start the next work session,
+   alone in a plain code block:
 
    ```
    Read docs/next-up.md and start the first of Next three.
    ```
 
-   Then clear this conversation: call `mcp__ccd_session_mgmt__clear_session`
-   with `self` as the turn's last call. The user approves it, and it takes
-   effect when the turn ends, so the user picks the model and pastes the line
-   into this same app session. Never clear in a turn that asks the user
+   Then ask whether to clear this conversation, and stop. Clear only in the
+   turn after the user says yes: call `mcp__ccd_session_mgmt__clear_session`
+   with `self` as that turn's last call. It takes effect when the turn ends,
+   so the user picks the model and pastes the line into this same app
+   session. Never clear without that yes, or in a turn that asks the user
    something: their answer would land in the cleared conversation.
 
 ## The brief's shape

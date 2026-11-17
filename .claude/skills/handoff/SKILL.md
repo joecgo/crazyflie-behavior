@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: "Passes unfinished work in the crazyflie-behavior repo to a fresh work session: writes a work order to drafts/<item>-handoff.md (the goal, what to read, what's decided and what isn't, the steps, the tests, when to stop and ask, when it's done, the progress so far, and the title the next work session renames itself to, such as W13 (A)), points the next-up brief at it, gives the user the one line to paste, and clears this conversation for it. Use it when the user asks for a hand-off, and at a stopping point once Messages pass about 100k tokens with work left that needs a written record. It never starts a session itself."
+description: "Passes unfinished work in the crazyflie-behavior repo to a fresh work session: writes a work order to drafts/<item>-handoff.md (the goal, what to read, what's decided and what isn't, the steps, the tests, when to stop and ask, when it's done, the progress so far, and the title the next work session renames itself to, such as W13 (A)), points the next-up brief at it, gives the user the one line to paste, and clears this conversation for it once the user says yes. Use it when the user asks for a hand-off, and at a stopping point once Messages pass about 100k tokens with work left that needs a written record. It never starts a session itself."
 ---
 
 # Handoff
@@ -58,7 +58,8 @@ a decision.
    `/wrap-up`'s. The brief has one writer at a time (`CLAUDE.md`, "One
    writer"): if another work session holds it, say so and leave the brief
    alone.
-5. **Give the user the line to paste, then clear.** Before the line, the
+5. **Give the user the line to paste, then ask to clear.** Before the line,
+   say in a sentence what the next work session will do first, and the
    model and effort to pick after the clear, if they differ from this work
    session's. The line goes alone in a plain code block:
 
@@ -67,8 +68,9 @@ a decision.
    ```
 
    If step 4 left the brief alone, the line is
-   `Read drafts/<item>-handoff.md and follow it.` instead. Then clear this
-   conversation, as `/wrap-up`'s step 6 says.
+   `Read drafts/<item>-handoff.md and follow it.` instead. Then ask whether to
+   clear this conversation, and clear only after the user says yes, as
+   `/wrap-up`'s step 6 says.
 
 ## The work order's shape
 
