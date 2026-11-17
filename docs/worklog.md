@@ -25,8 +25,9 @@ Milestones so far:
   4. Simulated flights and replay tests. Done when the programs fly in the
      simulator and recorded real flights replay, both in continuous
      integration.
-  5. No flight regresses. A baseline is recorded before the refactor, and the
-     First flight suite is flown partway through (after the take-off and
+  5. No flight regresses. The baseline is First flight 6 (2026-11-14). A
+     regression suite (failsafe low, failsafe high, and a 0.5 m hover for
+     5 s with chirps) is flown partway through (after the take-off and
      landing refactor) and at the end. Done when the final session passes.
   6. The project tour. Done when it's published.
   7. Joe reviews all the code line by line, aside from tests. Done when
