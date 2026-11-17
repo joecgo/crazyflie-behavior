@@ -1,4 +1,4 @@
-"""Start-up code every program shares (ADR-0026, ADR-0028).
+"""Start-up code every program shares (ADR-0026, ADR-0028, ADR-0035).
 
 Choosing the drone, logging to the console and a log file, QuickEdit off in an
 old Windows console window, and running the tick loop between connecting and
@@ -23,6 +23,7 @@ from crazyflie_behavior.drone.crazyflie.bad_flow_zone import DEFAULT_INITIAL_CLI
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_loop import HangWatchdog, TickLoop, TickStep
+from crazyflie_behavior.programs.console_output import console_output
 from crazyflie_behavior.timing.clock import Clock
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,6 @@ A stop request from the interrupt signal during the run is the normal end, with 
 _PROJECT_LOGGER = "crazyflie_behavior"
 """The parent of every logger in this project, including the programs' own."""
 
-_CONSOLE_FORMAT = "%(levelname)s %(name)s: %(message)s"
 _FILE_FORMAT = "%(asctime)s %(levelname)s [%(threadName)s] %(name)s: %(message)s"
 
 # Windows console input mode flags (wincon.h).
@@ -120,20 +120,23 @@ def run_program(program_name: str, description: str, drone: DroneInterface, tick
 
 
 @contextmanager
-def logging_for_run(program_name: str, log_directory: Path = LOG_DIRECTORY) -> Generator[TextIO]:
+def logging_for_run(
+    program_name: str, log_directory: Path = LOG_DIRECTORY, console: TextIO | None = None
+) -> Generator[TextIO]:
     """Log to the console (info and above) and to a new log file (everything of ours).
+
+    The console, standard error by default, is written from a background
+    thread; the log file on the thread that logs (ADR-0035).
 
     Libraries such as cflib log at info and above only: cflib logs every radio
     packet at debug level. Python warnings and errors in other threads are
     logged too. Yields the open log file, for the hang watchdog. On exit, the
     handlers, levels and thread hook are put back and warning capture is off.
+    Exit waits up to `console_output.EXIT_TIME_LIMIT` for the console (ADR-0075).
     """
     log_directory.mkdir(parents=True, exist_ok=True)
     log_path = log_directory / f"{datetime.now():%Y-%m-%d_%H-%M-%S}_{program_name}.log"
     log_file = log_path.open("a", encoding="utf-8")
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(logging.Formatter(_CONSOLE_FORMAT))
     file_handler = logging.StreamHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(logging.Formatter(_FILE_FORMAT))
@@ -146,16 +149,16 @@ def logging_for_run(program_name: str, log_directory: Path = LOG_DIRECTORY) -> G
     try:
         root_logger.setLevel(logging.INFO)
         project_logger.setLevel(logging.DEBUG)
-        root_logger.addHandler(console_handler)
         root_logger.addHandler(file_handler)
-        logging.captureWarnings(True)
-        threading.excepthook = _log_thread_error
-        logger.info("Logging to %s", log_path)
-        yield log_file
+        # Inside the file handler, so the console's exit warning still reaches the log file (ADR-0075).
+        with console_output(console if console is not None else sys.stderr):
+            logging.captureWarnings(True)
+            threading.excepthook = _log_thread_error
+            logger.info("Logging to %s", log_path)
+            yield log_file
     finally:
         threading.excepthook = previous_thread_hook
         logging.captureWarnings(False)
-        root_logger.removeHandler(console_handler)
         root_logger.removeHandler(file_handler)
         log_file.close()
         project_logger.setLevel(previous_project_level)

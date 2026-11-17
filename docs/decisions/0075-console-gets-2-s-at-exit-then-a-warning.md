@@ -1,6 +1,6 @@
 # 0075: At exit, the console gets 2 s to finish, then a warning goes to the log file
 
-- **Status:** Accepted. Amends [ADR-0035](0035-console-output-on-a-background-thread.md) for the exit.
+- **Status:** Accepted. Amends [ADR-0035](0035-console-output-on-a-background-thread.md) for the exit. Amended by [ADR-0078](0078-console-exit-risks-accepted-python-pinned-to-3-12.md), 2026-11-17: the "Not covered" case was measured and is an accepted risk, with two more exit cases; the exit test runs with `PYTHONUNBUFFERED=1`.
 - **Date:** 2026-11-17
 - **Origin:** AI recommendation accepted: the 2 s limit (D1 in the 2026-11-13 code review) and the console handler that takes no lock (found while writing this ADR).
 
