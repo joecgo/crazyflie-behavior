@@ -73,25 +73,25 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 18 |
 | recommendation | 7 | 6 |
 | environment | 4 | 9 |
-| communication | 8 | 41 |
-| testing | 0 | 12 |
+| communication | 9 | 41 |
+| testing | 0 | 13 |
 | process | 5 | 20 |
-| **Total** | **33** | **126** |
+| **Total** | **34** | **127** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 32 |
+| said-without-checking | 33 |
 | how-I-work | 20 |
 | safety-judgment | 16 |
 | reading-field-data | 14 |
 | records-ahead-of-code | 14 |
 | recommendation | 12 |
 | message-misstates-outcome | 12 |
+| weak-test | 11 |
 | vocabulary | 10 |
 | window-between-steps | 10 |
-| weak-test | 10 |
 | environment | 6 |
 | leftover-state | 3 |
 <!-- end generated -->
@@ -112,6 +112,8 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-161 | 2026-11-16 | The mistakes log's check passed malformed entries | testing | weak-test | `tests/tools/test_mistakes_log.py` |
+| M-160 | 2026-11-16 | A pull request's changes read from local `main` | communication | said-without-checking | working rule 1 |
 | M-159 | 2026-11-16 | "Was lost" for a script the hand-off said may be gone | communication | said-without-checking | working rule 2 |
 | M-158 | 2026-11-16 | A log's program line placed by one sample | communication | said-without-checking | working rule 1 |
 | M-157 | 2026-11-14 | One flight's battery line filed under other flights | communication | reading-field-data | working rule 4 |
@@ -276,6 +278,14 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-160, 2026-11-16: A pull request's changes read from local `main`
+
+- **What happened:** asked how well the workflow changes cut token use, I diffed the branch against local `main` and told Joe the pull request was the six skills plus the next-up brief (W13, W15). Local `main` already held W1 to W12; pull request #23 compares against GitHub's `main` and holds all of W1 to W16. Joe pointed it out.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 1.
+- **Takeaway:** what a pull request holds comes from the pull request (`gh pr view`, or a diff from `origin/main`), not from local `main`.
 
 ### M-153, 2026-11-14: A flight command without `--crazyflie`
 
@@ -619,6 +629,14 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-161, 2026-11-16: The mistakes log's check passed malformed entries
+
+- **What happened:** in a review of pull request #23, I found four ways `tools/mistakes_log.py`, which I wrote for W6, let a bad log pass. An entry heading with a typo dropped out of the counts, and its fields went to the entry above it. A misspelled pattern became a new row in the pattern table. Two entries could share an ID. A mistyped command ran `check` and exited 0. `check` reported none of them.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** `tests/tools/test_mistakes_log.py`.
+- **Takeaway:** a check script needs a test for each malformed input it exists to catch, not only for good input.
 
 ### M-159, 2026-11-16: "Was lost" for a script the hand-off said may be gone
 
