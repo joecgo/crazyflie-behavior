@@ -1,6 +1,6 @@
 ---
 name: review-packet
-description: "Writes the review packet for one of the user's code reviews in the crazyflie-behavior repo, to drafts/review-packet-<date>.md, and posts the findings as comments on the review's pull request: the reading order of the source files by review tier, what changed in each and its ADR, new log messages, new and changed test names, the findings with their lines, and explain-back questions. Short and plain, for the user to read beside the pull request. Use it before one of the user's code reviews, right after /project-review in the same work session so the packet carries its findings. It also works on a range no project review covered, and says so. Argument: a commit range (default: from the last reviewed commit in REVIEW.md's review log to main)."
+description: "Writes the review packet for one of the user's code reviews in the crazyflie-behavior repo, to drafts/review-packets/<date>.md, and posts the findings as comments on the review's pull request: the reading order of the source files by review tier, what changed in each and its ADR, new log messages, new and changed test names, the findings with their lines, and explain-back questions. Short and plain, for the user to read beside the pull request. Use it before one of the user's code reviews, right after /project-review in the same work session so the packet carries its findings. It also works on a range no project review covered, and says so. Argument: a commit range (default: from the last reviewed commit in REVIEW.md's review log to main)."
 ---
 
 # Review packet
@@ -58,7 +58,7 @@ the packet: say so, as step 1 does, and let the user choose.
    log or print; the project imports of each touched `.py` file; the tier
    table in `REVIEW.md` ("My reviews"); and, for each finding, the line it
    points at in the range's last commit, with line numbers.
-3. **Write the packet** to `drafts/review-packet-<date>.md` (Pacific date).
+3. **Write the packet** to `drafts/review-packets/<date>.md` (Pacific date).
    Open it with three lines: the range, the pull request (or the branch it
    will come from, since `REVIEW.md` writes the packet first), and which
    project review the findings come from. Then:

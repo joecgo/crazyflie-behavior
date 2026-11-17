@@ -25,7 +25,7 @@ move the item, renumber "Next three", and update "Last commit" and
 - 2026-11-17: committed C1 (`93c8f5f`, ADR-0035, ADR-0075, ADR-0078; the
   staged tree passed alone), ADR-0076's records (`701a20f`) and the records
   (`f729668`). Review pull request #24 opened (C1 only), with
-  `drafts/review-packet-2026-11-17.md`.
+  `drafts/review-packets/2026-11-17.md`.
 - 2026-11-17: ADR-0077 built, not yet reviewed; ADR-0075 to ADR-0078
   decided; First flight 6 set as the flight baseline (backlog #113).
 
