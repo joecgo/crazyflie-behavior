@@ -1,6 +1,6 @@
 ---
 name: decide
-description: "Turns an open question in the crazyflie-behavior repo into the user's decision and its records: searches the backlog, the ADR index and the glossary for the topic; gives lettered options, each with what it fixes and why to choose it, a recommendation and the pitfalls stated plainly; waits for the user's answer; then writes the ADR from the template, its index row with the Built column, the glossary proposal, the backlog change and a row for anything left unbuilt, and asks one explain-back question. Use it whenever an architectural question needs deciding (an interface, a module boundary, data flow, timing and threading, units and frames, error and safety strategy, test strategy, a dependency), when a backlog row comes up for deciding, and when a request conflicts with an accepted ADR. It writes no code. Argument: the question in a few words, or a backlog row number such as #58."
+description: "Turns an open question in the crazyflie-behavior repo into the user's decision and its records: searches the backlog, the ADR index and the glossary for the topic; gives lettered options, each with what it fixes and why to choose it, a recommendation and the pitfalls stated plainly; waits for the user's answer; then writes the ADR from the template, its index row with the Built column, the glossary proposal, the backlog change and a row for anything left unbuilt, and asks one explain-back question (or adds it to the next-up brief once the context is large). Use it whenever an architectural question needs deciding (an interface, a module boundary, data flow, timing and threading, units and frames, error and safety strategy, test strategy, a dependency), when a backlog row comes up for deciding, and when a request conflicts with an accepted ADR. It writes no code. Argument: the question in a few words, or a backlog row number such as #58."
 ---
 
 # Decide
@@ -99,7 +99,9 @@ code the hits point to.
 10. **One explain-back question** about the decision, using only terms the
     user knows; define a new one briefly first. If the answer is incomplete,
     say what's right and give one hint, then let the user try once more.
-    The full answer comes after the second try.
+    The full answer comes after the second try. Ask it now only while
+    Messages are under about 50k tokens; otherwise add it to the next-up
+    brief, as `CLAUDE.local.md`'s "Deferred explain-backs" says.
 
 ## Rules this keeps
 

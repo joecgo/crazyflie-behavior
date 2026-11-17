@@ -105,8 +105,11 @@ Where the rest goes:
   answerable with a letter and the recommendation marked, as in the brief's
   decision list, so they can answer from their phone. A glossary row waiting
   on their OK goes there with its exact before and after.
-- **What this work session owes the user** (an explain-back not yet asked,
-  something to tell them) goes under "Report back".
+- **An explain-back not yet asked** goes in the next-up brief's
+  "Explain-backs waiting", as `CLAUDE.local.md`'s "Deferred explain-backs"
+  says.
+- **Anything else this work session owes the user** (something to tell
+  them) goes under "Report back".
 
 ## Rules this keeps
 

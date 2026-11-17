@@ -94,8 +94,10 @@ if one is worth suggesting.
    ahead of the week.
 6. **The next-up brief** (`docs/next-up.md`). Rewrite it whole, in the shape
    below, in about 40 lines. It's a snapshot, not a log: drop what's no
-   longer true, but keep each undecided question until it's decided,
-   however old. A line saying something is built needs its code and test
+   longer true, but keep each undecided question until it's decided, and
+   each explain-back until it's answered, however old. Add any explain-back
+   this work session owes and didn't ask (`CLAUDE.local.md`, "Deferred
+   explain-backs"), with its notes. A line saying something is built needs its code and test
    (working rule 3). Then make its commit, if step 4's list was approved,
    and ask whether to push. Once the user has answered everything, end with
    the model and effort for the first of "Next three", then the line the user
@@ -141,6 +143,13 @@ The project's state on one page, read first by a fresh work session.
 Answer by number and letter, such as "1A". **Bold** is the recommendation.
 
 1. <The question.> **A.** <option>. B. <option>.
+
+## Explain-backs waiting
+
+Answer by number, such as "E1: ...", in any work session. Claude grades
+from `drafts/explain-back-notes.md`; don't open it first.
+
+- **E1.** <The question, using only terms Joe knows.>
 
 ## Last reviewed
 
