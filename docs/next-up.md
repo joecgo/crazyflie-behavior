@@ -9,12 +9,20 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-17 (Pacific)
-- **Last commit:** `839fb7a` Records: mistakes M-182 to M-184, work log,
-  backlog #125 and #126, on `main`, pushed with this brief. Uncommitted:
-  nothing.
+- **Last commit:** `c19e1e7` Records: mistake M-186, work log, on `main`,
+  pushed with this brief. Uncommitted: C5 part 1's work so far in
+  `programs/` (bench, failsafe, hover, rescue landing) and
+  `tests/programs/`, not checked or reviewed yet. The program tests still
+  flake on the real clock, with and without it.
 
 ## Done last
 
+- 2026-11-17: Joe finished reviewing pull request #25. #24 and #25 are
+  closed unmerged with review-log rows; their `review/*` branches are deleted,
+  and their `review-base/*` branches are kept so the diffs stay viewable. The
+  placeholder comment is gone from `bad_flow_zone.py` (ADR-0077 unchanged).
+  Glossary: *Flow* and *Hand-over* added, and *Stale value* names fresh as
+  its opposite (backlog #121 closed). Mistake M-186 logged.
 - 2026-11-17: ADR-0077 committed (`f973e8a`; the staged tree passed alone:
   751 tests, Ruff, Pyright), then its mistakes M-174 to M-181. Review pull
   request #25 opened, ADR-0077 only, with
@@ -30,12 +38,7 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
-- **Pull request #25**, Joe's review of ADR-0077: from
-  `review/2026-11-17-adr-0077` into `review-base/2026-11-17-adr-0077` (at
-  `4204007`), so it shows ADR-0077 only. Read it in PyCharm beside the
-  packet. Fixes go on `main`, never on the review branch (M-184). When done:
-  close it unmerged, delete both branches, and add a row to `REVIEW.md`'s
-  review log.
+None.
 
 ## Next three
 
@@ -44,7 +47,7 @@ move the item, renumber "Next three", and update "Last commit" and
 2. `/decide` backlog #119, a mechanism against scripts changing line
    endings. Sonnet, medium.
 3. `/decide` backlog #120, how fresh the initial climb's flow check must be
-   (0.5 s now, or the safety layer's 0.25 s), with #121's glossary terms;
+   (0.5 s now, or the safety layer's 0.25 s);
    needed before the next field session. Opus, high.
 
 ## Decisions waiting on Joe
@@ -57,26 +60,12 @@ Answer by number and letter, such as "1A". **Bold** is the recommendation.
 2. The tier questions in #24's packet: `programs/console_output.py` in tier
    1 (it was split out of `start_up.py`), `pyproject.toml` in tier 3.
    **A.** Both. B. Other tiers.
-3. Pull request #24's leftovers: its branches `review/2026-11-17` and
-   `review-base/2026-11-17` on GitHub, and its row in `REVIEW.md`'s review
-   log. **A.** Claude deletes both branches and adds the row. B. Later,
-   with #25's.
 
 ## Explain-backs waiting
 
-Answer by number, such as "E1: ...", in any work session. Claude grades
-from `drafts/explain-back-notes.md`; don't open it first.
-
-- **E1.** Our console handler takes no lock, yet a console write that got
-  stuck still kept the program from ending, when standard error was
-  buffered. What held it?
-- **E2.** The climb's check read "no down range, or under 0.15 m: keep
-  climbing; otherwise hand over". Why did a NaN down range hand over, when
-  the old "at or above the height: hand over" kept climbing?
-
-Each review packet has four more: #24's in
+None waiting. E1 and E2 and the eight in the review packets (#24's in
 `drafts/review-packets/2026-11-17.md`, #25's in
-`drafts/review-packets/2026-11-17-adr-0077.md`.
+`drafts/review-packets/2026-11-17-adr-0077.md`) were graded 2026-11-17.
 
 ## Last reviewed
 
