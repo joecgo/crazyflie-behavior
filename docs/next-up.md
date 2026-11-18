@@ -9,56 +9,40 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-18 (Pacific)
-- **Last commit:** `1f482dc` ADR-0079 decided, on `main`. The next commit
-  (ADR-0079 built: `.gitattributes`, `.editorconfig`, records, this brief)
-  is pushed with this brief. Another session's edits to
-  `.github/workflows/checks.yml`, four `tests/programs/test_*.py` files and
-  a new `tests/programs/conftest.py` are uncommitted and not part of it.
+- **Last commit:** `b27ea67` Review packets list code that supports the
+  tests and never a bare "the same"; mistakes M-190 and M-191, on `main`.
+  Uncommitted: nothing of substance. `git status` lists about 113 files as
+  modified with no content change, left from ADR-0079's renormalisation;
+  not looked into.
 
 ## Done last
 
-- 2026-11-18: ADR-0079 decided: every text file uses LF line endings, in
-  the repository and the working copy (`.gitattributes`, `.editorconfig`);
-  no fitness function, a risk Joe accepted. Backlog #119 closed. Built the
-  same day: `.gitattributes`, `.editorconfig`, the 119 CRLF
-  working files renormalised to LF. Joe skipped the explain-back (line endings aren't a topic he
-  wants to be tested on).
-- 2026-11-18: ADR-0076 built: `main()` takes an optional clock in the four
-  programs, and their tests run on the sim clock with the real waits. Suite
-  38.5 s to 19.5 s; 751 passed; five planted bugs caught. Joe confirmed the
-  four build choices and chose no failsafe real-clock test (noted in the
-  ADR).
-- 2026-11-17: Joe finished reviewing pull request #25. #24 and #25 are
-  closed unmerged with review-log rows; their `review/*` branches are deleted,
-  and their `review-base/*` branches are kept so the diffs stay viewable. The
-  placeholder comment is gone from `bad_flow_zone.py` (ADR-0077 unchanged).
-  Glossary: *Flow* and *Hand-over* added, and *Stale value* names fresh as
-  its opposite (backlog #121 closed). Mistake M-186 logged.
-- 2026-11-17: ADR-0077 committed (`f973e8a`; the staged tree passed alone:
-  751 tests, Ruff, Pyright), then its mistakes M-174 to M-181. Review pull
-  request #25 opened, ADR-0077 only, with
-  `drafts/review-packets/2026-11-17-adr-0077.md`; its 12 findings are
-  comments, rebuilt from the records of ADR-0077's two project reviews
-  (backlog #125). Continuous integration passes.
-- 2026-11-17: Joe reviewed C1 in pull request #24, now closed; his fixes
-  are on `main` (`d404629`: `_CONSOLE_LEVEL` dropped, two coding-style
-  rules). Mistakes M-182 to M-184 logged; backlog #126 (a mechanism against
-  pushes to an open review branch) added.
-- 2026-11-17: ADR-0077's two `/project-review` runs (Extra; Extra with a
-  fresh read): 17 findings, all fixed but backlog #120 to #124.
+- 2026-11-18: review pull request #26 (ADR-0076 with ADR-0080) read by Joe
+  with no comments and closed unmerged; `review/2026-11-18-adr-0076`
+  deleted, `review-base/…` kept; its row is in `REVIEW.md`'s review log.
+- 2026-11-18: `/project-review` (high) of ADR-0080's build, `f66702c`:
+  seven findings, none fixed, now backlog #129.
+- 2026-11-18: `/review-packet` lists code that supports the tests (a
+  `conftest.py`, a shared fake) and names every row's change, never a bare
+  "the same" (mistake M-191).
+- 2026-11-18: ADR-0076, ADR-0079 and ADR-0080 decided and built (the
+  program tests on the sim clock, LF line endings, the 120 s sim-time limit).
 
 ## In progress
 
-None.
+- Nothing open. Noticed: `tools/mistakes_log.py write` saves the log with
+  CRLF line endings, against ADR-0079 (git converts them on commit).
 
 ## Next three
 
 1. `/decide` backlog #120, how fresh the initial climb's flow check must be
-   (0.5 s now, or the safety layer's 0.25 s);
-   needed before the next field session. Opus, high.
-2. `/decide` D3 to D8 of `drafts/2026-11-13-code-recommendations.md`, for
-   C3 with C4 (the tick loop flies the whole flight; link lost as a
-   state), next in its suggested order. Opus, high.
+   (0.5 s now, or the safety layer's 0.25 s); needed before the next field
+   session. Opus, high.
+2. Backlog #129, ADR-0080's review findings: decide where the sim-time
+   limit applies (the start-up tests, `tests/loop/`, one shared bounded
+   clock, a fitness function), then the fixes. Opus, high.
+3. D3 to D8 of `drafts/2026-11-13-code-recommendations.md` (C3 with C4).
+   Opus, high.
 
 ## Decisions waiting on Joe
 
@@ -68,8 +52,12 @@ Answer by number and letter, such as "1A". **Bold** is the recommendation.
    `drafts/c1-review-fixes-handoff.md` ("Report back"). **A.** All
    confirmed. B. Name the ones to revisit.
 2. The tier questions in #24's packet: `programs/console_output.py` in tier
-   1 (it was split out of `start_up.py`), `pyproject.toml` in tier 3.
-   **A.** Both. B. Other tiers.
+   1, `pyproject.toml` in tier 3. **A.** Both. B. Other tiers.
+3. ADR-0080's build choices: the private name `_fail_after`; one bench test
+   advances the clock 10 s instead of starting it at 10 s; the bench
+   tick-step tests take the fixture though they can't run forever; the
+   workflow comment "Stops a hung run"; review findings 3 and 4 logged as
+   one mistake, M-187. **A.** All confirmed. B. Name the ones to revisit.
 
 ## Explain-backs waiting
 
@@ -84,8 +72,8 @@ from `drafts/explain-back-notes.md`; don't open it first.
 
 ## Last reviewed
 
-`0846826`, 2026-11-04: the last row of `REVIEW.md`'s review log. The next
-full code review covers everything after it, as the first pull request into
-the `reviewed` branch, which doesn't exist yet. The full line-by-line walk
-comes after the refactor (W9). Pull requests #24 and #25 review C1 and
-ADR-0077 alone, ahead of that.
+`0846826`, 2026-11-04: the last full row of `REVIEW.md`'s review log. The
+next full code review covers everything after it, as the first pull
+request into the `reviewed` branch, which doesn't exist yet; the full
+line-by-line walk comes after the refactor (W9). Pull requests #24, #25 and
+#26 reviewed C1, ADR-0077 and ADR-0076 (with ADR-0080) alone, ahead of it.
