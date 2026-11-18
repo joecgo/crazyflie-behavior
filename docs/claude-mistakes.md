@@ -73,16 +73,16 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 20 |
 | recommendation | 7 | 6 |
 | environment | 4 | 10 |
-| communication | 10 | 52 |
+| communication | 11 | 52 |
 | testing | 0 | 16 |
 | process | 7 | 24 |
-| **Total** | **37** | **148** |
+| **Total** | **38** | **148** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 36 |
+| said-without-checking | 37 |
 | how-I-work | 23 |
 | records-ahead-of-code | 21 |
 | safety-judgment | 18 |
@@ -112,6 +112,7 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-186 | 2026-11-17 | A Flow definition from ADR-0060 without its amendment | communication | said-without-checking | working rule 2: read an ADR's status line for amendments before quoting its rule |
 | M-185 | 2026-11-17 | A review packet's tier 1 files read as diffs | process | how-I-work | working rule 7: read a rule plainly, and when two parts of it disagree, say so before writing from one |
 | M-184 | 2026-11-17 | Review fixes pushed to the open review branch | process | how-I-work | working rule 2: read REVIEW.md's "My reviews" before committing anything during a review |
 | M-183 | 2026-11-17 | A "here" that didn't say where | communication | vocabulary | the new rule in `docs/coding-style.md`, "Name both places in a contrast" |
@@ -302,6 +303,13 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-186, 2026-11-17: A Flow definition from ADR-0060 without its amendment
+
+- **What happened:** proposing a glossary row for *Flow*, I wrote that flow arrives only while the velocity uncertainty is under 0.03 m/s, citing ADR-0060. ADR-0060's status line says ADR-0064 amends it: in flight, the limit grows with height above 0.3 m, up to 0.1 m/s. Joe pointed it out.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 2: read an ADR's status line for amendments before quoting its rule.
 
 ### M-185, 2026-11-17: A review packet's tier 1 files read as diffs
 
