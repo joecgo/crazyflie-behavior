@@ -9,6 +9,8 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    # Stops a hung run (ADR-0080).
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
