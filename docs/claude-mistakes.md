@@ -74,9 +74,9 @@ entries go at the top of their section without an ID.
 | recommendation | 7 | 6 |
 | environment | 4 | 10 |
 | communication | 11 | 52 |
-| testing | 0 | 16 |
-| process | 7 | 24 |
-| **Total** | **38** | **148** |
+| testing | 0 | 18 |
+| process | 7 | 25 |
+| **Total** | **38** | **151** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
@@ -84,12 +84,12 @@ entries go at the top of their section without an ID.
 |---|---|
 | said-without-checking | 37 |
 | how-I-work | 23 |
-| records-ahead-of-code | 21 |
+| records-ahead-of-code | 22 |
 | safety-judgment | 18 |
+| weak-test | 15 |
 | reading-field-data | 15 |
 | vocabulary | 13 |
 | message-misstates-outcome | 13 |
-| weak-test | 13 |
 | recommendation | 12 |
 | window-between-steps | 10 |
 | environment | 8 |
@@ -112,6 +112,9 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-189 | 2026-11-18 | Sim-clock program tests with no time limit | testing | weak-test | the `sim_clock` fixture in `tests/programs/conftest.py` (ADR-0080), and REVIEW.md Q-10 |
+| M-188 | 2026-11-18 | A chirp test left loose for slow ticks the sim clock doesn't have | testing | weak-test | REVIEW.md Q-49 |
+| M-187 | 2026-11-18 | ADR-0076's records left behind by two build choices | process | records-ahead-of-code | working rule 3, and `/project-review` step 3 |
 | M-186 | 2026-11-17 | A Flow definition from ADR-0060 without its amendment | communication | said-without-checking | working rule 2: read an ADR's status line for amendments before quoting its rule |
 | M-185 | 2026-11-17 | A review packet's tier 1 files read as diffs | process | how-I-work | working rule 7: read a rule plainly, and when two parts of it disagree, say so before writing from one |
 | M-184 | 2026-11-17 | Review fixes pushed to the open review branch | process | how-I-work | working rule 2: read REVIEW.md's "My reviews" before committing anything during a review |
@@ -685,6 +688,30 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-189, 2026-11-18: Sim-clock program tests with no time limit
+
+- **What happened:** ADR-0076 moved the program tests onto the sim clock with no time limit. On it, a program that never ends doesn't hang: each wait returns at once, so the tick loop runs about 3,000 ticks and writes about 6.6 MB of log per real second, without end; the hang watchdog counts real time, and neither pytest nor the workflow had a time limit. Caught by ADR-0076's project review (Q-10); fixed by ADR-0080: a sim clock that fails the test after 120 s of sim time, and a 15-minute limit on the continuous integration job.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** the `sim_clock` fixture in `tests/programs/conftest.py` (ADR-0080), and REVIEW.md Q-10.
+- **Takeaway:** a repeat of M-012 (test fakes that hang instead of failing), so the escalation ladder's second step: a helper, which the fixture is. Q-10 stays. On a sim clock a hang becomes a loop that fills the disk, so any sim clock that runs a loop to its end needs a limit.
+
+### M-188, 2026-11-18: A chirp test left loose for slow ticks the sim clock doesn't have
+
+- **What happened:** ADR-0076 moved the hover program's chirp test onto the sim clock but kept its real-clock comment, "A slow tick may skip a short note", and checked only the first and last notes of "Charge". On the sim clock no tick is late, so a bug that dropped or repeated a middle note passed. Caught by ADR-0076's project review (Q-49); fixed: the test checks every buzzer command and every pitch, proven by two planted bugs (a wrong middle note, a dropped one).
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** REVIEW.md Q-49.
+- **Takeaway:** moving a test onto the sim clock removes every reason it gave for slow ticks; Q-49 covers it. No new question.
+
+### M-187, 2026-11-18: ADR-0076's records left behind by two build choices
+
+- **What happened:** building ADR-0076, the hover program's "interrupt signal while connecting" test moved onto the sim clock (it sends no real signal), but the ADR still said the interrupt signal tests stay on the real clock; and after Joe chose no real-clock test for the failsafe program, noted in the ADR, its index row still said "one real-clock test per program". Caught by ADR-0076's project review (step 3, the records); fixed.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** working rule 3, and `/project-review` step 3.
+- **Takeaway:** a build choice that changes what an ADR says changes its index row too, in the same step. No cheap mechanism checks an ADR's wording against its tests, so the review step stays the guard.
 
 ### M-182, 2026-11-17: Reasons for changed tests guessed from their names
 

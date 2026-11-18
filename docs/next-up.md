@@ -78,6 +78,9 @@ from `drafts/explain-back-notes.md`; don't open it first.
 
 - **E1.** The program tests now run on a sim clock. What kind of bug can a
   sim-clock test never catch, and which tests still catch it?
+- **E2.** The program tests' time-limited sim clock stops a test with
+  `pytest.fail`, not an ordinary `AssertionError`. Why would an
+  `AssertionError` let a program that never ends pass its test?
 
 ## Last reviewed
 
