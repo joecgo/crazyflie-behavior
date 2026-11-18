@@ -9,8 +9,6 @@ from crazyflie_behavior.snapshot import Snapshot
 
 INITIAL_CLIMB_SPEED = 0.4
 """Meters per second: up in the level initial climb (ADR-0070, ADR-0077)."""
-
-# PLACEHOLDERS, to verify in flight (ADR-0048, ADR-0077).
 FINAL_DESCENT_SPEED = 0.3
 """Meters per second: down in the level final descent (ADR-0072)."""
 FINAL_DESCENT_HEIGHT = 0.15
