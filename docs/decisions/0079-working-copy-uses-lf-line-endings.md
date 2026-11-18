@@ -24,6 +24,6 @@ I chose A without a fitness function. The risk I accepted: a script or editor th
 ## Consequences
 
 - Scripts and tools can read and write text without preserving endings.
-- Built later (backlog #127): the two files, and the renormalise of the 119 CRLF working files. The renormalise changes no committed content, but it touches every file, so it waits for a clean working tree.
+- Built 2026-11-18: `.gitattributes`, `.editorconfig`, and the renormalise of the 119 CRLF working files (no committed content changed).
 - PyCharm follows `.editorconfig`; GitHub Desktop follows `.gitattributes`.
 - No glossary change.

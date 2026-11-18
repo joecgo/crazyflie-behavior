@@ -9,17 +9,19 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-18 (Pacific)
-- **Last commit:** `5d1181f` Next-up brief: review #25 closed, on `main`.
-  The next commits (ADR-0076 built; ADR-0079 and this brief) are pushed
-  with it.
+- **Last commit:** `1f482dc` ADR-0079 decided, on `main`. The next commit
+  (ADR-0079 built: `.gitattributes`, `.editorconfig`, records, this brief)
+  is pushed with this brief. Another session's edits to
+  `.github/workflows/checks.yml`, four `tests/programs/test_*.py` files and
+  a new `tests/programs/conftest.py` are uncommitted and not part of it.
 
 ## Done last
 
 - 2026-11-18: ADR-0079 decided: every text file uses LF line endings, in
   the repository and the working copy (`.gitattributes`, `.editorconfig`);
-  no fitness function, a risk Joe accepted. Backlog #119 closed; #127 builds
-  it (the two files, then a renormalise of the 119 CRLF working files on a
-  clean tree). Joe skipped the explain-back (line endings aren't a topic he
+  no fitness function, a risk Joe accepted. Backlog #119 closed. Built the
+  same day: `.gitattributes`, `.editorconfig`, the 119 CRLF
+  working files renormalised to LF. Joe skipped the explain-back (line endings aren't a topic he
   wants to be tested on).
 - 2026-11-18: ADR-0076 built: `main()` takes an optional clock in the four
   programs, and their tests run on the sim clock with the real waits. Suite
@@ -51,12 +53,10 @@ None.
 
 ## Next three
 
-1. Build backlog #127 (ADR-0079: `.gitattributes`, `.editorconfig`, the
-   renormalise), on a clean tree. Sonnet, low.
-2. `/decide` backlog #120, how fresh the initial climb's flow check must be
+1. `/decide` backlog #120, how fresh the initial climb's flow check must be
    (0.5 s now, or the safety layer's 0.25 s);
    needed before the next field session. Opus, high.
-3. `/decide` D3 to D8 of `drafts/2026-11-13-code-recommendations.md`, for
+2. `/decide` D3 to D8 of `drafts/2026-11-13-code-recommendations.md`, for
    C3 with C4 (the tick loop flies the whole flight; link lost as a
    state), next in its suggested order. Opus, high.
 
