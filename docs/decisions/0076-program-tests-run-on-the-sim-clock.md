@@ -1,6 +1,7 @@
 # 0076: Program tests run on the sim clock, with one real-clock test per program
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended by [ADR-0080](0080-sim-clock-program-tests-fail-after-120-s.md),
+  2026-11-18: a sim-clock program test fails after 120 s of sim time.
 - **Date:** 2026-11-17
 - **Origin:** AI recommendation accepted.
 
