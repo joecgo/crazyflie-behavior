@@ -1,6 +1,6 @@
 ---
 name: review-packet
-description: "Writes the review packet for one of the user's code reviews in the crazyflie-behavior repo, to drafts/review-packets/<date>.md, and posts the findings as comments on the review's pull request: the reading order of the source files by review tier, what changed in each and its ADR, new log messages, new and changed test names, the findings with their lines, and explain-back questions. Short and plain, for the user to read beside the pull request. Use it before one of the user's code reviews, right after /project-review in the same work session so the packet carries its findings. It also works on a range no project review covered, and says so. Argument: a commit range (default: from the last reviewed commit in REVIEW.md's review log to main)."
+description: "Writes the review packet for one of the user's code reviews in the crazyflie-behavior repo, to drafts/review-packets/<date>.md, and posts the findings as comments on the review's pull request: the reading order of the source files with the scale of each change, what changed in each and its ADR, new log messages, new and changed test names, the findings with their lines, and explain-back questions. Short and plain, for the user to read beside the pull request. Use it before one of the user's code reviews, right after /project-review in the same work session so the packet carries its findings. It also works on a range no project review covered, and says so. Argument: a commit range (default: from the last reviewed commit in REVIEW.md's review log to main)."
 ---
 
 # Review packet
@@ -55,17 +55,17 @@ the packet: say so, as step 1 does, and let the user choose.
      Suggest `/project-review` to the user in the reply too.
 2. **Read, in one batch:** `git log --oneline` and `git diff --stat` over the
    range; the test names added or changed in `tests/`; the added lines that
-   log or print; the project imports of each touched `.py` file; the tier
-   table in `REVIEW.md` ("My reviews"); and, for each finding, the line it
+   log or print; the project imports of each touched `.py` file; and, for each finding, the line it
    points at in the range's last commit, with line numbers.
 3. **Write the packet** to `drafts/review-packets/<date>.md` (Pacific date).
    Open it with three lines: the range, the pull request (or the branch it
    will come from, since `REVIEW.md` writes the packet first), and which
    project review the findings come from. Then:
-   1. **Reading order.** A table of each touched `.py` file outside `tests/`,
-      with its review tier and how to read it (every line, or the diff).
-      Within a tier, a file comes after the project files it imports. A
-      `.py` file in no tier gets a one-line question about its tier.
+   1. **Reading order.** A table of each touched `.py` file outside `tests/`
+      and the scale of its change in a few words ("two comments", "one
+      option removed", "its initial climb rewritten"). No tier and no
+      instruction on how to read it. A file comes after the project files
+      it imports.
    2. **What changed.** Two plain lines per file in the reading order, with
       its ADR. Then one line naming the ADRs the range adds or amends.
    3. **New log messages**, each beside the condition that prints it.

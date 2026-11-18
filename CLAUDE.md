@@ -193,9 +193,8 @@ number, so renumbering means updating those guards.
   changes to the safety layer, the Crazyflie adapter or the tick loop settle,
   or when a lot of unreviewed code has built up. Claude suggests a review at
   those points. A review covers only what's new since the last one (the
-  review log in `REVIEW.md`): new files line by line, changed files as diffs
-  from the last reviewed commit, and tests as a spec, by their names; each
-  path's review tier says how closely. Each review is a pull request, read in
+  review log in `REVIEW.md`), read however the user chooses. Each review is
+  a pull request, read in
   PyCharm, with a review packet: before a review, Claude commits and pushes
   everything, writes the packet and opens the pull request, as `REVIEW.md`
   ("My reviews") describes. Afterwards, Claude adds the review to the log.

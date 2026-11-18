@@ -305,11 +305,11 @@ times so far).
 
 ### M-185, 2026-11-17: A review packet's tier 1 files read as diffs
 
-- **What happened:** the review packet for ADR-0077 said "the diff" for three of its four tier 1 files, though REVIEW.md's table says tier 1 is read "every line". I followed the paragraph above the table ("changed files as diffs") and never noticed it clashed with the table. Joe asked why only one of four said every line. The rule was then clarified: a tier 1 file is read whole, a comments-only diff excepted; the packet was corrected. The earlier packet, `2026-11-17.md`, has the same wording for `start_up.py`.
+- **What happened:** the review packet for ADR-0077 said "the diff" for three of its four tier 1 files, though REVIEW.md's table says tier 1 is read "every line". I followed the paragraph above the table ("changed files as diffs") and never noticed it clashed with the table. Joe asked why only one of four said every line. The rule was then clarified: a tier 1 file is read whole. I had also added an exception for a comments-only diff that Joe never asked for, and used it on `safety_layer.py`; Joe pointed that out too, and the exception was removed. The earlier packet, `2026-11-17.md`, has the same wording for `start_up.py`.
 - **Kind:** process.
 - **Pattern:** how-I-work.
 - **Guard:** working rule 7: read a rule plainly, and when two parts of it disagree, say so before writing from one.
-- **Takeaway:** the rule itself was ambiguous, so it is fixed in REVIEW.md. `/review-packet` should take each file's read from the tier table, not from the paragraph.
+- **Takeaway:** the rule itself was ambiguous. I also changed it in `555157b` without proposing the glossary's *Review tier* change it needed. Joe then dropped reading instructions altogether: tiers now set only Claude's review, and the packet gives each file's scale of change.
 
 ### M-184, 2026-11-17: Review fixes pushed to the open review branch
 
