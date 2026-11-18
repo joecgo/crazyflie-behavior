@@ -70,13 +70,13 @@ entries go at the top of their section without an ID.
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 4 | 20 |
-| safety design | 5 | 18 |
+| safety design | 5 | 20 |
 | recommendation | 7 | 6 |
 | environment | 4 | 10 |
-| communication | 9 | 47 |
-| testing | 0 | 15 |
-| process | 5 | 23 |
-| **Total** | **34** | **139** |
+| communication | 9 | 51 |
+| testing | 0 | 16 |
+| process | 5 | 24 |
+| **Total** | **34** | **147** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
@@ -84,13 +84,13 @@ entries go at the top of their section without an ID.
 |---|---|
 | said-without-checking | 35 |
 | how-I-work | 21 |
-| records-ahead-of-code | 18 |
-| safety-judgment | 16 |
+| records-ahead-of-code | 21 |
+| safety-judgment | 18 |
 | reading-field-data | 15 |
+| message-misstates-outcome | 13 |
+| weak-test | 13 |
+| vocabulary | 12 |
 | recommendation | 12 |
-| weak-test | 12 |
-| message-misstates-outcome | 12 |
-| vocabulary | 11 |
 | window-between-steps | 10 |
 | environment | 8 |
 | leftover-state | 3 |
@@ -112,6 +112,14 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-181 | 2026-11-17 | The flow check let a negative or infinite uncertainty through | safety design | safety-judgment | REVIEW.md Q-14, and a test for each non-finite value and a negative one |
+| M-180 | 2026-11-17 | "No flow" logged for an old velocity uncertainty | communication | message-misstates-outcome | REVIEW.md Q-43, and the stale test's check of the line |
+| M-179 | 2026-11-17 | Wording ADR-0077 left behind, again | communication | records-ahead-of-code | REVIEW.md Q-35 |
+| M-178 | 2026-11-17 | Words outside the glossary in ADR-0077's fix lines and test names | communication | vocabulary | `/project-review`'s fresh-context read (step 7) |
+| M-177 | 2026-11-17 | A NaN down range could hand over the initial climb | safety design | safety-judgment | REVIEW.md Q-14, and a test for each non-finite value |
+| M-176 | 2026-11-17 | Wording ADR-0077 left behind | communication | records-ahead-of-code | REVIEW.md Q-35 and Q-43 |
+| M-175 | 2026-11-17 | ADR-0077's record out of step with its work | process | records-ahead-of-code | `/project-review` step 3 and REVIEW.md Q-39, Q-48 |
+| M-174 | 2026-11-17 | A boundary test that stepped over its boundary | testing | weak-test | REVIEW.md Q-48 and Q-53 |
 | M-173 | 2026-11-17 | Docstrings and comments only their author could follow | communication | vocabulary | `/project-review`'s fresh-context read (step 7) |
 | M-172 | 2026-11-17 | An unchecked claim about timed waits in a test comment | communication | said-without-checking | REVIEW.md Q-01 |
 | M-171 | 2026-11-17 | An index row written with the wrong line endings, again | environment | environment | `git diff --stat` after each scripted edit |
@@ -641,6 +649,70 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-181, 2026-11-17: The flow check let a negative or infinite uncertainty through
+
+- **What happened:** ADR-0077's `has_fresh_flow` counted any fresh velocity uncertainty under 0.03 m/s as flow, so −inf or a negative value would hand over the initial climb; only NaN and +inf failed. M-177's takeaway, written in the same change, said a safety check should let only a finite value pass, but its fix covered the down range only. Not reachable from the Crazyflie adapter, whose conversion gives NaN for a negative or non-finite variance. Caught by ADR-0077's second project review (Q-14); fixed with `0.0 <= value < limit` and tests for each infinity, a negative value and zero.
+- **Kind:** safety design.
+- **Pattern:** safety-judgment.
+- **Guard:** REVIEW.md Q-14, and a test for each non-finite value and a negative one.
+- **Takeaway:** the second safety-judgment miss in this change: a fix's takeaway applies to the whole change, so search it for the fix's siblings (every comparison against a limit). Backlog #123 is the down range's helper; no cheap mechanism yet for checks written fresh, so Q-14 stays.
+
+### M-180, 2026-11-17: "No flow" logged for an old velocity uncertainty
+
+- **What happened:** ADR-0077's no-flow landing logged "No flow at the end of the initial climb" also when the velocity uncertainty was low but older than 0.5 s, so a telemetry stall would read as darkness in a debrief. Caught by ADR-0077's second project review (Q-43); fixed with its own line for an old reading, and a test.
+- **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** REVIEW.md Q-43, and the stale test's check of the line.
+- **Takeaway:** when one branch reaching a log line has a different cause, it gets its own line. No new question.
+
+### M-179, 2026-11-17: Wording ADR-0077 left behind, again
+
+- **What happened:** after M-176's fixes, ADR-0068's Decision still glossed its aim as "the settle height", with no note from ADR-0077, and `bad_flow_zone.py`'s placeholder header still covered the 0.4 m/s climb speed that ADR-0077 decided. Caught by ADR-0077's second project review (ADR-0068 by a search of the ADRs for "settle height", Q-35; the header by the fresh-context read); fixed.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** REVIEW.md Q-35.
+- **Takeaway:** M-176's search covered docstrings and backlog notes but not every ADR naming the old term: search all of `docs/decisions/` for it. No new question.
+
+### M-178, 2026-11-17: Words outside the glossary in ADR-0077's fix lines and test names
+
+- **What happened:** a review fix in `land()` brought in "ADR-0049's climb landing", a term the glossary doesn't have; `FINAL_DESCENT_HEIGHT`'s docstring called a ValueError "refused", the glossary's word for a verdict; and new test names and comments leaned on the removed design ("still hands over", "no longer an option"), with `test_no_flow` naming none of its cases. Caught by ADR-0077's fresh-context read; fixed.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** `/project-review`'s fresh-context read (step 7).
+- **Takeaway:** as in M-173, the fresh-context read caught what the author's review missed, review fixes included (Q-51). No new question.
+
+### M-177, 2026-11-17: A NaN down range could hand over the initial climb
+
+- **What happened:** ADR-0077's climb check, `down is None or down.value < FINAL_DESCENT_HEIGHT`, kept climbing only on a number under 0.15 m, so a NaN or infinite down range fell through to the hand-over. The settle detector's `>=` had kept climbing. Not reachable from cflib's whole-millimeter readings. Caught by ADR-0077's project review (Q-14); fixed with a finite check and a test.
+- **Kind:** safety design.
+- **Pattern:** safety-judgment.
+- **Guard:** REVIEW.md Q-14, and a test for each non-finite value.
+- **Takeaway:** flipping a comparison flips which way NaN goes: write a safety check so only a finite value can pass it. Backlog #123 is the helper the escalation ladder asks for: `fresh_down_distance` dropping non-finite values for every user.
+
+### M-176, 2026-11-17: Wording ADR-0077 left behind
+
+- **What happened:** after ADR-0077, `land()`'s comment gave a reason that's false on the new no-flow landing ("the down range hasn't reached the final descent height"). ADR-0049 still gave "no final descent height" as its reason, the hover test's time limit spoke of "the default initial climb speed" and a 4.5 s worst case from the old 1.75 s limit, and backlog #68's notes still offered "a lower settle speed". Found by ADR-0077's project review and the doc pass after it; fixed.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** REVIEW.md Q-35 and Q-43.
+- **Takeaway:** Q-35's search for old wording covers other packages' docstrings and backlog notes too; no new question.
+
+### M-175, 2026-11-17: ADR-0077's record out of step with its work
+
+- **What happened:** ADR-0077 still said its glossary changes were "proposed for my OK" while the glossary already had them (whether the OK came first isn't known; Joe approved them in the review). It pointed at backlog #115 after the row was removed, its index row called 0.15 m "the lowest take-off target" though a target of 0.15 m is refused, and its Decision left an uncertainty of exactly 0.03 m/s unsaid. Caught by ADR-0077's project review; fixed.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** `/project-review` step 3 and REVIEW.md Q-39, Q-48.
+- **Takeaway:** once a decision is built, reread its ADR's Consequences for what was planned and is now done; no new question.
+
+### M-174, 2026-11-17: A boundary test that stepped over its boundary
+
+- **What happened:** the mock's dark-floor test set the dark floor at exactly 0.15 m, but the climb stepped from 0.14 to 0.16 m, so the boundary was never checked: `>` for `>=` in `_has_flow` would have passed. In the same change, the climb speed's log test copied 0.4 instead of using `INITIAL_CLIMB_SPEED`. Caught by ADR-0077's project review (Q-48); fixed, and the boundary test proven by planting `>`.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** REVIEW.md Q-48 and Q-53.
+- **Takeaway:** a test at a limit must land on it: compute the value the stepped code will see, then plant the off-by-one comparison. No new question.
 
 ### M-173, 2026-11-17: Docstrings and comments only their author could follow
 
