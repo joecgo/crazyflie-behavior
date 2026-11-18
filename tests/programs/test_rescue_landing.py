@@ -23,11 +23,11 @@ def the_log_file_text(log_directory: Path) -> str:
 
 
 def test_the_rescue_landing_program_lands_the_hovering_mock_drone(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
-    exit_code = main([], clock=SimClock())
+    exit_code = main([], clock=sim_clock)
 
     assert exit_code == 0
     log_text = the_log_file_text(tmp_path / "logs")
@@ -59,7 +59,7 @@ class UnlandableMockAdapter(MockAdapter):
 
 
 def test_a_rescue_that_fails_exits_with_1_though_the_program_itself_ran_fine(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
@@ -69,7 +69,7 @@ def test_a_rescue_that_fails_exits_with_1_though_the_program_itself_ran_fine(
 
     monkeypatch.setattr(rescue_landing_program, "make_drone", make_unlandable_drone)
 
-    exit_code = main([], clock=SimClock())
+    exit_code = main([], clock=sim_clock)
 
     assert exit_code == 1
     assert "Rescue landing failed: the drone still reports flying" in the_log_file_text(tmp_path / "logs")

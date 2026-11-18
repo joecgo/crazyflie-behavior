@@ -55,11 +55,10 @@ def wait_for_log_line(log_directory: Path, text: str, timeout: float) -> None:
 # --- The bench tick step ----------------------------------------------------------
 
 
-def test_the_bench_tick_step_never_commands_the_drone() -> None:
-    clock = SimClock()
-    drone = connected_mock(clock)
+def test_the_bench_tick_step_never_commands_the_drone(sim_clock: SimClock) -> None:
+    drone = connected_mock(sim_clock)
 
-    run_ticks(BenchTickStep(drone), clock, tick_count=40)
+    run_ticks(BenchTickStep(drone), sim_clock, tick_count=40)
 
     assert drone.command_log == ["connect"]
 
@@ -79,35 +78,32 @@ class UpdateRecordingMock(MockAdapter):
         super().update_take_off_and_landing(snapshot)
 
 
-def test_the_bench_tick_step_updates_take_off_and_landing_with_each_snapshot() -> None:
+def test_the_bench_tick_step_updates_take_off_and_landing_with_each_snapshot(sim_clock: SimClock) -> None:
     # As every tick step does (ADR-0055); on the bench there is nothing to update.
-    clock = SimClock()
-    drone = UpdateRecordingMock(clock)
+    drone = UpdateRecordingMock(sim_clock)
     drone.connect()
 
-    run_ticks(BenchTickStep(drone), clock, tick_count=3)
+    run_ticks(BenchTickStep(drone), sim_clock, tick_count=3)
 
     assert len(drone.updated_with) == 3
     assert drone.updated_with == drone.snapshots
 
 
-def test_every_snapshot_goes_to_the_log_at_debug_level(caplog: pytest.LogCaptureFixture) -> None:
+def test_every_snapshot_goes_to_the_log_at_debug_level(caplog: pytest.LogCaptureFixture, sim_clock: SimClock) -> None:
     caplog.set_level(logging.DEBUG, logger=BENCH_LOGGER)
-    clock = SimClock()
 
-    run_ticks(BenchTickStep(connected_mock(clock)), clock, tick_count=3)
+    run_ticks(BenchTickStep(connected_mock(sim_clock)), sim_clock, tick_count=3)
 
     debug_messages = [r.getMessage() for r in caplog.records if r.levelno == logging.DEBUG]
     assert len(debug_messages) == 3
     assert all(message.startswith("Snapshot: Snapshot(") for message in debug_messages)
 
 
-def test_the_console_gets_a_summary_once_a_second(caplog: pytest.LogCaptureFixture) -> None:
+def test_the_console_gets_a_summary_once_a_second(caplog: pytest.LogCaptureFixture, sim_clock: SimClock) -> None:
     caplog.set_level(logging.INFO, logger=BENCH_LOGGER)
-    clock = SimClock()
 
     # Ticks at 0, 0.25, ..., 2.0 s: summaries at 0, 1 and 2 s.
-    run_ticks(BenchTickStep(connected_mock(clock)), clock, tick_count=9)
+    run_ticks(BenchTickStep(connected_mock(sim_clock)), sim_clock, tick_count=9)
 
     assert len([r for r in caplog.records if r.levelno == logging.INFO]) == 3
 
@@ -115,13 +111,13 @@ def test_the_console_gets_a_summary_once_a_second(caplog: pytest.LogCaptureFixtu
 # --- The summary ----------------------------------------------------------------
 
 
-def test_the_summary_shows_each_value_and_how_old_it_is() -> None:
-    clock = SimClock(start=10.0)
-    drone = connected_mock(clock)
-    clock.advance(0.125)
+def test_the_summary_shows_each_value_and_how_old_it_is(sim_clock: SimClock) -> None:
+    sim_clock.advance(10.0)
+    drone = connected_mock(sim_clock)
+    sim_clock.advance(0.125)
     drone.set_range_reading(RangeDirection.DOWN, RangeReading.at_distance(0.03))
     drone.stop_telemetry()  # nothing more arrives
-    clock.advance(0.125)
+    sim_clock.advance(0.125)
 
     summary = snapshot_summary(drone.take_snapshot(0.25))
 
@@ -156,19 +152,16 @@ def test_the_summary_says_when_a_value_has_not_arrived_yet() -> None:
     assert "down no reading yet" in summary
 
 
-def test_the_summary_covers_every_range_direction() -> None:
-    clock = SimClock()
-
-    summary = snapshot_summary(connected_mock(clock).take_snapshot(0.0))
+def test_the_summary_covers_every_range_direction(sim_clock: SimClock) -> None:
+    summary = snapshot_summary(connected_mock(sim_clock).take_snapshot(0.0))
 
     for direction in RangeDirection:
         assert f"| {direction.value} " in summary
     assert "| down 0.02 m" in summary  # the mock's floor reading (ADR-0052); the others are clear
 
 
-def test_the_summary_marks_an_invalid_range_reading() -> None:
-    clock = SimClock()
-    drone = connected_mock(clock)
+def test_the_summary_marks_an_invalid_range_reading(sim_clock: SimClock) -> None:
+    drone = connected_mock(sim_clock)
     drone.set_range_reading(RangeDirection.UP, RangeReading.invalid())
 
     summary = snapshot_summary(drone.take_snapshot(0.0))
@@ -215,7 +208,7 @@ def test_the_bench_program_runs_with_the_mock_adapter_until_the_interrupt_signal
 
 @pytest.mark.parametrize(("arguments", "expected"), [([], False), (["--take-off-log"], True)])
 def test_the_take_off_log_option_reaches_make_drone_and_the_description(
-    arguments: list[str], expected: bool, monkeypatch: pytest.MonkeyPatch
+    arguments: list[str], expected: bool, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     """With it, the Crazyflie adapter runs the take-off block at connect: the Bench measures its load (ADR-0063)."""
     take_off_logs: list[bool] = []
@@ -232,7 +225,7 @@ def test_the_take_off_log_option_reaches_make_drone_and_the_description(
     monkeypatch.setattr(bench_module, "make_drone", make_mock_adapter)
     monkeypatch.setattr(bench_module, "run_program", record_the_description)
 
-    assert main(arguments, clock=SimClock()) == 0
+    assert main(arguments, clock=sim_clock) == 0
     assert take_off_logs == [expected]
     assert descriptions[0].endswith(", with the take-off block (the mock adapter has none)") == expected
 

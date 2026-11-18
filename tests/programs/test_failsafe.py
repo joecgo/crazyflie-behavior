@@ -86,10 +86,11 @@ def test_the_failsafe_lands_the_drone_after_the_forged_low_battery(
     mock_adapter_maker: MockAdapterMaker,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    sim_clock: SimClock,
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
-    exit_code = main(["--fault-at", fault_at], clock=SimClock())
+    exit_code = main(["--fault-at", fault_at], clock=sim_clock)
 
     assert exit_code == 0
     log_text = the_log_file_text(tmp_path / "logs")
@@ -104,11 +105,11 @@ def test_the_failsafe_lands_the_drone_after_the_forged_low_battery(
 
 
 def test_the_failsafe_is_the_real_one_so_the_forged_battery_is_the_only_thing_that_fails(
-    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
-    main(["--fault-at", "hover"], clock=SimClock())
+    main(["--fault-at", "hover"], clock=sim_clock)
 
     log_text = the_log_file_text(tmp_path / "logs")
     pre_check_lines = [line for line in log_text.splitlines() if "Safety pre-check failed" in line]
@@ -117,13 +118,13 @@ def test_the_failsafe_is_the_real_one_so_the_forged_battery_is_the_only_thing_th
 
 
 def test_a_fault_that_never_takes_effect_lands_normally_and_fails_the_test(
-    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     """A fault that never takes effect (a drone that injects nothing) must fail the test: the time limit lands it."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(failsafe_fault_module, "HOVER_DURATION_BEFORE_FAULT", 1000.0)
 
-    exit_code = main(["--fault-at", "hover"], clock=SimClock())
+    exit_code = main(["--fault-at", "hover"], clock=sim_clock)
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")
@@ -138,26 +139,26 @@ def test_a_fault_that_never_takes_effect_lands_normally_and_fails_the_test(
 
 
 def test_failsafe_low_never_waits_for_a_hover(
-    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     """With the hover trigger out of reach, only the climb trigger can fire the fault."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(failsafe_fault_module, "HOVER_DURATION_BEFORE_FAULT", 1000.0)
 
-    exit_code = main(["--fault-at", "climb"], clock=SimClock())
+    exit_code = main(["--fault-at", "climb"], clock=sim_clock)
 
     assert exit_code == 0
     assert "FAULT INJECTED: battery voltage forged" in the_log_file_text(tmp_path / "logs")
 
 
 def test_failsafe_low_with_a_down_range_that_never_clears_the_floor_lands_normally_and_fails(
-    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     """A climb trigger that never fires must fail the test: the time limit lands the drone (ADR-0049)."""
     monkeypatch.chdir(tmp_path)
     mock_adapter_maker.down_range = failsafe_fault_module.CLIMB_FAULT_DOWN_RANGE - 0.01
 
-    exit_code = main(["--fault-at", "climb"], clock=SimClock())
+    exit_code = main(["--fault-at", "climb"], clock=sim_clock)
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")
@@ -170,13 +171,13 @@ def test_failsafe_low_with_a_down_range_that_never_clears_the_floor_lands_normal
 
 
 def test_a_real_fault_before_the_forged_one_does_not_pass_the_test(
-    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     """The failsafe fires, but not for the injected fault, so it proves nothing about that one."""
     monkeypatch.chdir(tmp_path)
     mock_adapter_maker.battery_voltage = 3.1  # really low from the start, and not the forged value
 
-    exit_code = main(["--fault-at", "hover"], clock=SimClock())
+    exit_code = main(["--fault-at", "hover"], clock=sim_clock)
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")
@@ -185,13 +186,13 @@ def test_a_real_fault_before_the_forged_one_does_not_pass_the_test(
 
 
 def test_a_battery_below_the_take_off_voltage_is_refused_on_the_floor_and_fails_the_test(
-    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     """Above the pre-check's limit, so only the take-off judgment stops it (ADR-0051)."""
     monkeypatch.chdir(tmp_path)
     mock_adapter_maker.battery_voltage = 3.5
 
-    exit_code = main(["--fault-at", "climb"], clock=SimClock())
+    exit_code = main(["--fault-at", "climb"], clock=sim_clock)
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")
@@ -220,7 +221,11 @@ def test_the_fault_timing_is_required(capsys: pytest.CaptureFixture[str]) -> Non
 
 @pytest.mark.parametrize(("arguments", "expected"), [([], False), (["--take-off-log"], True)])
 def test_the_take_off_log_option_reaches_make_drone_and_the_description(
-    arguments: list[str], expected: bool, mock_adapter_maker: MockAdapterMaker, monkeypatch: pytest.MonkeyPatch
+    arguments: list[str],
+    expected: bool,
+    mock_adapter_maker: MockAdapterMaker,
+    monkeypatch: pytest.MonkeyPatch,
+    sim_clock: SimClock,
 ) -> None:
     descriptions: list[str] = []
 
@@ -230,7 +235,7 @@ def test_the_take_off_log_option_reaches_make_drone_and_the_description(
 
     monkeypatch.setattr(failsafe_module, "run_program", record_the_description)
 
-    main(["--fault-at", "hover", *arguments], clock=SimClock())
+    main(["--fault-at", "hover", *arguments], clock=sim_clock)
 
     assert mock_adapter_maker.take_off_log is expected
     assert descriptions[0].endswith(", with the take-off block (the mock adapter has none)") == expected
@@ -267,13 +272,13 @@ def test_each_failsafe_run_config_passes_its_tests_fault_timing() -> None:
 
 
 def test_a_landing_that_fails_in_disconnect_makes_the_exit_code_1_even_though_the_failsafe_fired(
-    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     """Exit code 0 includes `disconnect()` returning (ADR-0041): the failsafe firing is not enough."""
     monkeypatch.chdir(tmp_path)
     mock_adapter_maker.adapter_class = LandingFailsMockAdapter
 
-    exit_code = main(["--fault-at", "hover"], clock=SimClock())
+    exit_code = main(["--fault-at", "hover"], clock=sim_clock)
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")
