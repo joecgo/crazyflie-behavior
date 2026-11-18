@@ -73,22 +73,22 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 20 |
 | recommendation | 7 | 6 |
 | environment | 4 | 10 |
-| communication | 11 | 52 |
+| communication | 12 | 53 |
 | testing | 0 | 18 |
 | process | 7 | 25 |
-| **Total** | **38** | **151** |
+| **Total** | **39** | **152** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 37 |
+| said-without-checking | 38 |
 | how-I-work | 23 |
 | records-ahead-of-code | 22 |
 | safety-judgment | 18 |
 | weak-test | 15 |
 | reading-field-data | 15 |
-| vocabulary | 13 |
+| vocabulary | 14 |
 | message-misstates-outcome | 13 |
 | recommendation | 12 |
 | window-between-steps | 10 |
@@ -112,6 +112,8 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-191 | 2026-11-18 | A review packet's "the same" read as "unchanged" | communication | vocabulary | `/review-packet` step 3: every row names its change, as "the same change as `hover.py`", never a bare "the same" |
+| M-190 | 2026-11-18 | A review pull request misdescribed its copied commits | communication | said-without-checking | working rule 2; `git range-diff` compares copied commits with their originals |
 | M-189 | 2026-11-18 | Sim-clock program tests with no time limit | testing | weak-test | the `sim_clock` fixture in `tests/programs/conftest.py` (ADR-0080), and REVIEW.md Q-10 |
 | M-188 | 2026-11-18 | A chirp test left loose for slow ticks the sim clock doesn't have | testing | weak-test | REVIEW.md Q-49 |
 | M-187 | 2026-11-18 | ADR-0076's records left behind by two build choices | process | records-ahead-of-code | working rule 3, and `/project-review` step 3 |
@@ -306,6 +308,14 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-191, 2026-11-18: A review packet's "the same" read as "unchanged"
+
+- **What happened:** the reading order in ADR-0076's review packet gave `hover.py`'s change as "`main()` takes an optional clock: three lines", then "the same" for the other three programs, and "What changed" said "the same change" for each. Meant as "the same three lines as `hover.py`", it reads as "nothing changed". Joe pointed it out; each row and line now says the change in full.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** `/review-packet` step 3: every row names its change, as "the same change as `hover.py`", never a bare "the same".
+- **Takeaway:** a second *vocabulary* entry about shorthand that leans on a line elsewhere (M-183, "here"), so the ladder's second step: a template line, the guard above (Joe, 2026-11-18).
 
 ### M-186, 2026-11-17: A Flow definition from ADR-0060 without its amendment
 
@@ -688,6 +698,14 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-190, 2026-11-18: A review pull request misdescribed its copied commits
+
+- **What happened:** pull request #26's description said the copies of ADR-0080's two commits differed from `main`'s only in where ADR-0080's row sits in the ADR index. The copy of the ADR commit also carries ADR-0076's index-row fixes, which reached `main` in ADR-0079's commit `1f482dc`, made by the line-endings work session while this one's index edits were uncommitted in the same working copy. Said from the files the copies leave, without comparing the copies with the originals. Caught by Claude with `git range-diff` during the wrap-up; the description was corrected before Joe read it.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 2; `git range-diff` compares copied commits with their originals.
+- **Takeaway:** what a commit contains comes from its diff, not from the files it leaves. Not a code-review takeaway, so no step on the escalation ladder.
 
 ### M-189, 2026-11-18: Sim-clock program tests with no time limit
 

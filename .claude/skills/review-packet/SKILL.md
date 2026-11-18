@@ -61,13 +61,16 @@ the packet: say so, as step 1 does, and let the user choose.
    Open it with three lines: the range, the pull request (or the branch it
    will come from, since `REVIEW.md` writes the packet first), and which
    project review the findings come from. Then:
-   1. **Reading order.** A table of each touched `.py` file outside `tests/`
-      and the scale of its change in a few words ("two comments", "one
-      option removed", "its initial climb rewritten"). No tier and no
-      instruction on how to read it. A file comes after the project files
-      it imports.
+   1. **Reading order.** A table of each touched `.py` file outside `tests/`,
+      and each touched file of code that supports the tests (a `conftest.py`,
+      a shared fake or helper), and the scale of its change in a few words
+      ("two comments", "one option removed", "its initial climb
+      rewritten"). Every row names its change: when it repeats another
+      file's, "the same change as `hover.py`", never a bare "the same". No
+      tier and no instruction on how to read it. A file comes after the
+      project files it imports.
    2. **What changed.** Two plain lines per file in the reading order, with
-      its ADR. Then one line naming the ADRs the range adds or amends.
+      its ADR, under the same rule against a bare "the same". Then one line naming the ADRs the range adds or amends.
    3. **New log messages**, each beside the condition that prints it.
    4. **New and changed tests**, by name, grouped by file. The user reads
       them as a spec.
