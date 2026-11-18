@@ -73,23 +73,23 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 20 |
 | recommendation | 7 | 6 |
 | environment | 4 | 10 |
-| communication | 9 | 51 |
+| communication | 10 | 52 |
 | testing | 0 | 16 |
-| process | 5 | 24 |
-| **Total** | **34** | **147** |
+| process | 6 | 24 |
+| **Total** | **36** | **148** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 35 |
-| how-I-work | 21 |
+| said-without-checking | 36 |
+| how-I-work | 22 |
 | records-ahead-of-code | 21 |
 | safety-judgment | 18 |
 | reading-field-data | 15 |
+| vocabulary | 13 |
 | message-misstates-outcome | 13 |
 | weak-test | 13 |
-| vocabulary | 12 |
 | recommendation | 12 |
 | window-between-steps | 10 |
 | environment | 8 |
@@ -112,6 +112,9 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-184 | 2026-11-17 | Review fixes pushed to the open review branch | process | how-I-work | working rule 2: read REVIEW.md's "My reviews" before committing anything during a review |
+| M-183 | 2026-11-17 | A "here" that didn't say where | communication | vocabulary | the new rule in `docs/coding-style.md`, "Name both places in a contrast" |
+| M-182 | 2026-11-17 | Reasons for changed tests guessed from their names | communication | said-without-checking | working rule 2 |
 | M-181 | 2026-11-17 | The flow check let a negative or infinite uncertainty through | safety design | safety-judgment | REVIEW.md Q-14, and a test for each non-finite value and a negative one |
 | M-180 | 2026-11-17 | "No flow" logged for an old velocity uncertainty | communication | message-misstates-outcome | REVIEW.md Q-43, and the stale test's check of the line |
 | M-179 | 2026-11-17 | Wording ADR-0077 left behind, again | communication | records-ahead-of-code | REVIEW.md Q-35 |
@@ -298,6 +301,22 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-184, 2026-11-17: Review fixes pushed to the open review branch
+
+- **What happened:** asked to "commit and push" the fixes from Joe's comments on pull request #24, I committed them to `review/2026-11-17` and pushed (`a99a4d5`). REVIEW.md says nothing is pushed to the review branch once it's open; fixes go on `main` and into the next review. Joe pointed it out. The fix was then put on `main` as `d404629`.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** working rule 2: read REVIEW.md's "My reviews" before committing anything during a review.
+- **Takeaway:** a repeat of M-049 (commits pushed to a pull request already merged), so the escalation ladder calls for a mechanism. Proposal: `/review-packet` or a pre-push hook refuses a push to a `review/*` branch that has an open pull request (backlog #126).
+
+### M-183, 2026-11-17: A "here" that didn't say where
+
+- **What happened:** `console_output.py` set the console's level with the comment `# here, so debug messages never enter the queue`. "Here" stood for "on the queue's handler, not the console's", but the other handler was never named, so the word read as filler. Two project reviews, one of them a fresh-context read, missed it; Joe caught it reviewing pull request #24. Fixed on `main` in `d404629`.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** the new rule in `docs/coding-style.md`, "Name both places in a contrast".
+- **Takeaway:** the same pattern as M-173, which the fresh-context read was the guard for, came back in the same change. By the log's escalation ladder a repeat calls for a mechanism: the written rule gives the reviews something to check against.
 
 ### M-160, 2026-11-16: A pull request's changes read from local `main`
 
@@ -649,6 +668,14 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-182, 2026-11-17: Reasons for changed tests guessed from their names
+
+- **What happened:** ADR-0077's review packet first said seven hover-program tests changed "for the description line without a climb speed", and ten tests elsewhere "for the one final descent height": reasons guessed from the tests' names. Their diffs showed the seven changed mainly because their stand-in `make_drone` lost `initial_climb_speed`, and some of the ten for the climb speed's constant too. Caught by reading the diffs before the review was posted; fixed before Joe saw the packet.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 2.
+- **Takeaway:** the packet lists tests by name; a reason beyond the name comes from the diff. No new question.
 
 ### M-181, 2026-11-17: The flow check let a negative or infinite uncertainty through
 

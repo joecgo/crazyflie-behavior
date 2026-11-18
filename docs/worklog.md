@@ -35,7 +35,7 @@ Milestones so far:
 
 | Date | Hours | Milestone | Worked on |
 |---|---|---|---|
-| 2026-11-17 | ~2.5 | Airworthy | **Console output and three decisions.** C1 built (the console on a background thread, ADR-0035) and reviewed twice with `/project-review`, its fixes applied. Decided ADR-0075 (the console gets 2 s at exit, then a warning), ADR-0076 (program tests on the sim clock), ADR-0077 (the initial climb ends at a fixed 0.15 m; built, not yet reviewed) and ADR-0078 (console exit risks accepted, Python pinned to 3.12). First flight 6 set as the flight baseline (backlog #113). Skills: explain-backs deferred to the next-up brief; resets clear this session. |
+| 2026-11-17 | ~4.75 | Airworthy | **Console output and ADR-0077.** C1 built (the console on a background thread, ADR-0035), reviewed twice with `/project-review`, its fixes applied; review pull request #24, now closed, with Joe's fixes on `main` (`d404629`, two coding-style rules). Decided ADR-0075 (the console gets 2 s at exit, then a warning), ADR-0076 (program tests on the sim clock), ADR-0077 (the initial climb ends at a fixed 0.15 m) and ADR-0078 (console exit risks accepted, Python pinned to 3.12). ADR-0077 built, reviewed twice with `/project-review` (17 findings; the open ones are backlog #120 to #124) and committed; review pull request #25. First flight 6 set as the flight baseline (backlog #113). Skills: explain-backs deferred to the next-up brief; resets clear this session, after asking; review packets short, with findings as pull request comments. |
 | 2026-11-16 | ~3.25 | Airworthy | **Airworthy started.** The milestone named and its goals set: the refactor toward ARCHITECTURE.md's target, how each new rule is enforced, the review and docs process (Fable's W1-W16 to dig into), simulated flights and replay tests, the First flight suite flown partway through and at the end, and a project tour. *Airworthy* and *Project tour* added to the glossary. **W1-W16 decided** and all applied, deferred or dropped: mistake IDs, patterns and guards, the working rules, the facts register, the ADR index's Built column, review tiers and packets, a pull request per review. **Six project skills** (W13, W15): `/wrap-up` with the next-up brief, `/handoff`, `/review-packet`, `/decide`, `/field-session`, `/debrief`; *Work session*, *Work order*, *Next-up brief* and *Mock run* in the glossary. |
 | 2026-11-16 | ~0.5 | First flight | **First flight wrap-up.** Session 6's three test logs (Failsafe low, Failsafe high, Hover) written from the session doc and the logs; results set (landing within 15 cm: the night flights at 0.3 m/s pass, the daylight flights at 0.2 m/s fail); exit codes inferred from the logs; the uncommitted 0.3 m/s change recorded. The plan's undecided items deferred to backlog #105. CLAUDE.md's "no hardware" line updated. |
 | 2026-11-15 | ~0.5 | Airworthy | **ARCHITECTURE.md:** the layers, their boundaries and rules, and the refactor's target; the architecture rules in `CLAUDE.md`, the coding style and `REVIEW.md`. ADR-0074: a module is split by five tests, never by size. Backlog #104: consider removing the settle detector. |
@@ -79,6 +79,19 @@ findings, key design turns. Added only with the architect's OK.
 ### YYYY-MM-DD: <short title>
 A few sentences: what happened, why it matters, links to ADRs, commits or test logs.
 -->
+
+### 2026-11-17: The settle detector measured itself
+
+The settle detector was meant to find, on every take-off, the height where
+flow arrives and becomes trustworthy, and to start the final descent just
+above it. Across every flight log it measured its own settings instead: the
+39 climbs that settled did so at 0.101-0.144 m, just above its 0.10 m start
+and 0.2 s hold, and its cap fired 4 times, each on real sideways drift, never
+on bad flow. So I removed it: the initial climb now ends at a fixed 0.15 m
+and switches to the high-level climb only with a velocity uncertainty under
+0.03 m/s; otherwise the drone lands
+([ADR-0077](decisions/0077-initial-climb-ends-at-a-fixed-0-15-m.md), commit
+`f973e8a`).
 
 ### 2026-11-05: Landing through the floor's blind spot
 
@@ -130,5 +143,5 @@ from sensing ([ADR-0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)
 | Milestone | Hours |
 |---|---|
 | First flight | ~78.25 |
-| Airworthy | ~6.25 |
-| **Total** | **~84.5** |
+| Airworthy | ~8.5 |
+| **Total** | **~86.75** |
