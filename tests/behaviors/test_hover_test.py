@@ -23,6 +23,9 @@ from crazyflie_behavior.behaviors.hover_test import (
     check_take_off_height,
     note_pitch,
 )
+from crazyflie_behavior.drone.crazyflie.adapter import MIN_MOVE_DURATION, VERTICAL_SPEED
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_HEIGHT, INITIAL_CLIMB_TIME_LIMIT
+from crazyflie_behavior.drone.crazyflie.conversions import move_duration
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.safety.requests import Arm, Chirp, CommandRequest, Land, Silence, TakeOff, Tone, Verdict
 from crazyflie_behavior.snapshot import DroneStatus, RangeReading, RangeReadings, Snapshot, Stamped
@@ -266,6 +269,15 @@ def test_a_hover_duration_that_is_negative_or_endless_is_a_bug(hover_duration: f
 
 SET_HEIGHT = 1.0
 """Meters: a take-off height other than the default."""
+
+
+def test_the_take_off_time_limit_leaves_room_for_the_slowest_take_off_to_the_highest_target() -> None:
+    # The initial climb's whole time limit, then the high-level climb from the final descent height (ADR-0077).
+    slowest = INITIAL_CLIMB_TIME_LIMIT + move_duration(
+        MAX_TAKE_OFF_HEIGHT - FINAL_DESCENT_HEIGHT, VERTICAL_SPEED, MIN_MOVE_DURATION
+    )
+
+    assert slowest < TAKE_OFF_TIME_LIMIT
 
 
 def test_with_a_set_take_off_height_it_takes_off_to_that_height() -> None:

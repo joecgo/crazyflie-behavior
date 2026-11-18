@@ -20,7 +20,7 @@ import pytest
 
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
 from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_BLOCK_DURATION, CrazyflieAdapter
-from crazyflie_behavior.drone.crazyflie.bad_flow_zone import MAX_FINAL_DESCENT_HEIGHT
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_HEIGHT
 from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE
 from crazyflie_behavior.drone.interface import FLOOR_MAX_SPEED
 from crazyflie_behavior.geometry import Vector3
@@ -777,12 +777,12 @@ def test_taking_over_keeps_the_position_the_drone_already_reported(
 def test_after_taking_over_land_runs_the_normal_landing_not_just_a_motor_stop(
     taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
 ) -> None:
-    # No take-off of ours, so no settle height: the final descent height is the cap (ADR-0056).
+    # A taken-over flight lands from the same final descent height as every other landing (ADR-0077).
     fake_cflib.samples["state"]["stateEstimate.z"] = 0.6
     fake_cflib.samples["state"]["supervisor.info"] = FLYING
     fake_cflib.samples["down"]["range.zrange"] = 600.0
     taking_over_adapter.connect()
-    aim = MAX_FINAL_DESCENT_HEIGHT - adapter_module.LANDING_APPROACH_AIM_BELOW
+    aim = FINAL_DESCENT_HEIGHT - adapter_module.LANDING_APPROACH_AIM_BELOW
 
     taking_over_adapter.land()
 

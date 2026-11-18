@@ -41,14 +41,11 @@ from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.crtp.crtpstack import CRTPPacket, CRTPPort
 
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
-    DEFAULT_INITIAL_CLIMB_SPEED,
+    FINAL_DESCENT_HEIGHT,
     FINAL_DESCENT_SPEED,
-    MAX_FINAL_DESCENT_HEIGHT,
-    SETTLE_CAP_HEIGHT,
-    SettleDetector,
-    check_initial_climb_speed,
-    final_descent_height,
-    initial_climb_time_limit,
+    INITIAL_CLIMB_SPEED,
+    INITIAL_CLIMB_TIME_LIMIT,
+    has_fresh_flow,
 )
 from crazyflie_behavior.drone.crazyflie.conversions import (
     alt_hold_packet_data,
@@ -263,7 +260,6 @@ class CrazyflieAdapter(DroneInterface):
         cache_directory: str = "./cache",
         *,
         take_over_flight: bool = False,
-        initial_climb_speed: float = DEFAULT_INITIAL_CLIMB_SPEED,
         take_off_log: bool = False,
     ) -> None:
         """`take_over_flight`: only the rescue landing sets this (ADR-0038). `connect()` then
@@ -271,14 +267,8 @@ class CrazyflieAdapter(DroneInterface):
         drone as airborne, as if this adapter had sent the take-off. It also skips the
         diagnostic and controller blocks (ADR-0067).
 
-        `initial_climb_speed`: meters per second, for take-off speed tests (ADR-0059). Raises
-        ValueError outside the accepted range.
-
         `take_off_log`: run the take-off block, from the end of connect and from each take-off
         (ADR-0063, ADR-0065)."""
-        check_initial_climb_speed(initial_climb_speed)
-        self._initial_climb_speed = initial_climb_speed
-        self._initial_climb_time_limit = initial_climb_time_limit(initial_climb_speed)
         self._clock = clock
         self._uri = uri
         self._cache_directory = cache_directory
@@ -306,9 +296,6 @@ class CrazyflieAdapter(DroneInterface):
         self._is_in_initial_climb = False
         self._take_off_height = 0.0
         """Meters: the latest take-off's target. Meaningful during the initial climb."""
-        self._settle_detector = SettleDetector()
-        self._final_descent_height = final_descent_height(None)
-        """Meters, by the down range. Set when an initial climb ends; the cap until then."""
         self._is_ignoring_commands = False
         """The latest command was ignored while crossing the bad-flow zone: the log line for it comes
         once per streak."""
@@ -368,7 +355,6 @@ class CrazyflieAdapter(DroneInterface):
         self._is_streaming = False
         self._level_vertical_speed = None
         self._is_ignoring_commands = False
-        self._final_descent_height = final_descent_height(None)
         # A new session starts with no values, so the wait for the first telemetry
         # can't pass on values left from an earlier one (ADR-0031).
         self._telemetry = TelemetryBuffer(self._clock)
@@ -453,11 +439,10 @@ class CrazyflieAdapter(DroneInterface):
         self._crazyflie.supervisor.send_arming_request(False)
 
     def take_off(self, height: float) -> None:
-        """Raises for a height at or below the final descent height's cap: no hover there can fly (ADR-0056)."""
-        if height <= MAX_FINAL_DESCENT_HEIGHT:
+        """Raises for a height at or below the final descent height: no hover there can fly (ADR-0056, ADR-0077)."""
+        if height <= FINAL_DESCENT_HEIGHT:
             raise ValueError(
-                f"Take-off height must be above the final descent height's cap, "
-                f"{MAX_FINAL_DESCENT_HEIGHT:g} m: {height}"
+                f"Take-off height must be above the final descent height, {FINAL_DESCENT_HEIGHT:g} m: {height}"
             )
         if self._is_ignored_while_crossing_the_bad_flow_zone("Take-off"):
             return
@@ -481,7 +466,7 @@ class CrazyflieAdapter(DroneInterface):
             # (ADR-0032), so just make sure they're stopped.
             self._stop_motors()
         elif self._is_in_initial_climb:
-            # No landing approach: this take-off has no final descent height yet (ADR-0049).
+            # No landing approach during the initial climb (ADR-0049, ADR-0077).
             logger.info("Landing during the initial climb: no landing approach.")
             self._is_in_initial_climb = False
             self._start_final_descent(self._latest_fresh_down_distance())
@@ -843,45 +828,45 @@ class CrazyflieAdapter(DroneInterface):
         self._is_in_initial_climb = True
         self._is_ignoring_commands = False  # a new crossing: a new streak
         self._take_off_height = height
-        self._settle_detector = SettleDetector()
         # A landing during the climb sets its final descent's time limit from these readings (ADR-0049).
         self._touchdown_detector = TouchdownDetector()
-        self._final_descent_height = final_descent_height(None)
-        logger.info("Initial climb at %g m/s.", self._initial_climb_speed)
-        self._send_level_setpoint(self._initial_climb_speed)
+        logger.info("Initial climb at %g m/s.", INITIAL_CLIMB_SPEED)
+        self._send_level_setpoint(INITIAL_CLIMB_SPEED)
 
     def _update_initial_climb(self, snapshot: Snapshot) -> None:
         now = self._clock.now()
-        self._settle_detector.observe(snapshot, now)
         self._touchdown_detector.observe(snapshot, now)
-        if now - self._take_off_sent_at >= self._initial_climb_time_limit:
-            time_limit = self._initial_climb_time_limit
-            logger.warning("The initial climb hasn't ended %g s after the take-off. Landing.", time_limit)
+        if now - self._take_off_sent_at >= INITIAL_CLIMB_TIME_LIMIT:
+            logger.warning("The initial climb hasn't ended %g s after the take-off. Landing.", INITIAL_CLIMB_TIME_LIMIT)
             self.land()
             return
-        if self._settle_detector.is_cap_tripped:
-            logger.warning(
-                "The horizontal speed estimate hasn't settled by %.2f m. Landing.",
-                SETTLE_CAP_HEIGHT,
-            )
-            self.land()
-            return
-        settle_height = self._settle_detector.settle_height
         down = fresh_down_distance(snapshot, now)
-        if settle_height is not None and down is not None and down.value >= final_descent_height(settle_height):
-            self._end_initial_climb(settle_height)
+        if down is None or not math.isfinite(down.value) or down.value < FINAL_DESCENT_HEIGHT:
+            self._send_level_setpoint(INITIAL_CLIMB_SPEED)
+        elif has_fresh_flow(snapshot, now):
+            self._end_initial_climb(down.value)
         else:
-            self._send_level_setpoint(self._initial_climb_speed)
+            uncertainty = snapshot.velocity_uncertainty
+            if uncertainty is not None and uncertainty.age(now) > MAX_READING_AGE:
+                # An old reading may be a telemetry stall, not darkness.
+                logger.warning(
+                    "The velocity uncertainty is %.2f s old at the end of the initial climb. Landing.",
+                    uncertainty.age(now),
+                )
+            else:
+                logger.warning(
+                    "No flow at the end of the initial climb, %.3f m by the down range "
+                    "(velocity uncertainty %s). Landing.",
+                    down.value,
+                    "missing" if uncertainty is None else f"{uncertainty.value:.3f} m/s",
+                )
+            self.land()
 
-    def _end_initial_climb(self, settle_height: float) -> None:
-        """Hand over to a high-level climb to the take-off height, at the current x and y (ADR-0048)."""
+    def _end_initial_climb(self, down_distance: float) -> None:
+        """Hand over to a high-level climb to the take-off height, at the current x and y (ADR-0048, ADR-0077)."""
         self._is_in_initial_climb = False
-        self._final_descent_height = final_descent_height(settle_height)
         logger.info(
-            "Initial climb done: settle height %.3f m, final descent height %.3f m. Climbing to %.2f m.",
-            settle_height,
-            self._final_descent_height,
-            self._take_off_height,
+            "Initial climb done at %.3f m by the down range. Climbing to %.2f m.", down_distance, self._take_off_height
         )
         with self._handing_over_to_high_level():
             self._go_to_height(self._take_off_height)
@@ -890,7 +875,7 @@ class CrazyflieAdapter(DroneInterface):
         """A high-level move aimed below the final descent height, or the final descent at once if already there."""
         self._touchdown_detector = TouchdownDetector()
         down = self._latest_fresh_down_distance()
-        if down is not None and down.value <= self._final_descent_height:
+        if down is not None and down.value <= FINAL_DESCENT_HEIGHT:
             self._start_final_descent(down)
             return
         # A go_to, not the firmware's landing, which switches the motors off when it
@@ -905,7 +890,7 @@ class CrazyflieAdapter(DroneInterface):
                 commander.go_to(0.0, 0.0, -HEIGHT_IF_UNKNOWN, DEFAULT_YAW_RAD, duration, relative=True)
             else:
                 here = position_estimate.value
-                height = min(here.z, self._final_descent_height - LANDING_APPROACH_AIM_BELOW)
+                height = min(here.z, FINAL_DESCENT_HEIGHT - LANDING_APPROACH_AIM_BELOW)
                 duration = move_duration(here.z - height, VERTICAL_SPEED, MIN_MOVE_DURATION)
                 commander.go_to(here.x, here.y, height, DEFAULT_YAW_RAD, duration)
         # The drone trails the `go_to`, so the down range, not the `go_to`'s end, should start
@@ -928,7 +913,7 @@ class CrazyflieAdapter(DroneInterface):
         match self._landing_phase:
             case _LandingPhase.LANDING_APPROACH:
                 down = fresh_down_distance(snapshot, now)
-                if down is not None and down.value <= self._final_descent_height:
+                if down is not None and down.value <= FINAL_DESCENT_HEIGHT:
                     self._start_final_descent(down)
                 elif now >= self._landing_approach_ends_at:
                     logger.warning(

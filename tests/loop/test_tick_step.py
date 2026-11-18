@@ -7,7 +7,7 @@ import pytest
 
 from crazyflie_behavior.behaviors.behavior import Behavior
 from crazyflie_behavior.behaviors.hover_test import TAKE_OFF_HEIGHT, HoverTest
-from crazyflie_behavior.drone.crazyflie.bad_flow_zone import MIN_FINAL_DESCENT_HEIGHT
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_HEIGHT
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_step import BehaviorTickStep
 from crazyflie_behavior.safety.requests import CommandRequest, Hover, Verdict
@@ -145,10 +145,10 @@ def test_the_hover_test_arms_takes_off_hovers_and_lands() -> None:
     ticks_at_height = heights.count(TAKE_OFF_HEIGHT)
     climb, descent = heights[:first_at_height], heights[first_at_height + ticks_at_height :]
     assert climb == sorted(climb)
-    assert max(climb) < MIN_FINAL_DESCENT_HEIGHT
+    assert max(climb) < FINAL_DESCENT_HEIGHT
     assert ticks_at_height * TICK_PERIOD == HOVER_DURATION + 2 * TICK_PERIOD
     assert descent == sorted(descent, reverse=True)
-    assert descent[0] < MIN_FINAL_DESCENT_HEIGHT
+    assert descent[0] < FINAL_DESCENT_HEIGHT
     assert heights[-1] == 0.0
     assert tick_count == len(heights)
 

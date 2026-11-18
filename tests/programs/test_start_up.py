@@ -20,7 +20,6 @@ from typing import TextIO
 import pytest
 
 from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
-from crazyflie_behavior.drone.crazyflie.bad_flow_zone import DEFAULT_INITIAL_CLIMB_SPEED
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_loop import TickStep
 from crazyflie_behavior.programs import start_up as start_up_module
@@ -506,28 +505,3 @@ def test_make_drone_passes_the_take_off_log_on_to_the_crazyflie_adapter() -> Non
 def test_the_description_says_when_the_take_off_block_runs_and_when_the_adapter_has_none() -> None:
     assert take_off_log_description(use_crazyflie=True) == ", with the take-off block"
     assert take_off_log_description(use_crazyflie=False) == ", with the take-off block (the mock adapter has none)"
-
-
-def test_make_drone_without_a_climb_speed_gives_either_adapter_the_default() -> None:
-    # The failsafe program sets none, so it flies the default (ADR-0070).
-    clock = SimClock()
-
-    mock_drone = make_drone(use_crazyflie=False, clock=clock)
-    crazyflie = make_drone(use_crazyflie=True, clock=clock)
-
-    assert isinstance(mock_drone, MockAdapter)
-    assert mock_drone._initial_climb_speed == DEFAULT_INITIAL_CLIMB_SPEED  # pyright: ignore[reportPrivateUsage]
-    assert isinstance(crazyflie, CrazyflieAdapter)
-    assert crazyflie._initial_climb_speed == DEFAULT_INITIAL_CLIMB_SPEED  # pyright: ignore[reportPrivateUsage]
-
-
-def test_make_drone_passes_the_initial_climb_speed_on_to_either_adapter() -> None:
-    clock = SimClock()
-
-    mock_drone = make_drone(use_crazyflie=False, clock=clock, initial_climb_speed=0.3)
-    crazyflie = make_drone(use_crazyflie=True, clock=clock, initial_climb_speed=0.3)
-
-    assert isinstance(mock_drone, MockAdapter)
-    assert mock_drone._initial_climb_speed == 0.3  # pyright: ignore[reportPrivateUsage]
-    assert isinstance(crazyflie, CrazyflieAdapter)
-    assert crazyflie._initial_climb_speed == 0.3  # pyright: ignore[reportPrivateUsage]

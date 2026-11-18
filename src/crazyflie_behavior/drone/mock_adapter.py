@@ -5,14 +5,12 @@ It answers commands instantly with no physics: `move_to` teleports, and
 through the same `TelemetryBuffer` as every other adapter.
 
 It mocks the Crazyflie adapter, so it uses that adapter's numbers for the
-bad-flow zone (ADR-0048, ADR-0055). A take-off climbs level at its initial
-climb speed (`DEFAULT_INITIAL_CLIMB_SPEED` unless set, ADR-0059) to the final descent height, then teleports to its
-height. The mock's flow is perfect where it arrives, so the speed settles as
-soon as it does: at `SETTLE_MIN_DOWN_RANGE` on a lit floor, giving the lowest
-final descent height. A test can darken the floor with `set_dark_floor` (no
-flow below a height) or cut the flow with `cut_flow`: the velocity uncertainty
-is then high, and with no flow by `SETTLE_CAP_HEIGHT` the drone lands, as the
-Crazyflie adapter does (ADR-0054). A landing teleports down to the final descent height, then descends level at
+bad-flow zone (ADR-0048, ADR-0055, ADR-0077). A take-off climbs level at
+`INITIAL_CLIMB_SPEED` to the final descent height. There, with flow, it
+teleports to its height; without flow it lands, as the Crazyflie adapter does.
+A test can darken the floor with `set_dark_floor` (no flow below a height) or
+cut the flow with `cut_flow`: the velocity uncertainty is then high (ADR-0054).
+A landing teleports down to the final descent height, then descends level at
 `FINAL_DESCENT_SPEED` to the floor. During those level parts it ignores every
 command but land and the motor stops, as the Crazyflie adapter does (ADR-0056).
 
@@ -37,13 +35,9 @@ again each tick, until a test makes it go quiet with `stop_telemetry`.
 import math
 
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
-    DEFAULT_INITIAL_CLIMB_SPEED,
+    FINAL_DESCENT_HEIGHT,
     FINAL_DESCENT_SPEED,
-    MAX_FINAL_DESCENT_HEIGHT,
-    SETTLE_CAP_HEIGHT,
-    SETTLE_MIN_DOWN_RANGE,
-    check_initial_climb_speed,
-    final_descent_height,
+    INITIAL_CLIMB_SPEED,
 )
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.telemetry_buffer import TelemetryBuffer
@@ -77,17 +71,10 @@ and the drone drops."""
 class MockAdapter(DroneInterface):
     """A fake drone that does exactly what it's told, instantly."""
 
-    def __init__(
-        self, clock: Clock, *, take_over_flight: bool = False, initial_climb_speed: float = DEFAULT_INITIAL_CLIMB_SPEED
-    ) -> None:
+    def __init__(self, clock: Clock, *, take_over_flight: bool = False) -> None:
         """`take_over_flight`: the rescue landing's setting (ADR-0038). `connect()` then finds the
         drone armed and hovering at `TAKEN_OVER_HEIGHT`, as if a program had been lost with it
-        in the air, so the rescue landing has something to land.
-
-        `initial_climb_speed`: meters per second, as the Crazyflie adapter's (ADR-0059). Raises
-        ValueError outside the accepted range."""
-        check_initial_climb_speed(initial_climb_speed)
-        self._initial_climb_speed = initial_climb_speed
+        in the air, so the rescue landing has something to land."""
         self._clock = clock
         self._take_over_flight = take_over_flight
         self._telemetry = TelemetryBuffer(clock)
@@ -104,11 +91,7 @@ class MockAdapter(DroneInterface):
         self._last_setpoint_time: float | None = None
         self._climb_height: float | None = None
         """Meters: the take-off's height, during the initial climb."""
-        self._is_settled = False
-        """Whether this initial climb has reached its settle height."""
         self._is_in_final_descent = False
-        self._final_descent_height = MAX_FINAL_DESCENT_HEIGHT
-        """Meters: the lowest after its own take-off, the cap after a take-over (ADR-0056)."""
         self._last_level_setpoint_time: float | None = None
         """When the last level setpoint went out; None outside the level parts."""
         self._range_readings = dict.fromkeys(RangeDirection, RangeReading.out_of_range())
@@ -155,7 +138,6 @@ class MockAdapter(DroneInterface):
     def connect(self) -> None:
         self.command_log.append("connect")
         self._is_connected = True
-        self._final_descent_height = MAX_FINAL_DESCENT_HEIGHT  # a new session knows no settle height
         if self._take_over_flight:
             self._is_armed = True
             self._is_flying = True
@@ -182,15 +164,14 @@ class MockAdapter(DroneInterface):
 
     def take_off(self, height: float) -> None:
         self.command_log.append("take_off")
-        if height <= MAX_FINAL_DESCENT_HEIGHT:
-            cap = MAX_FINAL_DESCENT_HEIGHT
-            raise ValueError(f"Take-off height must be above the final descent height's cap, {cap:g} m: {height}")
+        if height <= FINAL_DESCENT_HEIGHT:
+            raise ValueError(
+                f"Take-off height must be above the final descent height, {FINAL_DESCENT_HEIGHT:g} m: {height}"
+            )
         if self._is_armed and not self._is_flying:
             self._is_flying = True
-            self._final_descent_height = MAX_FINAL_DESCENT_HEIGHT  # until the settle height is known
-            self._is_settled = False
             self._climb_height = height
-            self._start_level_part(self._initial_climb_speed)
+            self._start_level_part(INITIAL_CLIMB_SPEED)
 
     def land(self) -> None:
         self.command_log.append("land")
@@ -256,20 +237,15 @@ class MockAdapter(DroneInterface):
         self._apply_setpoint_timeout()
         if self._is_flying:
             self._position = self._position + self._velocity * snapshot.dt
-        if self._climb_height is not None and not self._is_settled:
-            settle_height = self._settle_height()
-            # Kept for the rest of the climb once reached, as the Crazyflie adapter does.
-            if settle_height is not None and self._position.z >= settle_height:
-                self._is_settled = True
-                self._final_descent_height = final_descent_height(settle_height)
-        if self._climb_height is not None and not self._is_settled and self._position.z > SETTLE_CAP_HEIGHT:
-            self._start_final_descent()  # no flow by the cap: the drone lands (ADR-0054)
-        elif self._climb_height is not None and self._position.z >= self._final_descent_height:
-            # The initial climb is over: the high-level climb to the height, teleported.
-            self._position = Vector3(self._position.x, self._position.y, self._climb_height)
-            self._velocity = Vector3.ZERO
-            self._climb_height = None
-            self._last_level_setpoint_time = None
+        if self._climb_height is not None and self._position.z >= FINAL_DESCENT_HEIGHT:
+            if self._has_flow():
+                # The initial climb is over: the high-level climb to the height, teleported.
+                self._position = Vector3(self._position.x, self._position.y, self._climb_height)
+                self._velocity = Vector3.ZERO
+                self._climb_height = None
+                self._last_level_setpoint_time = None
+            else:
+                self._start_final_descent()  # no flow at the final descent height: the drone lands (ADR-0077)
         elif self._is_in_final_descent and self._position.z <= 0.0:
             self._drop_to_ground()  # touchdown: the motors stop
         elif self._is_in_level_part():
@@ -279,22 +255,15 @@ class MockAdapter(DroneInterface):
     # --- Internals --------------------------------------------------------------
 
     def _start_final_descent(self) -> None:
-        # The landing approach, teleported. During the initial climb the drone is still below
-        # the final descent height, so the final descent starts from where it is (ADR-0049).
-        self._position = Vector3(self._position.x, self._position.y, min(self._position.z, self._final_descent_height))
+        # The landing approach, teleported. During the initial climb the final descent starts from
+        # where the drone is, at most the final descent height (ADR-0049).
+        self._position = Vector3(self._position.x, self._position.y, min(self._position.z, FINAL_DESCENT_HEIGHT))
         self._climb_height = None
         self._is_in_final_descent = True
         self._start_level_part(-FINAL_DESCENT_SPEED)
 
     def _has_flow(self) -> bool:
         return not self._is_flow_cut and self._position.z >= self._dark_floor_height
-
-    def _settle_height(self) -> float | None:
-        """Meters: where flow arrives above SETTLE_MIN_DOWN_RANGE, or None if not by the cap."""
-        if self._is_flow_cut:
-            return None
-        settle_height = max(self._dark_floor_height, SETTLE_MIN_DOWN_RANGE)
-        return settle_height if settle_height <= SETTLE_CAP_HEIGHT else None
 
     def _is_in_level_part(self) -> bool:
         return self._climb_height is not None or self._is_in_final_descent

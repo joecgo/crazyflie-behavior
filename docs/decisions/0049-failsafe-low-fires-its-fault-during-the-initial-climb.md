@@ -1,6 +1,6 @@
 # 0049: Failsafe low forges its battery fault during the initial climb; a landing during the climb is a final descent
 
-- **Status:** Accepted. Amends [ADR-0041](0041-failsafe-tests-inject-a-fault-into-the-pre-check.md): Failsafe low no longer hovers at 0.1 m. Amends [ADR-0048](0048-level-through-the-bad-flow-zone.md): it covers a landing requested during the initial climb. Closes backlog #52.
+- **Status:** Accepted. Amends [ADR-0041](0041-failsafe-tests-inject-a-fault-into-the-pre-check.md): Failsafe low no longer hovers at 0.1 m. Amends [ADR-0048](0048-level-through-the-bad-flow-zone.md): it covers a landing requested during the initial climb. Closes backlog #52. Note, 2026-11-17: [ADR-0077](0077-initial-climb-ends-at-a-fixed-0-15-m.md) fixed the final descent height at 0.15 m, so the Decision's reason for no landing approach (no final descent height yet) no longer holds. The rule stands: ADR-0077 also lands this way when there's no flow.
 - **Date:** 2026-11-05
 - **Origin:** AI recommendation accepted: firing the fault during the climb, and the gap in ADR-0048 it exposed. Keeping the name Failsafe low, a new ADR instead of an edit, and the rule for a landing during the climb (stop the climb, final descent): mine.
 

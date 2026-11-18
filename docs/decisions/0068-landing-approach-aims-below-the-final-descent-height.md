@@ -1,6 +1,6 @@
 # 0068: The landing approach aims 5 cm below the final descent height; the down range ends it
 
-- **Status:** Accepted. Amends [ADR-0048](0048-level-through-the-bad-flow-zone.md) and [ADR-0056](0056-adr-0048-as-built.md): the landing approach's aim, and its time limit, now a backup. Closes backlog #93.
+- **Status:** Accepted. Amends [ADR-0048](0048-level-through-the-bad-flow-zone.md) and [ADR-0056](0056-adr-0048-as-built.md): the landing approach's aim, and its time limit, now a backup. Closes backlog #93. Note, 2026-11-17: [ADR-0077](0077-initial-climb-ends-at-a-fixed-0-15-m.md) fixed the final descent height at 0.15 m, so the aim is a fixed 0.10 m and the settle height is gone.
 - **Date:** 2026-11-13
 - **Origin:** Mixed. Aiming at the settle height and letting the down range end the approach (A2): AI recommendation accepted. A backup of the plan's time plus 1 s: mine, over the AI's 0.5 s.
 

@@ -19,7 +19,7 @@ from crazyflie_behavior.drone.crazyflie.adapter import (
     TAKE_OFF_STATUS_GRACE,
     CrazyflieAdapter,
 )
-from crazyflie_behavior.drone.crazyflie.bad_flow_zone import DEFAULT_INITIAL_CLIMB_SPEED, MAX_FINAL_DESCENT_HEIGHT
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_HEIGHT, INITIAL_CLIMB_SPEED
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
 from crazyflie_behavior.timing.clock import SimClock
@@ -67,11 +67,11 @@ def fly_above_the_bad_flow_zone(
         if height > 1.0:
             pytest.fail("the initial climb never handed over")
         clock.advance(TICK)
-        height += DEFAULT_INITIAL_CLIMB_SPEED * TICK
+        height += INITIAL_CLIMB_SPEED * TICK
         telemetry = adapter._telemetry
         if with_position:
             telemetry.write_position_estimate(Vector3(0.5, -0.25, height), None)
-        telemetry.write_velocity_estimate(Vector3(0.0, 0.0, DEFAULT_INITIAL_CLIMB_SPEED), None)
+        telemetry.write_velocity_estimate(Vector3(0.0, 0.0, INITIAL_CLIMB_SPEED), None)
         telemetry.write_velocity_uncertainty(0.01, None)
         telemetry.write_drone_status(FLYING, None)
         telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(height)}, None)
@@ -79,14 +79,22 @@ def fly_above_the_bad_flow_zone(
     fake_link.reset_mock()
 
 
-@pytest.mark.parametrize("height", [0.0, 0.1, MAX_FINAL_DESCENT_HEIGHT])
-def test_take_off_to_the_final_descent_heights_cap_or_below_is_a_bug_and_sends_nothing(
+@pytest.mark.parametrize("height", [0.0, 0.1, FINAL_DESCENT_HEIGHT])
+def test_take_off_to_the_final_descent_height_or_below_is_a_bug_and_sends_nothing(
     adapter: CrazyflieAdapter, fake_link: MagicMock, height: float
 ) -> None:
-    with pytest.raises(ValueError, match="cap"):
+    with pytest.raises(ValueError, match="final descent height"):
         adapter.take_off(height)
 
     assert call_names(fake_link) == []
+
+
+def test_take_off_to_just_above_the_final_descent_height_starts_the_initial_climb(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    adapter.take_off(FINAL_DESCENT_HEIGHT + 0.01)
+
+    assert call_names(fake_link) == ["cf.send_packet"]
 
 
 def test_move_to_never_asks_for_a_move_shorter_than_the_minimum(

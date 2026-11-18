@@ -15,7 +15,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_STATUS_GRACE, CrazyflieAdapter
-from crazyflie_behavior.drone.crazyflie.bad_flow_zone import DEFAULT_INITIAL_CLIMB_SPEED, FINAL_DESCENT_SPEED
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_SPEED, INITIAL_CLIMB_SPEED
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.safety.safety_layer import LOW_BATTERY_VOLTAGE, SafetyLayer
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
@@ -67,7 +67,7 @@ def test_the_failsafe_lands_during_the_take_off_grace_period_though_the_status_s
     assert safety_layer.pre_check_has_failed
     # The climb's setpoint, then the final descent's.
     assert level_setpoints(fake_link) == [
-        pytest.approx(DEFAULT_INITIAL_CLIMB_SPEED),
+        pytest.approx(INITIAL_CLIMB_SPEED),
         pytest.approx(-FINAL_DESCENT_SPEED),
     ]
     fake_link.cf.high_level_commander.stop.assert_not_called()  # the motors keep running until touchdown

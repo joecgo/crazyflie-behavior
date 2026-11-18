@@ -19,7 +19,6 @@ from types import FrameType, TracebackType
 from typing import Any, Self, TextIO
 
 from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_BLOCK_DURATION, TAKE_OFF_PERIOD_MS, CrazyflieAdapter
-from crazyflie_behavior.drone.crazyflie.bad_flow_zone import DEFAULT_INITIAL_CLIMB_SPEED
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_loop import HangWatchdog, TickLoop, TickStep
@@ -56,23 +55,16 @@ def make_drone(
     clock: Clock,
     *,
     take_over_flight: bool = False,
-    initial_climb_speed: float = DEFAULT_INITIAL_CLIMB_SPEED,
     take_off_log: bool = False,
 ) -> DroneInterface:
     """The real Crazyflie only when asked for, otherwise the mock adapter (ADR-0028).
 
-    `take_over_flight` is for the rescue landing program only (ADR-0038);
-    `initial_climb_speed` for take-off speed tests (ADR-0059); `take_off_log` runs
+    `take_over_flight` is for the rescue landing program only (ADR-0038); `take_off_log` runs
     the Crazyflie adapter's take-off block (ADR-0063), which the mock adapter doesn't have.
     """
     if use_crazyflie:
-        return CrazyflieAdapter(
-            clock,
-            take_over_flight=take_over_flight,
-            initial_climb_speed=initial_climb_speed,
-            take_off_log=take_off_log,
-        )
-    return MockAdapter(clock, take_over_flight=take_over_flight, initial_climb_speed=initial_climb_speed)
+        return CrazyflieAdapter(clock, take_over_flight=take_over_flight, take_off_log=take_off_log)
+    return MockAdapter(clock, take_over_flight=take_over_flight)
 
 
 def add_take_off_log_option(parser: argparse.ArgumentParser) -> None:

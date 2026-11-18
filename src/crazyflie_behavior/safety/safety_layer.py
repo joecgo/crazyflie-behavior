@@ -133,7 +133,7 @@ def safety_pre_check(snapshot: Snapshot) -> list[str]:
         failures.append("the drone reports it has tumbled")
     # Only in flight: on the floor a failed pre-check would end every round at a dark hiding spot.
     # By "may be flying", not the drone status, which says flying for 2 s after the motors stop.
-    # The initial climb checks the flow itself (ADR-0054, ADR-0060).
+    # The initial climb checks the flow itself, at its end (ADR-0054, ADR-0060, ADR-0077).
     if snapshot.may_be_flying and not snapshot.is_in_initial_climb:
         failure = _velocity_uncertainty_failure(snapshot)
         if failure is not None:
@@ -260,7 +260,7 @@ def _judge_on_the_floor(snapshot: Snapshot) -> Verdict | None:
 def _judge_take_off_estimate(snapshot: Snapshot) -> Verdict:
     """On the floor; with flow arriving, the estimate must also be still at the reset point (ADR-0054).
 
-    Without flow, the take-off goes ahead: the initial climb checks the flow at the settle height.
+    Without flow, the take-off goes ahead: the initial climb checks the flow at the final descent height (ADR-0077).
     """
     floor_refusal = _judge_on_the_floor(snapshot)
     if floor_refusal is not None:

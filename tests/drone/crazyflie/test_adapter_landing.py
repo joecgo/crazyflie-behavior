@@ -26,7 +26,11 @@ from crazyflie_behavior.drone.crazyflie.adapter import (
     VERTICAL_SPEED,
     CrazyflieAdapter,
 )
-from crazyflie_behavior.drone.crazyflie.bad_flow_zone import DEFAULT_INITIAL_CLIMB_SPEED, FINAL_DESCENT_SPEED
+from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
+    FINAL_DESCENT_HEIGHT,
+    FINAL_DESCENT_SPEED,
+    INITIAL_CLIMB_SPEED,
+)
 from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE
 from crazyflie_behavior.drone.crazyflie.touchdown import (
     FINAL_DESCENT_MARGIN,
@@ -83,11 +87,11 @@ def fly_above_the_bad_flow_zone(
         if height > 1.0:
             pytest.fail("the initial climb never handed over")
         clock.advance(TICK)
-        height += DEFAULT_INITIAL_CLIMB_SPEED * TICK
+        height += INITIAL_CLIMB_SPEED * TICK
         telemetry = adapter._telemetry
         if with_position:
             telemetry.write_position_estimate(Vector3(0.5, -0.25, height), None)
-        telemetry.write_velocity_estimate(Vector3(0.0, 0.0, DEFAULT_INITIAL_CLIMB_SPEED), None)
+        telemetry.write_velocity_estimate(Vector3(0.0, 0.0, INITIAL_CLIMB_SPEED), None)
         telemetry.write_velocity_uncertainty(0.01, None)
         telemetry.write_drone_status(FLYING, None)
         telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(height)}, None)
@@ -162,7 +166,7 @@ def test_the_landing_approach_is_a_go_to_aimed_below_the_final_descent_height_no
     adapter: CrazyflieAdapter, fake_link: MagicMock
 ) -> None:
     # The firmware's landing switches the motors off when it ends (ADR-0032).
-    height = adapter._final_descent_height - LANDING_APPROACH_AIM_BELOW
+    height = FINAL_DESCENT_HEIGHT - LANDING_APPROACH_AIM_BELOW
 
     adapter.land()
 
@@ -185,7 +189,7 @@ def test_after_an_estimate_that_isnt_finite_the_landing_approach_goes_to_the_las
         "supervisor.info": float(1 << 4),  # flying
     }
     adapter._on_state(1500, nan_state, MagicMock())
-    height = adapter._final_descent_height - LANDING_APPROACH_AIM_BELOW
+    height = FINAL_DESCENT_HEIGHT - LANDING_APPROACH_AIM_BELOW
 
     adapter.land()
 
@@ -221,7 +225,7 @@ def test_the_landing_approach_ends_early_when_the_down_range_reaches_the_final_d
     adapter.land()
     go_to_duration = fake_link.cf.high_level_commander.go_to.call_args.args[4]
 
-    tick(adapter, clock, RangeReading.at_distance(adapter._final_descent_height))
+    tick(adapter, clock, RangeReading.at_distance(FINAL_DESCENT_HEIGHT))
 
     assert clock.now() < landing_starts + go_to_duration
     assert "hasn't reached the final descent height" not in caplog.text
@@ -239,7 +243,7 @@ def test_the_landing_approach_waits_a_backup_past_the_end_of_its_go_to_for_the_d
     if with_position:
         adapter._telemetry.write_position_estimate(Vector3(0.5, -0.25, 1.0), None)
     read_down(adapter, RangeReading.at_distance(1.0))
-    still_above = RangeReading.at_distance(adapter._final_descent_height + 0.05)
+    still_above = RangeReading.at_distance(FINAL_DESCENT_HEIGHT + 0.05)
     landing_starts = clock.now()
     adapter.land()
     go_to_duration = fake_link.cf.high_level_commander.go_to.call_args.args[4]
@@ -263,7 +267,7 @@ def test_the_down_range_reaching_the_final_descent_height_at_the_backup_time_end
     go_to_duration = fake_link.cf.high_level_commander.go_to.call_args.args[4]
 
     clock.sleep_until(landing_starts + go_to_duration + LANDING_APPROACH_BACKUP)
-    tick(adapter, clock, RangeReading.at_distance(adapter._final_descent_height))
+    tick(adapter, clock, RangeReading.at_distance(FINAL_DESCENT_HEIGHT))
 
     assert level_setpoints(fake_link) == [pytest.approx(-FINAL_DESCENT_SPEED)]
     assert "hasn't reached the final descent height" not in caplog.text
@@ -271,7 +275,7 @@ def test_the_down_range_reaching_the_final_descent_height_at_the_backup_time_end
 
 def test_the_landing_approach_does_not_climb_to_its_aim(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
     # The estimate already reads below the aim, but the down range says above the final descent height.
-    below_the_aim = adapter._final_descent_height - LANDING_APPROACH_AIM_BELOW - 0.02
+    below_the_aim = FINAL_DESCENT_HEIGHT - LANDING_APPROACH_AIM_BELOW - 0.02
     adapter._telemetry.write_position_estimate(Vector3(0.5, -0.25, below_the_aim), None)
 
     adapter.land()
@@ -284,7 +288,7 @@ def test_the_landing_approach_does_not_climb_to_its_aim(adapter: CrazyflieAdapte
 def test_a_landing_already_at_the_final_descent_height_skips_the_landing_approach(
     adapter: CrazyflieAdapter, fake_link: MagicMock
 ) -> None:
-    read_down(adapter, RangeReading.at_distance(adapter._final_descent_height - 0.02))
+    read_down(adapter, RangeReading.at_distance(FINAL_DESCENT_HEIGHT - 0.02))
 
     adapter.land()
 

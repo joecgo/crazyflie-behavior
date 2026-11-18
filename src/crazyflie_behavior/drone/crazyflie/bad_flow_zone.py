@@ -1,113 +1,34 @@
-"""Crossing the bad-flow zone level (ADR-0048, ADR-0056): its numbers and the settle check.
+"""Crossing the bad-flow zone level (ADR-0048, ADR-0056, ADR-0077): its numbers and the flow check.
 
 This module doesn't import cflib, so it's type-checked strictly and unit-tested without a drone.
 """
 
-import math
-
-from crazyflie_behavior.drone.crazyflie.touchdown import MAX_READING_AGE, fresh_down_distance
+from crazyflie_behavior.drone.crazyflie.touchdown import MAX_READING_AGE
 from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY
 from crazyflie_behavior.snapshot import Snapshot
 
-# PLACEHOLDERS, to verify in flight (ADR-0048, ADR-0056).
+INITIAL_CLIMB_SPEED = 0.4
+"""Meters per second: up in the level initial climb (ADR-0070, ADR-0077)."""
+
+# PLACEHOLDERS, to verify in flight (ADR-0048, ADR-0077).
 FINAL_DESCENT_SPEED = 0.3
 """Meters per second: down in the level final descent (ADR-0072)."""
-DEFAULT_INITIAL_CLIMB_SPEED = 0.4
-"""Meters per second: the initial climb's speed unless a program sets it (ADR-0070)."""
-MIN_INITIAL_CLIMB_SPEED = 0.1
-"""Meters per second: the slowest initial climb an adapter accepts (ADR-0059)."""
-MAX_INITIAL_CLIMB_SPEED = 0.4
-"""Meters per second: the fastest initial climb an adapter accepts (ADR-0059)."""
-SETTLE_SPEED = 0.15
-"""Meters per second. A horizontal speed estimate under this counts as settled, with the velocity
-uncertainty under FLOW_VELOCITY_UNCERTAINTY (ADR-0054)."""
-SETTLE_HOLD = 0.2
-"""Seconds the horizontal speed estimate must stay under SETTLE_SPEED."""
-SETTLE_MIN_DOWN_RANGE = 0.10
-"""Meters. The settle hold starts only above this down range: below it the firmware's flow model is
-wrong in any light."""
-SETTLE_MARGIN = 0.05
-"""Meters from the settle height up to the final descent height."""
-MIN_FINAL_DESCENT_HEIGHT = 0.15
-"""Meters."""
-MAX_FINAL_DESCENT_HEIGHT = 0.30
-"""Meters: the cap. A take-off target at or below it is refused."""
-
-SETTLE_CAP_HEIGHT = MAX_FINAL_DESCENT_HEIGHT - SETTLE_MARGIN
-"""Meters. If the speed hasn't settled by this down range, the drone lands at once."""
+FINAL_DESCENT_HEIGHT = 0.15
+"""Meters, by the down range: the initial climb ends here and the final descent starts here. Take-off
+targets must be above it."""
+INITIAL_CLIMB_TIME_LIMIT = 1.5
+"""Seconds from the take-off to the end of the initial climb, or the drone lands."""
 
 
-def check_initial_climb_speed(climb_speed: float) -> None:
-    """Raises ValueError unless the speed is in the accepted range (ADR-0059)."""
-    if not MIN_INITIAL_CLIMB_SPEED <= climb_speed <= MAX_INITIAL_CLIMB_SPEED:
-        low, high = MIN_INITIAL_CLIMB_SPEED, MAX_INITIAL_CLIMB_SPEED
-        raise ValueError(f"The initial climb speed must be {low:g}-{high:g} m/s: {climb_speed}")
+def has_fresh_flow(snapshot: Snapshot, now: float) -> bool:
+    """A fresh velocity uncertainty from 0 to under FLOW_VELOCITY_UNCERTAINTY (ADR-0060, ADR-0077).
 
-
-def initial_climb_time_limit(climb_speed: float) -> float:
-    """Seconds from the take-off to the end of the initial climb, or the drone lands (ADR-0059)."""
-    return MAX_FINAL_DESCENT_HEIGHT / climb_speed + 1.0
-
-
-def final_descent_height(settle_height: float | None) -> float:
-    """Meters, by the down range. Without a settle height (a taken-over flight), the cap."""
-    if settle_height is None:
-        return MAX_FINAL_DESCENT_HEIGHT
-    return min(max(MIN_FINAL_DESCENT_HEIGHT, settle_height + SETTLE_MARGIN), MAX_FINAL_DESCENT_HEIGHT)
-
-
-class SettleDetector:
-    """Watches one initial climb for the settle height. Give it every snapshot from the take-off.
-
-    The hold is timed by the velocity estimate's arrival times, so a reading
-    repeated in two snapshots doesn't stretch it.
+    Missing, stale, negative or not finite is no flow.
     """
-
-    def __init__(self) -> None:
-        self._hold_started_at: float | None = None
-        """The arrival time of the velocity estimate that started the hold."""
-        self._hold_start_height = 0.0
-        """Meters: the down range when the hold started. Meaningful while it holds."""
-        self._settle_height: float | None = None
-        self._is_cap_tripped = False
-
-    @property
-    def settle_height(self) -> float | None:
-        """Meters: the down range where the hold started, once it has held for SETTLE_HOLD."""
-        return self._settle_height
-
-    @property
-    def is_cap_tripped(self) -> bool:
-        """True once the down range is above SETTLE_CAP_HEIGHT with no hold started at or below it."""
-        return self._is_cap_tripped
-
-    def observe(self, snapshot: Snapshot, now: float) -> None:
-        if self._settle_height is not None or self._is_cap_tripped:
-            return  # decided
-        down = fresh_down_distance(snapshot, now)
-        velocity = snapshot.velocity_estimate
-        uncertainty = snapshot.velocity_uncertainty
-        if (
-            down is None
-            or velocity is None
-            or velocity.age(now) > MAX_READING_AGE
-            or uncertainty is None
-            or uncertainty.age(now) > MAX_READING_AGE
-        ):
-            self._hold_started_at = None  # a missing or stale reading breaks the hold
-            return
-        horizontal_speed = math.hypot(velocity.value.x, velocity.value.y)
-        # Without flow, a runaway speed can pass under SETTLE_SPEED by chance (ADR-0054).
-        # The comparison is false for NaN too.
-        has_flow = uncertainty.value < FLOW_VELOCITY_UNCERTAINTY
-        if horizontal_speed >= SETTLE_SPEED or not has_flow or down.value <= SETTLE_MIN_DOWN_RANGE:
-            self._hold_started_at = None
-        elif self._hold_started_at is None:
-            self._hold_started_at = velocity.arrival_time
-            self._hold_start_height = down.value
-        elif velocity.arrival_time - self._hold_started_at >= SETTLE_HOLD:
-            self._settle_height = self._hold_start_height
-            return
-        hold_can_settle_in_time = self._hold_started_at is not None and self._hold_start_height <= SETTLE_CAP_HEIGHT
-        if down.value > SETTLE_CAP_HEIGHT and not hold_can_settle_in_time:
-            self._is_cap_tripped = True
+    uncertainty = snapshot.velocity_uncertainty
+    # False for NaN and for either infinity, so only a finite value can pass.
+    return (
+        uncertainty is not None
+        and uncertainty.age(now) <= MAX_READING_AGE
+        and 0.0 <= uncertainty.value < FLOW_VELOCITY_UNCERTAINTY
+    )

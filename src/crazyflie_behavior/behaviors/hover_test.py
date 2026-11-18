@@ -50,8 +50,8 @@ HEIGHT_TOLERANCE = 0.1
 ARM_TIME_LIMIT = 2.0
 """Seconds for the drone status to show armed."""
 TAKE_OFF_TIME_LIMIT = 5.0
-"""Seconds to reach the take-off height. At the default initial climb speed, the take-off's
-worst case is about 4.5 s to MAX_TAKE_OFF_HEIGHT (the level climb, then the high-level climb)."""
+"""Seconds to reach the take-off height. It leaves room for the worst case to MAX_TAKE_OFF_HEIGHT:
+the initial climb's time limit, then the high-level climb."""
 # ------------------------------------------------------------------------------
 
 # The chirp schedule (ADR-0053).
