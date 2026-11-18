@@ -9,45 +9,43 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-17 (Pacific)
-- **Last commit:** this brief, on `main`, after `f729668` Records: mistakes
-  M-162 to M-173, work log, backlog #118 and #119. `main` isn't pushed (nine
-  commits ahead of `origin/main`). Uncommitted: ADR-0077's code, tests and
-  records (see In progress); another work session's edits to the `wrap-up`
-  and `handoff` skills (they ask before clearing).
+- **Last commit:** `839fb7a` Records: mistakes M-182 to M-184, work log,
+  backlog #125 and #126, on `main`, pushed with this brief. Uncommitted:
+  nothing.
 
 ## Done last
 
-- 2026-11-17: C1's second `/project-review` (high, `fresh`): 12 findings,
-  7 fixed (ADR-0078's missing index row, wording, an unchecked claim
-  marked); Joe kept the rest (A2, B none, C2, D2, E1). M-170 to M-173 logged;
-  backlog #118 (a glossary section for Python terms?) and #119 (a mechanism
-  for line endings) added.
-- 2026-11-17: committed C1 (`93c8f5f`, ADR-0035, ADR-0075, ADR-0078; the
-  staged tree passed alone), ADR-0076's records (`701a20f`) and the records
-  (`f729668`). Review pull request #24 opened (C1 only), with
-  `drafts/review-packets/2026-11-17.md`.
-- 2026-11-17: ADR-0077 built, not yet reviewed; ADR-0075 to ADR-0078
-  decided; First flight 6 set as the flight baseline (backlog #113).
+- 2026-11-17: ADR-0077 committed (`f973e8a`; the staged tree passed alone:
+  751 tests, Ruff, Pyright), then its mistakes M-174 to M-181. Review pull
+  request #25 opened, ADR-0077 only, with
+  `drafts/review-packets/2026-11-17-adr-0077.md`; its 12 findings are
+  comments, rebuilt from the records of ADR-0077's two project reviews
+  (backlog #125). Continuous integration passes.
+- 2026-11-17: Joe reviewed C1 in pull request #24, now closed; his fixes
+  are on `main` (`d404629`: `_CONSOLE_LEVEL` dropped, two coding-style
+  rules). Mistakes M-182 to M-184 logged; backlog #126 (a mechanism against
+  pushes to an open review branch) added.
+- 2026-11-17: ADR-0077's two `/project-review` runs (Extra; Extra with a
+  fresh read): 17 findings, all fixed but backlog #120 to #124.
 
 ## In progress
 
-- **Pull request #24**, Joe's review of C1: from `review/2026-11-17` into
-  `review-base/2026-11-17` (at `44b2406`), so it shows C1 only. Read it in
-  PyCharm beside the packet. When done: close it unmerged, delete both
-  branches, and add a row to `REVIEW.md`'s review log. `reviewed` doesn't
-  exist yet; the full review after `0846826` is still to come (W9).
-- **ADR-0077's code is built**; its `/project-review` (Extra, it changes the
-  Crazyflie adapter and the safety layer) comes before its commit, which
-  names ADR-0077. `start_up.py`'s uncommitted hunks are all ADR-0077's now
-  (`make_drone` loses `initial_climb_speed`).
+- **Pull request #25**, Joe's review of ADR-0077: from
+  `review/2026-11-17-adr-0077` into `review-base/2026-11-17-adr-0077` (at
+  `4204007`), so it shows ADR-0077 only. Read it in PyCharm beside the
+  packet. Fixes go on `main`, never on the review branch (M-184). When done:
+  close it unmerged, delete both branches, and add a row to `REVIEW.md`'s
+  review log.
 
 ## Next three
 
-1. ADR-0077's `/project-review`, then its fixes and commit. Opus, Extra.
-2. Build C5 part 1 of `drafts/2026-11-13-code-recommendations.md`: program
+1. Build C5 part 1 of `drafts/2026-11-13-code-recommendations.md`: program
    tests on the sim clock (ADR-0076, backlog #114). Opus, medium.
-3. `/decide` backlog #119, a mechanism against scripts changing line
+2. `/decide` backlog #119, a mechanism against scripts changing line
    endings. Sonnet, medium.
+3. `/decide` backlog #120, how fresh the initial climb's flow check must be
+   (0.5 s now, or the safety layer's 0.25 s), with #121's glossary terms;
+   needed before the next field session. Opus, high.
 
 ## Decisions waiting on Joe
 
@@ -56,9 +54,13 @@ Answer by number and letter, such as "1A". **Bold** is the recommendation.
 1. The seven choices made in "Project review C1 (A)", listed in
    `drafts/c1-review-fixes-handoff.md` ("Report back"). **A.** All
    confirmed. B. Name the ones to revisit.
-2. The packet's tier questions: `programs/console_output.py` in tier 1 (it
-   was split out of `start_up.py`), `pyproject.toml` in tier 3. **A.** Both.
-   B. Other tiers.
+2. The tier questions in #24's packet: `programs/console_output.py` in tier
+   1 (it was split out of `start_up.py`), `pyproject.toml` in tier 3.
+   **A.** Both. B. Other tiers.
+3. Pull request #24's leftovers: its branches `review/2026-11-17` and
+   `review-base/2026-11-17` on GitHub, and its row in `REVIEW.md`'s review
+   log. **A.** Claude deletes both branches and adds the row. B. Later,
+   with #25's.
 
 ## Explain-backs waiting
 
@@ -68,12 +70,18 @@ from `drafts/explain-back-notes.md`; don't open it first.
 - **E1.** Our console handler takes no lock, yet a console write that got
   stuck still kept the program from ending, when standard error was
   buffered. What held it?
+- **E2.** The climb's check read "no down range, or under 0.15 m: keep
+  climbing; otherwise hand over". Why did a NaN down range hand over, when
+  the old "at or above the height: hand over" kept climbing?
 
-The review packet has four more, for pull request #24.
+Each review packet has four more: #24's in
+`drafts/review-packets/2026-11-17.md`, #25's in
+`drafts/review-packets/2026-11-17-adr-0077.md`.
 
 ## Last reviewed
 
 `0846826`, 2026-11-04: the last row of `REVIEW.md`'s review log. The next
 full code review covers everything after it, as the first pull request into
-the `reviewed` branch. The full line-by-line walk comes after the refactor
-(W9). Pull request #24 reviews C1 alone, ahead of that.
+the `reviewed` branch, which doesn't exist yet. The full line-by-line walk
+comes after the refactor (W9). Pull requests #24 and #25 review C1 and
+ADR-0077 alone, ahead of that.
