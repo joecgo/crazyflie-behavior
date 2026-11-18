@@ -8,15 +8,24 @@ request merged, a step built), update this page in the same step: remove or
 move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
-- **Date:** 2026-11-17 (Pacific)
-- **Last commit:** `c19e1e7` Records: mistake M-186, work log, on `main`,
-  pushed with this brief. Uncommitted: C5 part 1's work so far in
-  `programs/` (bench, failsafe, hover, rescue landing) and
-  `tests/programs/`, not checked or reviewed yet. The program tests still
-  flake on the real clock, with and without it.
+- **Date:** 2026-11-18 (Pacific)
+- **Last commit:** `5d1181f` Next-up brief: review #25 closed, on `main`.
+  The next commits (ADR-0076 built; ADR-0079 and this brief) are pushed
+  with it.
 
 ## Done last
 
+- 2026-11-18: ADR-0079 decided: every text file uses LF line endings, in
+  the repository and the working copy (`.gitattributes`, `.editorconfig`);
+  no fitness function, a risk Joe accepted. Backlog #119 closed; #127 builds
+  it (the two files, then a renormalise of the 119 CRLF working files on a
+  clean tree). Joe skipped the explain-back (line endings aren't a topic he
+  wants to be tested on).
+- 2026-11-18: ADR-0076 built: `main()` takes an optional clock in the four
+  programs, and their tests run on the sim clock with the real waits. Suite
+  38.5 s to 19.5 s; 751 passed; five planted bugs caught. Joe confirmed the
+  four build choices and chose no failsafe real-clock test (noted in the
+  ADR).
 - 2026-11-17: Joe finished reviewing pull request #25. #24 and #25 are
   closed unmerged with review-log rows; their `review/*` branches are deleted,
   and their `review-base/*` branches are kept so the diffs stay viewable. The
@@ -42,13 +51,14 @@ None.
 
 ## Next three
 
-1. Build C5 part 1 of `drafts/2026-11-13-code-recommendations.md`: program
-   tests on the sim clock (ADR-0076, backlog #114). Opus, medium.
-2. `/decide` backlog #119, a mechanism against scripts changing line
-   endings. Sonnet, medium.
-3. `/decide` backlog #120, how fresh the initial climb's flow check must be
+1. Build backlog #127 (ADR-0079: `.gitattributes`, `.editorconfig`, the
+   renormalise), on a clean tree. Sonnet, low.
+2. `/decide` backlog #120, how fresh the initial climb's flow check must be
    (0.5 s now, or the safety layer's 0.25 s);
    needed before the next field session. Opus, high.
+3. `/decide` D3 to D8 of `drafts/2026-11-13-code-recommendations.md`, for
+   C3 with C4 (the tick loop flies the whole flight; link lost as a
+   state), next in its suggested order. Opus, high.
 
 ## Decisions waiting on Joe
 
@@ -63,9 +73,11 @@ Answer by number and letter, such as "1A". **Bold** is the recommendation.
 
 ## Explain-backs waiting
 
-None waiting. E1 and E2 and the eight in the review packets (#24's in
-`drafts/review-packets/2026-11-17.md`, #25's in
-`drafts/review-packets/2026-11-17-adr-0077.md`) were graded 2026-11-17.
+Answer by number, such as "E1: ...", in any work session. Claude grades
+from `drafts/explain-back-notes.md`; don't open it first.
+
+- **E1.** The program tests now run on a sim clock. What kind of bug can a
+  sim-clock test never catch, and which tests still catch it?
 
 ## Last reviewed
 
