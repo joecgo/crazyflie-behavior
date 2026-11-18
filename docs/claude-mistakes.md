@@ -75,15 +75,15 @@ entries go at the top of their section without an ID.
 | environment | 4 | 10 |
 | communication | 10 | 52 |
 | testing | 0 | 16 |
-| process | 6 | 24 |
-| **Total** | **36** | **148** |
+| process | 7 | 24 |
+| **Total** | **37** | **148** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
 | said-without-checking | 36 |
-| how-I-work | 22 |
+| how-I-work | 23 |
 | records-ahead-of-code | 21 |
 | safety-judgment | 18 |
 | reading-field-data | 15 |
@@ -112,6 +112,7 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-185 | 2026-11-17 | A review packet's tier 1 files read as diffs | process | how-I-work | working rule 7: read a rule plainly, and when two parts of it disagree, say so before writing from one |
 | M-184 | 2026-11-17 | Review fixes pushed to the open review branch | process | how-I-work | working rule 2: read REVIEW.md's "My reviews" before committing anything during a review |
 | M-183 | 2026-11-17 | A "here" that didn't say where | communication | vocabulary | the new rule in `docs/coding-style.md`, "Name both places in a contrast" |
 | M-182 | 2026-11-17 | Reasons for changed tests guessed from their names | communication | said-without-checking | working rule 2 |
@@ -301,6 +302,14 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-185, 2026-11-17: A review packet's tier 1 files read as diffs
+
+- **What happened:** the review packet for ADR-0077 said "the diff" for three of its four tier 1 files, though REVIEW.md's table says tier 1 is read "every line". I followed the paragraph above the table ("changed files as diffs") and never noticed it clashed with the table. Joe asked why only one of four said every line. The rule was then clarified: a tier 1 file is read whole, a comments-only diff excepted; the packet was corrected. The earlier packet, `2026-11-17.md`, has the same wording for `start_up.py`.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** working rule 7: read a rule plainly, and when two parts of it disagree, say so before writing from one.
+- **Takeaway:** the rule itself was ambiguous, so it is fixed in REVIEW.md. `/review-packet` should take each file's read from the tier table, not from the paragraph.
 
 ### M-184, 2026-11-17: Review fixes pushed to the open review branch
 

@@ -213,13 +213,13 @@ come from its rules, not from the mistakes log.
 ## My reviews
 
 Each review covers only what's new since the one before: new files line by
-line, changed files as diffs from the last reviewed commit, and tests as a
+line, changed files as diffs from the last reviewed commit (a tier 1 file, whole), and tests as a
 spec, by their names. A path's review tier says how closely I read it and
 which review Claude runs on it:
 
 | Tier | Paths | My read | Claude's review |
 |---|---|---|---|
-| 1 | `safety/`, `loop/`, `drone/crazyflie/`, `drone/interface.py`, `drone/telemetry_buffer.py`, `snapshot.py`, `programs/start_up.py`, `tools/emergency_stop.py` | every line | `/project-review` at the level CLAUDE.md asks for, with `fresh` |
+| 1 | `safety/`, `loop/`, `drone/crazyflie/`, `drone/interface.py`, `drone/telemetry_buffer.py`, `snapshot.py`, `programs/start_up.py`, `tools/emergency_stop.py` | every line of the file, even when changed; a changed file whose diff is comments and docstrings only: the diff | `/project-review` at the level CLAUDE.md asks for, with `fresh` |
 | 2 | `behaviors/`, the other programs, `drone/mock_adapter.py`, `timing/`, `geometry.py`, the other scripts in `tools/` | the diff | `/project-review` at high |
 | 3 | tests (test fakes included), docs | test names only, from the review packet | test fakes: `/project-review` at high; the rest: the path map's questions |
 
