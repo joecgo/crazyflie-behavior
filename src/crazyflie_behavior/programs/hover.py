@@ -43,10 +43,10 @@ from crazyflie_behavior.programs.start_up import (
     take_off_log_description,
 )
 from crazyflie_behavior.safety.safety_layer import SafetyLayer
-from crazyflie_behavior.timing.clock import RealClock
+from crazyflie_behavior.timing.clock import Clock, RealClock
 
 
-def main(arguments: list[str] | None = None) -> int:
+def main(arguments: list[str] | None = None, *, clock: Clock | None = None) -> int:
     """Run the hover test once. Returns the program's exit code."""
     parser = argparse.ArgumentParser(prog="hover", description="Arm, take off, hover, land (the Hover field test).")
     parser.add_argument(
@@ -92,7 +92,8 @@ def main(arguments: list[str] | None = None) -> int:
         hover_test = HoverTest(hover_duration, take_off_height=take_off_height, chirp=chirp)
     except ValueError as error:
         parser.error(f"--hover-seconds: {error}")
-    clock = RealClock()
+    if clock is None:  # a test passes a sim clock (ADR-0076)
+        clock = RealClock()
     drone = make_drone(use_crazyflie, clock, take_off_log=take_off_log)
     tick_step = BehaviorTickStep(drone, SafetyLayer(drone), hover_test)
     adapter_name = "the Crazyflie" if use_crazyflie else "the mock adapter"

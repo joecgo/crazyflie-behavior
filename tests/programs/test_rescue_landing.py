@@ -1,4 +1,7 @@
-"""The rescue landing program (ADR-0038). It runs on the real clock, on the mock adapter."""
+"""The rescue landing program (ADR-0038), on the mock adapter.
+
+Every test except the one that runs it as a program uses the sim clock (ADR-0076).
+"""
 
 import subprocess
 import sys
@@ -6,12 +9,11 @@ from pathlib import Path
 
 import pytest
 
-from crazyflie_behavior.behaviors import rescue_landing as rescue_landing_behavior
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.programs import rescue_landing as rescue_landing_program
 from crazyflie_behavior.programs.rescue_landing import main
-from crazyflie_behavior.timing.clock import Clock
+from crazyflie_behavior.timing.clock import Clock, SimClock
 
 
 def the_log_file_text(log_directory: Path) -> str:
@@ -25,7 +27,7 @@ def test_the_rescue_landing_program_lands_the_hovering_mock_drone(
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
-    exit_code = main([])
+    exit_code = main([], clock=SimClock())
 
     assert exit_code == 0
     log_text = the_log_file_text(tmp_path / "logs")
@@ -60,7 +62,6 @@ def test_a_rescue_that_fails_exits_with_1_though_the_program_itself_ran_fine(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(rescue_landing_behavior, "LANDING_TIME_LIMIT", 0.3)
 
     def make_unlandable_drone(use_crazyflie: bool, clock: Clock, *, take_over_flight: bool = False) -> DroneInterface:
         assert take_over_flight
@@ -68,7 +69,7 @@ def test_a_rescue_that_fails_exits_with_1_though_the_program_itself_ran_fine(
 
     monkeypatch.setattr(rescue_landing_program, "make_drone", make_unlandable_drone)
 
-    exit_code = main([])
+    exit_code = main([], clock=SimClock())
 
     assert exit_code == 1
     assert "Rescue landing failed: the drone still reports flying" in the_log_file_text(tmp_path / "logs")

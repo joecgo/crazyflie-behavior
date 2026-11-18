@@ -1,4 +1,4 @@
-"""The hover program (ADR-0030). It runs on the real clock, so the hovers are short."""
+"""The hover program (ADR-0030), on the sim clock except the test that runs it as a program (ADR-0076)."""
 
 import subprocess
 import sys
@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 
-from crazyflie_behavior.behaviors import hover_test as hover_test_module
 from crazyflie_behavior.behaviors.hover_test import TAKE_OFF_HEIGHT, note_pitch
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
@@ -14,7 +13,7 @@ from crazyflie_behavior.programs import hover as hover_module
 from crazyflie_behavior.programs.hover import main
 from crazyflie_behavior.safety.safety_layer import LOW_BATTERY_VOLTAGE
 from crazyflie_behavior.snapshot import Snapshot
-from crazyflie_behavior.timing.clock import Clock
+from crazyflie_behavior.timing.clock import Clock, SimClock
 
 
 def the_log_file_text(log_directory: Path) -> str:
@@ -28,7 +27,7 @@ def test_the_hover_program_flies_the_hover_test_on_the_mock_adapter(
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
-    exit_code = main(["--hover-seconds", "0.1"])
+    exit_code = main(["--hover-seconds", "0.1"], clock=SimClock())
 
     assert exit_code == 0
     log_text = the_log_file_text(tmp_path / "logs")
@@ -44,10 +43,7 @@ def test_the_hover_program_flies_the_hover_test_on_the_mock_adapter(
 
 
 def test_with_chirp_the_buzzer_commands_reach_the_drone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """On the real clock, so the waits are shortened. "Charge" keeps its length."""
     monkeypatch.chdir(tmp_path)
-    for wait in ("FLOOR_CHIRP_WAIT", "LANDED_CHIRP_DELAY", "CHARGE_WAIT", "SILENCE_HOLD"):
-        monkeypatch.setattr(hover_test_module, wait, 0.1)
     drones: list[MockAdapter] = []
 
     def make_mock_adapter(use_crazyflie: bool, clock: Clock, *, take_off_log: bool) -> DroneInterface:
@@ -57,17 +53,15 @@ def test_with_chirp_the_buzzer_commands_reach_the_drone(tmp_path: Path, monkeypa
 
     monkeypatch.setattr(hover_module, "make_drone", make_mock_adapter)
 
-    exit_code = main(["--hover-seconds", "0.1", "--chirp"])
+    exit_code = main(["--hover-seconds", "0.1", "--chirp"], clock=SimClock())
 
     assert exit_code == 0
     (drone,) = drones
     buzzer_commands = [command for command in drone.command_log if command in {"chirp", "play_tone", "silence"}]
-    # A slow tick may skip a short note, but never the first or the last.
-    assert buzzer_commands[:2] == ["chirp", "chirp"]  # on the floor and after landing: the hover is too short for more
-    assert set(buzzer_commands[2:-1]) == {"play_tone"}
-    assert buzzer_commands[-1] == "silence"
-    assert drone.tone_pitches[0] == pytest.approx(note_pitch("G", 4))
-    assert drone.tone_pitches[-1] == pytest.approx(note_pitch("G", 5))
+    charge = [("G", 4), ("C", 5), ("E", 5), ("G", 5), ("E", 5), ("G", 5)]
+    # A chirp on the floor and after landing (the hover is too short for more), then "Charge", then silence.
+    assert buzzer_commands == ["chirp", "chirp", *["play_tone"] * len(charge), "silence"]
+    assert drone.tone_pitches == pytest.approx([note_pitch(name, octave) for name, octave in charge])
     log_text = the_log_file_text(tmp_path / "logs")
     assert "Hover program, the mock adapter, hovering 0.1 s at 0.5 m, with chirps" in log_text
     assert "Hover test: done." in log_text
@@ -93,7 +87,7 @@ def test_a_hover_the_safety_layer_cut_short_exits_with_1(tmp_path: Path, monkeyp
 
     monkeypatch.setattr(hover_module, "make_drone", make_sagging_drone)
 
-    exit_code = main(["--hover-seconds", "5"])
+    exit_code = main(["--hover-seconds", "5"], clock=SimClock())
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")
@@ -124,7 +118,7 @@ def test_the_interrupt_signal_while_connecting_still_exits_with_130(
 
     monkeypatch.setattr(hover_module, "make_drone", make_drone)
 
-    assert main(["--hover-seconds", "0"]) == 130
+    assert main(["--hover-seconds", "0"], clock=SimClock()) == 130
 
 
 def test_an_error_after_a_full_hover_still_exits_with_1(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -136,7 +130,7 @@ def test_an_error_after_a_full_hover_still_exits_with_1(tmp_path: Path, monkeypa
 
     monkeypatch.setattr(hover_module, "make_drone", make_drone)
 
-    exit_code = main(["--hover-seconds", "0"])
+    exit_code = main(["--hover-seconds", "0"], clock=SimClock())
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")
@@ -186,7 +180,7 @@ def test_the_take_off_log_option_reaches_make_drone_and_the_description(
     monkeypatch.setattr(hover_module, "make_drone", make_mock_adapter)
     monkeypatch.setattr(hover_module, "run_program", record_the_description)
 
-    main(arguments)
+    main(arguments, clock=SimClock())
 
     assert take_off_logs == [expected]
     assert descriptions[0].endswith(", with the take-off block (the mock adapter has none)") == expected
@@ -195,7 +189,7 @@ def test_the_take_off_log_option_reaches_make_drone_and_the_description(
 def test_take_off_height_reaches_the_hover_test_and_the_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
 
-    exit_code = main(["--hover-seconds", "0", "--take-off-height", "0.75"])
+    exit_code = main(["--hover-seconds", "0", "--take-off-height", "0.75"], clock=SimClock())
 
     assert exit_code == 0
     log_text = the_log_file_text(tmp_path / "logs")

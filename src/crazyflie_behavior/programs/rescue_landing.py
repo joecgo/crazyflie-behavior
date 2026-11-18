@@ -22,10 +22,10 @@ from crazyflie_behavior.behaviors.rescue_landing import RescueLanding
 from crazyflie_behavior.loop.tick_step import BehaviorTickStep
 from crazyflie_behavior.programs.start_up import EXIT_ERROR, EXIT_OK, make_drone, run_program
 from crazyflie_behavior.safety.safety_layer import SafetyLayer
-from crazyflie_behavior.timing.clock import RealClock
+from crazyflie_behavior.timing.clock import Clock, RealClock
 
 
-def main(arguments: list[str] | None = None) -> int:
+def main(arguments: list[str] | None = None, *, clock: Clock | None = None) -> int:
     """Take over a flying drone and land it. Returns the program's exit code."""
     parser = argparse.ArgumentParser(
         prog="rescue_landing", description="Take over a drone a lost program left flying, and land it (ADR-0038)."
@@ -37,7 +37,8 @@ def main(arguments: list[str] | None = None) -> int:
     )
     parsed_arguments = parser.parse_args(arguments)
     use_crazyflie: bool = parsed_arguments.crazyflie
-    clock = RealClock()
+    if clock is None:  # a test passes a sim clock (ADR-0076)
+        clock = RealClock()
     drone = make_drone(use_crazyflie, clock, take_over_flight=True)
     rescue_landing = RescueLanding()
     tick_step = BehaviorTickStep(drone, SafetyLayer(drone), rescue_landing)

@@ -33,8 +33,12 @@ which a sim clock can't.
 
 - `main(arguments=None, *, clock: Clock | None = None)` in each program;
   `None` means a `RealClock`.
-- The real-clock tests named "runs as a program" and the interrupt signal
-  tests stay on the real clock, and can still fail on a laptop stall (#70).
+- The tests named "runs as a program" and the tests that send a real
+  interrupt signal stay on the real clock, and can still fail on a laptop
+  stall (#70).
 - A sim-clock test can't catch a bug that needs real threads or real timing.
 - Converted tests must still fail for the bug each was first proven with.
-- Not built: backlog #114.
+- The failsafe program never had a "runs as a program" test, and none was
+  added (Joe, 2026-11-18): the hover and rescue landing programs' tests
+  already run the shared start-up code on the real clock.
+- Built 2026-11-18.

@@ -26,7 +26,7 @@ from crazyflie_behavior.programs.start_up import (
     take_off_log_description,
 )
 from crazyflie_behavior.snapshot import RangeReading, RangeStatus, Snapshot, Stamped
-from crazyflie_behavior.timing.clock import RealClock
+from crazyflie_behavior.timing.clock import Clock, RealClock
 
 # Not __name__: run as a program, this module is called __main__, which is
 # outside the project's loggers and would lose the debug lines.
@@ -115,7 +115,7 @@ def _yes_no(flag: bool) -> str:
     return "yes" if flag else "no"
 
 
-def main(arguments: list[str] | None = None) -> int:
+def main(arguments: list[str] | None = None, *, clock: Clock | None = None) -> int:
     """Run the bench program until a stop request. Returns the program's exit code."""
     parser = argparse.ArgumentParser(
         prog="bench", description="Connect, tick and log every snapshot (the Bench field test)."
@@ -129,7 +129,8 @@ def main(arguments: list[str] | None = None) -> int:
     parsed_arguments = parser.parse_args(arguments)
     use_crazyflie: bool = parsed_arguments.crazyflie
     take_off_log: bool = parsed_arguments.take_off_log
-    clock = RealClock()
+    if clock is None:  # a test passes a sim clock (ADR-0076)
+        clock = RealClock()
     drone = make_drone(use_crazyflie, clock, take_off_log=take_off_log)
     adapter_name = "the Crazyflie" if use_crazyflie else "the mock adapter"
     description = f"Bench program, {adapter_name}"

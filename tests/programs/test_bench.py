@@ -232,7 +232,7 @@ def test_the_take_off_log_option_reaches_make_drone_and_the_description(
     monkeypatch.setattr(bench_module, "make_drone", make_mock_adapter)
     monkeypatch.setattr(bench_module, "run_program", record_the_description)
 
-    assert main(arguments) == 0
+    assert main(arguments, clock=SimClock()) == 0
     assert take_off_logs == [expected]
     assert descriptions[0].endswith(", with the take-off block (the mock adapter has none)") == expected
 

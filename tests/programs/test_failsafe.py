@@ -1,4 +1,4 @@
-"""The failsafe program (ADR-0041, ADR-0049), on the mock adapter and the real clock, with the hovers patched short."""
+"""The failsafe program (ADR-0041, ADR-0049), on the mock adapter and the sim clock (ADR-0076)."""
 
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
@@ -13,12 +13,10 @@ from crazyflie_behavior.programs import failsafe as failsafe_module
 from crazyflie_behavior.programs import failsafe_fault as failsafe_fault_module
 from crazyflie_behavior.programs.failsafe import main
 from crazyflie_behavior.snapshot import RangeDirection, RangeReading
-from crazyflie_behavior.timing.clock import Clock
+from crazyflie_behavior.timing.clock import Clock, SimClock
 
 RUN_CONFIGS = Path(__file__).resolve().parents[2] / ".run"
 """PyCharm's shared run configurations."""
-SHORT_HOVER = 0.2
-"""Seconds of hovering before the fault, in place of the 3 s a field test uses."""
 
 
 class LandingFailsMockAdapter(MockAdapter):
@@ -62,7 +60,6 @@ class MockAdapterMaker:
 def mock_adapter_maker(monkeypatch: pytest.MonkeyPatch) -> MockAdapterMaker:
     mock_adapter_maker = MockAdapterMaker()
     monkeypatch.setattr(failsafe_module, "make_drone", mock_adapter_maker)
-    monkeypatch.setattr(failsafe_fault_module, "HOVER_DURATION_BEFORE_FAULT", SHORT_HOVER)
     return mock_adapter_maker
 
 
@@ -92,7 +89,7 @@ def test_the_failsafe_lands_the_drone_after_the_forged_low_battery(
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
-    exit_code = main(["--fault-at", fault_at])
+    exit_code = main(["--fault-at", fault_at], clock=SimClock())
 
     assert exit_code == 0
     log_text = the_log_file_text(tmp_path / "logs")
@@ -111,7 +108,7 @@ def test_the_failsafe_is_the_real_one_so_the_forged_battery_is_the_only_thing_th
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
-    main(["--fault-at", "hover"])
+    main(["--fault-at", "hover"], clock=SimClock())
 
     log_text = the_log_file_text(tmp_path / "logs")
     pre_check_lines = [line for line in log_text.splitlines() if "Safety pre-check failed" in line]
@@ -125,14 +122,16 @@ def test_a_fault_that_never_takes_effect_lands_normally_and_fails_the_test(
     """A fault that never takes effect (a drone that injects nothing) must fail the test: the time limit lands it."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(failsafe_fault_module, "HOVER_DURATION_BEFORE_FAULT", 1000.0)
-    monkeypatch.setattr(failsafe_test_module, "HOVER_TIME_LIMIT", 0.3)
 
-    exit_code = main(["--fault-at", "hover"])
+    exit_code = main(["--fault-at", "hover"], clock=SimClock())
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")
     assert "FAULT INJECTED" not in log_text
-    assert "Failsafe test failed: the failsafe didn't land the drone within 0.3 s of hovering" in log_text
+    assert (
+        "Failsafe test failed: the failsafe didn't land the drone "
+        f"within {failsafe_test_module.HOVER_TIME_LIMIT:g} s of hovering"
+    ) in log_text
     assert "Sending Land()" in log_text  # the normal landing
     assert "Safety pre-check failed" not in log_text
     assert_landed_with_the_motors_off(mock_adapter_maker.adapter)
@@ -145,7 +144,7 @@ def test_failsafe_low_never_waits_for_a_hover(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(failsafe_fault_module, "HOVER_DURATION_BEFORE_FAULT", 1000.0)
 
-    exit_code = main(["--fault-at", "climb"])
+    exit_code = main(["--fault-at", "climb"], clock=SimClock())
 
     assert exit_code == 0
     assert "FAULT INJECTED: battery voltage forged" in the_log_file_text(tmp_path / "logs")
@@ -156,15 +155,17 @@ def test_failsafe_low_with_a_down_range_that_never_clears_the_floor_lands_normal
 ) -> None:
     """A climb trigger that never fires must fail the test: the time limit lands the drone (ADR-0049)."""
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(failsafe_test_module, "HOVER_TIME_LIMIT", 0.3)
     mock_adapter_maker.down_range = failsafe_fault_module.CLIMB_FAULT_DOWN_RANGE - 0.01
 
-    exit_code = main(["--fault-at", "climb"])
+    exit_code = main(["--fault-at", "climb"], clock=SimClock())
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")
     assert "FAULT INJECTED" not in log_text
-    assert "Failsafe test failed: the failsafe didn't land the drone within 0.3 s of hovering" in log_text
+    assert (
+        "Failsafe test failed: the failsafe didn't land the drone "
+        f"within {failsafe_test_module.HOVER_TIME_LIMIT:g} s of hovering"
+    ) in log_text
     assert_landed_with_the_motors_off(mock_adapter_maker.adapter)
 
 
@@ -175,7 +176,7 @@ def test_a_real_fault_before_the_forged_one_does_not_pass_the_test(
     monkeypatch.chdir(tmp_path)
     mock_adapter_maker.battery_voltage = 3.1  # really low from the start, and not the forged value
 
-    exit_code = main(["--fault-at", "hover"])
+    exit_code = main(["--fault-at", "hover"], clock=SimClock())
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")
@@ -190,7 +191,7 @@ def test_a_battery_below_the_take_off_voltage_is_refused_on_the_floor_and_fails_
     monkeypatch.chdir(tmp_path)
     mock_adapter_maker.battery_voltage = 3.5
 
-    exit_code = main(["--fault-at", "climb"])
+    exit_code = main(["--fault-at", "climb"], clock=SimClock())
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")
@@ -229,7 +230,7 @@ def test_the_take_off_log_option_reaches_make_drone_and_the_description(
 
     monkeypatch.setattr(failsafe_module, "run_program", record_the_description)
 
-    main(["--fault-at", "hover", *arguments])
+    main(["--fault-at", "hover", *arguments], clock=SimClock())
 
     assert mock_adapter_maker.take_off_log is expected
     assert descriptions[0].endswith(", with the take-off block (the mock adapter has none)") == expected
@@ -272,7 +273,7 @@ def test_a_landing_that_fails_in_disconnect_makes_the_exit_code_1_even_though_th
     monkeypatch.chdir(tmp_path)
     mock_adapter_maker.adapter_class = LandingFailsMockAdapter
 
-    exit_code = main(["--fault-at", "hover"])
+    exit_code = main(["--fault-at", "hover"], clock=SimClock())
 
     assert exit_code == 1
     log_text = the_log_file_text(tmp_path / "logs")

@@ -45,7 +45,7 @@ from crazyflie_behavior.programs.start_up import (
     take_off_log_description,
 )
 from crazyflie_behavior.safety.safety_layer import SafetyLayer
-from crazyflie_behavior.timing.clock import RealClock
+from crazyflie_behavior.timing.clock import Clock, RealClock
 
 FAILSAFE_TAKE_OFF_HEIGHT = TAKE_OFF_HEIGHT
 """Meters: both tests' take-off height, the Hover test's (ADR-0049). Failsafe low's fault fires
@@ -53,7 +53,7 @@ during the initial climb, so the drone gets there only if the fault never fires.
 TEST_NAMES = {FaultTrigger.CLIMB: "Failsafe low", FaultTrigger.HOVER: "Failsafe high"}
 
 
-def main(arguments: list[str] | None = None) -> int:
+def main(arguments: list[str] | None = None, *, clock: Clock | None = None) -> int:
     """Run the failsafe test once. Returns the exit code: 0 only if it passed, as the module docstring says."""
     parser = argparse.ArgumentParser(
         prog="failsafe",
@@ -79,7 +79,8 @@ def main(arguments: list[str] | None = None) -> int:
     trigger = FaultTrigger(parsed_arguments.fault_at)
     take_off_log: bool = parsed_arguments.take_off_log
     height = FAILSAFE_TAKE_OFF_HEIGHT
-    clock = RealClock()
+    if clock is None:  # a test passes a sim clock (ADR-0076)
+        clock = RealClock()
     drone = ForgedLowBatteryDrone(make_drone(use_crazyflie, clock, take_off_log=take_off_log), trigger)
     safety_layer = SafetyLayer(drone)
     failsafe_test = FailsafeTest(height)
