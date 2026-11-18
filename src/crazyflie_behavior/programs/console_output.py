@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 EXIT_TIME_LIMIT = 2.0
 """How long the console's thread gets at exit to write the log messages still queued (ADR-0075)."""
 
-_CONSOLE_LEVEL = logging.INFO
 _CONSOLE_FORMAT = "%(levelname)s %(name)s: %(message)s"
 
 
@@ -58,7 +57,8 @@ def console_output(console: TextIO) -> Generator[None]:
     """
     console_queue: queue.SimpleQueue[logging.LogRecord] = queue.SimpleQueue()
     queued_console = QueueHandler(console_queue)
-    queued_console.setLevel(_CONSOLE_LEVEL)  # here, so debug messages never enter the queue
+    # On the queue's handler, not the console's, so debug messages never enter the queue.
+    queued_console.setLevel(logging.INFO)
     console_handler = UnlockedConsoleHandler(console)
     console_handler.setFormatter(logging.Formatter(_CONSOLE_FORMAT))
     listener = _ConsoleListener(console_queue, console_handler)

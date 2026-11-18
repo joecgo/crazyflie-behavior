@@ -121,6 +121,10 @@ each.
   thread, so only copy data here").
 - **A comment describes the code it's on.** A fact another module, an ADR or
   the glossary owns gets a pointer there, not a copy that can go stale.
+- **Name both places in a contrast.** A comment that contrasts with another
+  place names both ("on the queue's handler, not the console's"), not "here".
+  Words such as "here", "this" and "above" are fine only when the code they
+  sit on makes the meaning clear.
 - **Sources go in the ADR, not the code.** Check a claim about the firmware or
   a library before writing it. If a decision rests on it, the ADR names the
   file it was checked in; the docstring stays short.
@@ -148,6 +152,12 @@ each.
   adapter's default URI with a test keeping the two equal. Files that can't
   import a value, such as PyCharm's run configurations, are kept equal by a
   test too.
+- **Avoid redundant constant aliases.** Do not assign an existing constant or
+  Enum member (such as `logging.INFO` or `HTTPStatus.OK`) to a new
+  module-level constant if it is only used once. Pass the original symbol
+  directly. Only extract a single-use value into a module-level constant when
+  replacing a raw literal (like a magic number, regex, or format string) or
+  when defining a fallback default for external configuration.
 
 ## Tests
 
