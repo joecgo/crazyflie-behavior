@@ -73,20 +73,20 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 21 |
 | recommendation | 7 | 6 |
 | environment | 4 | 10 |
-| communication | 12 | 53 |
-| testing | 0 | 18 |
-| process | 7 | 25 |
-| **Total** | **39** | **153** |
+| communication | 12 | 54 |
+| testing | 0 | 19 |
+| process | 7 | 27 |
+| **Total** | **39** | **157** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 39 |
-| how-I-work | 23 |
-| records-ahead-of-code | 22 |
+| said-without-checking | 40 |
+| how-I-work | 24 |
+| records-ahead-of-code | 23 |
 | safety-judgment | 18 |
-| weak-test | 15 |
+| weak-test | 16 |
 | reading-field-data | 15 |
 | vocabulary | 14 |
 | message-misstates-outcome | 13 |
@@ -112,10 +112,14 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-196 | 2026-11-20 | A planted bug undone with `git checkout` on a file with uncommitted changes | process | how-I-work | undo a planted bug by reversing the edit or restoring a copy taken first, never with `git checkout` or `git restore` |
+| M-195 | 2026-11-20 | Tests counted by the lines that build a clock | communication | said-without-checking | working rule 1: count tests by the `def test_` lines that reach the code, following helpers |
+| M-194 | 2026-11-19 | Age-limit tests one tick past the limit, none at it | testing | weak-test | REVIEW.md Q-48; for a limit, plant both a wrong value and the other comparison |
+| M-193 | 2026-11-19 | Built "Yes" with no test citing the ADR | process | records-ahead-of-code | REVIEW.md Q-39 and `/project-review` step 3, against the index's note on Built |
 | M-192 | 2026-11-19 | A stall of the velocity uncertainty alone, which its log block rules out | safety design | said-without-checking | working rule 1: before naming a failure of one input, read where it comes from and what shares its stream |
 | M-191 | 2026-11-18 | A review packet's "the same" read as "unchanged" | communication | vocabulary | `/review-packet` step 3: every row names its change, as "the same change as `hover.py`", never a bare "the same" |
 | M-190 | 2026-11-18 | A review pull request misdescribed its copied commits | communication | said-without-checking | working rule 2; `git range-diff` compares copied commits with their originals |
-| M-189 | 2026-11-18 | Sim-clock program tests with no time limit | testing | weak-test | the `sim_clock` fixture in `tests/programs/conftest.py` (ADR-0080), and REVIEW.md Q-10 |
+| M-189 | 2026-11-18 | Sim-clock program tests with no time limit | testing | weak-test | the `sim_clock` fixture in `tests/conftest.py` (ADR-0080, ADR-0082), and REVIEW.md Q-10 |
 | M-188 | 2026-11-18 | A chirp test left loose for slow ticks the sim clock doesn't have | testing | weak-test | REVIEW.md Q-49 |
 | M-187 | 2026-11-18 | ADR-0076's records left behind by two build choices | process | records-ahead-of-code | working rule 3, and `/project-review` step 3 |
 | M-186 | 2026-11-17 | A Flow definition from ADR-0060 without its amendment | communication | said-without-checking | working rule 2: read an ADR's status line for amendments before quoting its rule |
@@ -700,6 +704,38 @@ times so far).
 
 ## Mistakes Claude caught itself
 
+### M-196, 2026-11-20: A planted bug undone with `git checkout` on a file with uncommitted changes
+
+- **What happened:** building ADR-0082, Claude planted a bug in `src/crazyflie_behavior/loop/tick_loop.py` and undid it with `git checkout`, though `git status` had just shown the file as modified. Any uncommitted change in it would have been lost. Every other file under `src/` marked modified had an empty `git diff` (line-ending normalization only), and so very likely did this one; no copy of the file as it was exists. Caught by Claude from the next `git status`.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** undo a planted bug by reversing the edit or restoring a copy taken first, never with `git checkout` or `git restore`.
+- **Takeaway:** bug planting changes files Claude didn't write in this change; it puts back exactly what was there. Not a code-review takeaway, so no step on the escalation ladder.
+
+### M-195, 2026-11-20: Tests counted by the lines that build a clock
+
+- **What happened:** backlog #129, written in ADR-0080's project review, said 12 tests in `tests/programs/test_start_up.py` build a plain `SimClock()`. 12 is the number of `SimClock()` lines: one is the helper `run_test_program`, which 5 tests call, so 16 tests run without the limit. Caught by Claude listing the tests for Joe; corrected in ADR-0082.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 1: count tests by the `def test_` lines that reach the code, following helpers.
+- **Takeaway:** a grep hit is a line, not a test. Not a code-review takeaway, so no step on the escalation ladder.
+
+### M-194, 2026-11-19: Age-limit tests one tick past the limit, none at it
+
+- **What happened:** building ADR-0081, Claude tightened the tests of four age checks in the Crazyflie adapter ("may be flying", the wait for "not flying", the low-light warning, the initial climb's stale-reading log) to one tick past `STALE_AFTER`, and proved them by planting the old 0.5 s, but wrote no test at exactly the limit, which REVIEW.md asks of every limit. A `>` turned into `>=` in any of the four would have passed. Caught by Claude's project review of the build; fixed before the commit with four exact-limit tests, each proven by planting `>=`.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** REVIEW.md Q-48; for a limit, plant both a wrong value and the other comparison.
+- **Takeaway:** a third boundary-test entry (M-128, M-174), so the ladder's third step asks for a mechanism. None is cheap: mutation testing would plant the other comparison everywhere, but it's a new dependency and slow, so Q-48 stays. Proposed for Joe: a line in the coding style's bug planting, "for a limit, plant a wrong value and the other comparison".
+
+### M-193, 2026-11-19: Built "Yes" with no test citing the ADR
+
+- **What happened:** after finding ADR-0081's code and tests, Claude set its Built cell in the ADR index to "Yes", but no test cited ADR-0081. The index's note on Built calls that case "Yes, no test cites it". Caught by Claude's project review of the build; fixed by citing ADR-0081 in the tightened and new tests.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** REVIEW.md Q-39 and `/project-review` step 3, against the index's note on Built.
+- **Takeaway:** the project review caught it, as designed. A cheap mechanism exists: a test that each ADR whose Built cell is a plain "Yes" is cited by at least one test. Proposed for Joe.
+
 ### M-192, 2026-11-19: A stall of the velocity uncertainty alone, which its log block rules out
 
 - **What happened:** backlog #120, written in ADR-0077's project review, said that if the velocity uncertainty's stream stalled, the initial climb's flow check could hand over on evidence from near the floor. The uncertainty rides in the down range's log block and one callback writes both (ADR-0054), so it can't stall while the down range keeps arriving; a whole-block stall fails the safety pre-check's down range check at 0.25 s. Stated without reading which log block carries the value. Caught by Claude while deciding #120 (ADR-0081); the decision went ahead on consistency instead.
@@ -721,7 +757,7 @@ times so far).
 - **What happened:** ADR-0076 moved the program tests onto the sim clock with no time limit. On it, a program that never ends doesn't hang: each wait returns at once, so the tick loop runs about 3,000 ticks and writes about 6.6 MB of log per real second, without end; the hang watchdog counts real time, and neither pytest nor the workflow had a time limit. Caught by ADR-0076's project review (Q-10); fixed by ADR-0080: a sim clock that fails the test after 120 s of sim time, and a 15-minute limit on the continuous integration job.
 - **Kind:** testing.
 - **Pattern:** weak-test.
-- **Guard:** the `sim_clock` fixture in `tests/programs/conftest.py` (ADR-0080), and REVIEW.md Q-10.
+- **Guard:** the `sim_clock` fixture in `tests/conftest.py` (ADR-0080, ADR-0082), and REVIEW.md Q-10.
 - **Takeaway:** a repeat of M-012 (test fakes that hang instead of failing), so the escalation ladder's second step: a helper, which the fixture is. Q-10 stays. On a sim clock a hang becomes a loop that fills the disk, so any sim clock that runs a loop to its end needs a limit.
 
 ### M-188, 2026-11-18: A chirp test left loose for slow ticks the sim clock doesn't have
