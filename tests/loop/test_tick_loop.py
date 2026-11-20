@@ -93,8 +93,8 @@ def messages(caplog: pytest.LogCaptureFixture, level: int) -> list[str]:
 # --- Due times (ADR-0024) -----------------------------------------------------
 
 
-def test_ticks_start_one_tick_period_apart() -> None:
-    clock = SimClock()
+def test_ticks_start_one_tick_period_apart(sim_clock: SimClock) -> None:
+    clock = sim_clock
     tick_step = ScriptedTickStep(clock, [0.125, 0.125, 0.125])
 
     make_loop(clock, tick_step).run()
@@ -112,8 +112,8 @@ def test_a_late_start_shortens_the_next_wait_so_lateness_never_adds_up() -> None
     assert tick_step.start_times == [0.0, 0.25 + 1 / 64, 0.5 + 1 / 64, 0.75 + 1 / 64]
 
 
-def test_after_an_overrun_the_next_tick_starts_at_once_and_the_beat_restarts() -> None:
-    clock = SimClock()
+def test_after_an_overrun_the_next_tick_starts_at_once_and_the_beat_restarts(sim_clock: SimClock) -> None:
+    clock = sim_clock
     tick_step = ScriptedTickStep(clock, [0.375, 0.125, 0.125])
 
     make_loop(clock, tick_step).run()
@@ -121,8 +121,8 @@ def test_after_an_overrun_the_next_tick_starts_at_once_and_the_beat_restarts() -
     assert tick_step.start_times == [0.0, 0.375, 0.625]
 
 
-def test_missed_ticks_are_skipped_never_caught_up() -> None:
-    clock = SimClock()
+def test_missed_ticks_are_skipped_never_caught_up(sim_clock: SimClock) -> None:
+    clock = sim_clock
     tick_step = ScriptedTickStep(clock, [0.875, 0.125, 0.125])
 
     make_loop(clock, tick_step).run()
@@ -133,9 +133,10 @@ def test_missed_ticks_are_skipped_never_caught_up() -> None:
 
 def test_a_tick_that_ends_exactly_at_the_next_due_time_is_not_an_overrun(
     caplog: pytest.LogCaptureFixture,
+    sim_clock: SimClock,
 ) -> None:
     caplog.set_level(logging.WARNING, logger=LOGGER_NAME)
-    clock = SimClock()
+    clock = sim_clock
     tick_step = ScriptedTickStep(clock, [0.25, 0.125])
 
     make_loop(clock, tick_step).run()
@@ -144,8 +145,8 @@ def test_a_tick_that_ends_exactly_at_the_next_due_time_is_not_an_overrun(
     assert messages(caplog, logging.WARNING) == []
 
 
-def test_dt_is_zero_on_the_first_tick_then_the_time_since_the_previous_start() -> None:
-    clock = SimClock()
+def test_dt_is_zero_on_the_first_tick_then_the_time_since_the_previous_start(sim_clock: SimClock) -> None:
+    clock = sim_clock
     tick_step = ScriptedTickStep(clock, [0.375, 0.125, 0.125])
 
     make_loop(clock, tick_step).run()
@@ -153,8 +154,8 @@ def test_dt_is_zero_on_the_first_tick_then_the_time_since_the_previous_start() -
     assert [call.dt for call in tick_step.calls] == [0.0, 0.375, 0.25]
 
 
-def test_the_default_tick_rate_is_20_hz() -> None:
-    clock = SimClock()
+def test_the_default_tick_rate_is_20_hz(sim_clock: SimClock) -> None:
+    clock = sim_clock
     tick_step = ScriptedTickStep(clock, [0.01, 0.01, 0.01])
 
     TickLoop(clock, tick_step, FakeHangWatchdog()).run()
@@ -163,8 +164,8 @@ def test_the_default_tick_rate_is_20_hz() -> None:
     assert tick_step.start_times == pytest.approx([0.0, 0.05, 0.1])
 
 
-def test_the_tick_rate_must_be_positive() -> None:
-    clock = SimClock()
+def test_the_tick_rate_must_be_positive(sim_clock: SimClock) -> None:
+    clock = sim_clock
 
     with pytest.raises(ValueError, match="positive"):
         TickLoop(clock, ScriptedTickStep(clock, [0.1]), FakeHangWatchdog(), tick_rate=0.0)
@@ -205,8 +206,8 @@ class StopRequestingTickStep(TickStep):
         return self.tick_count == GIVE_UP_AFTER_TICKS
 
 
-def test_the_loop_stops_when_the_tick_step_is_done() -> None:
-    clock = SimClock()
+def test_the_loop_stops_when_the_tick_step_is_done(sim_clock: SimClock) -> None:
+    clock = sim_clock
     tick_step = ScriptedTickStep(clock, [0.125, 0.125, 0.125])
 
     make_loop(clock, tick_step).run()
@@ -214,9 +215,9 @@ def test_the_loop_stops_when_the_tick_step_is_done() -> None:
     assert len(tick_step.calls) == 3
 
 
-def test_a_stop_request_lets_the_current_tick_finish_and_starts_no_more() -> None:
+def test_a_stop_request_lets_the_current_tick_finish_and_starts_no_more(sim_clock: SimClock) -> None:
     tick_step = StopRequestingTickStep(stop_on_tick=1)
-    loop = make_loop(SimClock(), tick_step)
+    loop = make_loop(sim_clock, tick_step)
     tick_step.loop = loop
 
     loop.run()
@@ -224,8 +225,8 @@ def test_a_stop_request_lets_the_current_tick_finish_and_starts_no_more() -> Non
     assert tick_step.tick_count == 2
 
 
-def test_a_stop_request_during_a_tick_returns_without_waiting_for_the_next_due_time() -> None:
-    clock = SimClock()
+def test_a_stop_request_during_a_tick_returns_without_waiting_for_the_next_due_time(sim_clock: SimClock) -> None:
+    clock = sim_clock
     tick_step = StopRequestingTickStep(stop_on_tick=0, clock=clock, work_time=0.125)
     loop = make_loop(clock, tick_step)
     tick_step.loop = loop
@@ -236,9 +237,9 @@ def test_a_stop_request_during_a_tick_returns_without_waiting_for_the_next_due_t
     assert clock.now() == 0.125
 
 
-def test_a_stop_request_can_come_from_another_thread() -> None:
+def test_a_stop_request_can_come_from_another_thread(sim_clock: SimClock) -> None:
     tick_step = StopRequestingTickStep(stop_on_tick=0, from_another_thread=True)
-    loop = make_loop(SimClock(), tick_step)
+    loop = make_loop(sim_clock, tick_step)
     tick_step.loop = loop
 
     loop.run()
@@ -246,8 +247,8 @@ def test_a_stop_request_can_come_from_another_thread() -> None:
     assert tick_step.tick_count == 1
 
 
-def test_a_stop_request_before_the_loop_runs_starts_no_ticks() -> None:
-    clock = SimClock()
+def test_a_stop_request_before_the_loop_runs_starts_no_ticks(sim_clock: SimClock) -> None:
+    clock = sim_clock
     tick_step = ScriptedTickStep(clock, [0.125])
     loop = make_loop(clock, tick_step)
 
@@ -274,8 +275,8 @@ class FailingTickStep(TickStep):
         return self.tick_count == GIVE_UP_AFTER_TICKS
 
 
-def test_errors_from_the_tick_step_rise_to_the_caller() -> None:
-    loop = make_loop(SimClock(), FailingTickStep(fail_on_tick=1))
+def test_errors_from_the_tick_step_rise_to_the_caller(sim_clock: SimClock) -> None:
+    loop = make_loop(sim_clock, FailingTickStep(fail_on_tick=1))
 
     # In a program, this reaches the `with drone:` block, which lands.
     with pytest.raises(RuntimeError, match="the tick step broke"):
@@ -299,17 +300,17 @@ class RecordingTickStep(TickStep):
         return self._ticks_run == self._tick_count
 
 
-def test_the_hang_watchdog_is_armed_for_each_tick_and_disarmed_after_it() -> None:
+def test_the_hang_watchdog_is_armed_for_each_tick_and_disarmed_after_it(sim_clock: SimClock) -> None:
     events: list[str] = []
 
-    make_loop(SimClock(), RecordingTickStep(events, tick_count=2), FakeHangWatchdog(events)).run()
+    make_loop(sim_clock, RecordingTickStep(events, tick_count=2), FakeHangWatchdog(events)).run()
 
     assert events == ["arm", "tick", "disarm", "arm", "tick", "disarm"]
 
 
-def test_the_hang_watchdog_is_disarmed_even_when_the_tick_step_raises() -> None:
+def test_the_hang_watchdog_is_disarmed_even_when_the_tick_step_raises(sim_clock: SimClock) -> None:
     events: list[str] = []
-    loop = make_loop(SimClock(), FailingTickStep(fail_on_tick=0, events=events), FakeHangWatchdog(events))
+    loop = make_loop(sim_clock, FailingTickStep(fail_on_tick=0, events=events), FakeHangWatchdog(events))
 
     with pytest.raises(RuntimeError):
         loop.run()
@@ -360,13 +361,14 @@ class EventLogHandler(logging.Handler):
 
 def test_the_hang_watchdog_also_watches_the_ticks_logging(
     caplog: pytest.LogCaptureFixture,
+    sim_clock: SimClock,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger=LOGGER_NAME)
     events: list[str] = []
     handler = EventLogHandler(events)
     tick_loop_logger = logging.getLogger(LOGGER_NAME)
     tick_loop_logger.addHandler(handler)
-    loop = make_loop(SimClock(), RecordingTickStep(events, tick_count=1), FakeHangWatchdog(events))
+    loop = make_loop(sim_clock, RecordingTickStep(events, tick_count=1), FakeHangWatchdog(events))
     try:
         loop.run()
     finally:
@@ -377,9 +379,9 @@ def test_the_hang_watchdog_also_watches_the_ticks_logging(
     assert tick_events == ["arm", "tick", "log", "disarm"]
 
 
-def test_a_real_hang_watchdog_writes_nothing_when_ticks_finish_in_time(tmp_path: Path) -> None:
+def test_a_real_hang_watchdog_writes_nothing_when_ticks_finish_in_time(tmp_path: Path, sim_clock: SimClock) -> None:
     log_path = tmp_path / "run.log"
-    clock = SimClock()
+    clock = sim_clock
     with log_path.open("w") as log_file:
         loop = make_loop(clock, ScriptedTickStep(clock, [0.125, 0.125]), HangWatchdog(log_file))
 
@@ -408,9 +410,10 @@ def test_the_hang_timeout_must_be_positive() -> None:
 
 def test_every_tick_is_logged_at_debug_level_with_its_lateness_and_work_time(
     caplog: pytest.LogCaptureFixture,
+    sim_clock: SimClock,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger=LOGGER_NAME)
-    clock = SimClock()
+    clock = sim_clock
 
     make_loop(clock, ScriptedTickStep(clock, [0.125, 0.375])).run()
 
@@ -422,9 +425,10 @@ def test_every_tick_is_logged_at_debug_level_with_its_lateness_and_work_time(
 
 def test_every_overrun_is_logged_as_a_warning_even_several_in_a_row(
     caplog: pytest.LogCaptureFixture,
+    sim_clock: SimClock,
 ) -> None:
     caplog.set_level(logging.WARNING, logger=LOGGER_NAME)
-    clock = SimClock()
+    clock = sim_clock
 
     make_loop(clock, ScriptedTickStep(clock, [0.375, 0.375, 0.375, 0.125])).run()
 
@@ -435,9 +439,9 @@ def test_every_overrun_is_logged_as_a_warning_even_several_in_a_row(
     ]
 
 
-def test_an_overrun_on_the_last_tick_is_logged_too(caplog: pytest.LogCaptureFixture) -> None:
+def test_an_overrun_on_the_last_tick_is_logged_too(caplog: pytest.LogCaptureFixture, sim_clock: SimClock) -> None:
     caplog.set_level(logging.INFO, logger=LOGGER_NAME)
-    clock = SimClock()
+    clock = sim_clock
 
     make_loop(clock, ScriptedTickStep(clock, [0.125, 0.375])).run()
 
@@ -448,12 +452,12 @@ def test_an_overrun_on_the_last_tick_is_logged_too(caplog: pytest.LogCaptureFixt
     assert "overruns: 1" in summaries[0]
 
 
-def test_the_log_says_why_the_loop_stopped(caplog: pytest.LogCaptureFixture) -> None:
+def test_the_log_says_why_the_loop_stopped(caplog: pytest.LogCaptureFixture, sim_clock: SimClock) -> None:
     caplog.set_level(logging.INFO, logger=LOGGER_NAME)
-    clock = SimClock()
+    clock = sim_clock
     make_loop(clock, ScriptedTickStep(clock, [0.125])).run()
     stopping_tick_step = StopRequestingTickStep(stop_on_tick=1)
-    stopping_loop = make_loop(SimClock(), stopping_tick_step)
+    stopping_loop = make_loop(sim_clock, stopping_tick_step)
     stopping_tick_step.loop = stopping_loop
     stopping_loop.run()
 
@@ -464,9 +468,9 @@ def test_the_log_says_why_the_loop_stopped(caplog: pytest.LogCaptureFixture) -> 
     ]
 
 
-def test_the_end_of_a_run_logs_a_summary(caplog: pytest.LogCaptureFixture) -> None:
+def test_the_end_of_a_run_logs_a_summary(caplog: pytest.LogCaptureFixture, sim_clock: SimClock) -> None:
     caplog.set_level(logging.INFO, logger=LOGGER_NAME)
-    clock = SimClock()
+    clock = sim_clock
 
     make_loop(clock, ScriptedTickStep(clock, [0.375, 0.125])).run()
 
@@ -478,9 +482,10 @@ def test_the_end_of_a_run_logs_a_summary(caplog: pytest.LogCaptureFixture) -> No
 
 def test_the_summary_is_logged_even_when_the_tick_step_raises(
     caplog: pytest.LogCaptureFixture,
+    sim_clock: SimClock,
 ) -> None:
     caplog.set_level(logging.INFO, logger=LOGGER_NAME)
-    loop = make_loop(SimClock(), FailingTickStep(fail_on_tick=1))
+    loop = make_loop(sim_clock, FailingTickStep(fail_on_tick=1))
 
     with pytest.raises(RuntimeError):
         loop.run()
@@ -502,9 +507,9 @@ class SlowFailingTickStep(TickStep):
         raise RuntimeError("the tick step broke")
 
 
-def test_a_tick_that_raises_is_still_timed_and_logged(caplog: pytest.LogCaptureFixture) -> None:
+def test_a_tick_that_raises_is_still_timed_and_logged(caplog: pytest.LogCaptureFixture, sim_clock: SimClock) -> None:
     caplog.set_level(logging.DEBUG, logger=LOGGER_NAME)
-    clock = SimClock()
+    clock = sim_clock
 
     with pytest.raises(RuntimeError, match="the tick step broke"):
         make_loop(clock, SlowFailingTickStep(clock, work_time=0.375)).run()
@@ -528,19 +533,19 @@ class CollectingTickStep(TickStep):
         return True
 
 
-def test_garbage_collector_pauses_show_in_the_tick_log(caplog: pytest.LogCaptureFixture) -> None:
+def test_garbage_collector_pauses_show_in_the_tick_log(caplog: pytest.LogCaptureFixture, sim_clock: SimClock) -> None:
     caplog.set_level(logging.DEBUG, logger=LOGGER_NAME)
 
-    make_loop(SimClock(), CollectingTickStep()).run()
+    make_loop(sim_clock, CollectingTickStep()).run()
 
     tick_lines = messages(caplog, logging.DEBUG)
     assert len(tick_lines) == 1
     assert "garbage collector" in tick_lines[0]
 
 
-def test_the_loop_stops_measuring_the_garbage_collector_after_a_run() -> None:
+def test_the_loop_stops_measuring_the_garbage_collector_after_a_run(sim_clock: SimClock) -> None:
     callbacks_before = list(gc.callbacks)
-    clock = SimClock()
+    clock = sim_clock
 
     make_loop(clock, ScriptedTickStep(clock, [0.125])).run()
 

@@ -85,8 +85,8 @@ def hover_flight(drone: MockAdapter) -> BehaviorTickStep:
 # --- The order --------------------------------------------------------------------
 
 
-def test_a_tick_runs_snapshot_pre_check_take_off_and_landing_behavior_send_in_that_order() -> None:
-    clock = SimClock()
+def test_a_tick_runs_snapshot_pre_check_take_off_and_landing_behavior_send_in_that_order(sim_clock: SimClock) -> None:
+    clock = sim_clock
     events: list[str] = []
     drone = RecordingDrone(clock, events)
     drone.connect()
@@ -97,8 +97,10 @@ def test_a_tick_runs_snapshot_pre_check_take_off_and_landing_behavior_send_in_th
     assert events == ["snapshot", "pre-check", "take-off and landing", "behavior", "send"]
 
 
-def test_a_failed_pre_check_skips_the_behavior_but_not_take_off_and_landing_and_ends_the_flight() -> None:
-    clock = SimClock()
+def test_a_failed_pre_check_skips_the_behavior_but_not_take_off_and_landing_and_ends_the_flight(
+    sim_clock: SimClock,
+) -> None:
+    clock = sim_clock
     events: list[str] = []
     drone = RecordingDrone(clock, events)
     drone.connect()
@@ -113,9 +115,9 @@ def test_a_failed_pre_check_skips_the_behavior_but_not_take_off_and_landing_and_
     assert is_done
 
 
-def test_every_snapshot_goes_to_the_log_at_debug_level(caplog: pytest.LogCaptureFixture) -> None:
+def test_every_snapshot_goes_to_the_log_at_debug_level(caplog: pytest.LogCaptureFixture, sim_clock: SimClock) -> None:
     caplog.set_level(logging.DEBUG, logger="crazyflie_behavior.loop.tick_step")
-    clock = SimClock()
+    clock = sim_clock
 
     hover_flight(connected_mock(clock)).run(clock.now(), TICK_PERIOD)
 
@@ -125,8 +127,8 @@ def test_every_snapshot_goes_to_the_log_at_debug_level(caplog: pytest.LogCapture
 # --- Whole hover tests on the mock adapter ----------------------------------------
 
 
-def test_the_hover_test_arms_takes_off_hovers_and_lands() -> None:
-    clock = SimClock()
+def test_the_hover_test_arms_takes_off_hovers_and_lands(sim_clock: SimClock) -> None:
+    clock = sim_clock
     drone = connected_mock(clock)
     heights: list[float] = []
 
@@ -155,8 +157,9 @@ def test_the_hover_test_arms_takes_off_hovers_and_lands() -> None:
 
 def test_a_low_battery_mid_hover_lands_the_drone_and_ends_the_flight(
     caplog: pytest.LogCaptureFixture,
+    sim_clock: SimClock,
 ) -> None:
-    clock = SimClock()
+    clock = sim_clock
     drone = connected_mock(clock)
     tick_step = hover_flight(drone)
     for _ in range(4):  # arm, take off, hovering
@@ -172,8 +175,8 @@ def test_a_low_battery_mid_hover_lands_the_drone_and_ends_the_flight(
     assert "battery at 3.10 V" in caplog.text
 
 
-def test_a_link_gone_quiet_mid_hover_lands_the_drone() -> None:
-    clock = SimClock()
+def test_a_link_gone_quiet_mid_hover_lands_the_drone(sim_clock: SimClock) -> None:
+    clock = sim_clock
     drone = connected_mock(clock)
     tick_step = hover_flight(drone)
     for _ in range(4):  # arm, take off, hovering

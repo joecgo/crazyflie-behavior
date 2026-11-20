@@ -300,8 +300,8 @@ class InterruptSignalDuringLandingDrone(MockAdapter):
         self.command_log.append("landing finished")
 
 
-def test_the_drone_is_connected_for_the_ticks_and_disconnected_after(log_file: TextIO) -> None:
-    clock = SimClock()
+def test_the_drone_is_connected_for_the_ticks_and_disconnected_after(log_file: TextIO, sim_clock: SimClock) -> None:
+    clock = sim_clock
     drone = MockAdapter(clock)
     tick_step = CountingTickStep(3)
 
@@ -311,8 +311,8 @@ def test_the_drone_is_connected_for_the_ticks_and_disconnected_after(log_file: T
     assert drone.command_log == ["connect", "disconnect"]
 
 
-def test_the_drone_is_disconnected_even_when_a_tick_raises(log_file: TextIO) -> None:
-    clock = SimClock()
+def test_the_drone_is_disconnected_even_when_a_tick_raises(log_file: TextIO, sim_clock: SimClock) -> None:
+    clock = sim_clock
     drone = MockAdapter(clock)
 
     with pytest.raises(RuntimeError, match="the tick step broke"):
@@ -323,8 +323,9 @@ def test_the_drone_is_disconnected_even_when_a_tick_raises(log_file: TextIO) -> 
 
 def test_the_interrupt_signal_once_connected_lets_the_tick_finish_and_starts_no_more(
     log_file: TextIO,
+    sim_clock: SimClock,
 ) -> None:
-    clock = SimClock()
+    clock = sim_clock
     tick_step = CountingTickStep(GIVE_UP_AFTER_TICKS, interrupt_signal_on_ticks=(1,))
 
     run_without_keyboard_interrupt(MockAdapter(clock), tick_step, clock, log_file)
@@ -333,10 +334,10 @@ def test_the_interrupt_signal_once_connected_lets_the_tick_finish_and_starts_no_
 
 
 def test_the_interrupt_signal_during_the_landing_is_ignored_so_the_landing_finishes(
-    log_file: TextIO, caplog: pytest.LogCaptureFixture
+    log_file: TextIO, caplog: pytest.LogCaptureFixture, sim_clock: SimClock
 ) -> None:
     caplog.set_level(logging.INFO, logger=START_UP_LOGGER)
-    clock = SimClock()
+    clock = sim_clock
     drone = InterruptSignalDuringLandingDrone(clock)
     tick_step = CountingTickStep(GIVE_UP_AFTER_TICKS, interrupt_signal_on_ticks=(0,))
 
@@ -348,10 +349,10 @@ def test_the_interrupt_signal_during_the_landing_is_ignored_so_the_landing_finis
 
 
 def test_the_interrupt_signal_while_the_end_of_a_run_is_logged_is_ignored(
-    log_file: TextIO, caplog: pytest.LogCaptureFixture
+    log_file: TextIO, caplog: pytest.LogCaptureFixture, sim_clock: SimClock
 ) -> None:
     caplog.set_level(logging.INFO, logger=START_UP_LOGGER)
-    clock = SimClock()
+    clock = sim_clock
     tick_step = CountingTickStep(GIVE_UP_AFTER_TICKS, interrupt_signal_on_ticks=(0,))
 
     with interrupt_signal_when_logged("made the stop request"):
@@ -360,8 +361,10 @@ def test_the_interrupt_signal_while_the_end_of_a_run_is_logged_is_ignored(
     assert any("ignored (times: 1)" in message for message in caplog.messages)
 
 
-def test_the_interrupt_signal_while_connecting_stops_at_once_and_still_disconnects(log_file: TextIO) -> None:
-    clock = SimClock()
+def test_the_interrupt_signal_while_connecting_stops_at_once_and_still_disconnects(
+    log_file: TextIO, sim_clock: SimClock
+) -> None:
+    clock = sim_clock
     drone = InterruptSignalWhileConnectingDrone(clock)
     tick_step = CountingTickStep(GIVE_UP_AFTER_TICKS)
 
@@ -375,8 +378,9 @@ def test_the_interrupt_signal_while_connecting_stops_at_once_and_still_disconnec
 
 def test_a_second_interrupt_signal_while_connecting_doesnt_cut_the_cleanup_short(
     log_file: TextIO,
+    sim_clock: SimClock,
 ) -> None:
-    clock = SimClock()
+    clock = sim_clock
     drone = InterruptSignalTwiceWhileConnectingDrone(clock)
 
     with pytest.raises(KeyboardInterrupt):
@@ -385,9 +389,9 @@ def test_a_second_interrupt_signal_while_connecting_doesnt_cut_the_cleanup_short
     assert drone.command_log[-1] == "cleanup finished"
 
 
-def test_the_previous_interrupt_signal_handler_is_back_after_a_run(log_file: TextIO) -> None:
+def test_the_previous_interrupt_signal_handler_is_back_after_a_run(log_file: TextIO, sim_clock: SimClock) -> None:
     handler_before = signal.getsignal(signal.SIGINT)
-    clock = SimClock()
+    clock = sim_clock
 
     run_tick_loop(MockAdapter(clock), CountingTickStep(1), clock, log_file)
 
@@ -397,15 +401,15 @@ def test_the_previous_interrupt_signal_handler_is_back_after_a_run(log_file: Tex
 # --- Running a program (ADR-0028) -----------------------------------------------
 
 
-def test_the_mock_adapter_is_the_default_and_the_crazyflie_needs_the_flag() -> None:
-    clock = SimClock()
+def test_the_mock_adapter_is_the_default_and_the_crazyflie_needs_the_flag(sim_clock: SimClock) -> None:
+    clock = sim_clock
 
     assert isinstance(make_drone(use_crazyflie=False, clock=clock), MockAdapter)
     assert isinstance(make_drone(use_crazyflie=True, clock=clock), CrazyflieAdapter)
 
 
-def test_make_drone_passes_the_take_over_setting_on_to_either_adapter() -> None:
-    clock = SimClock()
+def test_make_drone_passes_the_take_over_setting_on_to_either_adapter(sim_clock: SimClock) -> None:
+    clock = sim_clock
 
     mock_drone = make_drone(use_crazyflie=False, clock=clock, take_over_flight=True)
     mock_drone.connect()
@@ -418,22 +422,23 @@ def test_make_drone_passes_the_take_over_setting_on_to_either_adapter() -> None:
     assert crazyflie._take_over_flight  # pyright: ignore[reportPrivateUsage]
 
 
-def run_test_program(tick_step: TickStep) -> int:
-    clock = SimClock()
+def run_test_program(clock: SimClock, tick_step: TickStep) -> int:
     return run_program("test", "Test program, the mock adapter", MockAdapter(clock), tick_step, clock)
 
 
-def test_a_program_that_runs_until_done_ends_with_exit_code_0(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_program_that_runs_until_done_ends_with_exit_code_0(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
+) -> None:
     monkeypatch.chdir(tmp_path)
 
-    assert run_test_program(CountingTickStep(3)) == 0
+    assert run_test_program(sim_clock, CountingTickStep(3)) == 0
     log_text = the_log_file_text(tmp_path / "logs")
     assert "Test program, the mock adapter" in log_text
     assert "Tick loop summary: ticks: 3" in log_text
 
 
 def test_the_interrupt_signal_while_connecting_ends_a_program_with_exit_code_130(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
@@ -442,18 +447,18 @@ def test_the_interrupt_signal_while_connecting_ends_a_program_with_exit_code_130
 
     monkeypatch.setattr(start_up_module, "run_tick_loop", interrupted)
 
-    assert run_test_program(CountingTickStep(1)) == 130
+    assert run_test_program(sim_clock, CountingTickStep(1)) == 130
     assert "stopped before the tick loop started" in the_log_file_text(tmp_path / "logs")
 
 
 def test_the_interrupt_signal_while_a_program_logs_its_description_ends_it_with_exit_code_130(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
     with interrupt_signal_when_logged("Test program, the mock adapter"):
         try:
-            exit_code = run_test_program(CountingTickStep(1))
+            exit_code = run_test_program(sim_clock, CountingTickStep(1))
         except KeyboardInterrupt:
             pytest.fail("The interrupt signal escaped the program as KeyboardInterrupt")
 
@@ -461,7 +466,7 @@ def test_the_interrupt_signal_while_a_program_logs_its_description_ends_it_with_
 
 
 def test_an_error_cut_short_by_the_interrupt_signal_still_goes_to_the_log(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
@@ -473,23 +478,23 @@ def test_an_error_cut_short_by_the_interrupt_signal_still_goes_to_the_log(
 
     monkeypatch.setattr(start_up_module, "run_tick_loop", interrupted_while_failing)
 
-    assert run_test_program(CountingTickStep(1)) == 130
+    assert run_test_program(sim_clock, CountingTickStep(1)) == 130
     assert "Flow deck not detected" in the_log_file_text(tmp_path / "logs")
 
 
 def test_an_error_ends_a_program_with_exit_code_1_and_goes_to_the_log(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
-    assert run_test_program(FailingTickStep()) == 1
+    assert run_test_program(sim_clock, FailingTickStep()) == 1
     log_text = the_log_file_text(tmp_path / "logs")
     assert "The test program stopped with an error" in log_text
     assert "the tick step broke" in log_text
 
 
-def test_make_drone_passes_the_take_off_log_on_to_the_crazyflie_adapter() -> None:
-    clock = SimClock()
+def test_make_drone_passes_the_take_off_log_on_to_the_crazyflie_adapter(sim_clock: SimClock) -> None:
+    clock = sim_clock
 
     mock_drone = make_drone(use_crazyflie=False, clock=clock, take_off_log=True)
     crazyflie = make_drone(use_crazyflie=True, clock=clock, take_off_log=True)
