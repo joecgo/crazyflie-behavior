@@ -35,10 +35,10 @@ from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE
 from crazyflie_behavior.drone.crazyflie.touchdown import (
     FINAL_DESCENT_MARGIN,
     HEIGHT_IF_UNKNOWN,
-    MAX_READING_AGE,
     SLOW_DESCENT_SPEED,
     TOUCHDOWN_HOLD,
 )
+from crazyflie_behavior.drone.interface import STALE_AFTER
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
 from crazyflie_behavior.timing.clock import SimClock
@@ -112,6 +112,11 @@ def adapter(clock: SimClock, fake_link: MagicMock) -> CrazyflieAdapter:
 
 def report_status(adapter: CrazyflieAdapter, status: DroneStatus) -> None:
     adapter._telemetry.write_drone_status(status, None)
+
+
+def skip_to_a_whole_second(clock: SimClock) -> None:
+    """Move the clock to the next whole second: from there, advancing by STALE_AFTER gives an exact age."""
+    clock.sleep_until(math.floor(clock.now()) + 1.0)
 
 
 def motors_stopped(fake_link: MagicMock) -> bool:
@@ -642,16 +647,32 @@ def test_shutdown_waits_no_longer_than_its_time_limit_and_warns(
 def test_an_old_not_flying_status_does_not_end_the_wait(
     adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
 ) -> None:
-    # Sent once, never refreshed: the link may have gone quiet.
+    # Sent once, never refreshed: the link may have gone quiet. One tick past its age limit (ADR-0081).
     land_until_the_motors_stop(adapter, clock, fake_link)
     report_status(adapter, ON_THE_FLOOR)
-    clock.advance(MAX_READING_AGE + TICK)
+    clock.advance(STALE_AFTER + TICK)
     closed_at = record_link_close_time(clock, fake_link)
     started_at = clock.now()
 
     adapter.disconnect()
 
     assert closed_at == [pytest.approx(started_at + NOT_FLYING_TIME_LIMIT)]
+
+
+def test_a_not_flying_status_at_its_age_limit_ends_the_wait(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    # Still fresh at exactly its age limit (ADR-0081).
+    land_until_the_motors_stop(adapter, clock, fake_link)
+    skip_to_a_whole_second(clock)
+    report_status(adapter, ON_THE_FLOOR)
+    clock.advance(STALE_AFTER)
+    closed_at = record_link_close_time(clock, fake_link)
+    started_at = clock.now()
+
+    adapter.disconnect()
+
+    assert closed_at == [started_at]
 
 
 def test_shutdown_reports_a_locked_drone(
@@ -729,12 +750,28 @@ def test_after_our_own_stop_the_snapshot_says_not_flying_while_the_status_still_
 def test_an_old_on_the_floor_status_counts_as_unknown_so_it_lands(
     adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
 ) -> None:
-    # The status stream stalled before the take-off showed in it. The drone may
-    # be flying: landing is safe, stopping the motors could drop it.
+    # The status stream stalled one tick past its age limit (ADR-0081), after the take-off grace.
+    # The drone may be flying: landing is safe, stopping the motors could drop it.
+    clock.advance(TAKE_OFF_STATUS_GRACE)
     report_status(adapter, ON_THE_FLOOR)
-    clock.advance(TAKE_OFF_STATUS_GRACE + TICK)
+    clock.advance(STALE_AFTER + TICK)
 
     adapter.land()
 
     assert len(landing_approach_moves(fake_link)) == 1
     assert not motors_stopped(fake_link)
+
+
+def test_an_on_the_floor_status_at_its_age_limit_still_counts_so_land_just_stops_the_motors(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
+) -> None:
+    # Still fresh at exactly its age limit (ADR-0081), after the take-off grace.
+    clock.advance(TAKE_OFF_STATUS_GRACE)
+    skip_to_a_whole_second(clock)
+    report_status(adapter, ON_THE_FLOOR)
+    clock.advance(STALE_AFTER)
+
+    adapter.land()
+
+    fake_link.cf.high_level_commander.go_to.assert_not_called()
+    assert motors_stopped(fake_link)

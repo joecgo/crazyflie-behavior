@@ -73,8 +73,8 @@ saves deciding the same question again for touchdown later.
   often such gaps happen hasn't been checked.
 - Easier: one number for "too old to trust"; tuning it at the bench moves
   the pre-check, the flow check and touchdown together.
-- Code (not built, backlog #130): `drone/interface.py`, `safety_layer.py`,
-  `touchdown.py`, `bad_flow_zone.py`, the Crazyflie adapter, and the tests
-  that import either constant. A change to the safety layer and the adapter,
+- Code: `drone/interface.py`, `safety_layer.py`, `touchdown.py`,
+  `bad_flow_zone.py`, the Crazyflie adapter, and the tests of each age
+  check. A change to the safety layer and the adapter,
   so `/project-review` first.
 - Glossary: *Stale value* reworded (proposed with this ADR).

@@ -7,15 +7,13 @@ the drone must be on the floor. This module doesn't import cflib, so it's
 type-checked strictly and unit-tested without a drone.
 """
 
-from crazyflie_behavior.drone.interface import TOUCHDOWN_DOWN_RANGE
+from crazyflie_behavior.drone.interface import STALE_AFTER, TOUCHDOWN_DOWN_RANGE
 from crazyflie_behavior.snapshot import RangeStatus, Snapshot, Stamped
 
 # PLACEHOLDERS, to VERIFY at the bench (ADR-0012, ADR-0019).
 TOUCHDOWN_HOLD = 0.3
 """Seconds the down range must stay at or below TOUCHDOWN_DOWN_RANGE to confirm
 touchdown, so one noisy reading can't."""
-MAX_READING_AGE = 0.5
-"""Seconds. Older telemetry doesn't count."""
 RECENT_WINDOW = 1.0
 """Seconds of down range history used to set the final descent's time limit."""
 SLOW_DESCENT_SPEED = 0.1
@@ -33,7 +31,7 @@ def fresh_down_distance(snapshot: Snapshot, now: float) -> Stamped[float] | None
     down = snapshot.range_readings.down
     if (
         down is None
-        or down.age(now) > MAX_READING_AGE
+        or down.age(now) > STALE_AFTER
         or down.value.status is not RangeStatus.DISTANCE
         or down.value.distance is None
     ):

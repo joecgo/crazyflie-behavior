@@ -60,13 +60,12 @@ from crazyflie_behavior.drone.crazyflie.conversions import (
 from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE, run_with_time_limit
 from crazyflie_behavior.drone.crazyflie.touchdown import (
     HEIGHT_IF_UNKNOWN,
-    MAX_READING_AGE,
     SLOW_DESCENT_SPEED,
     TouchdownDetector,
     final_descent_deadline,
     fresh_down_distance,
 )
-from crazyflie_behavior.drone.interface import FLOOR_MAX_SPEED, DroneInterface
+from crazyflie_behavior.drone.interface import FLOOR_MAX_SPEED, STALE_AFTER, DroneInterface
 from crazyflie_behavior.drone.telemetry_buffer import TelemetryBuffer
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading, Snapshot, Stamped
@@ -703,7 +702,7 @@ class CrazyflieAdapter(DroneInterface):
     def _log_low_light_warning(self) -> None:
         """At take-off, warn of sideways drift when the Flow deck sees little (ADR-0054). Never refuses."""
         quality = self._latest_image_quality
-        if quality is None or self._clock.now() - quality[0] > MAX_READING_AGE:
+        if quality is None or self._clock.now() - quality[0] > STALE_AFTER:
             logger.warning("Taking off with the Flow deck's image quality unknown: it may be low light.")
         elif quality[1] < LOW_LIGHT_IMAGE_QUALITY:
             logger.warning(
@@ -807,7 +806,7 @@ class CrazyflieAdapter(DroneInterface):
           status can't be trusted here, because after the motors stop it keeps
           saying flying for 2 s.
         - Otherwise, flying if the status is missing, older than
-          `MAX_READING_AGE`, or says flying. When unsure, say flying: a landing
+          `STALE_AFTER`, or says flying. When unsure, say flying: a landing
           sent to a drone already down only runs the motors until touchdown is
           confirmed, while stopping the motors of a flying drone drops it.
         - Otherwise (a fresh status says not flying), still flying for
@@ -818,7 +817,7 @@ class CrazyflieAdapter(DroneInterface):
             return False
         now = self._clock.now()
         status = self._telemetry.latest_drone_status()
-        if status is None or status.age(now) > MAX_READING_AGE or status.value.is_flying:
+        if status is None or status.age(now) > STALE_AFTER or status.value.is_flying:
             return True
         return now - self._take_off_sent_at < TAKE_OFF_STATUS_GRACE
 
@@ -847,7 +846,7 @@ class CrazyflieAdapter(DroneInterface):
             self._end_initial_climb(down.value)
         else:
             uncertainty = snapshot.velocity_uncertainty
-            if uncertainty is not None and uncertainty.age(now) > MAX_READING_AGE:
+            if uncertainty is not None and uncertainty.age(now) > STALE_AFTER:
                 # An old reading may be a telemetry stall, not darkness.
                 logger.warning(
                     "The velocity uncertainty is %.2f s old at the end of the initial climb. Landing.",
@@ -1142,7 +1141,7 @@ class CrazyflieAdapter(DroneInterface):
 
         def is_not_flying() -> bool:
             status = self._telemetry.latest_drone_status()
-            if status is None or status.age(self._clock.now()) > MAX_READING_AGE:
+            if status is None or status.age(self._clock.now()) > STALE_AFTER:
                 return False
             return not status.value.is_flying
 

@@ -3,8 +3,7 @@
 This module doesn't import cflib, so it's type-checked strictly and unit-tested without a drone.
 """
 
-from crazyflie_behavior.drone.crazyflie.touchdown import MAX_READING_AGE
-from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY
+from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY, STALE_AFTER
 from crazyflie_behavior.snapshot import Snapshot
 
 INITIAL_CLIMB_SPEED = 0.4
@@ -27,6 +26,6 @@ def has_fresh_flow(snapshot: Snapshot, now: float) -> bool:
     # False for NaN and for either infinity, so only a finite value can pass.
     return (
         uncertainty is not None
-        and uncertainty.age(now) <= MAX_READING_AGE
+        and uncertainty.age(now) <= STALE_AFTER
         and 0.0 <= uncertainty.value < FLOW_VELOCITY_UNCERTAINTY
     )

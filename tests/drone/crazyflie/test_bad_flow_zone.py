@@ -5,8 +5,7 @@ import math
 import pytest
 
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import has_fresh_flow
-from crazyflie_behavior.drone.crazyflie.touchdown import MAX_READING_AGE
-from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY
+from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY, STALE_AFTER
 from crazyflie_behavior.snapshot import RangeReadings, Snapshot, Stamped
 
 NOW = 10.0
@@ -40,14 +39,14 @@ def test_a_velocity_uncertainty_of_zero_is_flow() -> None:
 
 
 def test_a_velocity_uncertainty_at_its_age_limit_is_still_fresh() -> None:
-    assert has_fresh_flow(snapshot_with(WITH_FLOW, arrived=NOW - MAX_READING_AGE), NOW)
+    assert has_fresh_flow(snapshot_with(WITH_FLOW, arrived=NOW - STALE_AFTER), NOW)
 
 
 @pytest.mark.parametrize(
     ("velocity_uncertainty", "arrived"),
     [
         (None, NOW),
-        (WITH_FLOW, NOW - MAX_READING_AGE - 0.01),
+        (WITH_FLOW, NOW - STALE_AFTER - 0.01),
         (math.nan, NOW),
         (math.inf, NOW),
         (-math.inf, NOW),

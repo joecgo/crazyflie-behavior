@@ -33,6 +33,7 @@ from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
 )
 from crazyflie_behavior.drone.crazyflie.conversions import alt_hold_packet_data
 from crazyflie_behavior.drone.crazyflie.touchdown import TOUCHDOWN_HOLD
+from crazyflie_behavior.drone.interface import STALE_AFTER
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
 from crazyflie_behavior.timing.clock import SimClock
@@ -113,6 +114,11 @@ def climb_tick(
     if velocity_uncertainty is not None:
         telemetry.write_velocity_uncertainty(velocity_uncertainty, None)
     adapter.update_take_off_and_landing(adapter.take_snapshot(TICK))
+
+
+def skip_to_a_whole_second(clock: SimClock) -> None:
+    """Move the clock to the next whole second: from there, advancing by STALE_AFTER gives an exact age."""
+    clock.sleep_until(math.floor(clock.now()) + 1.0)
 
 
 def climb_until_handed_over(adapter: CrazyflieAdapter, clock: SimClock) -> list[float]:
@@ -483,7 +489,8 @@ def test_a_stale_velocity_uncertainty_at_the_final_descent_height_lands_there_an
 ) -> None:
     adapter.take_off(1.0)
     climb_tick(adapter, clock, 0.10)  # the last velocity uncertainty
-    for _ in range(round(0.6 / TICK)):  # then none, until it's older than its age limit
+    # Then none: each tick advances the clock first, so the next tick is one past its age limit (ADR-0081).
+    for _ in range(round(STALE_AFTER / TICK)):
         climb_tick(adapter, clock, 0.10, velocity_uncertainty=None)
 
     with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
@@ -493,6 +500,23 @@ def test_a_stale_velocity_uncertainty_at_the_final_descent_height_lands_there_an
     fake_link.cf.high_level_commander.go_to.assert_not_called()
     assert "s old at the end of the initial climb" in caplog.text
     assert "No flow" not in caplog.text
+
+
+def test_a_velocity_uncertainty_at_its_age_limit_without_flow_logs_no_flow_not_its_age(
+    adapter: CrazyflieAdapter, clock: SimClock, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Still fresh at exactly its age limit (ADR-0081), so the warning is about the missing flow.
+    adapter.take_off(1.0)
+    skip_to_a_whole_second(clock)
+    adapter._telemetry.write_velocity_uncertainty(NO_FLOW, None)
+    clock.advance(STALE_AFTER)
+    adapter._telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(FINAL_DESCENT_HEIGHT)}, None)
+
+    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+        adapter.update_take_off_and_landing(adapter.take_snapshot(TICK))
+
+    assert "No flow at the end of the initial climb" in caplog.text
+    assert "s old at the end of the initial climb" not in caplog.text
 
 
 def test_no_flow_below_the_final_descent_height_doesnt_stop_the_climb(
@@ -538,12 +562,26 @@ def test_a_take_off_warns_of_low_light_under_the_image_quality_limit(
 def test_a_take_off_with_no_recent_image_quality_warns_it_is_unknown(
     adapter: CrazyflieAdapter, clock: SimClock, caplog: pytest.LogCaptureFixture
 ) -> None:
-    adapter._latest_image_quality = (clock.now() - 1.0, 100)
+    adapter._latest_image_quality = (clock.now() - STALE_AFTER - TICK, 100)  # one tick past its age limit (ADR-0081)
 
     with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
         adapter.take_off(1.0)
 
     assert any("unknown" in message for message in low_light_warnings(caplog))
+
+
+def test_a_take_off_with_an_image_quality_at_its_age_limit_gives_no_warning(
+    adapter: CrazyflieAdapter, clock: SimClock, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Still fresh at exactly its age limit (ADR-0081).
+    skip_to_a_whole_second(clock)
+    adapter._latest_image_quality = (clock.now(), LOW_LIGHT_IMAGE_QUALITY)
+    clock.advance(STALE_AFTER)
+
+    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+        adapter.take_off(1.0)
+
+    assert low_light_warnings(caplog) == []
 
 
 def reset_writes(fake_link: MagicMock) -> int:

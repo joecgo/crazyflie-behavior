@@ -25,6 +25,7 @@ from typing import NamedTuple
 from crazyflie_behavior.drone.interface import (
     FLOOR_MAX_SPEED,
     FLOW_VELOCITY_UNCERTAINTY,
+    STALE_AFTER,
     TOUCHDOWN_DOWN_RANGE,
     DroneInterface,
 )
@@ -49,9 +50,7 @@ from crazyflie_behavior.snapshot import RangeStatus, Snapshot, Stamped
 logger = logging.getLogger(__name__)
 
 # --- PLACEHOLDERS, NOT DECISIONS: measure in the Bench field test (ADR-0030) --
-STALE_AFTER = 0.25
-"""Seconds. The position estimate, drone status and down range stream every
-20 ms, so this is about 12 missed values in a row."""
+# Every other value's age limit is STALE_AFTER, in the drone interface (ADR-0081).
 BATTERY_STALE_AFTER = 3.0
 """Seconds. The battery voltage streams once a second."""
 # ------------------------------------------------------------------------------

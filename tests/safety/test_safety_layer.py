@@ -7,7 +7,12 @@ from dataclasses import replace
 
 import pytest
 
-from crazyflie_behavior.drone.interface import FLOOR_MAX_SPEED, FLOW_VELOCITY_UNCERTAINTY, TOUCHDOWN_DOWN_RANGE
+from crazyflie_behavior.drone.interface import (
+    FLOOR_MAX_SPEED,
+    FLOW_VELOCITY_UNCERTAINTY,
+    STALE_AFTER,
+    TOUCHDOWN_DOWN_RANGE,
+)
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.safety.requests import (
@@ -27,7 +32,6 @@ from crazyflie_behavior.safety.requests import (
 from crazyflie_behavior.safety.safety_layer import (
     BATTERY_STALE_AFTER,
     LOW_BATTERY_VOLTAGE,
-    STALE_AFTER,
     TAKE_OFF_BATTERY_VOLTAGE,
     TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT,
     SafetyLayer,

@@ -10,12 +10,13 @@ from crazyflie_behavior.drone.crazyflie.touchdown import (
     final_descent_deadline,
     fresh_down_distance,
 )
+from crazyflie_behavior.drone.interface import STALE_AFTER
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import RangeReading, RangeReadings, Snapshot, Stamped
 
 NOW = 100.0
 FRESH = NOW - 0.05
-STALE = NOW - 5.0
+STALE = NOW - STALE_AFTER - 0.01
 
 
 def snapshot_with(
@@ -55,6 +56,13 @@ def test_a_fresh_distance_is_read() -> None:
 
     assert reading is not None
     assert reading.value == 0.6
+
+
+def test_a_distance_at_its_age_limit_is_still_fresh() -> None:
+    # Touchdown's age limit is STALE_AFTER, like every other reading's (ADR-0081).
+    snapshot = snapshot_with(down=RangeReading.at_distance(0.6), down_arrived=NOW - STALE_AFTER)
+
+    assert fresh_down_distance(snapshot, NOW) is not None
 
 
 @pytest.mark.parametrize(
