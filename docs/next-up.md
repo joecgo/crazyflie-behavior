@@ -9,15 +9,10 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-20 (Pacific)
-- **Last commit:** `fab1d5d` Build ADR-0081: STALE_AFTER moves to the drone
-  interface and MAX_READING_AGE goes, on `main`, pushed. Uncommitted:
-  mistakes M-193 to M-196; ADR-0082 and its build (`tests/conftest.py`,
-  `tests/test_sim_time_limit.py`, `tests/architecture/test_sim_clock_rules.py`,
-  the fixture in `test_start_up.py` and `tests/loop/`, `tests/programs/conftest.py`
-  deleted), its index row, the glossary's *Sim time*, backlog #132; this
-  brief. No work-log row for today yet. `git status` also lists about
-  113 files as modified with no content change, left from ADR-0079's
-  renormalisation; not looked into.
+- **Last commit:** `edbc4a9` Build ADR-0082 (its records in `46c231b`),
+  on `main`, pushed, with today's work-log row. Uncommitted: nothing but
+  about 113 files listed as modified with no content change, left from
+  ADR-0079's renormalisation; not looked into.
 
 ## Done last
 
@@ -42,6 +37,9 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
+- Review pull request #28 (ADR-0082's build, `fab1d5d..edbc4a9`), open
+  for Joe, with no project review run on it. Packet:
+  `drafts/review-packets/2026-11-20-adr-0082.md`.
 - Review pull request #27 (ADR-0081's build), open for Joe. Packet:
   `drafts/review-packets/2026-11-20-adr-0081.md`.
 - Noticed: `tools/mistakes_log.py write` saves the log with CRLF line
@@ -53,9 +51,8 @@ move the item, renumber "Next three", and update "Last commit" and
    unmerged, delete `review/2026-11-20-adr-0081` (keep `review-base/…`) and
    add its row to `REVIEW.md`'s review log. Sonnet, medium (Opus, high if a
    comment asks for a code change).
-2. Commit ADR-0082 in two chunks (its records, then the build, which
-   names `Implements ADR-0082`), with today's work-log row, on Joe's yes.
-   Sonnet, low.
+2. After Joe reads #28: the same as step 1, for `review/2026-11-20-adr-0082`.
+   Sonnet, medium.
 3. D3 to D8 of `drafts/2026-11-13-code-recommendations.md` (C3 with C4).
    Opus, high.
 
