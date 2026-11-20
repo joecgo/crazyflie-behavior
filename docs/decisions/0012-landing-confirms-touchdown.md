@@ -1,6 +1,6 @@
 # 0012: Motors stop only on confirmed touchdown
 
-- **Status:** Accepted. The height-estimate fallback and holding at the landing target are superseded by [ADR-0019](0019-final-descent-when-touchdown-unconfirmed.md). The landing itself is amended by [ADR-0032](0032-landing-with-a-go-to.md): the firmware's landing switches the motors off by itself, so landing is a `go_to` down to the floor.
+- **Status:** Accepted. The height-estimate fallback and holding at the landing target are superseded by [ADR-0019](0019-final-descent-when-touchdown-unconfirmed.md). The landing itself is amended by [ADR-0032](0032-landing-with-a-go-to.md): the firmware's landing switches the motors off by itself, so landing is a `go_to` down to the floor. Amended by [ADR-0081](0081-one-age-limit-for-every-reading.md) (2026-11-19): readings count up to `STALE_AFTER` (0.25 s) old, not 0.5 s.
 - **Date:** 2026-10-20
 - **Origin:** AI recommendation accepted (from code review).
 

@@ -70,19 +70,19 @@ entries go at the top of their section without an ID.
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 4 | 20 |
-| safety design | 5 | 20 |
+| safety design | 5 | 21 |
 | recommendation | 7 | 6 |
 | environment | 4 | 10 |
 | communication | 12 | 53 |
 | testing | 0 | 18 |
 | process | 7 | 25 |
-| **Total** | **39** | **152** |
+| **Total** | **39** | **153** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 38 |
+| said-without-checking | 39 |
 | how-I-work | 23 |
 | records-ahead-of-code | 22 |
 | safety-judgment | 18 |
@@ -112,6 +112,7 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-192 | 2026-11-19 | A stall of the velocity uncertainty alone, which its log block rules out | safety design | said-without-checking | working rule 1: before naming a failure of one input, read where it comes from and what shares its stream |
 | M-191 | 2026-11-18 | A review packet's "the same" read as "unchanged" | communication | vocabulary | `/review-packet` step 3: every row names its change, as "the same change as `hover.py`", never a bare "the same" |
 | M-190 | 2026-11-18 | A review pull request misdescribed its copied commits | communication | said-without-checking | working rule 2; `git range-diff` compares copied commits with their originals |
 | M-189 | 2026-11-18 | Sim-clock program tests with no time limit | testing | weak-test | the `sim_clock` fixture in `tests/programs/conftest.py` (ADR-0080), and REVIEW.md Q-10 |
@@ -698,6 +699,14 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-192, 2026-11-19: A stall of the velocity uncertainty alone, which its log block rules out
+
+- **What happened:** backlog #120, written in ADR-0077's project review, said that if the velocity uncertainty's stream stalled, the initial climb's flow check could hand over on evidence from near the floor. The uncertainty rides in the down range's log block and one callback writes both (ADR-0054), so it can't stall while the down range keeps arriving; a whole-block stall fails the safety pre-check's down range check at 0.25 s. Stated without reading which log block carries the value. Caught by Claude while deciding #120 (ADR-0081); the decision went ahead on consistency instead.
+- **Kind:** safety design.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 1: before naming a failure of one input, read where it comes from and what shares its stream.
+- **Takeaway:** a failure case for one reading needs that reading's own path; a value that shares a packet stalls with its partner. A code-review takeaway, for Joe to say whether it becomes a REVIEW.md question.
 
 ### M-190, 2026-11-18: A review pull request misdescribed its copied commits
 

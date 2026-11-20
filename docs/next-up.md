@@ -35,9 +35,16 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## Next three
 
-1. `/decide` backlog #120, how fresh the initial climb's flow check must be
-   (0.5 s now, or the safety layer's 0.25 s); needed before the next field
-   session. Opus, high.
+1. Backlog #130, build ADR-0081: one age limit, `STALE_AFTER` (0.25 s),
+   moved to `drone/interface.py`, replacing `MAX_READING_AGE` everywhere;
+   then `/project-review` (the safety layer and the adapter). Needed before
+   the next field session. Opus, Extra. With the code, the glossary's
+   *Stale value* becomes (approved 2026-11-19, ADRs 0007, 0030, 0081): "A
+   stamped value older than its age limit, so too old to trust. Every check
+   uses one limit, `STALE_AFTER` in the drone interface, except the battery
+   voltage's `BATTERY_STALE_AFTER`. A stale value stays in the snapshot until
+   a newer one arrives. The opposite is fresh." ADR-0081's records are
+   written but not committed.
 2. Backlog #129, ADR-0080's review findings: decide where the sim-time
    limit applies (the start-up tests, `tests/loop/`, one shared bounded
    clock, a fitness function), then the fixes. Opus, high.
@@ -58,6 +65,9 @@ Answer by number and letter, such as "1A". **Bold** is the recommendation.
    tick-step tests take the fixture though they can't run forever; the
    workflow comment "Stops a hung run"; review findings 3 and 4 logged as
    one mistake, M-187. **A.** All confirmed. B. Name the ones to revisit.
+4. M-192 (a failure named for one reading without checking what shares its
+   log block): a code-review takeaway. **A.** Add a `REVIEW.md` question. B.
+   No question.
 
 ## Explain-backs waiting
 
@@ -69,6 +79,9 @@ from `drafts/explain-back-notes.md`; don't open it first.
 - **E2.** The program tests' time-limited sim clock stops a test with
   `pytest.fail`, not an ordinary `AssertionError`. Why would an
   `AssertionError` let a program that never ends pass its test?
+- **E3.** ADR-0081 shortens the age limit for confirming touchdown from
+  0.5 s to 0.25 s. Why can that make the motors stop later, but never
+  earlier?
 
 ## Last reviewed
 
