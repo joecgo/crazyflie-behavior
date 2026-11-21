@@ -9,11 +9,10 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-21 (Pacific)
-- **Last commit:** `2bf62ae` Review #27 fixes, on `main`, pushed.
-  Uncommitted: this wrap-up's records (mistakes M-197 and M-198, backlog
-  #133, `REVIEW.md`'s rows for #27 and #28, the work-log row, this brief),
-  waiting on Joe's yes to commit; and about 113 files listed as modified
-  with no content change, left from ADR-0079's renormalisation.
+- **Last commit:** `2bf62ae` Review #27 fixes, then this wrap-up's
+  records (`0d188f9` and `1326396`), on `main`, pushed. Uncommitted:
+  nothing but about 113 files listed as modified with no content change,
+  left from ADR-0079's renormalisation.
 
 ## Done last
 
