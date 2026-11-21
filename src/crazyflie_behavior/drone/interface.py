@@ -29,7 +29,6 @@ FLOOR_MAX_SPEED = 0.05
 """Meters per second. A drone on the floor is still, so with flow arriving its horizontal speed
 estimate is under this (ADR-0054, ADR-0060)."""
 
-# A PLACEHOLDER, to measure in the Bench field test (ADR-0030).
 STALE_AFTER = 0.25
 """Seconds. The age limit of every value but the battery voltage (ADR-0081)."""
 

@@ -319,9 +319,9 @@ class CrazyflieAdapter(DroneInterface):
         self._is_ignoring_estimate_reset = False
         """The latest estimate reset was ignored because the drone may be flying: the warning for it
         comes once per streak."""
-        self._latest_image_quality: tuple[float, int] | None = None
-        """The arrival time and value of the latest `motion.squal`, for the low-light warning
-        (ADR-0054). Written on cflib's receive thread."""
+        self._latest_image_quality: Stamped[int] | None = None
+        """The latest image quality (`motion.squal`), for the low-light warning (ADR-0054).
+        Written on cflib's receive thread."""
         self._is_thrust_base_confirmed = False
         """The drone's latest report of its thrust base was THRUST_BASE (ADR-0061). Written on cflib's
         receive thread."""
@@ -702,13 +702,13 @@ class CrazyflieAdapter(DroneInterface):
     def _log_low_light_warning(self) -> None:
         """At take-off, warn of sideways drift when the Flow deck sees little (ADR-0054). Never refuses."""
         quality = self._latest_image_quality
-        if quality is None or self._clock.now() - quality[0] > STALE_AFTER:
+        if quality is None or quality.age(self._clock.now()) > STALE_AFTER:
             logger.warning("Taking off with the Flow deck's image quality unknown: it may be low light.")
-        elif quality[1] < LOW_LIGHT_IMAGE_QUALITY:
+        elif quality.value < LOW_LIGHT_IMAGE_QUALITY:
             logger.warning(
                 "Low light: the Flow deck's image quality is %d (under %d). "
                 "The take-off may drift sideways until flow arrives.",
-                quality[1],
+                quality.value,
                 LOW_LIGHT_IMAGE_QUALITY,
             )
 
@@ -1272,12 +1272,13 @@ class CrazyflieAdapter(DroneInterface):
         """One debug line, nothing in the telemetry buffer (ADR-0050)."""
         roll_deg, pitch_deg, yaw_deg = (data[variable] for variable in _ATTITUDE_VARIABLES)
         squal, shutter = (int(data[variable]) for variable in _FLOW_QUALITY_VARIABLES)
-        self._latest_image_quality = (self._clock.now(), squal)
+        drone_time = self._drone_time(timestamp)
+        self._latest_image_quality = Stamped(squal, self._clock.now(), drone_time)
         battery_voltage = battery_voltage_from_mv(int(data[_DIAGNOSTIC_BATTERY_VARIABLE]))
         logger.debug(
             "Diagnostic: drone_time=%.3f roll_deg=%.2f pitch_deg=%.2f yaw_deg=%.2f motors=%s squal=%d shutter=%d "
             "battery_voltage=%.3f",
-            self._drone_time(timestamp),
+            drone_time,
             roll_deg,
             pitch_deg,
             yaw_deg,

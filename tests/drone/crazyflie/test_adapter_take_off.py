@@ -35,7 +35,7 @@ from crazyflie_behavior.drone.crazyflie.conversions import alt_hold_packet_data
 from crazyflie_behavior.drone.crazyflie.touchdown import TOUCHDOWN_HOLD
 from crazyflie_behavior.drone.interface import STALE_AFTER
 from crazyflie_behavior.geometry import Vector3
-from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
+from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading, Stamped
 from crazyflie_behavior.timing.clock import SimClock
 
 TICK = 0.05
@@ -550,7 +550,7 @@ def low_light_warnings(caplog: pytest.LogCaptureFixture) -> list[str]:
 def test_a_take_off_warns_of_low_light_under_the_image_quality_limit(
     adapter: CrazyflieAdapter, clock: SimClock, caplog: pytest.LogCaptureFixture, quality: int, warns: bool
 ) -> None:
-    adapter._latest_image_quality = (clock.now(), quality)
+    adapter._latest_image_quality = Stamped(quality, clock.now(), None)
 
     with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
         adapter.take_off(1.0)
@@ -562,7 +562,8 @@ def test_a_take_off_warns_of_low_light_under_the_image_quality_limit(
 def test_a_take_off_with_no_recent_image_quality_warns_it_is_unknown(
     adapter: CrazyflieAdapter, clock: SimClock, caplog: pytest.LogCaptureFixture
 ) -> None:
-    adapter._latest_image_quality = (clock.now() - STALE_AFTER - TICK, 100)  # one tick past its age limit (ADR-0081)
+    # One tick past its age limit (ADR-0081).
+    adapter._latest_image_quality = Stamped(100, clock.now() - STALE_AFTER - TICK, None)
 
     with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
         adapter.take_off(1.0)
@@ -575,7 +576,7 @@ def test_a_take_off_with_an_image_quality_at_its_age_limit_gives_no_warning(
 ) -> None:
     # Still fresh at exactly its age limit (ADR-0081).
     skip_to_a_whole_second(clock)
-    adapter._latest_image_quality = (clock.now(), LOW_LIGHT_IMAGE_QUALITY)
+    adapter._latest_image_quality = Stamped(LOW_LIGHT_IMAGE_QUALITY, clock.now(), None)
     clock.advance(STALE_AFTER)
 
     with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
