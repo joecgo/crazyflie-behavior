@@ -73,20 +73,20 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 21 |
 | recommendation | 7 | 6 |
 | environment | 4 | 10 |
-| communication | 12 | 54 |
-| testing | 0 | 19 |
+| communication | 12 | 55 |
+| testing | 1 | 19 |
 | process | 7 | 27 |
-| **Total** | **39** | **157** |
+| **Total** | **40** | **158** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 40 |
+| said-without-checking | 41 |
 | how-I-work | 24 |
 | records-ahead-of-code | 23 |
 | safety-judgment | 18 |
-| weak-test | 16 |
+| weak-test | 17 |
 | reading-field-data | 15 |
 | vocabulary | 14 |
 | message-misstates-outcome | 13 |
@@ -112,6 +112,8 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-198 | 2026-11-21 | A fallback said to share a failure it doesn't share | communication | said-without-checking | before saying a fallback fails together with what it backs up, name what they share: code, sensor, estimate or thread (`/decide` step 3) |
+| M-197 | 2026-11-21 | Boundary tests proposed both on the firing side of a `>=` limit | testing | weak-test | for a limit, name the side of the boundary each test is on: one at exactly the limit and one on the other side, near it (REVIEW.md Q-48) |
 | M-196 | 2026-11-20 | A planted bug undone with `git checkout` on a file with uncommitted changes | process | how-I-work | undo a planted bug by reversing the edit or restoring a copy taken first, never with `git checkout` or `git restore` |
 | M-195 | 2026-11-20 | Tests counted by the lines that build a clock | communication | said-without-checking | working rule 1: count tests by the `def test_` lines that reach the code, following helpers |
 | M-194 | 2026-11-19 | Age-limit tests one tick past the limit, none at it | testing | weak-test | REVIEW.md Q-48; for a limit, plant both a wrong value and the other comparison |
@@ -313,6 +315,14 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-197, 2026-11-21: Boundary tests proposed both on the firing side of a `>=` limit
+
+- **What happened:** proposing tests for D5's 60 s backstop (a `>=` rule) in the C3 decisions, Claude wrote "one tick past and exactly at the limit". Both fire, so neither shows that the rule stays quiet just before its limit, and a smaller limit would pass. Joe asked why two tests were needed; answering, Claude saw the pair was on one side. The pair is exactly at the limit (fires) and one tick before it (doesn't).
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** for a limit, name the side of the boundary each test is on: one at exactly the limit and one on the other side, near it (REVIEW.md Q-48).
+- **Takeaway:** a fourth boundary-test entry (M-128, M-174, M-194), this one in a proposal rather than code. The mechanism question is already open: next-up brief decision 6 and backlog #133's audit, so no new step on the ladder.
 
 ### M-191, 2026-11-18: A review packet's "the same" read as "unchanged"
 
@@ -703,6 +713,14 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-198, 2026-11-21: A fallback said to share a failure it doesn't share
+
+- **What happened:** arguing for D3's option B in the C3 decisions, Claude said `disconnect()` "runs the same landing logic, so it may fail the same way" as a landing inside the tick loop. It shares the adapter's landing, but none of the new tick-step code (the latch, the stop request's handling), where a new bug would most likely be. Caught by Claude on a re-read, and corrected before Joe chose.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** before saying a fallback fails together with what it backs up, name what they share: code, sensor, estimate or thread (`/decide` step 3).
+- **Takeaway:** an argument about a backup's independence needs the shared part named, not assumed. Not a code-review takeaway, so no step on the escalation ladder.
 
 ### M-196, 2026-11-20: A planted bug undone with `git checkout` on a file with uncommitted changes
 
