@@ -91,7 +91,7 @@ def test_a_drone_that_keeps_reporting_flying_ends_it_after_the_time_limit(caplog
     rescue_landing = RescueLanding()
     rescue_landing.tick(snapshot(0.0, FLYING), safety_layer)
 
-    assert not rescue_landing.tick(snapshot(LANDING_TIME_LIMIT - 0.05, FLYING), safety_layer)
+    assert not rescue_landing.tick(snapshot(LANDING_TIME_LIMIT, FLYING), safety_layer)  # at exactly the limit
     with caplog.at_level(logging.ERROR):
         is_done = rescue_landing.tick(snapshot(LANDING_TIME_LIMIT + 0.05, FLYING), safety_layer)
 

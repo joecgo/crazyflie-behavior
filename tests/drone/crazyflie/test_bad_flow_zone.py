@@ -38,6 +38,11 @@ def test_a_velocity_uncertainty_of_zero_is_flow() -> None:
     assert has_fresh_flow(snapshot_with(0.0), NOW)
 
 
+def test_a_velocity_uncertainty_just_under_the_threshold_is_flow() -> None:
+    # The largest float below the threshold, so any lower threshold fails this.
+    assert has_fresh_flow(snapshot_with(math.nextafter(FLOW_VELOCITY_UNCERTAINTY, 0.0)), NOW)
+
+
 def test_a_velocity_uncertainty_at_its_age_limit_is_still_fresh() -> None:
     assert has_fresh_flow(snapshot_with(WITH_FLOW, arrived=NOW - STALE_AFTER), NOW)
 

@@ -13,6 +13,7 @@ from crazyflie_behavior.behaviors.hover_test import (
     CHARGE_WAIT,
     CHIRP_PERIOD,
     FLOOR_CHIRP_WAIT,
+    HEIGHT_TOLERANCE,
     LANDED_CHIRP_DELAY,
     MAX_TAKE_OFF_HEIGHT,
     MIN_TAKE_OFF_HEIGHT,
@@ -135,6 +136,31 @@ def test_it_starts_hovering_once_close_to_the_take_off_height() -> None:
 
     assert requests_when_it_got_there == [Arm(), TakeOff(TAKE_OFF_HEIGHT)]
     assert safety_layer.requests[-1] == Land()  # hovered for 0 s, so it lands
+
+
+@pytest.mark.parametrize(
+    ("off_by", "counts_as_there"),
+    [
+        (HEIGHT_TOLERANCE - 0.001, True),
+        (-HEIGHT_TOLERANCE + 0.001, True),
+        (HEIGHT_TOLERANCE + 0.001, False),
+        (-HEIGHT_TOLERANCE - 0.001, False),
+    ],
+    ids=["1 mm inside, above", "1 mm inside, below", "1 mm outside, above", "1 mm outside, below"],
+)
+def test_within_the_height_tolerance_of_the_take_off_height_counts_as_there(
+    off_by: float, counts_as_there: bool
+) -> None:
+    safety_layer = SafetyLayerStandIn()
+    hover_test = HoverTest(hover_duration=0.0)
+    hover_test.tick(snapshot(0.0, ON_THE_FLOOR), safety_layer)
+    hover_test.tick(snapshot(0.25, ARMED), safety_layer)
+
+    hover_test.tick(snapshot(0.5, FLYING, TAKE_OFF_HEIGHT + off_by), safety_layer)
+    hover_test.tick(snapshot(0.75, FLYING, TAKE_OFF_HEIGHT + off_by), safety_layer)
+
+    # With a hover of 0 s, the tick after it counts as there lands.
+    assert (safety_layer.requests[-1] == Land()) == counts_as_there
 
 
 def test_it_hovers_for_the_hover_duration_then_lands() -> None:

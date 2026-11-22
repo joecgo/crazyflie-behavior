@@ -60,11 +60,14 @@ def snapshot(time: float, status: DroneStatus, height: float = 0.0) -> Snapshot:
 
 
 def hovering_test(safety_layer: SafetyLayerStandIn) -> FailsafeTest:
-    """A failsafe test that armed at 0 s, took off at 0.25 s and reached the height at 0.5 s."""
+    """A failsafe test that armed at -0.5 s, took off at -0.25 s and reached the height at 0 s.
+
+    The hover is timed from 0.0, so a time limit's subtraction comes out exact.
+    """
     failsafe_test = FailsafeTest(HEIGHT)
-    failsafe_test.tick(snapshot(0.0, ON_THE_FLOOR), safety_layer)
-    failsafe_test.tick(snapshot(0.25, ARMED), safety_layer)
-    failsafe_test.tick(snapshot(0.5, FLYING, HEIGHT), safety_layer)
+    failsafe_test.tick(snapshot(-0.5, ON_THE_FLOOR), safety_layer)
+    failsafe_test.tick(snapshot(-0.25, ARMED), safety_layer)
+    failsafe_test.tick(snapshot(0.0, FLYING, HEIGHT), safety_layer)
     safety_layer.requests.clear()
     return failsafe_test
 
@@ -98,12 +101,12 @@ def test_it_takes_off_to_the_height_it_was_given() -> None:
     assert safety_layer.requests == [Arm(), TakeOff(0.1)]
 
 
-def test_hovering_never_ends_by_itself_before_the_time_limit() -> None:
+def test_hovering_never_ends_by_itself_up_to_and_at_the_time_limit() -> None:
     """The failsafe ends the flight: the safety layer skips the behavior from then on (ADR-0026)."""
     safety_layer = SafetyLayerStandIn()
     failsafe_test = hovering_test(safety_layer)
 
-    done = failsafe_test.tick(snapshot(0.5 + HOVER_TIME_LIMIT - 0.05, FLYING, HEIGHT), safety_layer)
+    done = failsafe_test.tick(snapshot(HOVER_TIME_LIMIT, FLYING, HEIGHT), safety_layer)
 
     assert not done
     assert safety_layer.requests == []
@@ -141,7 +144,7 @@ def test_a_fault_that_never_takes_effect_lands_the_drone_normally_and_fails_the_
     failsafe_test = hovering_test(safety_layer)
 
     with caplog.at_level(logging.ERROR):
-        done = failsafe_test.tick(snapshot(0.5 + HOVER_TIME_LIMIT + 0.05, FLYING, HEIGHT), safety_layer)
+        done = failsafe_test.tick(snapshot(HOVER_TIME_LIMIT + 0.01, FLYING, HEIGHT), safety_layer)
 
     assert not done  # it waits for the landing
     assert safety_layer.requests == [Land()]
@@ -152,7 +155,7 @@ def test_a_fault_that_never_takes_effect_lands_the_drone_normally_and_fails_the_
 def test_after_the_normal_landing_it_reports_done() -> None:
     safety_layer = SafetyLayerStandIn()
     failsafe_test = hovering_test(safety_layer)
-    failsafe_test.tick(snapshot(0.5 + HOVER_TIME_LIMIT + 0.05, FLYING, HEIGHT), safety_layer)
+    failsafe_test.tick(snapshot(HOVER_TIME_LIMIT + 0.05, FLYING, HEIGHT), safety_layer)
 
     still_flying = failsafe_test.tick(snapshot(11.0, FLYING, 0.2), safety_layer)
     landed = failsafe_test.tick(snapshot(11.05, ARMED, 0.0), safety_layer)
@@ -172,6 +175,30 @@ def test_a_refused_request_ends_the_test_with_an_error_naming_the_reason(caplog:
 
     assert done
     assert "Arm() was refused: the drone is already flying" in caplog.text
+
+
+def test_arming_may_take_up_to_and_exactly_the_time_limit() -> None:
+    safety_layer = SafetyLayerStandIn()
+    failsafe_test = FailsafeTest(HEIGHT)
+    failsafe_test.tick(snapshot(0.0, ON_THE_FLOOR), safety_layer)
+
+    done = failsafe_test.tick(snapshot(ARM_TIME_LIMIT, ON_THE_FLOOR), safety_layer)
+
+    assert not done
+    assert not failsafe_test.has_failed
+
+
+def test_the_take_off_may_take_up_to_and_exactly_the_time_limit() -> None:
+    safety_layer = SafetyLayerStandIn()
+    failsafe_test = FailsafeTest(HEIGHT)
+    failsafe_test.tick(snapshot(-0.25, ON_THE_FLOOR), safety_layer)
+    failsafe_test.tick(snapshot(0.0, ARMED), safety_layer)  # the take-off starts at 0 s, so the limit is exact
+
+    done = failsafe_test.tick(snapshot(TAKE_OFF_TIME_LIMIT, FLYING, 0.2), safety_layer)
+
+    assert not done
+    assert not failsafe_test.has_failed
+    assert safety_layer.requests == [Arm(), TakeOff(HEIGHT)]  # no landing
 
 
 def test_arming_too_slowly_ends_the_test_at_once(caplog: pytest.LogCaptureFixture) -> None:

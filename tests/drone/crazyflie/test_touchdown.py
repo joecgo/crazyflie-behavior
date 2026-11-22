@@ -10,7 +10,7 @@ from crazyflie_behavior.drone.crazyflie.touchdown import (
     final_descent_deadline,
     fresh_down_distance,
 )
-from crazyflie_behavior.drone.interface import STALE_AFTER
+from crazyflie_behavior.drone.interface import STALE_AFTER, TOUCHDOWN_DOWN_RANGE
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import RangeReading, RangeReadings, Snapshot, Stamped
 
@@ -49,6 +49,10 @@ def snapshot_with(
 
 def low_reading_at(time: float) -> Snapshot:
     return snapshot_with(down=RangeReading.at_distance(0.02), down_arrived=time)
+
+
+def down_reading_at(distance: float, time: float) -> Snapshot:
+    return snapshot_with(down=RangeReading.at_distance(distance), down_arrived=time)
 
 
 def test_a_fresh_distance_is_read() -> None:
@@ -97,6 +101,46 @@ def test_a_down_range_that_stays_low_confirms_touchdown() -> None:
     assert detector.touchdown_confirmed(later)
 
 
+# The limit tests below are timed from 0.0, so each subtraction comes out exact.
+
+
+def test_touchdown_is_confirmed_at_exactly_the_hold() -> None:
+    detector = TouchdownDetector()
+    detector.observe(low_reading_at(0.0), 0.0)
+
+    detector.observe(low_reading_at(TOUCHDOWN_HOLD), TOUCHDOWN_HOLD)
+
+    assert detector.touchdown_confirmed(TOUCHDOWN_HOLD)
+
+
+def test_touchdown_is_not_confirmed_just_before_the_hold() -> None:
+    detector = TouchdownDetector()
+    detector.observe(low_reading_at(0.0), 0.0)
+    just_before = TOUCHDOWN_HOLD - 0.01
+
+    detector.observe(low_reading_at(just_before), just_before)
+
+    assert not detector.touchdown_confirmed(just_before)
+
+
+def test_a_down_range_of_exactly_the_touchdown_down_range_is_low() -> None:
+    detector = TouchdownDetector()
+    detector.observe(down_reading_at(TOUCHDOWN_DOWN_RANGE, 0.0), 0.0)
+
+    detector.observe(down_reading_at(TOUCHDOWN_DOWN_RANGE, TOUCHDOWN_HOLD), TOUCHDOWN_HOLD)
+
+    assert detector.touchdown_confirmed(TOUCHDOWN_HOLD)
+
+
+def test_a_down_range_1_mm_over_the_touchdown_down_range_is_high() -> None:
+    detector = TouchdownDetector()
+    detector.observe(down_reading_at(TOUCHDOWN_DOWN_RANGE + 0.001, 0.0), 0.0)
+
+    detector.observe(down_reading_at(TOUCHDOWN_DOWN_RANGE + 0.001, TOUCHDOWN_HOLD), TOUCHDOWN_HOLD)
+
+    assert not detector.touchdown_confirmed(TOUCHDOWN_HOLD)
+
+
 @pytest.mark.parametrize(
     "interruption",
     [RangeReading.at_distance(0.6), RangeReading.invalid(), RangeReading.out_of_range()],
@@ -139,6 +183,25 @@ def test_old_readings_leave_the_recent_window() -> None:
     later = NOW + RECENT_WINDOW + 0.1
 
     detector.observe(snapshot_with(down=RangeReading.at_distance(0.3), down_arrived=later), later)
+
+    assert detector.highest_recent_distance() == 0.3
+
+
+def test_a_reading_exactly_the_recent_window_old_is_kept() -> None:
+    detector = TouchdownDetector()
+    detector.observe(down_reading_at(0.9, 0.0), 0.0)
+
+    detector.observe(down_reading_at(0.3, RECENT_WINDOW), RECENT_WINDOW)
+
+    assert detector.highest_recent_distance() == 0.9
+
+
+def test_a_reading_just_older_than_the_recent_window_is_dropped() -> None:
+    detector = TouchdownDetector()
+    detector.observe(down_reading_at(0.9, 0.0), 0.0)
+    just_after = RECENT_WINDOW + 0.01
+
+    detector.observe(down_reading_at(0.3, just_after), just_after)
 
     assert detector.highest_recent_distance() == 0.3
 
