@@ -1,6 +1,6 @@
 # 0027: Operator controls: Windows hotkeys, an optional PS5 controller, no dead-man mode
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended by [ADR-0083](0083-every-flight-end-lands-inside-the-tick-loop.md) (2026-11-21): "land now" sets the flight end, not a failed safety pre-check.
 - **Date:** 2026-10-29
 - **Origin:** Mixed. Keys that work in any window plus an optional PS5 controller, landing when a controller in use disconnects, and no dead-man mode (a drop can damage the battery, a fire hazard): mine, the last one overriding the AI's recommendation. Windows hotkeys rather than a keyboard hook, "land now" through the safety pre-check, the kill latch and the `tools/` script: AI recommendations accepted.
 

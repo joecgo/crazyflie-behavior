@@ -1,6 +1,6 @@
 # 0032: Landing is a go_to down to the floor; our touchdown check stops the motors
 
-- **Status:** Accepted. Amends [ADR-0012](0012-landing-confirms-touchdown.md): its landing assumed the firmware keeps the motors running after it lands.
+- **Status:** Accepted. Amends [ADR-0012](0012-landing-confirms-touchdown.md): its landing assumed the firmware keeps the motors running after it lands. Amended by [ADR-0084](0084-a-lost-link-is-an-error-and-the-firmware-land-is-a-last-resort.md) (2026-11-21): the firmware's land is sent as a last resort when our landing raises.
 - **Date:** 2026-10-31
 - **Origin:** My call: keep in line with ADR-0012 and ADR-0019, which already said the touchdown check decides when the motors stop. Claude had recommended trusting the firmware's landing instead.
 

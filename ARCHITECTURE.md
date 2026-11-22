@@ -89,13 +89,13 @@ mostly create wide interfaces. By review: no fitness function.
 | Boundary | Contract | Rules |
 |---|---|---|
 | Behavior to safety layer | `Behavior.tick(snapshot, ask) -> bool` (done). `ask(CommandRequest) -> Verdict`. | Requests are frozen records in SI units and the world frame. A verdict is approved or refused with a reason, at once (ADR-0025). A behavior holds no drone, no clock and no safety layer. **[target]** `tick` reports an outcome (ADR-0036, accepted, not built). |
-| Safety layer to drone | `DroneInterface`: `arm`, `disarm`, `take_off`, `land`, `set_velocity`, `move_to`, `hover`, `emergency_stop`, `reset_estimate`, `chirp`, `play_tone`, `silence`. | A command starts an action and returns; what happened shows in later snapshots (ADR-0003, ADR-0008). Exceptions are for bugs and broken connections, never for a refusal. |
+| Safety layer to drone | `DroneInterface`: `arm`, `disarm`, `take_off`, `land`, `set_velocity`, `move_to`, `hover`, `emergency_stop`, `reset_estimate`, `chirp`, `play_tone`, `silence`. | A command starts an action and returns; what happened shows in later snapshots (ADR-0003, ADR-0008). Exceptions are for bugs and broken connections, never for a refusal: a lost link raises on the tick's next call to the adapter (ADR-0084, not built). |
 | Tick step to drone | `take_snapshot(dt) -> Snapshot`. `update_take_off_and_landing(snapshot)`. | The first only copies. The second moves a take-off or landing on by one tick (ADR-0055). |
-| Program to drone | `connect()`, `disconnect()`. | The only calls that may block. `connect()` has time limits and returns with every telemetry value present (ADR-0029, ADR-0031). `disconnect()` lands a drone that may be flying (ADR-0038). |
+| Program to drone | `connect()`, `disconnect()`. | The only calls that may block. `connect()` has time limits and returns with every telemetry value present (ADR-0029, ADR-0031). `disconnect()` lands a drone that may be flying (ADR-0038), except after a lost link; when its own landing raises with the link up, it sends the last-resort landing (ADR-0084, not built). |
 | Drone to every layer | `Snapshot`. | Read-only. Each telemetry value is `Stamped` with its arrival time and the drone's, and is `None` until it first arrives. It also carries the adapter's `is_in_initial_climb` and `may_be_flying` (ADR-0054, ADR-0060) and the previous battery reading (ADR-0069). Its `time` is read after the copy (ADR-0046). |
 | cflib's thread to the tick's | `TelemetryBuffer`: its writers and `snapshot()`. | Values that arrive together are written together, so no snapshot mixes two samples (ADR-0007, ADR-0021). |
-| Tick loop to tick step | `TickStep.run(time, dt) -> bool` (done). | The loop knows nothing else about a tick (ADR-0026). |
-| Any thread to tick loop | `TickLoop.request_stop()`. | Safe from any thread. The loop returns after the current tick, and the program's `disconnect()` lands (ADR-0026). |
+| Tick loop to tick step | `TickStep.run(time, dt) -> bool` (done). `TickStep.request_stop()`, abstract. | The loop knows nothing else about a tick (ADR-0026). It calls `request_stop()` once, on the tick's thread, when it first sees a stop request, then ticks until `run()` reports done (ADR-0083, not built). |
+| Any thread to tick loop | `TickLoop.request_stop()`. | Safe from any thread. In a program with a safety layer it sets the flight end, so a flying drone lands inside the loop before the program's `disconnect()`; later interrupt signals are ignored (ADR-0026; ADR-0083, not built). |
 | Everything to time | `Clock.now()`, `Clock.sleep_until()`. | Injected, never read from the system directly (ADR-0009). |
 
 Only project types cross a boundary. No cflib object, `dict` of raw values or
@@ -178,7 +178,11 @@ Forbidden:
 
 - A command request reaches the drone unjudged (ADR-0025).
 - A behavior runs on a tick whose safety pre-check failed, or on any tick
-  after it: a failed pre-check ends the flight for good (ADR-0030).
+  after it: a failed pre-check ends the flight for good (ADR-0030). So does
+  any flight end: a stop request, or a behavior done while the drone may be
+  flying (ADR-0083, not built).
+- The tick step reports done while the drone may be flying (ADR-0083, not
+  built).
 - A missing, stale or non-finite value counts as safe (ADR-0030).
 - The motors stop before the down range confirms touchdown or the final
   descent's time limit runs out (ADR-0012, ADR-0019).
@@ -189,6 +193,9 @@ Forbidden:
 - Fault injection or a take-over is reachable from a game program (ADR-0038,
   ADR-0041). **[fitness]**
 - An interrupt signal cuts a landing short (ADR-0026).
+- The last-resort landing runs while our landing still works, or reads what
+  failed it; a lost link is logged as a landing, or the run exits 0 after
+  one (ADR-0084, not built).
 
 **Always:**
 
@@ -197,7 +204,13 @@ Forbidden:
 - `update_take_off_and_landing` runs on every tick, after the pre-check,
   failed or not (ADR-0055).
 - Every way out of the tick loop but a hang ends in `disconnect()`, which
-  lands a drone that may be flying (ADR-0026).
+  lands a drone that may be flying (ADR-0026), unless the link is lost
+  (ADR-0084, not built).
+- After a flight end, the tick loop keeps ticking until the drone is down;
+  60 s on, an error hands the landing to `disconnect()` (ADR-0083, not
+  built).
+- A drone whose link is up gets some landing command after any error: the
+  last-resort landing when ours raises (ADR-0084, not built).
 - Unsure whether the drone is flying, the adapter says it is (ADR-0039).
 - Connecting refuses a drone that's already flying; only the rescue landing
   takes one over (ADR-0038).
@@ -214,8 +227,8 @@ the repository until they're decided. Module names are working names.
 | Target | Changes here | Needs |
 |---|---|---|
 | The Crazyflie adapter becomes parts inside `drone/crazyflie/`: `link.py`, `log_blocks.py` and `commands.py`, which with `adapter.py` are the only cflib importers; and `flight_phases.py`, the take-off and landing logic with no cflib import and strict typing. `DroneInterface` stays as it is. | Section 2; rule 1 narrows to the named modules | An ADR; the glossary's *Crazyflie adapter* |
-| The tick loop flies the whole flight. After a failed pre-check, a stop request or a behavior that ends in flight, the tick step keeps ticking until the snapshot says the drone isn't flying. `disconnect()` lands only after an error. | Section 3 (the two tick loop rows); section 6; the glossary's *Stop request* | An ADR that amends ADR-0026 |
-| A link lost in flight is a state the adapter reports, and a landing that fails has a last resort sharing no code with it. | Section 6 | An ADR with failure modes |
+| The tick loop flies the whole flight. After a failed pre-check, a stop request or a behavior that ends in flight, the tick step keeps ticking until the snapshot says the drone isn't flying. `disconnect()` lands only after an error. | Section 3 (the two tick loop rows); section 6; the glossary's *Stop request* | ADR-0083 is accepted; built with backlog #134 |
+| A link lost in flight ends the run with an error, and a landing that raises has a last resort sharing no Python landing code with it. | Sections 3 and 6 | ADR-0084 is accepted; built with backlog #135 |
 | A tick reports an outcome, up to the program. | Section 3 | ADR-0036 is accepted; how the outcome travels is open |
 | Recordings, replay tests, and program tests on the sim clock. | A recorder beside the tick step | ADR-0034 is accepted; its details are open |
 | Tuning values are grouped, passed in, and logged with every run. | Where constants live | An ADR |
