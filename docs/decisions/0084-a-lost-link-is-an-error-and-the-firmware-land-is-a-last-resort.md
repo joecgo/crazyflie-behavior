@@ -1,6 +1,6 @@
 # 0084: A lost link ends the run with an error; when our landing raises, the firmware's land is the last resort
 
-- **Status:** Accepted. Amends [ADR-0032](0032-landing-with-a-go-to.md): the firmware's land is sent as a last resort, never as a normal landing. Answers backlog #46.
+- **Status:** Accepted. Amends [ADR-0032](0032-landing-with-a-go-to.md): the firmware's land is sent as a last resort, never as a normal landing. Answers backlog #46. Amended by [ADR-0086](0086-a-lost-link-raises-at-the-next-snapshot.md) (2026-11-22): a lost link raises at the tick's next snapshot, not at every call.
 - **Date:** 2026-11-21
 - **Origin:** Mixed. Leaving backlog #61 as is (as built, 2026-11-21): mine, over the AI's recommendation to catch the `KeyError` in the buzzer write. The rest: AI recommendations accepted. For how the tick loop hears of a lost link, I first leaned to the snapshot carrying it (it fits the architecture: the safety layer decides) and chose the adapter raising on the AI's recommendation.
 

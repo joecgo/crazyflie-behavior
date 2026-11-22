@@ -1,6 +1,6 @@
 # 0083: Every flight end lands inside the tick loop; the tick loop runs until the drone is down
 
-- **Status:** Accepted. Amends [ADR-0026](0026-tick-loop-calls-one-tick-step.md) ("Stopping": the loop no longer returns on a stop request, and leaving it no longer lands) and [ADR-0027](0027-operator-controls.md) ("land now" sets the flight end, not a failed safety pre-check). Answers backlog #59.
+- **Status:** Accepted. Amends [ADR-0026](0026-tick-loop-calls-one-tick-step.md) ("Stopping": the loop no longer returns on a stop request, and leaving it no longer lands) and [ADR-0027](0027-operator-controls.md) ("land now" sets the flight end, not a failed safety pre-check). Answers backlog #59. Amended by [ADR-0085](0085-the-silence-waits-a-fixed-1-s-with-no-confirmation.md) (2026-11-22): the silence waits a fixed 1 s, with no confirmation.
 - **Date:** 2026-11-21
 - **Origin:** Mixed. Later interrupt signals ignored during the landing: mine, over the AI's recommendation that a second one leaves the loop at once and `disconnect()` lands. The point that the time limit shares the tick step's state, so it only catches bugs after the flight end: mine. The flight end and its three causes, the time limit (60 s, then an error), `disconnect()` silencing a tone, an abstract `request_stop()`, a land on the floor too, and keeping `BenchTickStep`: AI recommendations accepted. The "As built" answers (2026-11-21, while coding): AI recommendations accepted; I first chose to remove `SILENCE_HOLD`, then kept it, since ADR-0053 records its wait.
 
