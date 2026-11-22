@@ -171,3 +171,11 @@ def test_archive_moves_a_month_and_the_index_links_it(script: ModuleType) -> Non
     assert "### M-001" not in main
     assert "[M-001](claude-mistakes/2026-10.md)" in main
     assert script.main(["check"]) == 0
+
+
+def test_write_and_archive_save_lf_line_endings(script: ModuleType) -> None:
+    """ADR-0079. Fails only on Windows, where Python writes CRLF by default."""
+    script.main(["write"])
+    script.main(["archive", "2026-10"])
+    for path in (script.MAIN, script.ARCHIVE_DIR / "2026-10.md"):
+        assert b"\r" not in path.read_bytes(), path.name

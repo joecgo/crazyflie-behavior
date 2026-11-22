@@ -62,6 +62,11 @@ class Entry:
     guard: str
 
 
+def write_lf(path: Path, text: str) -> None:
+    """Write with LF line endings (ADR-0079); Python's default on Windows is CRLF."""
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+
 def log_files() -> list[Path]:
     return [MAIN, *sorted(ARCHIVE_DIR.glob("*.md"))]
 
@@ -125,7 +130,7 @@ def write_ids(assigned: dict[tuple[Path, int], str]) -> None:
                 mistake_id = assigned.get((path, position))
                 if mistake_id:
                     lines[index] = line.replace("### ", f"### {mistake_id}, ", 1)
-        path.write_text("".join(lines), encoding="utf-8")
+        write_lf(path, "".join(lines))
 
 
 def kind_table(entries: list[Entry]) -> str:
@@ -201,7 +206,7 @@ def write_tables(entries: list[Entry]) -> None:
             text,
             flags=re.S,
         )
-    MAIN.write_text(text, encoding="utf-8")
+    write_lf(MAIN, text)
 
 
 def archive(month: str) -> None:
@@ -229,8 +234,8 @@ def archive(month: str) -> None:
     parts = [f"# Claude's mistakes, {month}\n\n{note}\n\n"]
     for heading_line in SECTIONS:
         parts.append(heading_line + "\n\n" + "".join(moved[heading_line]).rstrip("\n") + "\n\n")
-    target.write_text("".join(parts).rstrip("\n") + "\n", encoding="utf-8")
-    MAIN.write_text("".join(kept), encoding="utf-8")
+    write_lf(target, "".join(parts).rstrip("\n") + "\n")
+    write_lf(MAIN, "".join(kept))
 
 
 def main(arguments: list[str]) -> int:

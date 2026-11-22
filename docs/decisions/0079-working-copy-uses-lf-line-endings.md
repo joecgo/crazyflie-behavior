@@ -23,7 +23,7 @@ I chose A without a fitness function. The risk I accepted: a script or editor th
 
 ## Consequences
 
-- Scripts and tools can read and write text without preserving endings.
+- Scripts and tools can read and write text without preserving endings, as long as they write LF. Python's text mode writes CRLF on Windows by default, so a Python script passes `newline="\n"` (facts register; added 2026-11-22 after `tools/mistakes_log.py` wrote CRLF).
 - Built 2026-11-18: `.gitattributes`, `.editorconfig`, and the renormalise of the 119 CRLF working files (no committed content changed).
 - PyCharm follows `.editorconfig`; GitHub Desktop follows `.gitattributes`.
 - No glossary change.

@@ -37,8 +37,7 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
-- Noticed: `tools/mistakes_log.py write` saves the log with CRLF line
-  endings, against ADR-0079 (git converts them on commit).
+- Nothing.
 
 ## Next three
 
