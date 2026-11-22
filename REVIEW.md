@@ -179,6 +179,8 @@ A review walks only the sections for the paths it touches:
   that arrived: cflib drops packets without an error once the link is lost. (M-068, M-069, M-082)
 - **Q-53.** New tests: are they proven by bug planting
   ([coding style](docs/coding-style.md))? (M-015)
+- **Q-54.** Does every assert check a bool or a comparison, not an object that's
+  always true (a `Verdict` rather than its `.is_approved`)? (M-201)
 
 Takeaways about recommendations and explanations stay in the mistakes log
 only: they're for me, when I weigh Claude's options.

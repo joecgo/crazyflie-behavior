@@ -35,7 +35,7 @@ Milestones so far:
 
 | Date | Hours | Milestone | Worked on |
 |---|---|---|---|
-| 2026-11-21 | ~1.25 | Airworthy | **C3 decisions; review fixes.** Decided D3 to D6 of the code recommendations (C3: the tick loop flies the whole flight), ADRs not written yet. A boundary-test audit: backlog #133. Joe's comments on review pull request #27 fixed (`2bf62ae`); #27 and #28 closed. Mistakes M-197 and M-198. |
+| 2026-11-21 | ~3.75 | Airworthy | **C3 and C4 decided and recorded; review fixes; the boundary audit checked.** Decided D3 to D7 of the code recommendations and wrote ADR-0083 (every flight end lands inside the tick loop) and ADR-0084 (a lost link is an error; the firmware's land is the last resort), not built yet (backlog #134, #135); a second work session started building them. Joe's comments on review pull request #27 fixed (`2bf62ae`); #27 and #28 closed. A boundary-test audit (backlog #133), checked by planting 97 bugs: 20 limits where a planted bug passes every test, among them a 0.06 s touchdown hold. Joe chose the tests to write, and `REVIEW.md` Q-54. Mistakes M-197 to M-203. |
 | 2026-11-20 | ~1 | Airworthy | **One age limit; the sim-time limit everywhere.** Review pull request #27 opened for ADR-0081's build (`STALE_AFTER`, 0.25 s). Decided and built ADR-0082: every test that runs the tick loop on a sim clock has the 120 s limit, with a fitness function against a plain `SimClock()` in the program and loop tests. Mistakes M-193 to M-196. |
 | 2026-11-18 | ~1.75 | Airworthy | **The program tests on the sim clock.** ADR-0076 built (program tests on the sim clock; suite 38.5 s to 19.5 s). Decided and built ADR-0079 (LF line endings) and ADR-0080 (sim-clock program tests fail after 120 s of sim time; the continuous integration job stops after 15 minutes). Review pull request #26 (ADR-0076 with ADR-0080) read with no comments and closed; ADR-0080's project review left seven findings (backlog #129). `/review-packet` now lists code that supports the tests and never says a bare "the same". |
 | 2026-11-17 | ~6.75 | Airworthy | **Console output and ADR-0077.** C1 built (the console on a background thread, ADR-0035), reviewed twice with `/project-review`, its fixes applied; review pull request #24, now closed, with Joe's fixes on `main` (`d404629`, two coding-style rules). Decided ADR-0075 (the console gets 2 s at exit, then a warning), ADR-0076 (program tests on the sim clock), ADR-0077 (the initial climb ends at a fixed 0.15 m) and ADR-0078 (console exit risks accepted, Python pinned to 3.12). ADR-0077 built, reviewed twice with `/project-review` (17 findings; the open ones are backlog #120 to #124) and committed; review pull request #25. First flight 6 set as the flight baseline (backlog #113). Skills: explain-backs deferred to the next-up brief; resets clear this session, after asking; review packets short, with findings as pull request comments. Joe's review of ADR-0077 (pull request #25) closed: placeholder comment dropped, glossary *Flow* and *Hand-over* added. |
@@ -82,6 +82,15 @@ findings, key design turns. Added only with the architect's OK.
 ### YYYY-MM-DD: <short title>
 A few sentences: what happened, why it matters, links to ADRs, commits or test logs.
 -->
+
+### 2026-11-21: Bug planting beat reading
+
+An audit of the boundary tests, done by reading them, was wrong in 8 of its
+14 rows. Planting 97 bugs one at a time, each run against the whole suite,
+showed that a 0.06 s touchdown hold (instead of 0.3 s) and a 0.15 s recent
+window (instead of 1.0 s) pass every test, though both decide when the
+motors stop, and found an assert that can never fail (M-201, M-202,
+backlog #133).
 
 ### 2026-11-17: The settle detector measured itself
 
@@ -145,6 +154,6 @@ from sensing ([ADR-0016](decisions/0016-first-game-hide-and-seek-drone-lands.md)
 
 | Milestone | Hours |
 |---|---|
-| First flight | ~78.25 |
-| Airworthy | ~13.5 |
-| **Total** | **~91.75** |
+| First flight | ~79.75 |
+| Airworthy | ~17 |
+| **Total** | **~96.75** |
