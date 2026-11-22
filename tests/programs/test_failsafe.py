@@ -1,18 +1,20 @@
 """The failsafe program (ADR-0041, ADR-0049), on the mock adapter and the sim clock (ADR-0076)."""
 
+import signal
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
 import pytest
 
 from crazyflie_behavior.behaviors import failsafe_test as failsafe_test_module
+from crazyflie_behavior.behaviors.hover_test import TAKE_OFF_HEIGHT
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.programs import failsafe as failsafe_module
 from crazyflie_behavior.programs import failsafe_fault as failsafe_fault_module
 from crazyflie_behavior.programs.failsafe import main
-from crazyflie_behavior.snapshot import RangeDirection, RangeReading
+from crazyflie_behavior.snapshot import RangeDirection, RangeReading, Snapshot
 from crazyflie_behavior.timing.clock import Clock, SimClock
 
 RUN_CONFIGS = Path(__file__).resolve().parents[2] / ".run"
@@ -25,6 +27,21 @@ class LandingFailsMockAdapter(MockAdapter):
     def disconnect(self) -> None:
         super().disconnect()
         raise RuntimeError("the landing failed")
+
+
+class StopRequestAtTheHoverHeightMockAdapter(MockAdapter):
+    """A mock drone that sends the interrupt signal once, when it's at the take-off height."""
+
+    def __init__(self, clock: Clock) -> None:
+        super().__init__(clock)
+        self._has_sent_the_signal = False
+
+    def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
+        super().update_take_off_and_landing(snapshot)
+        position = snapshot.position_estimate
+        if not self._has_sent_the_signal and position is not None and position.value.z == TAKE_OFF_HEIGHT:
+            self._has_sent_the_signal = True
+            signal.raise_signal(signal.SIGINT)
 
 
 class MockAdapterMaker:
@@ -100,7 +117,9 @@ def test_the_failsafe_lands_the_drone_after_the_forged_low_battery(
     assert "Safety pre-check failed: battery at 3.00 V (land below 3.20 V). Landing." in log_text
     assert "Sending Land()" in log_text
     assert "Failsafe test failed" not in log_text
-    assert mock_adapter_maker.adapter.command_log.count("land") >= 1
+    # The failsafe's landing runs inside the tick loop: none in disconnect() (ADR-0083).
+    assert mock_adapter_maker.adapter.command_log[-2:] == ["land", "disconnect"]
+    assert mock_adapter_maker.adapter.command_log.count("land") == 1
     assert_landed_with_the_motors_off(mock_adapter_maker.adapter)
 
 
@@ -168,6 +187,24 @@ def test_failsafe_low_with_a_down_range_that_never_clears_the_floor_lands_normal
         f"within {failsafe_test_module.HOVER_TIME_LIMIT:g} s of hovering"
     ) in log_text
     assert_landed_with_the_motors_off(mock_adapter_maker.adapter)
+
+
+def test_a_stop_request_before_the_fault_never_passes_the_test_though_the_fault_fires_while_landing(
+    mock_adapter_maker: MockAdapterMaker, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
+) -> None:
+    """A stop request sets the flight end, never a failed pre-check, so it can't count as the pass (ADR-0083)."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(failsafe_fault_module, "HOVER_DURATION_BEFORE_FAULT", 0.25)  # during the landing
+    mock_adapter_maker.adapter_class = StopRequestAtTheHoverHeightMockAdapter
+
+    exit_code = main(["--fault-at", "hover"], clock=sim_clock)
+
+    assert exit_code == 1
+    log_text = the_log_file_text(tmp_path / "logs")
+    assert "The flight is over: a stop request. Landing." in log_text
+    assert "FAULT INJECTED: battery voltage forged" in log_text
+    assert "Safety pre-check failed" not in log_text
+    assert mock_adapter_maker.adapter.command_log[-2:] == ["land", "disconnect"]
 
 
 def test_a_real_fault_before_the_forged_one_does_not_pass_the_test(

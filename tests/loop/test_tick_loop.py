@@ -1,4 +1,4 @@
-"""The tick loop (ADR-0024, ADR-0026), driven by a sim clock and fake tick steps.
+"""The tick loop (ADR-0024, ADR-0026, ADR-0083), driven by a sim clock and fake tick steps.
 
 Most tests tick at 4 Hz: quarter-second periods keep every time exact in
 binary, so start times can be compared with `==`. Only the hang watchdog's own
@@ -39,12 +39,17 @@ class TickCall(NamedTuple):
 
 
 class ScriptedTickStep(TickStep):
-    """A fake tick step: each tick takes the next scripted work time; done after the last."""
+    """A fake tick step: each tick takes the next scripted work time; done after the last, stop request or not."""
 
     def __init__(self, clock: SimClock, work_times: list[float]) -> None:
         self._clock = clock
         self._work_times = work_times
         self.calls: list[TickCall] = []
+        self.stop_requests: list[int] = []
+        """The ticks run when each stop request arrived."""
+
+    def request_stop(self) -> None:
+        self.stop_requests.append(len(self.calls))
 
     def run(self, time: float, dt: float) -> bool:
         self.calls.append(TickCall(time, dt))
@@ -175,26 +180,39 @@ def test_the_tick_rate_must_be_positive(sim_clock: SimClock) -> None:
 
 
 class StopRequestingTickStep(TickStep):
-    """A fake tick step that makes a stop request on one tick, and otherwise keeps going."""
+    """A fake tick step that makes a stop request on some ticks, then reports done `ticks_to_finish` ticks after
+    the stop request reaches it, as a landing would take a few."""
 
     def __init__(
         self,
-        stop_on_tick: int,
+        stop_on_ticks: tuple[int, ...],
+        *,
+        ticks_to_finish: int = 1,
         from_another_thread: bool = False,
         clock: SimClock | None = None,
         work_time: float = 0.0,
     ) -> None:
-        self._stop_on_tick = stop_on_tick
+        self._stop_on_ticks = stop_on_ticks
+        self._ticks_to_finish = ticks_to_finish
         self._from_another_thread = from_another_thread
         self._clock = clock
         self._work_time = work_time
         self.loop: TickLoop | None = None
         self.tick_count = 0
+        self.start_times: list[float] = []
+        self.stop_requests: list[int] = []
+        """The ticks run when each stop request reached this tick step."""
+        self.stop_request_threads: list[threading.Thread] = []
+
+    def request_stop(self) -> None:
+        self.stop_requests.append(self.tick_count)
+        self.stop_request_threads.append(threading.current_thread())
 
     def run(self, time: float, dt: float) -> bool:
+        self.start_times.append(time)
         if self._clock is not None:
             self._clock.advance(self._work_time)
-        if self.tick_count == self._stop_on_tick:
+        if self.tick_count in self._stop_on_ticks:
             assert self.loop is not None
             if self._from_another_thread:
                 other_thread = threading.Thread(target=self.loop.request_stop)
@@ -203,6 +221,8 @@ class StopRequestingTickStep(TickStep):
             else:
                 self.loop.request_stop()
         self.tick_count += 1
+        if self.stop_requests and self.tick_count - self.stop_requests[0] == self._ticks_to_finish:
+            return True
         return self.tick_count == GIVE_UP_AFTER_TICKS
 
 
@@ -215,47 +235,71 @@ def test_the_loop_stops_when_the_tick_step_is_done(sim_clock: SimClock) -> None:
     assert len(tick_step.calls) == 3
 
 
-def test_a_stop_request_lets_the_current_tick_finish_and_starts_no_more(sim_clock: SimClock) -> None:
-    tick_step = StopRequestingTickStep(stop_on_tick=1)
+def test_a_stop_request_reaches_the_tick_step_before_the_next_tick(sim_clock: SimClock) -> None:
+    tick_step = StopRequestingTickStep(stop_on_ticks=(1,))
     loop = make_loop(sim_clock, tick_step)
     tick_step.loop = loop
 
     loop.run()
 
-    assert tick_step.tick_count == 2
+    assert tick_step.stop_requests == [2]  # after ticks 0 and 1, before tick 2
 
 
-def test_a_stop_request_during_a_tick_returns_without_waiting_for_the_next_due_time(sim_clock: SimClock) -> None:
-    clock = sim_clock
-    tick_step = StopRequestingTickStep(stop_on_tick=0, clock=clock, work_time=0.125)
-    loop = make_loop(clock, tick_step)
-    tick_step.loop = loop
-
-    loop.run()
-
-    # The tick ended at 0.125; the next one was due at 0.25.
-    assert clock.now() == 0.125
-
-
-def test_a_stop_request_can_come_from_another_thread(sim_clock: SimClock) -> None:
-    tick_step = StopRequestingTickStep(stop_on_tick=0, from_another_thread=True)
+def test_after_a_stop_request_the_loop_ticks_until_the_tick_step_is_done(sim_clock: SimClock) -> None:
+    # So a flying drone lands inside the loop (ADR-0083).
+    tick_step = StopRequestingTickStep(stop_on_ticks=(1,), ticks_to_finish=3)
     loop = make_loop(sim_clock, tick_step)
     tick_step.loop = loop
 
     loop.run()
 
-    assert tick_step.tick_count == 1
+    assert tick_step.tick_count == 5
 
 
-def test_a_stop_request_before_the_loop_runs_starts_no_ticks(sim_clock: SimClock) -> None:
+def test_a_stop_request_reaches_the_tick_step_only_once(sim_clock: SimClock) -> None:
+    # A second interrupt signal, say, changes nothing (ADR-0026, ADR-0083).
+    tick_step = StopRequestingTickStep(stop_on_ticks=(0, 1, 2), ticks_to_finish=4)
+    loop = make_loop(sim_clock, tick_step)
+    tick_step.loop = loop
+
+    loop.run()
+
+    assert tick_step.stop_requests == [1]
+    assert tick_step.tick_count == 5
+
+
+def test_after_a_stop_request_the_ticks_keep_their_due_times(sim_clock: SimClock) -> None:
     clock = sim_clock
-    tick_step = ScriptedTickStep(clock, [0.125])
+    tick_step = StopRequestingTickStep(stop_on_ticks=(0,), ticks_to_finish=2, clock=clock, work_time=0.125)
     loop = make_loop(clock, tick_step)
+    tick_step.loop = loop
+
+    loop.run()
+
+    # The stop request came during the first tick, which ended at 0.125.
+    assert tick_step.start_times == [0.0, 0.25, 0.5]
+
+
+def test_a_stop_request_from_another_thread_reaches_the_tick_step_on_the_ticks_thread(sim_clock: SimClock) -> None:
+    tick_step = StopRequestingTickStep(stop_on_ticks=(0,), from_another_thread=True)
+    loop = make_loop(sim_clock, tick_step)
+    tick_step.loop = loop
+
+    loop.run()
+
+    assert tick_step.stop_requests == [1]
+    assert tick_step.stop_request_threads == [threading.current_thread()]
+
+
+def test_a_stop_request_before_the_loop_runs_reaches_the_tick_step_before_its_first_tick(sim_clock: SimClock) -> None:
+    tick_step = StopRequestingTickStep(stop_on_ticks=())
+    loop = make_loop(sim_clock, tick_step)
 
     loop.request_stop()
     loop.run()
 
-    assert tick_step.calls == []
+    assert tick_step.stop_requests == [0]
+    assert tick_step.tick_count == 1
 
 
 class FailingTickStep(TickStep):
@@ -265,6 +309,9 @@ class FailingTickStep(TickStep):
         self._fail_on_tick = fail_on_tick
         self._events = events if events is not None else []
         self.tick_count = 0
+
+    def request_stop(self) -> None:
+        pytest.fail("No stop request in these tests")
 
     def run(self, time: float, dt: float) -> bool:
         self._events.append("tick")
@@ -287,12 +334,15 @@ def test_errors_from_the_tick_step_rise_to_the_caller(sim_clock: SimClock) -> No
 
 
 class RecordingTickStep(TickStep):
-    """A fake tick step that writes each tick into a shared event list."""
+    """A fake tick step that writes each tick and stop request into a shared event list."""
 
     def __init__(self, events: list[str], tick_count: int) -> None:
         self._events = events
         self._tick_count = tick_count
         self._ticks_run = 0
+
+    def request_stop(self) -> None:
+        self._events.append("stop request")
 
     def run(self, time: float, dt: float) -> bool:
         self._events.append("tick")
@@ -306,6 +356,16 @@ def test_the_hang_watchdog_is_armed_for_each_tick_and_disarmed_after_it(sim_cloc
     make_loop(sim_clock, RecordingTickStep(events, tick_count=2), FakeHangWatchdog(events)).run()
 
     assert events == ["arm", "tick", "disarm", "arm", "tick", "disarm"]
+
+
+def test_the_hang_watchdog_also_watches_passing_the_stop_request_on(sim_clock: SimClock) -> None:
+    events: list[str] = []
+    loop = make_loop(sim_clock, RecordingTickStep(events, tick_count=1), FakeHangWatchdog(events))
+
+    loop.request_stop()
+    loop.run()
+
+    assert events == ["arm", "stop request", "tick", "disarm"]
 
 
 def test_the_hang_watchdog_is_disarmed_even_when_the_tick_step_raises(sim_clock: SimClock) -> None:
@@ -452,19 +512,22 @@ def test_an_overrun_on_the_last_tick_is_logged_too(caplog: pytest.LogCaptureFixt
     assert "overruns: 1" in summaries[0]
 
 
-def test_the_log_says_why_the_loop_stopped(caplog: pytest.LogCaptureFixture, sim_clock: SimClock) -> None:
+def test_the_log_says_when_the_stop_request_was_passed_on_and_why_the_loop_stopped(
+    caplog: pytest.LogCaptureFixture, sim_clock: SimClock
+) -> None:
     caplog.set_level(logging.INFO, logger=LOGGER_NAME)
     clock = sim_clock
     make_loop(clock, ScriptedTickStep(clock, [0.125])).run()
-    stopping_tick_step = StopRequestingTickStep(stop_on_tick=1)
+    stopping_tick_step = StopRequestingTickStep(stop_on_ticks=(1,))
     stopping_loop = make_loop(sim_clock, stopping_tick_step)
     stopping_tick_step.loop = stopping_loop
     stopping_loop.run()
 
-    reasons = [m for m in messages(caplog, logging.INFO) if "tick loop stopping" in m]
+    reasons = [m for m in messages(caplog, logging.INFO) if "tick loop stopping" in m or m.startswith("Stop request")]
     assert reasons == [
         "Tick step done: tick loop stopping (ticks run: 1)",
-        "Stop request: tick loop stopping (ticks run: 2)",
+        "Stop request: passed to the tick step (ticks run: 2)",
+        "Tick step done: tick loop stopping (ticks run: 3)",
     ]
 
 
@@ -502,6 +565,9 @@ class SlowFailingTickStep(TickStep):
         self._clock = clock
         self._work_time = work_time
 
+    def request_stop(self) -> None:
+        pytest.fail("No stop request in this test")
+
     def run(self, time: float, dt: float) -> bool:
         self._clock.advance(self._work_time)
         raise RuntimeError("the tick step broke")
@@ -527,6 +593,9 @@ def test_a_tick_that_raises_is_still_timed_and_logged(caplog: pytest.LogCaptureF
 
 class CollectingTickStep(TickStep):
     """A fake tick step that runs the garbage collector on its only tick."""
+
+    def request_stop(self) -> None:
+        pytest.fail("No stop request in this test")
 
     def run(self, time: float, dt: float) -> bool:
         gc.collect()

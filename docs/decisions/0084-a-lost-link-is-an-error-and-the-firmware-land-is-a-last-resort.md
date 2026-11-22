@@ -2,7 +2,7 @@
 
 - **Status:** Accepted. Amends [ADR-0032](0032-landing-with-a-go-to.md): the firmware's land is sent as a last resort, never as a normal landing. Answers backlog #46.
 - **Date:** 2026-11-21
-- **Origin:** AI recommendations accepted. For how the tick loop hears of a lost link, I first leaned to the snapshot carrying it (it fits the architecture: the safety layer decides) and chose the adapter raising on the AI's recommendation.
+- **Origin:** Mixed. Leaving backlog #61 as is (as built, 2026-11-21): mine, over the AI's recommendation to catch the `KeyError` in the buzzer write. The rest: AI recommendations accepted. For how the tick loop hears of a lost link, I first leaned to the snapshot carrying it (it fits the architecture: the safety layer decides) and chose the adapter raising on the AI's recommendation.
 
 ## Context
 
@@ -54,6 +54,9 @@ low-battery shutdown is compiled out.
 
   It reads no telemetry and no project state. An error inside it is logged,
   not raised. Not after a lost link.
+- **As built (2026-11-21):** backlog #61's race is left as is: the buzzer
+  write doesn't catch the `KeyError`, and `disconnect()` knows of a lost link
+  only from cflib's `connection_lost` message.
 
 ## Failure modes
 

@@ -4,9 +4,10 @@ Arm, take off to the height it's given, hover, and wait for the failsafe to
 land the drone. The failsafe is the safety layer's: the program forges a low
 battery after the drone has hovered a while, the safety pre-check fails, and
 the safety layer lands the drone and ends the flight. From then on the safety
-layer skips this behavior, so it never sees the landing: it is the tick step
-that ends the run (ADR-0026). So the only ways this behavior reports done are
-the ways the test failed.
+layer skips this behavior, so it never sees the landing: the tick step keeps
+ticking while the drone lands, inside the tick loop, and ends the run once
+it's down (ADR-0083). So the only ways this behavior reports done are the
+ways the test failed.
 
 Failure rule (ADR-0033): the first refused request ends the test, since the
 basic sequence is what's tested and an unexpected state is the finding. So do

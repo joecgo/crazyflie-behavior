@@ -2,7 +2,7 @@
 
 - **Status:** Accepted. Amends [ADR-0026](0026-tick-loop-calls-one-tick-step.md) ("Stopping": the loop no longer returns on a stop request, and leaving it no longer lands) and [ADR-0027](0027-operator-controls.md) ("land now" sets the flight end, not a failed safety pre-check). Answers backlog #59.
 - **Date:** 2026-11-21
-- **Origin:** Mixed. Later interrupt signals ignored during the landing: mine, over the AI's recommendation that a second one leaves the loop at once and `disconnect()` lands. The point that the time limit shares the tick step's state, so it only catches bugs after the flight end: mine. The flight end and its three causes, the time limit (60 s, then an error), `disconnect()` silencing a tone, an abstract `request_stop()`, a land on the floor too, and keeping `BenchTickStep`: AI recommendations accepted.
+- **Origin:** Mixed. Later interrupt signals ignored during the landing: mine, over the AI's recommendation that a second one leaves the loop at once and `disconnect()` lands. The point that the time limit shares the tick step's state, so it only catches bugs after the flight end: mine. The flight end and its three causes, the time limit (60 s, then an error), `disconnect()` silencing a tone, an abstract `request_stop()`, a land on the floor too, and keeping `BenchTickStep`: AI recommendations accepted. The "As built" answers (2026-11-21, while coding): AI recommendations accepted; I first chose to remove `SILENCE_HOLD`, then kept it, since ADR-0053 records its wait.
 
 ## Context
 
@@ -67,6 +67,12 @@ off again on the same link, so the landing can't live in shutdown. From the
   would send `Land()`, a motor stop on the floor, at every stop request and
   failed pre-check, and a telemetry stall would end the run. Without a safety
   layer, ADR-0028's "never commands the drone" holds by construction.
+- **As built (2026-11-21):**
+  - A drone with no `sound.effect` parameter gets a warning, and
+    `disconnect()` closes anyway (backlog #136).
+  - The first report of `sound.effect` 0 confirms the silence, even the
+    answer to an earlier silence (backlog #141).
+  - `SILENCE_HOLD` stays: ADR-0053 records its 1 s wait.
 
 ## Failure modes
 

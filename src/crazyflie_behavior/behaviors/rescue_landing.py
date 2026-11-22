@@ -5,9 +5,9 @@ longer flying. The drone was taken over by the adapter, which treats it as
 airborne, so the landing is the normal one (ADR-0032).
 
 Failure rule (ADR-0033): the first refused request ends it, and so does its
-time limit. Ending lands the drone anyway, since disconnecting finishes or
-starts a landing for a drone that may be flying, and every failure is logged
-as an error with its reason.
+time limit. Ending lands the drone anyway, since the tick step lands a drone
+that may still be flying when a behavior is done (ADR-0083), and every failure
+is logged as an error with its reason.
 """
 
 import logging

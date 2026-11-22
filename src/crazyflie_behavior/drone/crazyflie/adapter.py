@@ -101,6 +101,8 @@ LANDING_APPROACH_AIM_BELOW = 0.05
 LANDING_APPROACH_BACKUP = 1.0
 """Seconds after the landing approach's `go_to` ends before the final descent starts anyway, if
 the down range hasn't started it (ADR-0068)."""
+SILENCE_CONFIRMATION_TIME_LIMIT = 1.0
+"""Seconds that disconnecting waits for the drone to confirm the buzzer's silence (ADR-0083)."""
 
 # --- PLACEHOLDERS, NOT DECISIONS ---------------------------------------------
 # Flight parameters wait on speed envelopes (ADR-0005) and the safety layer.
@@ -135,6 +137,9 @@ THRUST_BASE = 43_000
 """Written to the drone at connect, near this drone's hover thrust (ADR-0061). VERIFY from each hover's
 motor outputs."""
 # ------------------------------------------------------------------------------
+
+LAST_RESORT_LANDING_DURATION = HEIGHT_IF_UNKNOWN / VERTICAL_SPEED
+"""Seconds: the last-resort landing's fixed time, down from the highest height assumed (ADR-0084)."""
 
 _MULTIRANGER_VARIABLES = {
     RangeDirection.FRONT: "range.front",
@@ -332,6 +337,13 @@ class CrazyflieAdapter(DroneInterface):
         """A start or create was sent for the take-off block, and no stop since."""
         self._take_off_block_stops_at = 0.0
         """When the take-off block's run is over. Meaningful while it runs."""
+        self._lost_link_message: str | None = None
+        """cflib's message for a lost link (ADR-0084). Written on whichever thread cflib reports it from."""
+        self._is_lost_link_raised = False
+        """A call has raised for the lost link, so `disconnect()` doesn't raise for it again."""
+        self._is_silence_confirmed = False
+        """The drone reported the buzzer off after the silence in `disconnect()` (ADR-0083). Written on cflib's
+        receive thread."""
 
     # --- Connection ---------------------------------------------------------
 
@@ -347,6 +359,9 @@ class CrazyflieAdapter(DroneInterface):
         self._is_ignoring_estimate_reset = False
         self._latest_image_quality = None
         self._is_thrust_base_confirmed = False
+        self._lost_link_message = None
+        self._is_lost_link_raised = False
+        self._is_silence_confirmed = False
         self._is_drone_state_unknown = True
         # Nor does it carry on a take-off, landing or setpoint stream from an earlier session.
         self._is_in_initial_climb = False
@@ -359,6 +374,8 @@ class CrazyflieAdapter(DroneInterface):
         self._telemetry = TelemetryBuffer(self._clock)
         sync_crazyflie = SyncCrazyflie(self._uri, cf=Crazyflie(rw_cache=self._cache_directory))
         self._sync_crazyflie = sync_crazyflie  # tracked from the start, so cleanup always finds it
+        # Before the link opens, so no lost link goes unheard (ADR-0084).
+        sync_crazyflie.cf.connection_lost.add_callback(self._on_connection_lost)
         try:
             # cflib's blocking steps each get a time limit, waited for in short
             # slices so the interrupt signal gets through, even on Windows (ADR-0029).
@@ -401,24 +418,45 @@ class CrazyflieAdapter(DroneInterface):
     def disconnect(self) -> None:
         if self._sync_crazyflie is None:
             return
+        try:
+            if self._lost_link_message is None:
+                self._land_silence_and_wait()
+            elif not self._is_lost_link_raised:
+                self._raise_if_the_link_is_lost()  # lost since the last tick: the run must still end with an error
+        finally:
+            # After a lost link, also one found while landing or waiting here.
+            if self._lost_link_message is not None:
+                self._log_closing_after_the_lost_link()
+            # Clean up even if landing failed.
+            self._shut_down_link()
+
+    def _land_silence_and_wait(self) -> None:
+        """Disconnecting with the link up: land a drone that may be flying, silence the buzzer, then wait for
+        not flying."""
         # cflib's close_link() sends a zero-thrust setpoint, which would drop a
         # flying drone. Land first and wait until the motors are stopped:
         # blocking is fine at shutdown.
+        was_airborne = self._is_airborne
         try:
             # The landing below doesn't tick, so nothing else would stop the take-off block (ADR-0065).
             self._stop_take_off_block()
             if self._is_airborne:
                 self._land_and_wait_for_touchdown()
-            if self._has_stopped_motors:
-                # That setpoint also locks a drone that still reports flying (ADR-0058).
-                self._wait_for_not_flying()
-        finally:
-            # Clean up even if landing failed, e.g. because the link dropped.
-            self._shut_down_link()
+        except Exception:
+            if was_airborne and self._lost_link_message is None:
+                self._land_as_a_last_resort()
+            raise
+        self._silence_and_wait_for_confirmation()
+        if self._has_stopped_motors:
+            # That setpoint also locks a drone that still reports flying (ADR-0058).
+            self._wait_for_not_flying()
 
     # --- Commands -----------------------------------------------------------
 
+    # Every call a tick makes raises after a lost link (ADR-0084).
+
     def arm(self) -> None:
+        self._raise_if_the_link_is_lost()
         status = self._telemetry.latest_drone_status()
         if status is not None:
             # The drone answers an arm request with only "refused", never why (ADR-0058).
@@ -434,11 +472,13 @@ class CrazyflieAdapter(DroneInterface):
         self._crazyflie.supervisor.send_arming_request(True)
 
     def disarm(self) -> None:
+        self._raise_if_the_link_is_lost()
         self._stop_motors()
         self._crazyflie.supervisor.send_arming_request(False)
 
     def take_off(self, height: float) -> None:
         """Raises for a height at or below the final descent height: no hover there can fly (ADR-0056, ADR-0077)."""
+        self._raise_if_the_link_is_lost()
         if height <= FINAL_DESCENT_HEIGHT:
             raise ValueError(
                 f"Take-off height must be above the final descent height, {FINAL_DESCENT_HEIGHT:g} m: {height}"
@@ -460,6 +500,7 @@ class CrazyflieAdapter(DroneInterface):
         self._run_take_off_block()  # after the take-off's own commands (ADR-0065)
 
     def land(self) -> None:
+        self._raise_if_the_link_is_lost()
         if not self._may_be_flying():
             # On the floor, a move down would spin an armed drone's motors up
             # (ADR-0032), so just make sure they're stopped.
@@ -474,6 +515,7 @@ class CrazyflieAdapter(DroneInterface):
         # Otherwise already landing: a new landing approach could climb back up (ADR-0056).
 
     def set_velocity(self, velocity: Vector3, yaw_rate_rad_per_s: float = 0.0) -> None:
+        self._raise_if_the_link_is_lost()
         if self._is_ignored_while_crossing_the_bad_flow_zone("Set-velocity"):
             return
         self._cancel_landing()
@@ -484,6 +526,7 @@ class CrazyflieAdapter(DroneInterface):
         self._level_vertical_speed = None
 
     def move_to(self, position: Vector3, duration: float) -> None:
+        self._raise_if_the_link_is_lost()
         if duration <= 0.0:
             raise ValueError(f"Move duration must be positive: {duration}")
         if self._is_ignored_while_crossing_the_bad_flow_zone("Move-to"):
@@ -499,6 +542,7 @@ class CrazyflieAdapter(DroneInterface):
             )
 
     def hover(self) -> None:
+        self._raise_if_the_link_is_lost()
         if self._is_ignored_while_crossing_the_bad_flow_zone("Hover"):
             return
         if not self._may_be_flying():
@@ -521,6 +565,7 @@ class CrazyflieAdapter(DroneInterface):
                 commander.go_to(here.x, here.y, here.z, DEFAULT_YAW_RAD, HOVER_SETTLE_DURATION)
 
     def emergency_stop(self) -> None:
+        self._raise_if_the_link_is_lost()
         self._crazyflie.supervisor.send_emergency_stop()
         self._is_airborne = False
         self._is_in_initial_climb = False
@@ -529,6 +574,7 @@ class CrazyflieAdapter(DroneInterface):
         self._cancel_landing()
 
     def reset_estimate(self) -> None:
+        self._raise_if_the_link_is_lost()
         if self._may_be_flying():
             # Just after a take-off, the drone status still says not flying and the down
             # range still reads the floor, so the safety layer can't tell (ADR-0039).
@@ -540,26 +586,31 @@ class CrazyflieAdapter(DroneInterface):
         self._send_estimate_reset()
 
     def chirp(self) -> None:
+        self._raise_if_the_link_is_lost()
         # A chirp that a silence or a tone cuts short leaves the firmware partway through its
         # tune, so the next chirp plays only the rest.
         self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_CHIRP)
 
     def play_tone(self, pitch: float) -> None:
+        self._raise_if_the_link_is_lost()
         frequency = sound_frequency_from_pitch(pitch)
         # The pitch first: the tone plays whatever `sound.freq` holds when it starts.
         self._write_buzzer_parameter(_SOUND_FREQUENCY_PARAMETER, frequency)
         self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_TONE)
 
     def silence(self) -> None:
+        self._raise_if_the_link_is_lost()
         self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_OFF)
 
     def take_snapshot(self, dt: float) -> Snapshot:
+        self._raise_if_the_link_is_lost()
         return self._telemetry.snapshot(
             dt, is_in_initial_climb=self._is_in_initial_climb, may_be_flying=self._may_be_flying()
         )
 
     def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
         """Also stops the take-off block once its run is over (ADR-0065)."""
+        self._raise_if_the_link_is_lost()
         if self._is_in_initial_climb:
             self._update_initial_climb(snapshot)
         else:
@@ -613,6 +664,28 @@ class CrazyflieAdapter(DroneInterface):
         # cflib's own close_link() calls this too: it tells SyncCrazyflie the link is closed.
         crazyflie.disconnected.call(crazyflie.link_uri)
 
+    def _on_connection_lost(self, link_uri: str, message: str) -> None:
+        # cflib calls this on whichever thread found the link error, the tick's included: store and log only.
+        self._lost_link_message = str(message)
+        logger.error("The radio link to the drone was lost: %s", message)
+
+    def _raise_if_the_link_is_lost(self) -> None:
+        """Raise after a lost link, so the run ends with an error (ADR-0084)."""
+        message = self._lost_link_message
+        if message is None:
+            return
+        self._is_lost_link_raised = True
+        raise ConnectionError(f"The radio link to the drone was lost: {message}")
+
+    def _log_closing_after_the_lost_link(self) -> None:
+        if self._may_be_flying():
+            logger.error(
+                "Closing without landing: the link is lost and the drone may still be flying. "
+                "Run the rescue landing, or tools/emergency_stop.py with something soft under the drone."
+            )
+        else:
+            logger.error("Closing without landing: the link is lost. The drone wasn't flying.")
+
     def _deck_attached(self, *parameters: str) -> bool:
         """True if any of the deck parameters says the deck is attached."""
         for parameter in parameters:
@@ -634,6 +707,38 @@ class CrazyflieAdapter(DroneInterface):
             return
         self._is_skipping_buzzer_commands = False  # this write goes through: the streak is over
         self._crazyflie.param.set_value(name, value)
+
+    def _silence_and_wait_for_confirmation(self) -> None:
+        """Silence the buzzer and wait for the drone to confirm it: closing the link drops writes still waiting
+        (ADR-0083). Without a confirmation in time, a warning."""
+        param = self._crazyflie.param
+        group, name = _SOUND_EFFECT_PARAMETER.split(".")
+        param.add_update_callback(group=group, name=name, cb=self._on_sound_effect_reported)
+        try:
+            param.set_value(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_OFF)
+        except KeyError:
+            # The firmware may lack it without a Buzzer deck: not checked (backlog #136).
+            logger.warning("Buzzer not silenced: the drone has no %s parameter.", _SOUND_EFFECT_PARAMETER)
+            return
+        try:
+            self._wait_until(
+                lambda: self._is_silence_confirmed,
+                SILENCE_CONFIRMATION_TIME_LIMIT,
+                lambda: (
+                    f"The drone didn't confirm the buzzer's silence within {SILENCE_CONFIRMATION_TIME_LIMIT:g} s. "
+                    "A tone may stay on until the drone is switched off."
+                ),
+            )
+        except TimeoutError as error:
+            logger.warning("%s", error)
+            return
+        logger.info("The drone confirmed the buzzer's silence.")
+
+    def _on_sound_effect_reported(self, name: str, value: str) -> None:
+        # cflib calls this on its receive thread, inside its parameter writer: compared as text, never parsed.
+        # Any report of the buzzer off counts, an earlier silence's too (backlog #141).
+        if value == str(_SOUND_EFFECT_OFF):
+            self._is_silence_confirmed = True
 
     def _send_estimate_reset(self) -> None:
         """Write the reset without waiting (ADR-0054), then log the estimate it erases (ADR-0020)."""
@@ -988,6 +1093,29 @@ class CrazyflieAdapter(DroneInterface):
             self._clock.sleep_until(self._clock.now() + TOUCHDOWN_POLL_PERIOD)
             self._update_landing(self.take_snapshot(0.0))
 
+    def _land_as_a_last_resort(self) -> None:
+        """The last-resort landing (ADR-0084): the firmware's land, the release, a wait with the link open, then
+        the radio link closes. It reads no telemetry and no landing state, and logs its errors instead of
+        raising them."""
+        logger.critical("Our landing failed: sending the firmware's land as a last resort.")
+        try:
+            crazyflie = self._crazyflie
+            crazyflie.high_level_commander.land(0.0, LAST_RESORT_LANDING_DURATION)
+            # After the land: released first, the idle planner's motors-off setpoint gets through.
+            crazyflie.commander.send_notify_setpoint_stop()
+        except Exception:
+            logger.exception(
+                "The last-resort landing wasn't sent. "
+                "Run the rescue landing, or tools/emergency_stop.py with something soft under the drone."
+            )
+        else:
+            # Not relying on cflib to send what's still queued when the link closes (backlog #138).
+            self._clock.sleep_until(self._clock.now() + LAST_RESORT_LANDING_DURATION)
+        try:
+            self._close_radio_link_only()
+        except Exception:
+            logger.exception("Closing the radio link after the last-resort landing failed")
+
     # --- Telemetry ----------------------------------------------------------
 
     def _start_state_logging(self) -> None:
@@ -1172,9 +1300,11 @@ class CrazyflieAdapter(DroneInterface):
 
         Checks every wait slice. Unlike cflib's waits (ADR-0029), a plain sleep
         ends at once on the interrupt signal, so this needs no helper thread.
+        A lost link ends the wait at once with its error (ADR-0084).
         """
         deadline = self._clock.now() + time_limit
         while not is_done():
+            self._raise_if_the_link_is_lost()
             now = self._clock.now()
             if now >= deadline:
                 raise TimeoutError(time_limit_message())

@@ -15,15 +15,16 @@ It uses the mock adapter unless it's run with --crazyflie:
 If the fault never takes effect, the failsafe test lands the drone normally
 after a time limit and has failed. The exit code is 0 only if the fault was
 injected, the safety pre-check then failed, the test didn't fail by its own
-rules, and `disconnect()` returned (it raises if its landing fails, which makes
-the exit code 1). ADR-0036 says a program exits nonzero when the failsafe ends
-the flight; for this program that is the pass (ADR-0041 amends the rule).
+rules, and the run ended without an error: the failsafe's landing runs inside
+the tick loop (ADR-0083), and a lost link or a landing that raises makes the
+exit code 1 (ADR-0084). ADR-0036 says a program exits nonzero when the
+failsafe ends the flight; for this program that is the pass (ADR-0041 amends
+the rule).
 
-Exit code 0 doesn't say whether the motors stopped (a lost radio link drops the
-motor stop without an error, backlog #46), nor whether touchdown was confirmed
-or the final descent ran out its time limit. The operator's test log records
-those, from what they saw and the warnings in the log file. A pytest test checks
-that the pre-check failed because of the battery.
+Exit code 0 doesn't say whether touchdown was confirmed or the final descent
+ran out its time limit. The operator's test log records that, from what they
+saw and the warnings in the log file. A pytest test checks that the pre-check
+failed because of the battery.
 
 The interrupt signal makes a stop request: before the fault, the drone lands
 and the test hasn't passed.

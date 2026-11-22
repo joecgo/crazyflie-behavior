@@ -36,6 +36,14 @@ class TickStep(ABC):
         loop's own: compare ages with `snapshot.time` (ADR-0046).
         """
 
+    @abstractmethod
+    def request_stop(self) -> None:
+        """A stop request arrived: end the job, so a later `run()` reports done (ADR-0083).
+
+        Called once, on the tick's thread, just before a tick. The loop keeps
+        ticking until `run()` reports done, so a flying drone can land first.
+        """
+
 
 class HangWatchdog:
     """Reports a tick that runs longer than `timeout` seconds (ADR-0026).
@@ -151,12 +159,15 @@ def _ms(seconds: float) -> str:
 
 
 class TickLoop:
-    """Calls the tick step at the tick rate until it's done or a stop request arrives.
+    """Calls the tick step at the tick rate until it's done.
 
     Due times follow ADR-0024: each one is the previous due time plus one tick
     period, so a late start shortens the next wait instead of adding up. After
     an overrun the next tick starts at once and the beat restarts from there;
     missed ticks are skipped, never caught up.
+
+    A stop request goes to the tick step once, before the next tick, and the
+    loop keeps ticking until the tick step is done (ADR-0083).
 
     Errors from the tick step aren't caught here. They rise to the program,
     which disconnects and lands (ADR-0026).
@@ -179,11 +190,11 @@ class TickLoop:
         self._stop_requested = threading.Event()
 
     def request_stop(self) -> None:
-        """Make a stop request: the loop returns after the current tick. Safe from any thread."""
+        """Make a stop request: the tick step gets it before the next tick (ADR-0083). Safe from any thread."""
         self._stop_requested.set()
 
     def run(self) -> None:
-        """Run ticks until the tick step reports it's done or a stop request arrives."""
+        """Run ticks until the tick step reports it's done."""
         record = _TimingRecord()
         pauses = _GarbageCollectorPauses(self._clock)
         logger.info("Tick loop starting at %g Hz", self._tick_rate)
@@ -200,12 +211,9 @@ class TickLoop:
     def _run_ticks(self, record: _TimingRecord, pauses: _GarbageCollectorPauses) -> None:
         due_time = self._clock.now()
         previous_start: float | None = None
+        is_stop_request_passed_on = False
         while True:
             self._clock.sleep_until(due_time)
-            if self._stop_requested.is_set():
-                self._log_stop_request(record)
-                return
-
             start = self._clock.now()
             dt = 0.0 if previous_start is None else start - previous_start
             previous_start = start
@@ -215,6 +223,11 @@ class TickLoop:
                 # (a blocked console, say) is also reported.
                 self._hang_watchdog.arm()
                 try:
+                    # On this thread and only once, so the tick step needs no lock (ADR-0083).
+                    if not is_stop_request_passed_on and self._stop_requested.is_set():
+                        is_stop_request_passed_on = True
+                        logger.info("Stop request: passed to the tick step (ticks run: %d)", record.tick_count)
+                        self._tick_step.request_stop()
                     done = self._tick_step.run(start, dt)
                 finally:
                     # Also when the tick step raises, so that tick's timing is logged too.
@@ -224,9 +237,6 @@ class TickLoop:
 
             if done:
                 logger.info("Tick step done: tick loop stopping (ticks run: %d)", record.tick_count)
-                return
-            if self._stop_requested.is_set():
-                self._log_stop_request(record)
                 return
 
     def _finish_tick(
@@ -262,6 +272,3 @@ class TickLoop:
             _ms(end - next_due_time),
         )
         return end
-
-    def _log_stop_request(self, record: _TimingRecord) -> None:
-        logger.info("Stop request: tick loop stopping (ticks run: %d)", record.tick_count)

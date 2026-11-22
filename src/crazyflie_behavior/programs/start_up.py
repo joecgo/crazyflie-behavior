@@ -87,8 +87,9 @@ def take_off_log_description(use_crazyflie: bool) -> str:
 def run_program(program_name: str, description: str, drone: DroneInterface, tick_step: TickStep, clock: Clock) -> int:
     """Run a program: its log, then the tick loop between connecting and disconnecting.
 
-    Returns the exit code: 0 when the tick loop ran until done or stopped, 1
-    after an error, 130 when the interrupt signal stopped the program while connecting.
+    Returns the exit code: 0 when the tick loop ran until done, after a stop
+    request too, 1 after an error, a lost link included (ADR-0084), 130 when the
+    interrupt signal stopped the program while connecting.
     Every error goes to the log with its stack trace (ADR-0020).
     """
     with logging_for_run(program_name) as log_file, quick_edit_off():
@@ -287,13 +288,14 @@ class _InterruptSignalHandler:
 
 
 def run_tick_loop(drone: DroneInterface, tick_step: TickStep, clock: Clock, log_file: TextIO) -> None:
-    """Connect, run the tick loop until it's done or stopped, then disconnect (ADR-0026).
+    """Connect, run the tick loop until it's done, then disconnect (ADR-0026).
 
     Disconnecting always happens, also after an error or a failed connect (it
-    does nothing if nothing is connected), and it lands a flying drone. Once
-    connected, the interrupt signal is a stop request, so it can't cut the
-    landing short. While connecting, nothing is commanded, so the interrupt signal
-    stops the program (ADR-0028, ADR-0029, ADR-0038).
+    does nothing if nothing is connected), and after an error it lands a
+    flying drone. Once connected, the interrupt signal is a stop request: a
+    flying drone lands inside the tick loop, and a later signal can't cut the
+    landing short (ADR-0083). While connecting, nothing is commanded, so the
+    interrupt signal stops the program (ADR-0028, ADR-0029, ADR-0038).
 
     This uses `try`/`finally` rather than `with drone:` so that the interrupt
     signal's handler is in place before connecting and stays until after the

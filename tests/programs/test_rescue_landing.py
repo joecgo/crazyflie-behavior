@@ -38,6 +38,24 @@ def test_the_rescue_landing_program_lands_the_hovering_mock_drone(
     assert "Sending TakeOff" not in log_text
 
 
+def test_the_rescue_landing_program_lands_before_disconnecting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    drones: list[MockAdapter] = []
+
+    def make_mock_adapter(use_crazyflie: bool, clock: Clock, *, take_over_flight: bool = False) -> DroneInterface:
+        drones.append(MockAdapter(clock, take_over_flight=take_over_flight))
+        return drones[-1]
+
+    monkeypatch.setattr(rescue_landing_program, "make_drone", make_mock_adapter)
+
+    assert main([], clock=sim_clock) == 0
+
+    (drone,) = drones
+    assert drone.command_log == ["connect", "land", "disconnect"]  # no landing in disconnect() (ADR-0083)
+
+
 def test_the_rescue_landing_program_runs_as_a_program(tmp_path: Path) -> None:
     finished = subprocess.run(
         [sys.executable, "-m", "crazyflie_behavior.programs.rescue_landing"],

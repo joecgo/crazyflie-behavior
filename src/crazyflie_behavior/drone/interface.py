@@ -10,6 +10,8 @@ Rules every adapter follows:
 - Positions and velocities are in the world frame, SI units (ADR-0004).
 - Yaw is held fixed (ADR-0008).
 - Exceptions are for bugs and broken connections, never for normal refusals.
+  After a lost link, every call but `connect()` and `disconnect()` raises
+  `ConnectionError` (ADR-0084).
 """
 
 from abc import ABC, abstractmethod
@@ -62,12 +64,14 @@ class DroneInterface(ABC):
 
     @abstractmethod
     def disconnect(self) -> None:
-        """Leave the drone on the ground with motors stopped, then close the link.
+        """Leave the drone on the ground with motors stopped and the buzzer silent, then close the link.
 
-        If the drone may be flying, it lands first. If that landing fails, the
-        link is closed without stopping the motors, so a flying drone keeps
-        flying: run the rescue landing (ADR-0038). Unlike the other commands
-        this may block, because it's only used at shutdown.
+        If the drone may be flying, it lands first. If that landing raises, the
+        last-resort landing, then the link is closed without stopping the
+        motors, and the error raised again (ADR-0038, ADR-0084). After a lost
+        link it closes without landing, raising `ConnectionError` unless an
+        earlier call already did. Unlike the other commands this may block,
+        because it's only used at shutdown.
         """
 
     @abstractmethod

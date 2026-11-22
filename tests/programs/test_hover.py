@@ -1,7 +1,9 @@
 """The hover program (ADR-0030), on the sim clock except the test that runs it as a program (ADR-0076)."""
 
+import signal
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -64,9 +66,131 @@ def test_with_chirp_the_buzzer_commands_reach_the_drone(
     # A chirp on the floor and after landing (the hover is too short for more), then "Charge", then silence.
     assert buzzer_commands == ["chirp", "chirp", *["play_tone"] * len(charge), "silence"]
     assert drone.tone_pitches == pytest.approx([note_pitch(name, octave) for name, octave in charge])
+    assert drone.playing_tone is None
     log_text = the_log_file_text(tmp_path / "logs")
     assert "Hover program, the mock adapter, hovering 0.1 s at 0.5 m, with chirps" in log_text
     assert "Hover test: done." in log_text
+
+
+def capture_the_mock_adapter[T: MockAdapter](
+    monkeypatch: pytest.MonkeyPatch, adapter_class: Callable[[Clock], T]
+) -> list[T]:
+    """Has the hover program make its drone with `adapter_class`, and returns the list it lands in."""
+    drones: list[T] = []
+
+    def make_mock_adapter(use_crazyflie: bool, clock: Clock, *, take_off_log: bool) -> DroneInterface:
+        drones.append(adapter_class(clock))
+        return drones[-1]
+
+    monkeypatch.setattr(hover_module, "make_drone", make_mock_adapter)
+    return drones
+
+
+def test_the_hover_program_lands_before_disconnecting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    drones = capture_the_mock_adapter(monkeypatch, MockAdapter)
+
+    assert main(["--hover-seconds", "0.1"], clock=sim_clock) == 0
+
+    (drone,) = drones
+    assert drone.command_log == ["connect", "arm", "take_off", "land", "disconnect"]  # no landing in disconnect()
+
+
+class StopRequestAtTheHoverHeightMockAdapter(MockAdapter):
+    """A mock drone that sends the interrupt signal once, when it's at the take-off height."""
+
+    def __init__(self, clock: Clock) -> None:
+        super().__init__(clock)
+        self._has_sent_the_signal = False
+
+    def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
+        super().update_take_off_and_landing(snapshot)
+        position = snapshot.position_estimate
+        if not self._has_sent_the_signal and position is not None and position.value.z == TAKE_OFF_HEIGHT:
+            self._has_sent_the_signal = True
+            signal.raise_signal(signal.SIGINT)
+
+
+def test_a_stop_request_mid_hover_lands_inside_the_tick_loop_and_still_exits_with_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
+) -> None:
+    """ADR-0062's exit code for a hover cut short, with the landing before `disconnect()` (ADR-0083)."""
+    monkeypatch.chdir(tmp_path)
+    drones = capture_the_mock_adapter(monkeypatch, StopRequestAtTheHoverHeightMockAdapter)
+
+    exit_code = main(["--hover-seconds", "5"], clock=sim_clock)
+
+    assert exit_code == 1
+    (drone,) = drones
+    assert drone.command_log == ["connect", "arm", "take_off", "land", "disconnect"]
+    log_text = the_log_file_text(tmp_path / "logs")
+    assert "The flight is over: a stop request. Landing." in log_text
+    assert "Hover test: hovered" not in log_text
+
+
+class StopRequestAtTheFirstToneMockAdapter(MockAdapter):
+    """A mock drone that sends the interrupt signal when its first tone arrives: "Charge" is cut short."""
+
+    def play_tone(self, pitch: float) -> None:
+        super().play_tone(pitch)
+        if len(self.tone_pitches) == 1:
+            signal.raise_signal(signal.SIGINT)
+
+
+def test_a_stop_request_during_charge_leaves_no_tone_playing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
+) -> None:
+    """Backlog #59's case: `disconnect()` silences the buzzer (ADR-0083)."""
+    monkeypatch.chdir(tmp_path)
+    drones = capture_the_mock_adapter(monkeypatch, StopRequestAtTheFirstToneMockAdapter)
+
+    exit_code = main(["--hover-seconds", "0.1", "--chirp"], clock=sim_clock)
+
+    assert exit_code == 0  # the hover test had landed
+    (drone,) = drones
+    assert drone.tone_pitches == [pytest.approx(note_pitch("G", 4))]
+    assert drone.playing_tone is None
+
+
+class LinkLostAtTheHoverHeightMockAdapter(MockAdapter):
+    """A mock drone that loses its link once it's at the take-off height (ADR-0084)."""
+
+    def __init__(self, clock: Clock) -> None:
+        super().__init__(clock)
+        self.snapshots_asked_for_after_the_loss = 0
+        self._has_lost_the_link = False
+
+    def take_snapshot(self, dt: float) -> Snapshot:
+        if self._has_lost_the_link:
+            self.snapshots_asked_for_after_the_loss += 1
+        return super().take_snapshot(dt)
+
+    def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
+        super().update_take_off_and_landing(snapshot)
+        position = snapshot.position_estimate
+        if not self._has_lost_the_link and position is not None and position.value.z == TAKE_OFF_HEIGHT:
+            self._has_lost_the_link = True
+            self.lose_link()
+
+
+def test_a_link_lost_in_flight_ends_the_run_at_once_with_1_and_says_the_drone_may_still_be_flying(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    drones = capture_the_mock_adapter(monkeypatch, LinkLostAtTheHoverHeightMockAdapter)
+
+    exit_code = main(["--hover-seconds", "5"], clock=sim_clock)
+
+    assert exit_code == 1
+    (drone,) = drones
+    assert drone.snapshots_asked_for_after_the_loss == 1  # the next tick's first call raised
+    assert drone.command_log == ["connect", "arm", "take_off", "disconnect"]
+    log_text = the_log_file_text(tmp_path / "logs")
+    assert "The radio link to the drone was lost" in log_text
+    assert "Closing without landing: the link is lost and the drone may still be flying." in log_text
+    assert "Sending Land()" not in log_text
 
 
 class SaggingBatteryMockAdapter(MockAdapter):

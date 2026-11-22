@@ -1289,3 +1289,36 @@ def test_disconnecting_stops_the_take_off_block_before_its_landing(fake_cflib: F
     adapter.disconnect()
 
     assert fake_cflib.events[events_before : events_before + 2] == ["stop take_off", "landing approach"]
+
+
+# --- A lost link (ADR-0084) -----------------------------------------------------------
+
+
+def lose_the_link(fake_cflib: FakeCflib) -> None:
+    """cflib calls every connection_lost callback with the link's URI and its message (facts register)."""
+    for call in fake_cflib.link.cf.connection_lost.add_callback.call_args_list:
+        call.args[0]("radio://0/80/2M/E7E7E7E7E7", "Too many packets lost")
+
+
+def test_connect_listens_for_a_lost_link_before_the_link_opens(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    adapter.connect()
+
+    calls = [name for name, _, _ in fake_cflib.link.mock_calls]
+    assert calls.index("cf.connection_lost.add_callback") < calls.index("open_link")
+
+
+def test_a_lost_link_is_logged_once_as_an_error_and_the_next_call_raises(
+    adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -> None:
+    adapter.connect()
+
+    with caplog.at_level(logging.ERROR, logger=adapter_module.__name__):
+        lose_the_link(fake_cflib)
+
+    assert [record.getMessage() for record in caplog.records if record.levelno >= logging.ERROR] == [
+        "The radio link to the drone was lost: Too many packets lost"
+    ]
+    with pytest.raises(ConnectionError, match="The radio link to the drone was lost: Too many packets lost"):
+        adapter.take_snapshot(0.05)

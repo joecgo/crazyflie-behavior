@@ -250,22 +250,33 @@ def log_file(tmp_path: Path) -> Generator[TextIO]:
 
 
 class CountingTickStep(TickStep):
-    """A fake tick step that runs a set number of ticks, sending the interrupt signal on some."""
+    """A fake tick step that runs a set number of ticks, sending the interrupt signal on some.
+
+    A stop request makes its next tick report done.
+    """
 
     def __init__(self, tick_count: int, interrupt_signal_on_ticks: tuple[int, ...] = ()) -> None:
         self._tick_count = tick_count
         self._interrupt_signal_on_ticks = interrupt_signal_on_ticks
         self.ticks_run = 0
+        self.stop_requests: list[int] = []
+        """The ticks run when each stop request arrived."""
+
+    def request_stop(self) -> None:
+        self.stop_requests.append(self.ticks_run)
 
     def run(self, time: float, dt: float) -> bool:
         tick_number = self.ticks_run
         self.ticks_run += 1
         if tick_number in self._interrupt_signal_on_ticks:
             signal.raise_signal(signal.SIGINT)
-        return self.ticks_run >= self._tick_count
+        return self.ticks_run >= self._tick_count or bool(self.stop_requests)
 
 
 class FailingTickStep(TickStep):
+    def request_stop(self) -> None:
+        pytest.fail("No stop request in these tests")
+
     def run(self, time: float, dt: float) -> bool:
         raise RuntimeError("the tick step broke")
 
@@ -321,7 +332,7 @@ def test_the_drone_is_disconnected_even_when_a_tick_raises(log_file: TextIO, sim
     assert drone.command_log == ["connect", "disconnect"]
 
 
-def test_the_interrupt_signal_once_connected_lets_the_tick_finish_and_starts_no_more(
+def test_the_interrupt_signal_once_connected_is_a_stop_request_for_the_tick_step(
     log_file: TextIO,
     sim_clock: SimClock,
 ) -> None:
@@ -330,7 +341,8 @@ def test_the_interrupt_signal_once_connected_lets_the_tick_finish_and_starts_no_
 
     run_without_keyboard_interrupt(MockAdapter(clock), tick_step, clock, log_file)
 
-    assert tick_step.ticks_run == 2
+    assert tick_step.stop_requests == [2]
+    assert tick_step.ticks_run == 3  # the tick step ended the run on its next tick
 
 
 def test_the_interrupt_signal_during_the_landing_is_ignored_so_the_landing_finishes(

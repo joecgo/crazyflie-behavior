@@ -63,6 +63,22 @@ def test_the_bench_tick_step_never_commands_the_drone(sim_clock: SimClock) -> No
     assert drone.command_log == ["connect"]
 
 
+def test_a_stop_request_makes_the_next_bench_tick_report_done_with_nothing_sent(sim_clock: SimClock) -> None:
+    # With no safety layer, nothing lands (ADR-0083).
+    clock = sim_clock
+    drone = connected_mock(clock)
+    tick_step = BenchTickStep(drone)
+    is_done_before = tick_step.run(clock.now(), TICK_PERIOD)
+    clock.advance(TICK_PERIOD)
+
+    tick_step.request_stop()
+    is_done_after = tick_step.run(clock.now(), TICK_PERIOD)
+
+    assert not is_done_before
+    assert is_done_after
+    assert drone.command_log == ["connect"]
+
+
 class UpdateRecordingMock(MockAdapter):
     def __init__(self, clock: SimClock) -> None:
         super().__init__(clock)
@@ -203,7 +219,39 @@ def test_the_bench_program_runs_with_the_mock_adapter_until_the_interrupt_signal
     assert "Bench program, the mock adapter" in log_text
     assert "Snapshot: Snapshot(" in log_text  # the debug lines reach the file
     assert "The interrupt signal made the stop request" in log_text
-    assert "Tick loop summary: ticks: 3" in log_text
+    assert "Tick loop summary: ticks: 4" in log_text  # the stop request ends the run on the next tick
+
+
+class LinkLostOnTheThirdTickMockAdapter(MockAdapter):
+    """A mock drone that loses its link on the floor, at its third tick (ADR-0084)."""
+
+    def __init__(self, clock: Clock) -> None:
+        super().__init__(clock)
+        self._updates = 0
+
+    def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
+        super().update_take_off_and_landing(snapshot)
+        self._updates += 1
+        if self._updates == 3:
+            self.lose_link()
+
+
+def test_a_link_lost_on_the_floor_ends_the_run_at_once_with_1_and_says_the_drone_wasnt_flying(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def make_mock_adapter(use_crazyflie: bool, clock: Clock, *, take_off_log: bool) -> DroneInterface:
+        return LinkLostOnTheThirdTickMockAdapter(clock)
+
+    monkeypatch.setattr(bench_module, "make_drone", make_mock_adapter)
+
+    exit_code = main([], clock=sim_clock)
+
+    assert exit_code == 1
+    log_text = the_log_file_text(tmp_path / "logs")
+    assert "Closing without landing: the link is lost. The drone wasn't flying." in log_text
+    assert "Tick loop summary: ticks: 4" in log_text  # the fourth tick's first call raised
 
 
 @pytest.mark.parametrize(("arguments", "expected"), [([], False), (["--take-off-log"], True)])

@@ -45,6 +45,11 @@ class BenchTickStep(TickStep):
     def __init__(self, drone: DroneInterface) -> None:
         self._drone = drone
         self._next_summary_time: float | None = None
+        self._is_stop_requested = False
+
+    def request_stop(self) -> None:
+        """Makes the next `run()` report done. With no safety layer, nothing lands (ADR-0083)."""
+        self._is_stop_requested = True
 
     def run(self, time: float, dt: float) -> bool:
         snapshot = self._drone.take_snapshot(dt)
@@ -53,7 +58,7 @@ class BenchTickStep(TickStep):
         if self._next_summary_time is None or time >= self._next_summary_time:
             logger.info("%s", snapshot_summary(snapshot))
             self._next_summary_time = time + SUMMARY_PERIOD
-        return False  # runs until stopped
+        return self._is_stop_requested  # runs until stopped
 
 
 def snapshot_summary(snapshot: Snapshot) -> str:
