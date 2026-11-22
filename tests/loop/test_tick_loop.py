@@ -11,6 +11,7 @@ import logging
 import sys
 import threading
 import time
+from collections.abc import Iterator
 from pathlib import Path
 from typing import NamedTuple
 
@@ -468,6 +469,19 @@ def test_the_hang_timeout_must_be_positive() -> None:
 # --- Logging (ADR-0026) ----------------------------------------------------------
 
 
+@pytest.fixture
+def no_automatic_garbage_collection() -> Iterator[None]:
+    """The collector runs only when a test calls it, so a tick's log line can't gain a pause by chance."""
+    was_enabled = gc.isenabled()
+    gc.disable()
+    try:
+        yield
+    finally:
+        if was_enabled:
+            gc.enable()
+
+
+@pytest.mark.usefixtures("no_automatic_garbage_collection")
 def test_every_tick_is_logged_at_debug_level_with_its_lateness_and_work_time(
     caplog: pytest.LogCaptureFixture,
     sim_clock: SimClock,
@@ -573,6 +587,7 @@ class SlowFailingTickStep(TickStep):
         raise RuntimeError("the tick step broke")
 
 
+@pytest.mark.usefixtures("no_automatic_garbage_collection")
 def test_a_tick_that_raises_is_still_timed_and_logged(caplog: pytest.LogCaptureFixture, sim_clock: SimClock) -> None:
     caplog.set_level(logging.DEBUG, logger=LOGGER_NAME)
     clock = sim_clock
