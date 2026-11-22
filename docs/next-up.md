@@ -8,12 +8,19 @@ request merged, a step built), update this page in the same step: remove or
 move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
-- **Date:** 2026-11-21 (Pacific)
-- **Last commit:** this brief, after `0363756` (the project review's fixes
-  for ADR-0083 and ADR-0084), on `main`, pushed. Uncommitted: nothing.
+- **Date:** 2026-11-22 (Pacific)
+- **Last commit:** this brief, with the work-log row and the backlog, after
+  `3833131` (mistake M-206), on `main`, pushed. Uncommitted: nothing.
 
 ## Done last
 
+- 2026-11-22: boundary tests, part 1 (#133, `a900cb6`): rows 1-3, 7, 12-15
+  and 17, every planted bug caught but the hover tolerance's `<` (as
+  chosen). Row 14's "after" test moved to 0.01 s past the limit (Joe's
+  choice; M-206).
+- 2026-11-22: Joe's review of #29 fixed (`4a97e68`); ADR-0085 and ADR-0086
+  decided and built (`92d0ceb`, `e8f7e10`); #29 closed and logged in
+  `REVIEW.md`. Mistakes M-207 to M-215, Q-55 and Q-56.
 - 2026-11-21: ADR-0083 and ADR-0084 built (`1b673f9`): every flight end
   lands inside the tick loop, and a lost link ends the run with an error,
   with the firmware's land as the last-resort landing. `/project-review max`
@@ -30,23 +37,20 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
-- **Joe's code review of #29.** When he's done, add its row to `REVIEW.md`'s
-  review log; #24 to #28 were closed unmerged, their `review-base/*`
-  branches kept.
 - Noticed: `tools/mistakes_log.py write` saves the log with CRLF line
   endings, against ADR-0079 (git converts them on commit).
 
 ## Next three
 
-1. Boundary tests, part 1 (#133): rows 1-3, 7, 12-15 and 17 of the checked
-   audit's "Test to add" (`test_touchdown.py`, `test_bad_flow_zone.py`, the
-   three behavior tests). Time each step from 0.0; prove each by planting
-   its row's bugs (`recheck.py`). Opus, high.
-2. Boundary tests, part 2: rows 4-6, 8-11 and 18-20 (adapter, safety layer
-   and mock tests), with #140. The build moved lines in those files:
-   re-find each row's code first. Opus, high.
-3. Decide D10 to D12 (C5's recordings and replay tests,
+1. Boundary tests, part 2 (#133): rows 4-6, 8-11 and 18-20 (adapter, safety
+   layer and mock tests), with #140. ADR-0083 to ADR-0086 moved lines in
+   those files: re-find each row's code first. Time each step from 0.0;
+   prove each by planting its row's bugs (`recheck.py`, in a scratch copy).
+   Check each row's results file entries, not just its table row (M-206).
+   Opus, high.
+2. Decide D10 to D12 (C5's recordings and replay tests,
    `drafts/2026-11-13-code-recommendations.md`). Opus, high.
+3. The decisions waiting below (answer by number). Sonnet, medium.
 
 ## Decisions waiting on Joe
 
@@ -102,5 +106,4 @@ full code review covers everything after it, as the first pull request into
 the `reviewed` branch, which doesn't exist yet; the full line-by-line walk
 comes after the refactor (W9). Pull requests #24 to #28 reviewed C1,
 ADR-0077, ADR-0076 (with ADR-0080), ADR-0081 and ADR-0082 alone, ahead of it;
-#29 (ADR-0083 and ADR-0084) is open; its branch now carries the ADR-0085
-and ADR-0086 builds, up to `e8f7e10`, and Joe is rechecking it.
+#29 read ADR-0083 to ADR-0086, up to `e8f7e10`, and is closed unmerged.
