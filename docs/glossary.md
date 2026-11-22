@@ -231,7 +231,7 @@ How the project tracks Claude's mistakes and the checks they lead to ([mistakes 
 |---|---|
 | **Work session** | One conversation with Claude in the desktop app, from its first message to its wrap-up. Not a *session*, which is a field-test trip. |
 | **Work order** | A hand-off that lets a fresh work session carry on: the goal, what to read, what's decided and what isn't, the steps, the tests, when to stop and ask, and when it's done. Written to `drafts/` by `/handoff`. |
-| **Next-up brief** | [`docs/next-up.md`](next-up.md): the project's state on one page, read first by a fresh work session: what was done last, what's in progress and its work order, the next three things, the decisions waiting on the architect, the last commit the architect reviewed, and the date. Rewritten by `/wrap-up`. |
+| **Next-up brief** | [`docs/next-up.md`](next-up.md): the project's state on one page, read first by a fresh work session: what was done last, what's in progress and its work order, the next three things, the explain-backs waiting, the last commit the architect reviewed, and the date. Rewritten by `/wrap-up`. |
 
 ## Hide-and-seek
 
