@@ -585,8 +585,37 @@ def test_an_error_in_the_last_resort_is_logged_not_raised_and_the_radio_link_sti
         adapter.disconnect()
 
     assert "The last-resort landing wasn't sent" in caplog.text
-    # Released alone, the idle planner's motors-off setpoint would get through (ADR-0084).
+    # Released alone, the firmware's motors-off setpoint would get through (ADR-0084).
     fake_link.cf.commander.send_notify_setpoint_stop.assert_not_called()
+    radio_link.close.assert_called_once()
+    fake_link.close_link.assert_not_called()
+
+
+def test_a_release_that_raises_in_the_last_resort_is_logged_and_the_link_stays_open_for_the_land(
+    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    radio_link = fake_link.cf.link
+    fake_link.cf.high_level_commander.go_to.side_effect = OSError("made-up landing error")
+    land_times: list[float] = []
+    close_times: list[float] = []
+
+    def record_the_land_time(absolute_height_m: float, duration_s: float) -> None:
+        land_times.append(clock.now())
+
+    def fail_the_release_after_the_land(*args: object, **kwargs: object) -> None:
+        if land_times:  # our own landing may release before it
+            raise OSError("made-up error in the release")
+
+    fake_link.cf.high_level_commander.land.side_effect = record_the_land_time
+    fake_link.cf.commander.send_notify_setpoint_stop.side_effect = fail_the_release_after_the_land
+    radio_link.close.side_effect = lambda: close_times.append(clock.now())
+
+    with pytest.raises(OSError, match="made-up landing error"):
+        adapter.disconnect()
+
+    assert "The last-resort landing was sent, but the setpoint priority wasn't released" in caplog.text
+    assert "The last-resort landing wasn't sent" not in caplog.text
+    assert close_times == [pytest.approx(land_times[0] + LAST_RESORT_LANDING_DURATION)]  # the land isn't cut off
     radio_link.close.assert_called_once()
     fake_link.close_link.assert_not_called()
 
@@ -912,7 +941,8 @@ def test_after_a_lost_link_in_flight_every_call_a_tick_makes_raises_and_sends_no
 def test_after_a_lost_link_on_the_floor_every_call_a_tick_makes_raises_and_sends_nothing(
     call: Callable[[CrazyflieAdapter], object], clock: SimClock
 ) -> None:
-    # In flight, some calls read a snapshot before they send, and that raises; on the floor, `land()` doesn't.
+    # In flight, some calls read a snapshot before they send, and that raises; on the floor, `land()` reads
+    # none, so only its own check raises.
     link = MagicMock()
     adapter = adapter_on_the_floor(clock, link)
     lose_the_link(adapter, link)
@@ -1101,3 +1131,29 @@ def test_a_drone_without_the_buzzers_parameter_gets_a_warning_and_no_wait(
 
     assert closed_at == [started_at]
     assert caplog.messages == ["Buzzer not silenced: the drone has no sound.effect parameter."]
+
+
+@pytest.mark.parametrize("has_stopped_motors", [False, True], ids=["no motor stop", "after a motor stop"])
+def test_a_link_lost_at_the_silence_still_ends_the_run_with_an_error(
+    has_stopped_motors: bool, clock: SimClock, caplog: pytest.LogCaptureFixture
+) -> None:
+    link = MagicMock()
+    adapter = adapter_on_the_floor(clock, link)
+    adapter._has_stopped_motors = has_stopped_motors
+    # A fresh status, so the wait for not flying ends at once.
+    adapter._telemetry.write_drone_status(ON_THE_FLOOR, clock.now())
+
+    def lose_the_link_at_the_write(complete_name: str, value: object) -> None:
+        lose_the_link(adapter, link)
+        raise KeyError(f"{complete_name} not in param TOC")  # cflib forgets the parameter list too
+
+    link.cf.param.set_value.side_effect = lose_the_link_at_the_write
+
+    with (
+        caplog.at_level(logging.WARNING, logger=adapter_module.__name__),
+        pytest.raises(ConnectionError, match="The radio link to the drone was lost: Too many packets lost"),
+    ):
+        adapter.disconnect()
+
+    assert "Buzzer not silenced: the link is closed." in caplog.messages
+    assert "Closing without landing: the link is lost. The drone wasn't flying." in caplog.messages

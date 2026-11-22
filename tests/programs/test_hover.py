@@ -142,7 +142,7 @@ class StopRequestAtTheFirstToneMockAdapter(MockAdapter):
 def test_a_stop_request_during_charge_leaves_no_tone_playing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
 ) -> None:
-    """Backlog #59's case: `disconnect()` silences the buzzer (ADR-0083)."""
+    """ADR-0083's case, a tone left on at the end of a run: `disconnect()` silences the buzzer."""
     monkeypatch.chdir(tmp_path)
     drones = capture_the_mock_adapter(monkeypatch, StopRequestAtTheFirstToneMockAdapter)
 

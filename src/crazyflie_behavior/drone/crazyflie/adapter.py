@@ -421,8 +421,9 @@ class CrazyflieAdapter(DroneInterface):
         try:
             if self._lost_link_message is None:
                 self._land_silence_and_wait()
-            elif not self._is_lost_link_raised:
-                self._raise_if_the_link_is_lost()  # lost since the last tick: the run must still end with an error
+            if not self._is_lost_link_raised:
+                # Lost since the last tick, or while disconnecting: the run must still end with an error.
+                self._raise_if_the_link_is_lost()
         finally:
             # After a lost link, also one found while landing or waiting here.
             if self._lost_link_message is not None:
@@ -717,8 +718,12 @@ class CrazyflieAdapter(DroneInterface):
         try:
             param.set_value(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_OFF)
         except KeyError:
-            # The firmware may lack it without a Buzzer deck: not checked (backlog #136).
-            logger.warning("Buzzer not silenced: the drone has no %s parameter.", _SOUND_EFFECT_PARAMETER)
+            # Once the link is lost, cflib forgets the parameter list and a write raises.
+            # The firmware may also lack it without a Buzzer deck: not checked (backlog #136).
+            if self._crazyflie.link is None:
+                logger.warning("Buzzer not silenced: the link is closed.")
+            else:
+                logger.warning("Buzzer not silenced: the drone has no %s parameter.", _SOUND_EFFECT_PARAMETER)
             return
         try:
             self._wait_until(
@@ -1101,14 +1106,20 @@ class CrazyflieAdapter(DroneInterface):
         try:
             crazyflie = self._crazyflie
             crazyflie.high_level_commander.land(0.0, LAST_RESORT_LANDING_DURATION)
-            # After the land: released first, the idle planner's motors-off setpoint gets through.
-            crazyflie.commander.send_notify_setpoint_stop()
         except Exception:
             logger.exception(
                 "The last-resort landing wasn't sent. "
                 "Run the rescue landing, or tools/emergency_stop.py with something soft under the drone."
             )
         else:
+            try:
+                # Released before the land, the firmware's motors-off setpoint would get through first (ADR-0084).
+                crazyflie.commander.send_notify_setpoint_stop()
+            except Exception:
+                logger.exception(
+                    "The last-resort landing was sent, but the setpoint priority wasn't released. "
+                    "Run the rescue landing, or tools/emergency_stop.py with something soft under the drone."
+                )
             # Not relying on cflib to send what's still queued when the link closes (backlog #138).
             self._clock.sleep_until(self._clock.now() + LAST_RESORT_LANDING_DURATION)
         try:

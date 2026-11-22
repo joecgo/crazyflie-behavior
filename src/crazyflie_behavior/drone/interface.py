@@ -66,9 +66,9 @@ class DroneInterface(ABC):
     def disconnect(self) -> None:
         """Leave the drone on the ground with motors stopped and the buzzer silent, then close the link.
 
-        If the drone may be flying, it lands first. If that landing raises, the
-        last-resort landing, then the link is closed without stopping the
-        motors, and the error raised again (ADR-0038, ADR-0084). After a lost
+        If the drone may be flying, it lands first. If that landing raises, it
+        sends the last-resort landing, closes the link without stopping the
+        motors, and raises the error again (ADR-0038, ADR-0084). After a lost
         link it closes without landing, raising `ConnectionError` unless an
         earlier call already did. Unlike the other commands this may block,
         because it's only used at shutdown.

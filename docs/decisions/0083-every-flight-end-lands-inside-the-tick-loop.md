@@ -73,6 +73,9 @@ off again on the same link, so the landing can't live in shutdown. From the
   - The first report of `sound.effect` 0 confirms the silence, even the
     answer to an earlier silence (backlog #141).
   - `SILENCE_HOLD` stays: ADR-0053 records its 1 s wait.
+  - After the flight end, `pre_check()` returns False without running its
+    checks: a fault during that landing isn't logged by the pre-check and
+    doesn't set `pre_check_has_failed`.
 
 ## Failure modes
 

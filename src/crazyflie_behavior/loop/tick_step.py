@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 # --- PLACEHOLDER, NOT A DECISION (ADR-0083) ------------------------------------
 FLIGHT_END_TIME_LIMIT = 60.0
-"""Seconds from the flight end until a drone that may still be flying is an error, which `disconnect()` lands."""
+"""Seconds from the flight end until a drone that may still be flying is an error: the tick step raises, and
+`disconnect()` lands it."""
 # ------------------------------------------------------------------------------
 
 

@@ -69,8 +69,8 @@ the ADRs: an accepted ADR wins where the two disagree.
   callback. Only `connect()` and `disconnect()` may block.
 - Pass a cflib object or an untyped value across a module boundary.
 - Stop the motors of a drone that may be flying before touchdown is confirmed
-  or the final descent's time limit, or close its link with cflib's
-  `close_link()`.
+  or the final descent's time limit (except the last-resort landing,
+  ADR-0084), or close its link with cflib's `close_link()`.
 
 **Always:**
 

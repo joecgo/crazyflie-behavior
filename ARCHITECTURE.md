@@ -184,7 +184,8 @@ Forbidden:
 - The tick step reports done while the drone may be flying (ADR-0083).
 - A missing, stale or non-finite value counts as safe (ADR-0030).
 - The motors stop before the down range confirms touchdown or the final
-  descent's time limit runs out (ADR-0012, ADR-0019).
+  descent's time limit runs out (ADR-0012, ADR-0019), except in the
+  last-resort landing (ADR-0084).
 - cflib's `close_link()` is called on a drone that may be flying: it sends
   zero thrust first (ADR-0038).
 - An estimate reset or a new thrust base goes to a drone that may be flying

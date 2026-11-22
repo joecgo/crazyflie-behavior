@@ -38,7 +38,7 @@ class TickStep(ABC):
 
     @abstractmethod
     def request_stop(self) -> None:
-        """A stop request arrived: end the job, so a later `run()` reports done (ADR-0083).
+        """A stop request arrived: end the run, so a later `run()` reports done (ADR-0083).
 
         Called once, on the tick's thread, just before a tick. The loop keeps
         ticking until `run()` reports done, so a flying drone can land first.
