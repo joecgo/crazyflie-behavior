@@ -94,8 +94,10 @@ if one is worth suggesting.
    ahead of the week.
 6. **The next-up brief** (`docs/next-up.md`). Rewrite it whole, in the shape
    below, in about 40 lines. It's a snapshot, not a log: drop what's no
-   longer true, but keep each undecided question until it's decided, and
-   each explain-back until it's answered, however old. Add any explain-back
+   longer true, but keep each explain-back until it's answered, however old.
+   It holds no list of decisions: build choices are asked at the end of the
+   task they come from (working rule 8), and an open question that outlives
+   the work session becomes a backlog row. Add any explain-back
    this work session owes and didn't ask (`CLAUDE.local.md`, "Deferred
    explain-backs"), with its notes. A line saying something is built needs its code and test
    (working rule 3). Then make its commit, if step 4's list was approved,
@@ -140,12 +142,6 @@ The project's state on one page, read first by a fresh work session.
 2. <...>
 3. <...>
 
-## Decisions waiting on Joe
-
-Answer by number and letter, such as "1A". **Bold** is the recommendation.
-
-1. <The question.> **A.** <option>. B. <option>.
-
 ## Explain-backs waiting
 
 Answer by number, such as "E1: ...", in any work session. Claude grades
@@ -158,11 +154,6 @@ from `drafts/explain-back-notes.md`; don't open it first.
 `<hash>`, <date>: the last row of `REVIEW.md`'s review log. The next code
 review covers everything after it.
 ```
-
-Each decision is answerable with a letter, so the user can answer from their
-phone, several at once. When the questions live in a longer list elsewhere
-(a draft's decision list), carry only those the next three things need, and
-point to the rest.
 
 ## Rules this keeps
 

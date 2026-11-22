@@ -160,8 +160,9 @@ number, so renumbering means updating those guards.
    missing term before using it.
 7. Read a rule or the user's words plainly before acting on them or
    correcting the user.
-8. List choices made while building for the user to confirm; never settle
-   one silently.
+8. Ask about choices made while building at the end of the task, in a
+   choice dialog, while the context is fresh. A choice the user skips stands
+   as built. Never settle one silently, and never queue one for later.
 9. A run that needs the user's hands starts when the user says go, and the
    command given is complete.
 10. Run `/project-review` before committing changes to the safety layer, the
