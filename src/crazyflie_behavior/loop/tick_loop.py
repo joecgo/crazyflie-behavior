@@ -40,8 +40,9 @@ class TickStep(ABC):
     def request_stop(self) -> None:
         """A stop request arrived: end the run, so a later `run()` reports done (ADR-0083).
 
-        Called once, on the tick's thread, just before a tick. The loop keeps
-        ticking until `run()` reports done, so a flying drone can land first.
+        The loop calls this once, on the same thread as `run()` and right
+        before it, so the tick step needs no lock. The loop then keeps ticking
+        until `run()` reports done, so a flying drone can land first.
         """
 
 
@@ -166,8 +167,9 @@ class TickLoop:
     an overrun the next tick starts at once and the beat restarts from there;
     missed ticks are skipped, never caught up.
 
-    A stop request goes to the tick step once, before the next tick, and the
-    loop keeps ticking until the tick step is done (ADR-0083).
+    A stop request doesn't end the loop. The loop calls the tick step's
+    `request_stop()` once, then keeps ticking until the tick step reports
+    done, so a flying drone lands first (ADR-0083).
 
     Errors from the tick step aren't caught here. They rise to the program,
     which disconnects and lands (ADR-0026).
@@ -190,7 +192,11 @@ class TickLoop:
         self._stop_requested = threading.Event()
 
     def request_stop(self) -> None:
-        """Make a stop request: the tick step gets it before the next tick (ADR-0083). Safe from any thread."""
+        """Make a stop request (ADR-0083).
+
+        Safe from any thread: it only sets a flag, which the loop reads at the
+        start of the next tick.
+        """
         self._stop_requested.set()
 
     def run(self) -> None:

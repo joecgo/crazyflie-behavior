@@ -327,7 +327,7 @@ class _CommandSlot[T]:
         return request
 
 
-class FlightEnd(Enum):
+class FlightEndReason(Enum):
     """Why this run's flight is over (ADR-0083). Each value ends the sentence "The flight is over: ..."."""
 
     PRE_CHECK_FAILED = "the safety pre-check failed"
@@ -338,7 +338,6 @@ class FlightEnd(Enum):
 class SafetyLayer:
     """The only code that sends commands to the drone, apart from the kill switch (ADR-0013).
 
-    TODO: one failsafe (land) so far (ADR-0030), and no LED slot (ADR-0025).
     Once the flight end is set, the flight is over: it never resumes, and every
     later request is refused (ADR-0083).
     """
@@ -352,7 +351,7 @@ class SafetyLayer:
         self._is_estimate_reset_requested = False
         """An approved estimate reset waits for the end of the tick. It has no slot (ADR-0054)."""
         self._pre_check_has_failed = False
-        self._flight_end: FlightEnd | None = None
+        self._flight_end_reason: FlightEndReason | None = None
 
     @property
     def pre_check_has_failed(self) -> bool:
@@ -360,23 +359,23 @@ class SafetyLayer:
         return self._pre_check_has_failed
 
     @property
-    def flight_end(self) -> FlightEnd | None:
+    def flight_end_reason(self) -> FlightEndReason | None:
         """Why the flight is over, or None while it isn't (ADR-0083)."""
-        return self._flight_end
+        return self._flight_end_reason
 
-    def end_flight(self, flight_end: FlightEnd) -> None:
+    def end_flight(self, flight_end_reason: FlightEndReason) -> None:
         """Set the flight end, for a stop request or a behavior done in flight: land, then refuse every request.
 
         The first flight end stays for the rest of the run (ADR-0083).
         """
-        if flight_end is FlightEnd.PRE_CHECK_FAILED:
+        if flight_end_reason is FlightEndReason.PRE_CHECK_FAILED:
             # So a failed pre-check is never recorded without `pre_check_has_failed`.
             raise ValueError("Only the safety pre-check sets the flight end for a failed pre-check")
-        if self._flight_end is not None:
+        if self._flight_end_reason is not None:
             return
-        self._set_flight_end(flight_end)
-        level = logging.INFO if flight_end is FlightEnd.STOP_REQUEST else logging.WARNING
-        logger.log(level, "The flight is over: %s. Landing.", flight_end.value)
+        self._set_flight_end(flight_end_reason)
+        level = logging.INFO if flight_end_reason is FlightEndReason.STOP_REQUEST else logging.WARNING
+        logger.log(level, "The flight is over: %s. Landing.", flight_end_reason.value)
 
     def pre_check(self, snapshot: Snapshot) -> bool:
         """Run the safety pre-check on this tick's snapshot. Returns whether behaviors may run.
@@ -387,13 +386,13 @@ class SafetyLayer:
         which the status alone can't tell (ADR-0039).
         """
         self._snapshot = snapshot
-        if self._flight_end is not None:
+        if self._flight_end_reason is not None:
             return False
         failures = safety_pre_check(snapshot)
         if not failures:
             return True
         self._pre_check_has_failed = True
-        self._set_flight_end(FlightEnd.PRE_CHECK_FAILED)
+        self._set_flight_end(FlightEndReason.PRE_CHECK_FAILED)
         logger.warning("Safety pre-check failed: %s. Landing.", "; ".join(failures))
         return False
 
@@ -404,8 +403,8 @@ class SafetyLayer:
         one in the same slot and tick replaces it, with a warning once per streak (ADR-0020).
         An approved estimate reset has no slot: it's sent after the slots' commands (ADR-0054).
         """
-        if self._flight_end is not None:
-            verdict = Verdict.refused(f"the flight is over: {self._flight_end.value}")
+        if self._flight_end_reason is not None:
+            verdict = Verdict.refused(f"the flight is over: {self._flight_end_reason.value}")
         elif self._snapshot is None:
             verdict = Verdict.refused("no safety pre-check yet")
         else:
@@ -438,9 +437,9 @@ class SafetyLayer:
             logger.info("Sending %s", ResetEstimate())
             self._drone.reset_estimate()
 
-    def _set_flight_end(self, flight_end: FlightEnd) -> None:
+    def _set_flight_end(self, flight_end_reason: FlightEndReason) -> None:
         """The failsafe's land takes the movement slot (ADR-0030, ADR-0083)."""
-        self._flight_end = flight_end
+        self._flight_end_reason = flight_end_reason
         self._movement_slot.fill(Land())
 
     def _send_movement(self, command: MovementRequest) -> None:

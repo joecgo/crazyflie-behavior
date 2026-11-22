@@ -5,7 +5,7 @@ import logging
 from crazyflie_behavior.behaviors.behavior import Behavior
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.loop.tick_loop import TickStep
-from crazyflie_behavior.safety.safety_layer import FlightEnd, SafetyLayer
+from crazyflie_behavior.safety.safety_layer import FlightEndReason, SafetyLayer
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class BehaviorTickStep(TickStep):
 
     def request_stop(self) -> None:
         """Sets the flight end: a flying drone lands inside the tick loop (ADR-0083)."""
-        self._safety_layer.end_flight(FlightEnd.STOP_REQUEST)
+        self._safety_layer.end_flight(FlightEndReason.STOP_REQUEST)
 
     def run(self, time: float, dt: float) -> bool:
         snapshot = self._drone.take_snapshot(dt)
@@ -54,9 +54,9 @@ class BehaviorTickStep(TickStep):
         if behavior_may_run:
             behavior_is_done = self._behavior.tick(snapshot, self._safety_layer.request)
             if behavior_is_done and snapshot.may_be_flying:
-                self._safety_layer.end_flight(FlightEnd.BEHAVIOR_DONE_IN_FLIGHT)
+                self._safety_layer.end_flight(FlightEndReason.BEHAVIOR_DONE_IN_FLIGHT)
         self._safety_layer.send()
-        if self._safety_layer.flight_end is None:
+        if self._safety_layer.flight_end_reason is None:
             return behavior_is_done
         if not snapshot.may_be_flying:
             return True

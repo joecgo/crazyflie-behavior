@@ -34,7 +34,7 @@ from crazyflie_behavior.safety.safety_layer import (
     LOW_BATTERY_VOLTAGE,
     TAKE_OFF_BATTERY_VOLTAGE,
     TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT,
-    FlightEnd,
+    FlightEndReason,
     SafetyLayer,
     in_flight_velocity_uncertainty_limit,
     judge,
@@ -591,7 +591,7 @@ def test_a_failed_pre_check_lands_a_flying_drone_and_skips_behaviors(
     assert not behaviors_may_run
     assert drone.command_log == ["land"]
     assert safety_layer.pre_check_has_failed
-    assert safety_layer.flight_end is FlightEnd.PRE_CHECK_FAILED
+    assert safety_layer.flight_end_reason is FlightEndReason.PRE_CHECK_FAILED
     assert warnings_in(caplog) == ["Safety pre-check failed: battery at 3.10 V (land below 3.20 V). Landing."]
 
 
@@ -650,16 +650,18 @@ def test_after_the_failsafe_the_flight_never_resumes() -> None:
 
 # --- The flight end (ADR-0083) -------------------------------------------------------
 
-TICK_STEP_FLIGHT_ENDS = [FlightEnd.STOP_REQUEST, FlightEnd.BEHAVIOR_DONE_IN_FLIGHT]
-"""The flight ends the tick step sets."""
+TICK_STEP_FLIGHT_END_REASONS = [FlightEndReason.STOP_REQUEST, FlightEndReason.BEHAVIOR_DONE_IN_FLIGHT]
+"""The flight end reasons the tick step sets."""
 
 
-@pytest.mark.parametrize("flight_end", TICK_STEP_FLIGHT_ENDS)
-def test_a_flight_end_lands_once_skips_behaviors_and_refuses_every_later_request(flight_end: FlightEnd) -> None:
+@pytest.mark.parametrize("flight_end_reason", TICK_STEP_FLIGHT_END_REASONS)
+def test_a_flight_end_lands_once_skips_behaviors_and_refuses_every_later_request(
+    flight_end_reason: FlightEndReason,
+) -> None:
     drone = RecordingDrone()
     safety_layer = SafetyLayer(drone)
 
-    safety_layer.end_flight(flight_end)
+    safety_layer.end_flight(flight_end_reason)
     behaviors_may_run = safety_layer.pre_check(snapshot(FLYING))
     verdict = safety_layer.request(Hover())
     safety_layer.send()
@@ -667,32 +669,32 @@ def test_a_flight_end_lands_once_skips_behaviors_and_refuses_every_later_request
     safety_layer.send()
 
     assert not behaviors_may_run
-    assert verdict.reason == f"the flight is over: {flight_end.value}"
+    assert verdict.reason == f"the flight is over: {flight_end_reason.value}"
     assert drone.command_log == ["land"]
-    assert safety_layer.flight_end is flight_end
+    assert safety_layer.flight_end_reason is flight_end_reason
 
 
 def test_after_a_stop_request_the_pre_check_never_fails_so_it_cant_count_as_the_failsafe() -> None:
     # The failsafe program's pass needs a failed pre-check (ADR-0041).
     safety_layer = SafetyLayer(RecordingDrone())
 
-    safety_layer.end_flight(FlightEnd.STOP_REQUEST)
+    safety_layer.end_flight(FlightEndReason.STOP_REQUEST)
     safety_layer.pre_check(snapshot(FLYING, battery_voltage=3.1, previous_battery_voltage=3.1))
 
     assert not safety_layer.pre_check_has_failed
-    assert safety_layer.flight_end is FlightEnd.STOP_REQUEST
+    assert safety_layer.flight_end_reason is FlightEndReason.STOP_REQUEST
 
 
-@pytest.mark.parametrize("flight_end", TICK_STEP_FLIGHT_ENDS)
-def test_the_first_flight_end_stays(flight_end: FlightEnd) -> None:
+@pytest.mark.parametrize("flight_end_reason", TICK_STEP_FLIGHT_END_REASONS)
+def test_the_first_flight_end_stays(flight_end_reason: FlightEndReason) -> None:
     drone = RecordingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(FLYING, position_age=1.0))
 
-    safety_layer.end_flight(flight_end)
+    safety_layer.end_flight(flight_end_reason)
     safety_layer.send()
 
-    assert safety_layer.flight_end is FlightEnd.PRE_CHECK_FAILED
+    assert safety_layer.flight_end_reason is FlightEndReason.PRE_CHECK_FAILED
     assert drone.command_log == ["land"]
 
 
@@ -700,24 +702,24 @@ def test_only_the_pre_check_sets_the_flight_end_for_a_failed_pre_check() -> None
     safety_layer = SafetyLayer(RecordingDrone())
 
     with pytest.raises(ValueError, match="Only the safety pre-check"):
-        safety_layer.end_flight(FlightEnd.PRE_CHECK_FAILED)
+        safety_layer.end_flight(FlightEndReason.PRE_CHECK_FAILED)
 
-    assert safety_layer.flight_end is None
+    assert safety_layer.flight_end_reason is None
 
 
 @pytest.mark.parametrize(
-    ("flight_end", "level"),
-    [(FlightEnd.STOP_REQUEST, logging.INFO), (FlightEnd.BEHAVIOR_DONE_IN_FLIGHT, logging.WARNING)],
+    ("flight_end_reason", "level"),
+    [(FlightEndReason.STOP_REQUEST, logging.INFO), (FlightEndReason.BEHAVIOR_DONE_IN_FLIGHT, logging.WARNING)],
 )
 def test_a_flight_end_is_logged_with_its_reason(
-    flight_end: FlightEnd, level: int, caplog: pytest.LogCaptureFixture
+    flight_end_reason: FlightEndReason, level: int, caplog: pytest.LogCaptureFixture
 ) -> None:
     caplog.set_level(logging.INFO, logger=SAFETY_LOGGER)
 
-    SafetyLayer(RecordingDrone()).end_flight(flight_end)
+    SafetyLayer(RecordingDrone()).end_flight(flight_end_reason)
 
     assert [(record.levelno, record.getMessage()) for record in caplog.records] == [
-        (level, f"The flight is over: {flight_end.value}. Landing.")
+        (level, f"The flight is over: {flight_end_reason.value}. Landing.")
     ]
 
 

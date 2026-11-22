@@ -12,7 +12,7 @@ from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_HEIGH
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_step import FLIGHT_END_TIME_LIMIT, BehaviorTickStep
 from crazyflie_behavior.safety.requests import Arm, CommandRequest, Hover, TakeOff, Verdict
-from crazyflie_behavior.safety.safety_layer import FlightEnd, SafetyLayer
+from crazyflie_behavior.safety.safety_layer import FlightEndReason, SafetyLayer
 from crazyflie_behavior.snapshot import Snapshot
 from crazyflie_behavior.timing.clock import SimClock
 
@@ -269,7 +269,7 @@ def test_a_stop_request_in_flight_lands_the_drone_and_skips_the_behavior_until_t
     assert behavior.tick_count == ticks_before_the_stop_request
     assert drone.command_log == ["connect", "arm", "take_off", "land"]
     assert not drone.take_snapshot(0.0).may_be_flying
-    assert safety_layer.flight_end is FlightEnd.STOP_REQUEST
+    assert safety_layer.flight_end_reason is FlightEndReason.STOP_REQUEST
     assert not safety_layer.pre_check_has_failed  # so it can't count as the failsafe program's pass
 
 
@@ -297,7 +297,7 @@ def test_a_behavior_done_in_flight_sets_the_flight_end_and_the_drone_lands_befor
 
     fly(BehaviorTickStep(drone, safety_layer, behavior), clock)
 
-    assert safety_layer.flight_end is FlightEnd.BEHAVIOR_DONE_IN_FLIGHT
+    assert safety_layer.flight_end_reason is FlightEndReason.BEHAVIOR_DONE_IN_FLIGHT
     assert drone.command_log == ["connect", "arm", "take_off", "land"]
     assert behavior.ticks_after_done == 0
     assert not drone.take_snapshot(0.0).may_be_flying
@@ -310,7 +310,7 @@ def test_a_behavior_done_on_the_floor_ends_the_run_with_no_flight_end(sim_clock:
 
     fly(BehaviorTickStep(drone, safety_layer, HoverTest(HOVER_DURATION)), clock)
 
-    assert safety_layer.flight_end is None
+    assert safety_layer.flight_end_reason is None
     assert drone.command_log == ["connect", "arm", "take_off", "land"]
 
 
