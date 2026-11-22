@@ -91,7 +91,9 @@ Answer by number and letter, such as "1A". **Bold** is the recommendation.
 Answer by number, such as "E1: ...", in any work session. Claude grades
 from `drafts/explain-back-notes.md`; don't open it first.
 
-None waiting.
+- **E1.** ADR-0086 checks for a lost link only in `take_snapshot()`. Why
+  does that still stop every tick after a lost link before it does anything,
+  and which command still raises on its own after one, and why?
 
 ## Last reviewed
 
@@ -100,4 +102,5 @@ full code review covers everything after it, as the first pull request into
 the `reviewed` branch, which doesn't exist yet; the full line-by-line walk
 comes after the refactor (W9). Pull requests #24 to #28 reviewed C1,
 ADR-0077, ADR-0076 (with ADR-0080), ADR-0081 and ADR-0082 alone, ahead of it;
-#29 (ADR-0083 and ADR-0084) is open.
+#29 (ADR-0083 and ADR-0084) is open; its branch now carries the ADR-0085
+and ADR-0086 builds, up to `e8f7e10`, and Joe is rechecking it.
