@@ -74,15 +74,15 @@ entries go at the top of their section without an ID.
 | recommendation | 7 | 7 |
 | environment | 4 | 10 |
 | communication | 13 | 56 |
-| testing | 1 | 21 |
+| testing | 1 | 22 |
 | process | 7 | 28 |
-| **Total** | **41** | **164** |
+| **Total** | **41** | **165** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 45 |
+| said-without-checking | 46 |
 | how-I-work | 24 |
 | records-ahead-of-code | 23 |
 | weak-test | 18 |
@@ -112,6 +112,7 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-206 | 2026-11-22 | A checked audit's row that left out a planted bug that passed | testing | said-without-checking | working rule 2: a table written from results is checked against every result, not the ones in mind |
 | M-205 | 2026-11-21 | A backlog number cited in code before its row, and already taken | process | said-without-checking | working rule 2: read the backlog's last row before naming a new row's number, and add the row before code cites it |
 | M-204 | 2026-11-21 | Asked whether to remove `SILENCE_HOLD` without finding the ADR that records it | recommendation | recommendation | working rule 5: search the ADRs for the topic in words too, not only for a name from the code |
 | M-203 | 2026-11-21 | A float limit called unreachable for both tolerances, from one's results | communication | said-without-checking | working rule 1: quote a computed result case by case; "the same" across cases needs each case computed |
@@ -728,6 +729,14 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-206, 2026-11-22: A checked audit's row that left out a planted bug that passed
+
+- **What happened:** the checked boundary-test audit says its "passes" column lists exactly what was planted and passed. Row 14 (the failsafe test's hover time limit) lists only `>=`, but its results (`results.json`) show the limit plus 0.04 s passed too: the tests sit at the limit and 0.05 s past it, so any limit in between passes. Joe chose row 14's tests from that row. Caught by Claude planting row 14's bugs to prove the new tests (#133, part 1); put back to Joe as a decision.
+- **Kind:** testing.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 2: a table written from results is checked against every result, not the ones in mind.
+- **Takeaway:** a summary written from a results file dropped one of its rows. The boundary-test pattern is already at the mechanism step (next-up brief decision 6); a tool that writes the table from the results would rule this out. No new step.
 
 ### M-205, 2026-11-21: A backlog number cited in code before its row, and already taken
 
