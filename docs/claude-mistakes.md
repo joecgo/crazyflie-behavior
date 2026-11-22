@@ -70,25 +70,25 @@ entries go at the top of their section without an ID.
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
 | design | 4 | 20 |
-| safety design | 5 | 21 |
+| safety design | 5 | 22 |
 | recommendation | 7 | 6 |
 | environment | 4 | 10 |
-| communication | 12 | 55 |
-| testing | 1 | 19 |
+| communication | 13 | 56 |
+| testing | 1 | 21 |
 | process | 7 | 27 |
-| **Total** | **40** | **158** |
+| **Total** | **41** | **162** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 41 |
+| said-without-checking | 44 |
 | how-I-work | 24 |
 | records-ahead-of-code | 23 |
+| weak-test | 18 |
 | safety-judgment | 18 |
-| weak-test | 17 |
+| vocabulary | 15 |
 | reading-field-data | 15 |
-| vocabulary | 14 |
 | message-misstates-outcome | 13 |
 | recommendation | 12 |
 | window-between-steps | 10 |
@@ -112,6 +112,11 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-203 | 2026-11-21 | A float limit called unreachable for both tolerances, from one's results | communication | said-without-checking | working rule 1: quote a computed result case by case; "the same" across cases needs each case computed |
+| M-202 | 2026-11-21 | A test audit's coverage judged by reading, not by planting | testing | said-without-checking | plant a bug before saying whether a test catches it (the audit's scripts, `drafts/2026-11-21-boundary-audit/`) |
+| M-201 | 2026-11-21 | An assert on a verdict, which is always true | testing | weak-test | REVIEW.md Q-54: assert a verdict's `.is_approved`, never the verdict; bug planting (`docs/coding-style.md`) shows an assert that can't fail |
+| M-200 | 2026-11-21 | A last-resort landing that released the setpoint priority before the land | safety design | said-without-checking | working rule 2: before proposing an order of commands to the firmware, read the ADRs and code that already fix that order |
+| M-199 | 2026-11-21 | A question asked with a term the glossary lacks | communication | vocabulary | working rule 6: check the glossary before naming something, and propose a missing term before using it, in questions too |
 | M-198 | 2026-11-21 | A fallback said to share a failure it doesn't share | communication | said-without-checking | before saying a fallback fails together with what it backs up, name what they share: code, sensor, estimate or thread (`/decide` step 3) |
 | M-197 | 2026-11-21 | Boundary tests proposed both on the firing side of a `>=` limit | testing | weak-test | for a limit, name the side of the boundary each test is on: one at exactly the limit and one on the other side, near it (REVIEW.md Q-48) |
 | M-196 | 2026-11-20 | A planted bug undone with `git checkout` on a file with uncommitted changes | process | how-I-work | undo a planted bug by reversing the edit or restoring a copy taken first, never with `git checkout` or `git restore` |
@@ -315,6 +320,14 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-199, 2026-11-21: A question asked with a term the glossary lacks
+
+- **What happened:** asking C3's shape questions, Claude wrote question 2 as "when the latch clears", for the new record that the flight is over, which had no glossary term. Joe asked whether it meant the glossary's *Kill latch*. Claude then proposed *Flight end*, which Joe approved.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** working rule 6: check the glossary before naming something, and propose a missing term before using it, in questions too.
+- **Takeaway:** a working name in a question reads as the glossary term it resembles. Not a code-review takeaway, so no step on the escalation ladder.
 
 ### M-197, 2026-11-21: Boundary tests proposed both on the firing side of a `>=` limit
 
@@ -713,6 +726,38 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-203, 2026-11-21: A float limit called unreachable for both tolerances, from one's results
+
+- **What happened:** putting choice 3 of the checked boundary audit to Joe (how to test the two height tolerances), Claude wrote that no real height sits exactly 0.1 m from a hover test take-off height in floats, "and the failsafe test's tolerance has the same problem at 0.05 m". The computation Claude had just run said otherwise for one pair: with the failsafe test's 0.1 m take-off height, a height of 0.05 m is exactly 0.05 m away (0.1 is twice 0.05 in binary). Joe chose 1 mm either side on that premise. Caught by Claude at the wrap-up, re-reading the computation; put back to Joe as a decision.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 1: quote a computed result case by case; "the same" across cases needs each case computed.
+- **Takeaway:** a generalization from the hover test's cases to the failsafe test's, against a printed result. Not a code-review takeaway, so no step on the escalation ladder.
+
+### M-202, 2026-11-21: A test audit's coverage judged by reading, not by planting
+
+- **What happened:** the boundary-test audit (`drafts/2026-11-21-boundary-test-audit.md`, backlog #133) judged each limit's tests by grep and reading. Checked by planting the bugs it named, rows 5, 7, 8 and 10 to 14 of its 14 were wrong in part: the reset log's floor speed called untested (it's tested at the limit), the climb's flow check said to lack a test at its limit (it has one), approved and refused swapped in the take-off rule's row, typed-number tests of the mock missed, and a 0.06 s touchdown hold not seen to pass. Its "at the limit" take-off grace tests are 0.4 s past the limit; two limits in its Good list aren't pinned (an always-true assert, and a time checked with `pytest.approx`); it missed the landing approach skipped at the final descent height, the take-off rule's age limit (pinned only by chance) and the mock's climb end. Caught by Claude checking the audit for Joe, before any test was written. The check's own first report, before planting, did it once more: it called the take-off rule's age limit untested at its limit, which three tick-step tests pin by chance.
+- **Kind:** testing.
+- **Pattern:** said-without-checking.
+- **Guard:** plant a bug before saying whether a test catches it (the audit's scripts, `drafts/2026-11-21-boundary-audit/`).
+- **Takeaway:** reading finds the tests that name a limit, not those that pin it with a typed number or by chance, nor those that only seem to (an assert that's always true, a time within `pytest.approx`). The boundary-test pattern is already at the mechanism step (next-up brief decision 6, M-194); this check adds its cost, about 9 minutes for 97 planted bugs with three copies at once. No new step.
+
+### M-201, 2026-11-21: An assert on a verdict, which is always true
+
+- **What happened:** `test_a_take_off_is_refused_unless_the_down_range_reads_the_floor` (`tests/safety/test_safety_layer.py:765`, from ADR-0054's build, `152d456`, 2026-11-09) checks a down range at exactly `TOUCHDOWN_DOWN_RANGE` with `assert judge(...)`. A `Verdict` has no `__bool__`, so the assert is always true, and planting `>=` in the take-off rule's floor check passes every test. Caught by Claude's bug planting while checking the boundary-test audit.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** REVIEW.md Q-54: assert a verdict's `.is_approved`, never the verdict; bug planting (`docs/coding-style.md`) shows an assert that can't fail.
+- **Takeaway:** the line was never proven by planting. A code-review takeaway, the first of its kind, so the ladder's first step: the question Q-54 (Joe, 2026-11-21).
+
+### M-200, 2026-11-21: A last-resort landing that released the setpoint priority before the land
+
+- **What happened:** `drafts/2026-11-13-code-recommendations.md` (C4, D8's option A) said the last resort "releases the setpoint priority, sends the firmware's land". The adapter's recorded order is the high-level command first, then the release (ADR-0048, ADR-0056, `_handing_over_to_high_level`'s docstring): released first, the idle planner's motors-off setpoint gets through until the land arrives. Caught by Claude while checking the firmware facts for D8, before Joe chose; ADR-0084 has the right order and a test of it.
+- **Kind:** safety design.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 2: before proposing an order of commands to the firmware, read the ADRs and code that already fix that order.
+- **Takeaway:** a command sequence written from memory of what it does, not from the adapter's own rule. ADR-0084's test pins the order, so no step on the escalation ladder.
 
 ### M-198, 2026-11-21: A fallback said to share a failure it doesn't share
 
