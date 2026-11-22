@@ -181,6 +181,11 @@ A review walks only the sections for the paths it touches:
   ([coding style](docs/coding-style.md))? (M-015)
 - **Q-54.** Does every assert check a bool or a comparison, not an object that's
   always true (a `Verdict` rather than its `.is_approved`)? (M-201)
+- **Q-55.** Does a docstring about a hand-off between two parts name the call,
+  and say why its thread or timing matters? (M-207, M-208)
+- **Q-56.** Does a test that compares a log line or message exactly hold fixed
+  every optional part it can carry (a garbage-collector pause, a warning, a
+  timing)? (M-214)
 
 Takeaways about recommendations and explanations stay in the mistakes log
 only: they're for me, when I weigh Claude's options.

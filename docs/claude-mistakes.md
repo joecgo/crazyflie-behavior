@@ -69,29 +69,29 @@ entries go at the top of their section without an ID.
 <!-- generated: kinds -->
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 4 | 20 |
+| design | 5 | 20 |
 | safety design | 5 | 22 |
 | recommendation | 7 | 7 |
 | environment | 4 | 10 |
-| communication | 13 | 56 |
-| testing | 1 | 22 |
-| process | 7 | 28 |
-| **Total** | **41** | **165** |
+| communication | 14 | 60 |
+| testing | 1 | 24 |
+| process | 7 | 29 |
+| **Total** | **43** | **172** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 46 |
+| said-without-checking | 49 |
 | how-I-work | 24 |
 | records-ahead-of-code | 23 |
-| weak-test | 18 |
+| weak-test | 20 |
+| vocabulary | 18 |
 | safety-judgment | 18 |
-| vocabulary | 15 |
 | reading-field-data | 15 |
 | recommendation | 13 |
 | message-misstates-outcome | 13 |
-| window-between-steps | 10 |
+| window-between-steps | 11 |
 | environment | 8 |
 | leftover-state | 3 |
 <!-- end generated -->
@@ -112,6 +112,15 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-215 | 2026-11-22 | Said the draft filed every PR #29 entry under "I had to point out" | communication | said-without-checking | working rule 2: read the whole document before saying what it says, not a line found by search |
+| M-214 | 2026-11-22 | Two tick-loop tests expected a tick's log line without a garbage-collector pause | testing | weak-test | a test that compares a log line exactly holds fixed every optional part the line can carry |
+| M-213 | 2026-11-22 | A backlog row's removal drafted without searching for pointers to it | process | said-without-checking | before removing a backlog row, search the code and the docs for its number |
+| M-212 | 2026-11-22 | New names for the wait after the silence and the lost-link flag that said more or less than their code | communication | vocabulary | after a change, reread every name and comment it touched or relied on against what the code now does (M-207's guard) |
+| M-211 | 2026-11-22 | "Only the snapshot raises" for a lost link, though `land()` reads a snapshot of its own | communication | said-without-checking | rule 1: before writing that only one function does something, search for every caller of it, its own module's included |
+| M-210 | 2026-11-22 | Removing the mock's lost-link checks let its next update play a tone a real drone never got | testing | window-between-steps | when a change removes a check, list everything the check stopped, in the adapters and their fakes, and keep each one stopped or decide otherwise |
+| M-209 | 2026-11-22 | A lost-link check copied into every adapter method, with nothing to catch a method without it | design | weak-test | a check every method of a kind needs goes in one place every call passes through; where it can't, a test that takes its list of methods from the class fails for a method without it (`docs/coding-style.md`, "A check every call needs goes in one place") |
+| M-208 | 2026-11-22 | The fix for M-207 said "It keeps ticking", with no clear subject | communication | vocabulary | M-207's guard, and after rewording a docstring, check that each "it" points at the part that does the thing |
+| M-207 | 2026-11-22 | A tick-loop docstring that said "goes to the tick step, before the next tick" | communication | vocabulary | name the call and why its timing matters ("the loop calls `request_stop()` on its own thread, so the tick step needs no lock"), never a vague verb such as "goes to" or "gets it" |
 | M-206 | 2026-11-22 | A checked audit's row that left out a planted bug that passed | testing | said-without-checking | working rule 2: a table written from results is checked against every result, not the ones in mind |
 | M-205 | 2026-11-21 | A backlog number cited in code before its row, and already taken | process | said-without-checking | working rule 2: read the backlog's last row before naming a new row's number, and add the row before code cites it |
 | M-204 | 2026-11-21 | Asked whether to remove `SILENCE_HOLD` without finding the ADR that records it | recommendation | recommendation | working rule 5: search the ADRs for the topic in words too, not only for a name from the code |
@@ -323,6 +332,22 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-209, 2026-11-22: A lost-link check copied into every adapter method, with nothing to catch a method without it
+
+- **What happened:** building ADR-0084 ("the adapter raises on the tick's next call to it"), Claude put `_raise_if_the_link_is_lost()` at the top of each of the Crazyflie adapter's 14 tick-facing methods, and the same in the mock adapter. The tests list those methods by hand (`TICK_CALLS`, `LOST_LINK_CALLS`), so a new command without the line would send to a dead link, and no test would notice unless its author also added it to the list. Q-32 asks what enforces a rule about the code; neither the build nor its `/project-review max` asked it. Joe caught it reviewing #29: "what if a new function forgets to add this?" ADR-0086 moves the check to `take_snapshot()`.
+- **Kind:** design.
+- **Pattern:** weak-test.
+- **Guard:** a check every method of a kind needs goes in one place every call passes through; where it can't, a test that takes its list of methods from the class fails for a method without it (`docs/coding-style.md`, "A check every call needs goes in one place").
+- **Takeaway:** Q-32 already asks what enforces a rule about the code, so reviews need no new question: it just wasn't asked. The guard goes where code is written: the coding-style rule, added with Joe's OK on 2026-11-22 and committed with ADR-0086's build. A matching Q-32 line was dropped as overkill (Joe, 2026-11-22).
+
+### M-207, 2026-11-22: A tick-loop docstring that said "goes to the tick step, before the next tick"
+
+- **What happened:** building ADR-0083, Claude wrote `TickLoop`'s docstring as "A stop request goes to the tick step once, before the next tick, and the loop keeps ticking until the tick step is done", with "the tick step gets it before the next tick" and "just before a tick" in the two `request_stop()` docstrings. Reviewing #29, Joe couldn't tell what it meant: "goes to" hid the call (`request_stop()`), and "before the next tick" hid why the timing matters (the loop makes the call on its own thread, so the tick step needs no lock).
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** name the call and why its timing matters ("the loop calls `request_stop()` on its own thread, so the tick step needs no lock"), never a vague verb such as "goes to" or "gets it".
+- **Takeaway:** a repeat of M-173 (docstrings only their author could follow), and `/project-review max`'s fresh-context read passed it. Added with Joe's OK on 2026-11-22: `REVIEW.md` Q-55.
 
 ### M-199, 2026-11-21: A question asked with a term the glossary lacks
 
@@ -729,6 +754,62 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-215, 2026-11-22: Said the draft filed every PR #29 entry under "I had to point out"
+
+- **What happened:** asked whether the flaky-test fix (`40a5397`) was in the mistakes log, Claude said the draft `drafts/2026-11-22-pr29-shared-records.md` told the writer to file all its entries under "Mistakes I had to point out", so M-214 would land in the wrong section. Claude had read only the draft's first instruction line; the draft splits them correctly, with M-214 under "Mistakes Claude caught itself". Caught by Claude reading the whole draft to apply it.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 2: read the whole document before saying what it says, not a line found by search.
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
+
+### M-214, 2026-11-22: Two tick-loop tests expected a tick's log line without a garbage-collector pause
+
+- **What happened:** `test_every_tick_is_logged_at_debug_level_with_its_lateness_and_work_time` and `test_a_tick_that_raises_is_still_timed_and_logged` compared each tick's debug line exactly, but the line ends with a pause whenever Python's garbage collector runs during that tick. The second failed 3 runs in 4 when the ADR-0085-only commit was tested on its own, since the suite's other tests shift when the collector runs. Fixed in `40a5397`: a fixture turns the automatic collector off for those two tests.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a test that compares a log line exactly holds fixed every optional part the line can carry.
+- **Takeaway:** found only because a commit's tree was tested on its own: testing each commit's tree also catches tests that pass by luck. The weak-test pattern is past its third entry; added with Joe's OK on 2026-11-22: `REVIEW.md` Q-56.
+
+### M-213, 2026-11-22: A backlog row's removal drafted without searching for pointers to it
+
+- **What happened:** drafting the removal of backlog #138 (answered by the facts register), Claude didn't search the code for "#138": the last-resort landing's comment still cited it. `/project-review high` caught it. Fixed in `92d0ceb`: the comment points at ADR-0084.
+- **Kind:** process.
+- **Pattern:** said-without-checking.
+- **Guard:** before removing a backlog row, search the code and the docs for its number.
+- **Takeaway:** Q-35 already asks whether the old wording was searched for.
+
+### M-212, 2026-11-22: New names for the wait after the silence and the lost-link flag that said more or less than their code
+
+- **What happened:** building ADR-0085 and ADR-0086, Claude spelled the wait after the silence four ways, named `_silence_and_wait()` beside `_land_silence_and_wait()` (whose wait is the wait for not flying), kept "a call has raised" where only a snapshot or a wait raises now, and left test helpers whose names said more than they did (`lose_the_link_at_the_next_wait`, `sent_to_the_drone`). `/project-review high`'s fresh-context read caught them before the commit.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** after a change, reread every name and comment it touched or relied on against what the code now does (M-207's guard).
+- **Takeaway:** a repeat of M-173, M-207 and M-208, and the fresh-context read caught every one before the commit, so it's working as the mechanism; no new question.
+
+### M-211, 2026-11-22: "Only the snapshot raises" for a lost link, though `land()` reads a snapshot of its own
+
+- **What happened:** ADR-0086's failure modes said a link lost after the tick's snapshot raises one tick later, and the build's docstrings said no command checks. But `land()` in flight reads a snapshot of its own (`_latest_fresh_down_distance()`), so it raises at once. The new coding-style rule also said the check goes "where every call passes through", though calls don't pass through `take_snapshot()`: each tick starts with it. The review and its fresh-context read caught both. Fixed in `e8f7e10`, with Joe's OK for the ADR and rule wording.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** rule 1: before writing that only one function does something, search for every caller of it, its own module's included.
+- **Takeaway:** Q-02 already asks whether a claim says only what its source showed.
+
+### M-210, 2026-11-22: Removing the mock's lost-link checks let its next update play a tone a real drone never got
+
+- **What happened:** building ADR-0086, Claude took `_raise_if_the_link_is_lost()` out of the mock adapter's `update_take_off_and_landing()` along with the commands' checks. That check had also stopped the update from delivering buzzer commands still on their way after a lost link, so a link lost after the tick's snapshot now let the update play a tone that the Crazyflie adapter would have skipped and cflib thrown away. `/project-review high` caught it before the commit (Q-09). Fixed in `e8f7e10`, with a test proven by bug planting.
+- **Kind:** testing.
+- **Pattern:** window-between-steps.
+- **Guard:** when a change removes a check, list everything the check stopped, in the adapters and their fakes, and keep each one stopped or decide otherwise.
+- **Takeaway:** Q-09 caught it at review, so no new question.
+
+### M-208, 2026-11-22: The fix for M-207 said "It keeps ticking", with no clear subject
+
+- **What happened:** rewording `TickStep.request_stop`'s docstring for #29, Claude wrote "The loop calls this only once, on its own thread, right before calling `run()`, so the tick step needs no lock. It keeps ticking until `run()` reports done". "It" reads as the tick step, though the loop is what ticks, and "on its own thread" didn't say it's `run()`'s thread, which is why no lock is needed. `/project-review high`'s fresh-context read caught it before the commit.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** M-207's guard, and after rewording a docstring, check that each "it" points at the part that does the thing.
+- **Takeaway:** a repeat of M-207 inside its own fix. Backs Q-55.
 
 ### M-206, 2026-11-22: A checked audit's row that left out a planted bug that passed
 
