@@ -1,5 +1,4 @@
 import math
-from collections.abc import Callable
 
 import pytest
 
@@ -659,38 +658,21 @@ def test_disconnect_silences_a_tone_left_on_even_one_sent_just_before() -> None:
     assert drone.command_log == ["connect", "play_tone", "play_tone", "disconnect"]
 
 
-# --- A lost link (ADR-0084) -----------------------------------------------------------
-
-LOST_LINK_CALLS: dict[str, Callable[[MockAdapter, Snapshot], object]] = {
-    "take_snapshot": lambda drone, _: drone.take_snapshot(TICK),
-    "update_take_off_and_landing": lambda drone, snapshot: drone.update_take_off_and_landing(snapshot),
-    "arm": lambda drone, _: drone.arm(),
-    "disarm": lambda drone, _: drone.disarm(),
-    "take_off": lambda drone, _: drone.take_off(0.5),
-    "land": lambda drone, _: drone.land(),
-    "set_velocity": lambda drone, _: drone.set_velocity(Vector3.ZERO),
-    "move_to": lambda drone, _: drone.move_to(Vector3(0.0, 0.0, 1.0), 1.0),
-    "hover": lambda drone, _: drone.hover(),
-    "emergency_stop": lambda drone, _: drone.emergency_stop(),
-    "reset_estimate": lambda drone, _: drone.reset_estimate(),
-    "chirp": lambda drone, _: drone.chirp(),
-    "play_tone": lambda drone, _: drone.play_tone(440.0),
-    "silence": lambda drone, _: drone.silence(),
-}
+# --- A lost link (ADR-0084, ADR-0086) -------------------------------------------------
 
 
-@pytest.mark.parametrize("call", LOST_LINK_CALLS.values(), ids=LOST_LINK_CALLS.keys())
-def test_after_a_lost_link_every_call_but_connect_and_disconnect_raises(
-    call: Callable[[MockAdapter, Snapshot], object],
-) -> None:
+def test_a_link_lost_after_the_ticks_snapshot_raises_at_the_next_snapshot_not_in_the_rest_of_the_tick() -> None:
     drone = flying_drone(SimClock())
     snapshot = drone.take_snapshot(TICK)
     drone.lose_link()
 
-    with pytest.raises(ConnectionError, match="The radio link to the drone was lost"):
-        call(drone, snapshot)
+    drone.update_take_off_and_landing(snapshot)
+    drone.hover()
+    drone.chirp()
 
-    assert drone.command_log == ["connect", "arm", "take_off"]
+    with pytest.raises(ConnectionError, match="The radio link to the drone was lost"):
+        drone.take_snapshot(TICK)
+    assert drone.command_log == ["connect", "arm", "take_off", "hover", "chirp"]
 
 
 def test_after_a_lost_link_in_flight_disconnect_leaves_the_drone_flying_and_says_so(
@@ -708,7 +690,7 @@ def test_after_a_lost_link_in_flight_disconnect_leaves_the_drone_flying_and_says
     assert "the link is lost and the drone may still be flying" in caplog.messages[-1]
 
 
-def test_a_link_lost_on_the_floor_since_the_last_call_makes_disconnect_raise_and_says_the_drone_wasnt_flying(
+def test_a_link_lost_on_the_floor_since_the_last_snapshot_makes_disconnect_raise_and_says_the_drone_wasnt_flying(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     drone = MockAdapter(SimClock())
@@ -731,6 +713,19 @@ def test_a_lost_link_drops_buzzer_commands_still_on_their_way() -> None:
         drone.disconnect()
 
     assert drone.playing_tone is None  # the tone never reached the drone, and nor did a silence
+
+
+def test_a_link_lost_after_the_ticks_snapshot_drops_buzzer_commands_still_on_their_way() -> None:
+    # The rest of the tick still runs after such a loss, the update included (ADR-0086).
+    drone = MockAdapter(SimClock())
+    drone.connect()
+    drone.play_tone(440.0)
+    snapshot = drone.take_snapshot(TICK)
+    drone.lose_link()
+
+    drone.update_take_off_and_landing(snapshot)
+
+    assert drone.playing_tone is None
 
 
 # --- The flow (ADR-0054) ---------------------------------------------------------------

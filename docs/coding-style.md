@@ -111,6 +111,14 @@ each.
   snapshot. Exceptions are for bugs and broken connections. One raised in a
   tick isn't caught there: it rises to the program, which lands and logs it
   ([ADR-0026](decisions/0026-tick-loop-calls-one-tick-step.md)).
+- **A check every call needs goes in one place.** Put a check that a whole
+  kind of method needs (every command needs the link up) in one place on
+  every call's path, such as `take_snapshot()`: every tick starts with it,
+  before it sends a command
+  ([ADR-0086](decisions/0086-a-lost-link-raises-at-the-next-snapshot.md)).
+  A copy at the top of each method is easy to forget in the next one. Where
+  one place won't do, a test must fail for a method without the check: it
+  gets its list of methods from the class, not from a list written by hand.
 
 ## Docstrings and comments
 

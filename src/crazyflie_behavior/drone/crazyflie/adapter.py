@@ -341,7 +341,7 @@ class CrazyflieAdapter(DroneInterface):
         self._lost_link_message: str | None = None
         """cflib's message for a lost link (ADR-0084). Written on whichever thread cflib reports it from."""
         self._is_lost_link_raised = False
-        """A call has raised for the lost link, so `disconnect()` doesn't raise for it again."""
+        """A snapshot or a wait has raised for the lost link, so `disconnect()` doesn't raise for it again."""
 
     # --- Connection ---------------------------------------------------------
 
@@ -419,7 +419,7 @@ class CrazyflieAdapter(DroneInterface):
             if self._lost_link_message is None:
                 self._land_silence_and_wait()
             if not self._is_lost_link_raised:
-                # Lost since the last tick, or while disconnecting: the run must still end with an error.
+                # Lost since the last snapshot, or while disconnecting: the run must still end with an error.
                 self._raise_if_the_link_is_lost()
         finally:
             # After a lost link, also one found while landing or waiting here.
@@ -451,10 +451,7 @@ class CrazyflieAdapter(DroneInterface):
 
     # --- Commands -----------------------------------------------------------
 
-    # Every call a tick makes raises after a lost link (ADR-0084).
-
     def arm(self) -> None:
-        self._raise_if_the_link_is_lost()
         status = self._telemetry.latest_drone_status()
         if status is not None:
             # The drone answers an arm request with only "refused", never why (ADR-0058).
@@ -470,13 +467,11 @@ class CrazyflieAdapter(DroneInterface):
         self._crazyflie.supervisor.send_arming_request(True)
 
     def disarm(self) -> None:
-        self._raise_if_the_link_is_lost()
         self._stop_motors()
         self._crazyflie.supervisor.send_arming_request(False)
 
     def take_off(self, height: float) -> None:
         """Raises for a height at or below the final descent height: no hover there can fly (ADR-0056, ADR-0077)."""
-        self._raise_if_the_link_is_lost()
         if height <= FINAL_DESCENT_HEIGHT:
             raise ValueError(
                 f"Take-off height must be above the final descent height, {FINAL_DESCENT_HEIGHT:g} m: {height}"
@@ -498,7 +493,6 @@ class CrazyflieAdapter(DroneInterface):
         self._run_take_off_block()  # after the take-off's own commands (ADR-0065)
 
     def land(self) -> None:
-        self._raise_if_the_link_is_lost()
         if not self._may_be_flying():
             # On the floor, a move down would spin an armed drone's motors up
             # (ADR-0032), so just make sure they're stopped.
@@ -513,7 +507,6 @@ class CrazyflieAdapter(DroneInterface):
         # Otherwise already landing: a new landing approach could climb back up (ADR-0056).
 
     def set_velocity(self, velocity: Vector3, yaw_rate_rad_per_s: float = 0.0) -> None:
-        self._raise_if_the_link_is_lost()
         if self._is_ignored_while_crossing_the_bad_flow_zone("Set-velocity"):
             return
         self._cancel_landing()
@@ -524,7 +517,6 @@ class CrazyflieAdapter(DroneInterface):
         self._level_vertical_speed = None
 
     def move_to(self, position: Vector3, duration: float) -> None:
-        self._raise_if_the_link_is_lost()
         if duration <= 0.0:
             raise ValueError(f"Move duration must be positive: {duration}")
         if self._is_ignored_while_crossing_the_bad_flow_zone("Move-to"):
@@ -540,7 +532,6 @@ class CrazyflieAdapter(DroneInterface):
             )
 
     def hover(self) -> None:
-        self._raise_if_the_link_is_lost()
         if self._is_ignored_while_crossing_the_bad_flow_zone("Hover"):
             return
         if not self._may_be_flying():
@@ -563,7 +554,6 @@ class CrazyflieAdapter(DroneInterface):
                 commander.go_to(here.x, here.y, here.z, DEFAULT_YAW_RAD, HOVER_SETTLE_DURATION)
 
     def emergency_stop(self) -> None:
-        self._raise_if_the_link_is_lost()
         self._crazyflie.supervisor.send_emergency_stop()
         self._is_airborne = False
         self._is_in_initial_climb = False
@@ -572,7 +562,6 @@ class CrazyflieAdapter(DroneInterface):
         self._cancel_landing()
 
     def reset_estimate(self) -> None:
-        self._raise_if_the_link_is_lost()
         if self._may_be_flying():
             # Just after a take-off, the drone status still says not flying and the down
             # range still reads the floor, so the safety layer can't tell (ADR-0039).
@@ -584,23 +573,22 @@ class CrazyflieAdapter(DroneInterface):
         self._send_estimate_reset()
 
     def chirp(self) -> None:
-        self._raise_if_the_link_is_lost()
         # A chirp that a silence or a tone cuts short leaves the firmware partway through its
         # tune, so the next chirp plays only the rest.
         self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_CHIRP)
 
     def play_tone(self, pitch: float) -> None:
-        self._raise_if_the_link_is_lost()
         frequency = sound_frequency_from_pitch(pitch)
         # The pitch first: the tone plays whatever `sound.freq` holds when it starts.
         self._write_buzzer_parameter(_SOUND_FREQUENCY_PARAMETER, frequency)
         self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_TONE)
 
     def silence(self) -> None:
-        self._raise_if_the_link_is_lost()
         self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_OFF)
 
     def take_snapshot(self, dt: float) -> Snapshot:
+        """Raises after a lost link (ADR-0084). Every tick starts with a snapshot, so nothing else a tick calls
+        needs its own check (ADR-0086)."""
         self._raise_if_the_link_is_lost()
         return self._telemetry.snapshot(
             dt, is_in_initial_climb=self._is_in_initial_climb, may_be_flying=self._may_be_flying()
@@ -608,7 +596,6 @@ class CrazyflieAdapter(DroneInterface):
 
     def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
         """Also stops the take-off block once its run is over (ADR-0065)."""
-        self._raise_if_the_link_is_lost()
         if self._is_in_initial_climb:
             self._update_initial_climb(snapshot)
         else:

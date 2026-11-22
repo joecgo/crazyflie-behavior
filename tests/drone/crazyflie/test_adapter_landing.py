@@ -11,7 +11,6 @@ adapter would send to a real drone, without one.
 import logging
 import math
 import struct
-from collections.abc import Callable
 from unittest.mock import MagicMock
 
 import pytest
@@ -43,7 +42,7 @@ from crazyflie_behavior.drone.crazyflie.touchdown import (
 )
 from crazyflie_behavior.drone.interface import STALE_AFTER
 from crazyflie_behavior.geometry import Vector3
-from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading, Snapshot
+from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading
 from crazyflie_behavior.timing.clock import SimClock
 
 TICK = 0.05
@@ -865,7 +864,7 @@ def test_an_on_the_floor_status_at_its_age_limit_still_counts_so_land_just_stops
     assert motors_stopped(fake_link)
 
 
-# --- A lost link (ADR-0084) -----------------------------------------------------------
+# --- A lost link (ADR-0084, ADR-0086) -------------------------------------------------
 
 
 def adapter_on_the_floor(clock: SimClock, link: MagicMock) -> CrazyflieAdapter:
@@ -881,8 +880,8 @@ def lose_the_link(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
     adapter._on_connection_lost("radio://0/80/2M/E7E7E7E7E7", "Too many packets lost")
 
 
-def sent_to_the_drone(fake_link: MagicMock) -> int:
-    """How many commands, packets and parameter writes have gone to the drone."""
+def handed_to_cflib(fake_link: MagicMock) -> int:
+    """How many commands, packets and parameter writes the adapter has handed to cflib."""
     crazyflie = fake_link.cf
     return sum(
         len(calls)
@@ -896,54 +895,22 @@ def sent_to_the_drone(fake_link: MagicMock) -> int:
     )
 
 
-def a_snapshot(adapter: CrazyflieAdapter) -> Snapshot:
-    return adapter._telemetry.snapshot(TICK, is_in_initial_climb=False, may_be_flying=True)
-
-
-TICK_CALLS: dict[str, Callable[[CrazyflieAdapter], object]] = {
-    "take_snapshot": lambda adapter: adapter.take_snapshot(TICK),
-    "update_take_off_and_landing": lambda adapter: adapter.update_take_off_and_landing(a_snapshot(adapter)),
-    "arm": lambda adapter: adapter.arm(),
-    "disarm": lambda adapter: adapter.disarm(),
-    "take_off": lambda adapter: adapter.take_off(1.0),
-    "land": lambda adapter: adapter.land(),
-    "set_velocity": lambda adapter: adapter.set_velocity(Vector3.ZERO),
-    "move_to": lambda adapter: adapter.move_to(Vector3(0.0, 0.0, 1.0), 1.0),
-    "hover": lambda adapter: adapter.hover(),
-    "emergency_stop": lambda adapter: adapter.emergency_stop(),
-    "reset_estimate": lambda adapter: adapter.reset_estimate(),
-    "chirp": lambda adapter: adapter.chirp(),
-    "play_tone": lambda adapter: adapter.play_tone(440.0),
-    "silence": lambda adapter: adapter.silence(),
-}
-
-
-@pytest.mark.parametrize("call", TICK_CALLS.values(), ids=TICK_CALLS.keys())
-def test_after_a_lost_link_in_flight_every_call_a_tick_makes_raises_and_sends_nothing(
-    call: Callable[[CrazyflieAdapter], object], adapter: CrazyflieAdapter, fake_link: MagicMock
+def test_a_link_lost_after_the_ticks_snapshot_raises_at_the_next_snapshot_not_in_the_rest_of_the_tick(
+    adapter: CrazyflieAdapter, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
+    # ADR-0086: every tick starts with a snapshot, so only `take_snapshot()` checks.
+    snapshot = adapter.take_snapshot(TICK)
     lose_the_link(adapter, fake_link)
 
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__name__):
+        adapter.update_take_off_and_landing(snapshot)
+        adapter.hover()  # sent to cflib, which drops it with no link
+        adapter.chirp()
+
+    fake_link.cf.param.set_value.assert_not_called()  # cflib would raise: it forgets the parameter list
+    assert "Buzzer command not sent: the link is closed. Warned once per streak." in caplog.messages
     with pytest.raises(ConnectionError, match="The radio link to the drone was lost: Too many packets lost"):
-        call(adapter)
-
-    assert sent_to_the_drone(fake_link) == 0
-
-
-@pytest.mark.parametrize("call", TICK_CALLS.values(), ids=TICK_CALLS.keys())
-def test_after_a_lost_link_on_the_floor_every_call_a_tick_makes_raises_and_sends_nothing(
-    call: Callable[[CrazyflieAdapter], object], clock: SimClock
-) -> None:
-    # In flight, some calls read a snapshot before they send, and that raises; on the floor, `land()` reads
-    # none, so only its own check raises.
-    link = MagicMock()
-    adapter = adapter_on_the_floor(clock, link)
-    lose_the_link(adapter, link)
-
-    with pytest.raises(ConnectionError, match="The radio link to the drone was lost: Too many packets lost"):
-        call(adapter)
-
-    assert sent_to_the_drone(link) == 0
+        adapter.take_snapshot(TICK)
 
 
 def test_after_a_lost_link_in_flight_disconnect_closes_without_landing_and_says_the_drone_may_still_be_flying(
@@ -956,7 +923,7 @@ def test_after_a_lost_link_in_flight_disconnect_closes_without_landing_and_says_
     with caplog.at_level(logging.ERROR, logger=adapter_module.__name__):
         adapter.disconnect()  # the tick's error is on its way: no second one
 
-    assert sent_to_the_drone(fake_link) == 0  # no landing, no silence
+    assert handed_to_cflib(fake_link) == 0  # no landing, no silence
     fake_link.close_link.assert_not_called()
     assert caplog.messages[-1] == (
         "Closing without landing: the link is lost and the drone may still be flying. "
@@ -964,7 +931,7 @@ def test_after_a_lost_link_in_flight_disconnect_closes_without_landing_and_says_
     )
 
 
-def test_a_link_lost_since_the_last_tick_makes_disconnect_raise_so_the_run_ends_with_an_error(
+def test_a_link_lost_since_the_last_snapshot_makes_disconnect_raise_so_the_run_ends_with_an_error(
     adapter: CrazyflieAdapter, fake_link: MagicMock
 ) -> None:
     lose_the_link(adapter, fake_link)
@@ -972,7 +939,7 @@ def test_a_link_lost_since_the_last_tick_makes_disconnect_raise_so_the_run_ends_
     with pytest.raises(ConnectionError, match="Too many packets lost"):
         adapter.disconnect()
 
-    assert sent_to_the_drone(fake_link) == 0
+    assert handed_to_cflib(fake_link) == 0
 
 
 def test_a_link_lost_on_the_floor_says_the_drone_wasnt_flying(

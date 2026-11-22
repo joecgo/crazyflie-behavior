@@ -1,12 +1,12 @@
 # 0086: A lost link raises at the tick's next snapshot, not at every call
 
-- **Status:** Accepted. Amends [ADR-0084](0084-a-lost-link-is-an-error-and-the-firmware-land-is-a-last-resort.md) ("The adapter raises on the tick's next call to it": now at its next snapshot). Not built yet.
+- **Status:** Accepted. Amends [ADR-0084](0084-a-lost-link-is-an-error-and-the-firmware-land-is-a-last-resort.md) ("The adapter raises on the tick's next call to it": now at its next snapshot).
 - **Date:** 2026-11-22
 - **Origin:** Mixed. That a check at the top of every call is easy to forget in a new command, and bloats the adapter: mine, from my review of pull request #29. Checking once, in `take_snapshot()`: AI recommendation accepted.
 
 ## Context
 
-As built, each of the Crazyflie adapter's 14 tick-facing methods starts with
+As built, each of the 14 Crazyflie adapter methods a tick calls starts with
 `_raise_if_the_link_is_lost()`, and the mock adapter's do the same. A new
 command that forgets the line sends to a dead link and raises nothing.
 
@@ -31,7 +31,8 @@ does the same.
 - **Inputs:** a link lost after the tick's snapshot: that tick's commands
   are dropped by cflib, or skipped with a warning for a parameter write
   (backlog #61's race still raises cflib's `KeyError`), and the next
-  snapshot raises, one tick later. `emergency_stop()` after a lost link no
+  snapshot raises, one tick later; `land()` in flight reads a snapshot of
+  its own, so it raises at once. `emergency_stop()` after a lost link no
   longer raises; nothing reached the drone before either (ADR-0084).
 - **Never:** a tick after a lost link that gets past its snapshot.
 

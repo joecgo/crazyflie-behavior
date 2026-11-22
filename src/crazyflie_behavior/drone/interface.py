@@ -10,8 +10,9 @@ Rules every adapter follows:
 - Positions and velocities are in the world frame, SI units (ADR-0004).
 - Yaw is held fixed (ADR-0008).
 - Exceptions are for bugs and broken connections, never for normal refusals.
-  After a lost link, every call but `connect()` and `disconnect()` raises
-  `ConnectionError` (ADR-0084).
+  After a lost link, `take_snapshot()` raises `ConnectionError` (ADR-0084).
+  Every tick starts with a snapshot, so nothing else a tick calls needs its
+  own check (ADR-0086).
 """
 
 from abc import ABC, abstractmethod
@@ -69,8 +70,8 @@ class DroneInterface(ABC):
         If the drone may be flying, it lands first. If that landing raises, it
         sends the last-resort landing, closes the link without stopping the
         motors, and raises the error again (ADR-0038, ADR-0084). After a lost
-        link it closes without landing, raising `ConnectionError` unless an
-        earlier call already did. Unlike the other commands this may block,
+        link it closes without landing, raising `ConnectionError` unless a
+        snapshot already did. Unlike the other commands this may block,
         because it's only used at shutdown.
         """
 
@@ -145,6 +146,7 @@ class DroneInterface(ABC):
         `dt` is the seconds since the previous tick started. The snapshot's time
         comes from the adapter's clock, read after its values are copied (ADR-0046).
         It only copies the telemetry: it sends nothing to the drone (ADR-0055).
+        Raises `ConnectionError` after a lost link (ADR-0084, ADR-0086).
         """
 
     @abstractmethod

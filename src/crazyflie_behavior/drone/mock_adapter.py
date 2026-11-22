@@ -31,12 +31,14 @@ height 0, so the down range reads the drone's height, never less than its
 reading on the floor (ADR-0052). Like a real drone, it streams every value
 again each tick, until a test makes it go quiet with `stop_telemetry`.
 
-A test can lose the link with `lose_link`: from then on every call but
-`connect()` and `disconnect()` raises, as the Crazyflie adapter's do
-(ADR-0084). A buzzer command reaches the fake buzzer on the next tick, as a
-parameter write takes a while to reach the drone; `disconnect()` silences it
-after the ones still waiting (ADR-0085), and a lost link drops those
-(ADR-0083).
+A test can lose the link with `lose_link`: from then on `take_snapshot()`
+raises, as the Crazyflie adapter's does, and so does `disconnect()` if no
+snapshot has (ADR-0084, ADR-0086). A command sent after that still moves or
+stops the fake drone, which a real drone wouldn't: the run ends at the next
+snapshot anyway. A buzzer command reaches the fake buzzer on the next tick,
+as a parameter write takes a while to reach the drone; `disconnect()`
+silences it after the ones still waiting (ADR-0085), and a lost link drops
+those (ADR-0083).
 """
 
 import logging
@@ -114,7 +116,7 @@ class MockAdapter(DroneInterface):
         self._is_flow_cut = False
         self._is_link_lost = False
         self._is_lost_link_raised = False
-        """A call has raised for the lost link, so `disconnect()` doesn't raise for it again."""
+        """A snapshot has raised for the lost link, so `disconnect()` doesn't raise for it again."""
         self._buzzer_writes: list[float | None] = []
         """Buzzer commands on their way to the fake buzzer, oldest first: a tone's pitch in hertz, or None."""
         self._playing_tone: float | None = None
@@ -155,7 +157,7 @@ class MockAdapter(DroneInterface):
         self._is_streaming = False
 
     def lose_link(self) -> None:
-        """A fault: the link is lost from now on (ADR-0084). Nothing reaches the fake drone, which stays as it is."""
+        """A fault: the link is lost from now on (ADR-0084). The telemetry stops, and the next snapshot raises."""
         self._is_link_lost = True
         self._is_streaming = False
         logger.error("The radio link to the drone was lost: the mock adapter lost it on cue")
@@ -189,22 +191,17 @@ class MockAdapter(DroneInterface):
         self._playing_tone = None
         self._is_connected = False
 
-    # Every call but connect() and disconnect() raises after a lost link (ADR-0084).
-
     def arm(self) -> None:
-        self._raise_if_the_link_is_lost()
         self.command_log.append("arm")
         if self._is_connected:
             self._is_armed = True
 
     def disarm(self) -> None:
-        self._raise_if_the_link_is_lost()
         self.command_log.append("disarm")
         self._is_armed = False
         self._drop_to_ground()
 
     def take_off(self, height: float) -> None:
-        self._raise_if_the_link_is_lost()
         self.command_log.append("take_off")
         if height <= FINAL_DESCENT_HEIGHT:
             raise ValueError(
@@ -216,7 +213,6 @@ class MockAdapter(DroneInterface):
             self._start_level_part(INITIAL_CLIMB_SPEED)
 
     def land(self) -> None:
-        self._raise_if_the_link_is_lost()
         self.command_log.append("land")
         if not self._is_flying:
             self._drop_to_ground()
@@ -224,7 +220,6 @@ class MockAdapter(DroneInterface):
             self._start_final_descent()
 
     def set_velocity(self, velocity: Vector3, yaw_rate_rad_per_s: float = 0.0) -> None:
-        self._raise_if_the_link_is_lost()
         self.command_log.append("set_velocity")
         # Yaw is held fixed (ADR-0008), so the mock ignores the yaw rate.
         if self._is_flying and not self._is_in_level_part():
@@ -232,7 +227,6 @@ class MockAdapter(DroneInterface):
             self._last_setpoint_time = self._clock.now()
 
     def move_to(self, position: Vector3, duration: float) -> None:
-        self._raise_if_the_link_is_lost()
         self.command_log.append("move_to")
         if duration <= 0.0:
             raise ValueError(f"Move duration must be positive: {duration}")
@@ -242,21 +236,18 @@ class MockAdapter(DroneInterface):
             self._last_setpoint_time = None
 
     def hover(self) -> None:
-        self._raise_if_the_link_is_lost()
         self.command_log.append("hover")
         if not self._is_in_level_part():
             self._velocity = Vector3.ZERO
             self._last_setpoint_time = None
 
     def emergency_stop(self) -> None:
-        self._raise_if_the_link_is_lost()
         self.command_log.append("emergency_stop")
         self._is_armed = False
         self._drop_to_ground()
 
     def reset_estimate(self) -> None:
         """Ignored while flying, as the Crazyflie adapter ignores it while the drone may be flying."""
-        self._raise_if_the_link_is_lost()
         self.command_log.append("reset_estimate")
         if not self._is_flying:
             self._position = Vector3(0.0, 0.0, self._position.z)
@@ -264,12 +255,10 @@ class MockAdapter(DroneInterface):
             self._publish_state()
 
     def chirp(self) -> None:
-        self._raise_if_the_link_is_lost()
         self.command_log.append("chirp")
         self._buzzer_writes.append(None)  # a chirp stops by itself
 
     def play_tone(self, pitch: float) -> None:
-        self._raise_if_the_link_is_lost()
         self.command_log.append("play_tone")
         if not (math.isfinite(pitch) and pitch > 0.0):
             raise ValueError(f"Tone pitch must be positive: {pitch}")
@@ -277,11 +266,11 @@ class MockAdapter(DroneInterface):
         self._buzzer_writes.append(pitch)
 
     def silence(self) -> None:
-        self._raise_if_the_link_is_lost()
         self.command_log.append("silence")
         self._buzzer_writes.append(None)
 
     def take_snapshot(self, dt: float) -> Snapshot:
+        """Raises after a lost link, as the Crazyflie adapter's does (ADR-0086)."""
         self._raise_if_the_link_is_lost()
         return self._telemetry.snapshot(
             dt, is_in_initial_climb=self._climb_height is not None, may_be_flying=self._is_flying
@@ -290,7 +279,6 @@ class MockAdapter(DroneInterface):
     def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
         """Also moves the fake drone by the snapshot's `dt`, for every command, and streams every value (ADR-0055).
         The buzzer commands sent since the last call reach the fake buzzer."""
-        self._raise_if_the_link_is_lost()
         self._deliver_buzzer_writes()
         self._apply_setpoint_timeout()
         if self._is_flying:
@@ -328,10 +316,11 @@ class MockAdapter(DroneInterface):
             logger.error("Closing without landing: the link is lost. The drone wasn't flying.")
 
     def _deliver_buzzer_writes(self) -> None:
-        """The buzzer commands on their way reach the fake buzzer, in order, so the last one decides."""
-        if self._buzzer_writes:
+        """The buzzer commands on their way reach the fake buzzer, in order, so the last one decides. After a lost
+        link they're dropped instead (ADR-0083)."""
+        if self._buzzer_writes and not self._is_link_lost:
             self._playing_tone = self._buzzer_writes[-1]
-            self._buzzer_writes.clear()
+        self._buzzer_writes.clear()
 
     def _start_final_descent(self) -> None:
         # The landing approach, teleported. During the initial climb the final descent starts from
