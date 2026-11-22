@@ -71,26 +71,26 @@ entries go at the top of their section without an ID.
 |---|---|---|
 | design | 4 | 20 |
 | safety design | 5 | 22 |
-| recommendation | 7 | 6 |
+| recommendation | 7 | 7 |
 | environment | 4 | 10 |
 | communication | 13 | 56 |
 | testing | 1 | 21 |
-| process | 7 | 27 |
-| **Total** | **41** | **162** |
+| process | 7 | 28 |
+| **Total** | **41** | **164** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 44 |
+| said-without-checking | 45 |
 | how-I-work | 24 |
 | records-ahead-of-code | 23 |
 | weak-test | 18 |
 | safety-judgment | 18 |
 | vocabulary | 15 |
 | reading-field-data | 15 |
+| recommendation | 13 |
 | message-misstates-outcome | 13 |
-| recommendation | 12 |
 | window-between-steps | 10 |
 | environment | 8 |
 | leftover-state | 3 |
@@ -112,6 +112,8 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-205 | 2026-11-21 | A backlog number cited in code before its row, and already taken | process | said-without-checking | working rule 2: read the backlog's last row before naming a new row's number, and add the row before code cites it |
+| M-204 | 2026-11-21 | Asked whether to remove `SILENCE_HOLD` without finding the ADR that records it | recommendation | recommendation | working rule 5: search the ADRs for the topic in words too, not only for a name from the code |
 | M-203 | 2026-11-21 | A float limit called unreachable for both tolerances, from one's results | communication | said-without-checking | working rule 1: quote a computed result case by case; "the same" across cases needs each case computed |
 | M-202 | 2026-11-21 | A test audit's coverage judged by reading, not by planting | testing | said-without-checking | plant a bug before saying whether a test catches it (the audit's scripts, `drafts/2026-11-21-boundary-audit/`) |
 | M-201 | 2026-11-21 | An assert on a verdict, which is always true | testing | weak-test | REVIEW.md Q-54: assert a verdict's `.is_approved`, never the verdict; bug planting (`docs/coding-style.md`) shows an assert that can't fail |
@@ -726,6 +728,22 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-205, 2026-11-21: A backlog number cited in code before its row, and already taken
+
+- **What happened:** building ADR-0083, Claude planned the first-0 confirmation's case as a new backlog row #139 and cited "backlog #139" in the adapter's `_on_sound_effect_reported` comment and in the build's progress record. Rows #139 and #140 had been added earlier that day (`ea5c7fb`), so the comment pointed to "A test that failed once under load". Caught by Claude while updating the backlog after bug planting: the row is #141, and the comment cites it.
+- **Kind:** process.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 2: read the backlog's last row before naming a new row's number, and add the row before code cites it.
+- **Takeaway:** a row number taken from memory of the backlog, not from the file. A fitness function could check that a cited row exists, not that it's the right one, so no step on the escalation ladder.
+
+### M-204, 2026-11-21: Asked whether to remove `SILENCE_HOLD` without finding the ADR that records it
+
+- **What happened:** building ADR-0083, Claude asked Joe whether to remove the Hover test's `SILENCE_HOLD` now that `disconnect()` waits for the silence's confirmation, after searching the ADRs only for the constant's name. ADR-0053's "As built" records the 1 s wait in words ("After its silence, the Hover test waits 1 s before it's done"), so Joe chose "remove it now" without knowing it was an accepted decision. Caught by Claude before changing the code; asked again with ADR-0053 quoted, Joe kept it.
+- **Kind:** recommendation.
+- **Pattern:** recommendation.
+- **Guard:** working rule 5: search the ADRs for the topic in words too, not only for a name from the code.
+- **Takeaway:** a name search misses a decision written in words. Not a code-review takeaway, so no step on the escalation ladder.
 
 ### M-203, 2026-11-21: A float limit called unreachable for both tolerances, from one's results
 
