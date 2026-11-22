@@ -101,8 +101,6 @@ LANDING_APPROACH_AIM_BELOW = 0.05
 LANDING_APPROACH_BACKUP = 1.0
 """Seconds after the landing approach's `go_to` ends before the final descent starts anyway, if
 the down range hasn't started it (ADR-0068)."""
-SILENCE_CONFIRMATION_TIME_LIMIT = 1.0
-"""Seconds that disconnecting waits for the drone to confirm the buzzer's silence (ADR-0083)."""
 
 # --- PLACEHOLDERS, NOT DECISIONS ---------------------------------------------
 # Flight parameters wait on speed envelopes (ADR-0005) and the safety layer.
@@ -130,6 +128,9 @@ streamed once a second, is the slowest."""
 NOT_FLYING_TIME_LIMIT = 3.0
 """Seconds that closing the link waits, after a motor stop, for the drone to report not flying
 (ADR-0058). Its status keeps saying flying for 2 s after the motors stop."""
+WAIT_AFTER_SILENCE = 1.0
+"""Seconds the link stays open after the silence at disconnect: closing it throws away writes not yet sent
+(ADR-0085)."""
 LOW_LIGHT_IMAGE_QUALITY = 60
 """The Flow deck's image quality (`motion.squal`) under which a take-off logs a low-light warning
 (ADR-0054)."""
@@ -341,9 +342,6 @@ class CrazyflieAdapter(DroneInterface):
         """cflib's message for a lost link (ADR-0084). Written on whichever thread cflib reports it from."""
         self._is_lost_link_raised = False
         """A call has raised for the lost link, so `disconnect()` doesn't raise for it again."""
-        self._is_silence_confirmed = False
-        """The drone reported the buzzer off after the silence in `disconnect()` (ADR-0083). Written on cflib's
-        receive thread."""
 
     # --- Connection ---------------------------------------------------------
 
@@ -361,7 +359,6 @@ class CrazyflieAdapter(DroneInterface):
         self._is_thrust_base_confirmed = False
         self._lost_link_message = None
         self._is_lost_link_raised = False
-        self._is_silence_confirmed = False
         self._is_drone_state_unknown = True
         # Nor does it carry on a take-off, landing or setpoint stream from an earlier session.
         self._is_in_initial_climb = False
@@ -432,8 +429,8 @@ class CrazyflieAdapter(DroneInterface):
             self._shut_down_link()
 
     def _land_silence_and_wait(self) -> None:
-        """Disconnecting with the link up: land a drone that may be flying, silence the buzzer, then wait for
-        not flying."""
+        """Disconnecting with the link up: land a drone that may be flying, silence the buzzer and keep the link
+        open after it, then wait for not flying."""
         # cflib's close_link() sends a zero-thrust setpoint, which would drop a
         # flying drone. Land first and wait until the motors are stopped:
         # blocking is fine at shutdown.
@@ -447,7 +444,7 @@ class CrazyflieAdapter(DroneInterface):
             if was_airborne and self._lost_link_message is None:
                 self._land_as_a_last_resort()
             raise
-        self._silence_and_wait_for_confirmation()
+        self._silence_and_keep_the_link_open()
         if self._has_stopped_motors:
             # That setpoint also locks a drone that still reports flying (ADR-0058).
             self._wait_for_not_flying()
@@ -709,14 +706,11 @@ class CrazyflieAdapter(DroneInterface):
         self._is_skipping_buzzer_commands = False  # this write goes through: the streak is over
         self._crazyflie.param.set_value(name, value)
 
-    def _silence_and_wait_for_confirmation(self) -> None:
-        """Silence the buzzer and wait for the drone to confirm it: closing the link drops writes still waiting
-        (ADR-0083). Without a confirmation in time, a warning."""
-        param = self._crazyflie.param
-        group, name = _SOUND_EFFECT_PARAMETER.split(".")
-        param.add_update_callback(group=group, name=name, cb=self._on_sound_effect_reported)
+    def _silence_and_keep_the_link_open(self) -> None:
+        """Silence the buzzer, then keep the link open for WAIT_AFTER_SILENCE (ADR-0085). A write that fails gets
+        a warning instead, and no wait."""
         try:
-            param.set_value(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_OFF)
+            self._crazyflie.param.set_value(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_OFF)
         except KeyError:
             # Once the link is lost, cflib forgets the parameter list and a write raises.
             # The firmware may also lack it without a Buzzer deck: not checked (backlog #136).
@@ -725,25 +719,7 @@ class CrazyflieAdapter(DroneInterface):
             else:
                 logger.warning("Buzzer not silenced: the drone has no %s parameter.", _SOUND_EFFECT_PARAMETER)
             return
-        try:
-            self._wait_until(
-                lambda: self._is_silence_confirmed,
-                SILENCE_CONFIRMATION_TIME_LIMIT,
-                lambda: (
-                    f"The drone didn't confirm the buzzer's silence within {SILENCE_CONFIRMATION_TIME_LIMIT:g} s. "
-                    "A tone may stay on until the drone is switched off."
-                ),
-            )
-        except TimeoutError as error:
-            logger.warning("%s", error)
-            return
-        logger.info("The drone confirmed the buzzer's silence.")
-
-    def _on_sound_effect_reported(self, name: str, value: str) -> None:
-        # cflib calls this on its receive thread, inside its parameter writer: compared as text, never parsed.
-        # Any report of the buzzer off counts, an earlier silence's too (backlog #141).
-        if value == str(_SOUND_EFFECT_OFF):
-            self._is_silence_confirmed = True
+        self._clock.sleep_until(self._clock.now() + WAIT_AFTER_SILENCE)
 
     def _send_estimate_reset(self) -> None:
         """Write the reset without waiting (ADR-0054), then log the estimate it erases (ADR-0020)."""
@@ -1120,7 +1096,7 @@ class CrazyflieAdapter(DroneInterface):
                     "The last-resort landing was sent, but the setpoint priority wasn't released. "
                     "Run the rescue landing, or tools/emergency_stop.py with something soft under the drone."
                 )
-            # Not relying on cflib to send what's still queued when the link closes (backlog #138).
+            # Closing the link throws away packets not yet sent, so wait with it open (ADR-0084).
             self._clock.sleep_until(self._clock.now() + LAST_RESORT_LANDING_DURATION)
         try:
             self._close_radio_link_only()

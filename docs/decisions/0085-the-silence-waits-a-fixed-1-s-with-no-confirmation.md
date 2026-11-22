@@ -1,6 +1,6 @@
 # 0085: `disconnect()` silences, then waits a fixed 1 s with the link open, with no confirmation
 
-- **Status:** Accepted. Amends [ADR-0083](0083-every-flight-end-lands-inside-the-tick-loop.md) ("A tone (B)": the wait no longer looks for the drone's confirmation, and nothing warns). Not built yet.
+- **Status:** Accepted. Amends [ADR-0083](0083-every-flight-end-lands-inside-the-tick-loop.md) ("A tone (B)": the wait no longer looks for the drone's confirmation, and nothing warns).
 - **Date:** 2026-11-22
 - **Origin:** Mixed. Dropping the confirmation and its warning, since I hear a tone left on: mine, from my review of pull request #29. Keeping a fixed wait, since closing the link throws away packets not yet sent: the AI's pushback, accepted.
 

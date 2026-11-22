@@ -24,9 +24,9 @@ from crazyflie_behavior.drone.crazyflie.adapter import (
     LAST_RESORT_LANDING_DURATION,
     MIN_MOVE_DURATION,
     NOT_FLYING_TIME_LIMIT,
-    SILENCE_CONFIRMATION_TIME_LIMIT,
     TAKE_OFF_STATUS_GRACE,
     VERTICAL_SPEED,
+    WAIT_AFTER_SILENCE,
     CrazyflieAdapter,
 )
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
@@ -68,24 +68,7 @@ def clock() -> SimClock:
 
 @pytest.fixture
 def fake_link() -> MagicMock:
-    fake_link = MagicMock()
-    answer_parameter_writes(fake_link)
-    return fake_link
-
-
-def answer_parameter_writes(fake_link: MagicMock) -> None:
-    """The fake drone answers each parameter write at once: cflib passes the answer to the update callbacks."""
-    callbacks: dict[str, list[Callable[[str, str], None]]] = {}
-
-    def add_update_callback(group: str, name: str, cb: Callable[[str, str], None]) -> None:
-        callbacks.setdefault(f"{group}.{name}", []).append(cb)
-
-    def set_value(complete_name: str, value: object) -> None:
-        for callback in callbacks.get(complete_name, []):
-            callback(complete_name, str(value))
-
-    fake_link.cf.param.add_update_callback.side_effect = add_update_callback
-    fake_link.cf.param.set_value.side_effect = set_value
+    return MagicMock()
 
 
 FLYING = DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=False)
@@ -696,6 +679,12 @@ def record_link_close_time(clock: SimClock, fake_link: MagicMock) -> list[float]
     return closed_at
 
 
+@pytest.fixture
+def no_wait_after_the_silence(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No wait after the silence (ADR-0085), so the wait for not flying starts when `disconnect()` does."""
+    monkeypatch.setattr(adapter_module, "WAIT_AFTER_SILENCE", 0.0)
+
+
 def test_the_motor_stop_at_touchdown_releases_the_setpoint_priority_last(
     adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
 ) -> None:
@@ -721,6 +710,7 @@ def test_shutdown_after_a_motor_stop_waits_until_the_drone_reports_not_flying(
     assert closed_at == [pytest.approx(stopped_at + 2.0, abs=WAIT_SLICE)]
 
 
+@pytest.mark.usefixtures("no_wait_after_the_silence")
 def test_shutdown_waits_no_longer_than_its_time_limit_and_warns(
     adapter: CrazyflieAdapter,
     clock: SimClock,
@@ -739,6 +729,7 @@ def test_shutdown_waits_no_longer_than_its_time_limit_and_warns(
     assert "didn't report not flying" in caplog.text
 
 
+@pytest.mark.usefixtures("no_wait_after_the_silence")
 def test_an_old_not_flying_status_does_not_end_the_wait(
     adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
 ) -> None:
@@ -754,6 +745,7 @@ def test_an_old_not_flying_status_does_not_end_the_wait(
     assert closed_at == [pytest.approx(started_at + NOT_FLYING_TIME_LIMIT)]
 
 
+@pytest.mark.usefixtures("no_wait_after_the_silence")
 def test_a_not_flying_status_at_its_age_limit_ends_the_wait(
     adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
 ) -> None:
@@ -787,8 +779,9 @@ def test_shutdown_reports_a_locked_drone(
     fake_link.close_link.assert_called_once()
 
 
-def test_shutdown_without_a_motor_stop_does_not_wait(clock: SimClock, fake_link: MagicMock) -> None:
-    # Never flown, and no status at all: a wait would run out its whole time limit.
+@pytest.mark.usefixtures("no_wait_after_the_silence")
+def test_shutdown_without_a_motor_stop_does_not_wait_for_not_flying(clock: SimClock, fake_link: MagicMock) -> None:
+    # Never flown, and no status at all: a wait for not flying would run out its whole time limit.
     adapter = CrazyflieAdapter(clock)
     adapter._sync_crazyflie = fake_link
     closed_at = record_link_close_time(clock, fake_link)
@@ -995,14 +988,21 @@ def test_a_link_lost_on_the_floor_says_the_drone_wasnt_flying(
     assert caplog.messages[-1] == "Closing without landing: the link is lost. The drone wasn't flying."
 
 
-def lose_the_link_at_the_next_wait(
-    adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock, monkeypatch: pytest.MonkeyPatch
+def lose_the_link_while_waiting(
+    adapter: CrazyflieAdapter,
+    clock: SimClock,
+    fake_link: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    after: float = -math.inf,
 ) -> None:
+    """From now on, every wait that ends after `after` loses the link as it ends: by default, every wait."""
     sleep_until = clock.sleep_until
 
     def sleep_and_lose_the_link(deadline: float) -> None:
         sleep_until(deadline)
-        lose_the_link(adapter, fake_link)
+        if clock.now() > after:
+            lose_the_link(adapter, fake_link)
 
     monkeypatch.setattr(clock, "sleep_until", sleep_and_lose_the_link)
 
@@ -1014,7 +1014,7 @@ def test_a_link_lost_while_disconnect_lands_stops_its_wait_with_no_last_resort(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    lose_the_link_at_the_next_wait(adapter, clock, fake_link, monkeypatch)
+    lose_the_link_while_waiting(adapter, clock, fake_link, monkeypatch)
 
     with caplog.at_level(logging.ERROR, logger=adapter_module.__name__), pytest.raises(ConnectionError):
         adapter.disconnect()
@@ -1029,92 +1029,47 @@ def test_a_link_lost_while_waiting_for_not_flying_stops_the_wait_at_once(
 ) -> None:
     land_until_the_motors_stop(adapter, clock, fake_link)
     report_status(adapter, FLYING)  # the status still says flying for 2 s after the motors stop
-    lose_the_link_at_the_next_wait(adapter, clock, fake_link, monkeypatch)
     started_at = clock.now()
+    wait_after_the_silence_ends_at = started_at + WAIT_AFTER_SILENCE
+    lose_the_link_while_waiting(adapter, clock, fake_link, monkeypatch, after=wait_after_the_silence_ends_at)
 
     with pytest.raises(ConnectionError):
         adapter.disconnect()
 
-    assert clock.now() == pytest.approx(started_at + WAIT_SLICE)  # one slice, not NOT_FLYING_TIME_LIMIT
+    # One slice of the wait for not flying, not NOT_FLYING_TIME_LIMIT.
+    assert clock.now() == pytest.approx(wait_after_the_silence_ends_at + WAIT_SLICE)
 
 
-# --- The buzzer's silence at shutdown (ADR-0083) ----------------------------------------
+# --- The buzzer's silence at shutdown (ADR-0083, ADR-0085) ------------------------------
 
 
-def test_shutdown_silences_the_buzzer_after_the_landing_and_logs_the_drones_confirmation(
-    adapter: CrazyflieAdapter, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
-) -> None:
-    caplog.set_level(logging.INFO, logger=adapter_module.__name__)
-
+def test_shutdown_silences_the_buzzer_after_the_landing(adapter: CrazyflieAdapter, fake_link: MagicMock) -> None:
     adapter.disconnect()
 
     fake_link.cf.param.set_value.assert_called_once_with("sound.effect", 0)
     calls = [name for name, _, _ in fake_link.mock_calls]
     assert calls.index("cf.high_level_commander.stop") < calls.index("cf.param.set_value")
-    assert "The drone confirmed the buzzer's silence." in caplog.messages
 
 
-def test_without_a_confirmation_shutdown_closes_the_link_at_the_silences_time_limit_with_a_warning(
+def test_shutdown_keeps_the_link_open_for_the_wait_after_the_silence_with_no_warning(
     clock: SimClock, caplog: pytest.LogCaptureFixture
 ) -> None:
-    link = MagicMock()  # its drone never answers a parameter write
+    link = MagicMock()  # its drone never answers a parameter write, and nothing waits for an answer
     adapter = adapter_on_the_floor(clock, link)
+    written_at: list[float] = []
+
+    def record_the_write(complete_name: str, value: object) -> None:
+        written_at.append(clock.now())
+
+    link.cf.param.set_value.side_effect = record_the_write
     closed_at = record_link_close_time(clock, link)
-    started_at = clock.now()
 
     with caplog.at_level(logging.WARNING, logger=adapter_module.__name__):
         adapter.disconnect()
 
-    assert closed_at == [pytest.approx(started_at + SILENCE_CONFIRMATION_TIME_LIMIT)]
-    assert caplog.messages == [
-        "The drone didn't confirm the buzzer's silence within 1 s. A tone may stay on until the drone is switched off."
-    ]
-
-
-def test_a_confirmation_at_exactly_the_silences_time_limit_still_counts(
-    clock: SimClock, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-) -> None:
-    link = MagicMock()
-    callbacks: list[Callable[[str, str], None]] = []
-
-    def add_update_callback(group: str, name: str, cb: Callable[[str, str], None]) -> None:
-        callbacks.append(cb)
-
-    link.cf.param.add_update_callback.side_effect = add_update_callback
-    adapter = adapter_on_the_floor(clock, link)
-    started_at = clock.now()
-    sleep_until = clock.sleep_until
-
-    def sleep_and_answer_at_the_time_limit(deadline: float) -> None:
-        sleep_until(deadline)
-        if clock.now() >= started_at + SILENCE_CONFIRMATION_TIME_LIMIT:
-            for callback in callbacks:
-                callback("sound.effect", "0")
-
-    monkeypatch.setattr(clock, "sleep_until", sleep_and_answer_at_the_time_limit)
-
-    with caplog.at_level(logging.WARNING, logger=adapter_module.__name__):
-        adapter.disconnect()
-
-    assert clock.now() == started_at + SILENCE_CONFIRMATION_TIME_LIMIT
+    assert len(written_at) == 1
+    assert closed_at == [pytest.approx(written_at[0] + WAIT_AFTER_SILENCE)]
     assert caplog.messages == []
-
-
-def test_a_report_of_another_buzzer_value_doesnt_confirm_the_silence(
-    clock: SimClock, caplog: pytest.LogCaptureFixture
-) -> None:
-    link = MagicMock()
-
-    def answer_an_earlier_tones_write(group: str, name: str, cb: Callable[[str, str], None]) -> None:
-        cb(f"{group}.{name}", "12")  # and nothing after it
-
-    link.cf.param.add_update_callback.side_effect = answer_an_earlier_tones_write
-    adapter = adapter_on_the_floor(clock, link)
-
-    with caplog.at_level(logging.WARNING, logger=adapter_module.__name__):
-        adapter.disconnect()
-
-    assert "didn't confirm the buzzer's silence" in caplog.text
 
 
 def test_a_drone_without_the_buzzers_parameter_gets_a_warning_and_no_wait(

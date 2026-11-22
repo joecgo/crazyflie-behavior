@@ -183,7 +183,7 @@ only an example: "For example, about 43,300 for this drone".
 |---|---|---|
 | **Chirp** | One short sound from the Buzzer deck, about 1 s: the firmware's built-in two-note tune, which stops by itself. A buzzer command, like tone and silence. | [0053](decisions/0053-buzzer-commands-and-a-chirp-hover-test.md) |
 | **Tone** | A steady sound from the Buzzer deck at a chosen pitch, until a silence command stops it. | [0053](decisions/0053-buzzer-commands-and-a-chirp-hover-test.md) |
-| **Silence** | The buzzer command that stops a tone; `disconnect()` silences and waits for the drone to report it. | [0053](decisions/0053-buzzer-commands-and-a-chirp-hover-test.md), [0083](decisions/0083-every-flight-end-lands-inside-the-tick-loop.md) |
+| **Silence** | The buzzer command that stops a tone; `disconnect()` silences, then waits a fixed time with the link open: closing it throws away writes not yet sent. | [0053](decisions/0053-buzzer-commands-and-a-chirp-hover-test.md), [0083](decisions/0083-every-flight-end-lands-inside-the-tick-loop.md), [0085](decisions/0085-the-silence-waits-a-fixed-1-s-with-no-confirmation.md) |
 
 ## Testing
 

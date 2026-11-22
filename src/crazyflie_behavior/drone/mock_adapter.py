@@ -35,7 +35,8 @@ A test can lose the link with `lose_link`: from then on every call but
 `connect()` and `disconnect()` raises, as the Crazyflie adapter's do
 (ADR-0084). A buzzer command reaches the fake buzzer on the next tick, as a
 parameter write takes a while to reach the drone; `disconnect()` silences it
-after the ones still waiting, and a lost link drops those (ADR-0083).
+after the ones still waiting (ADR-0085), and a lost link drops those
+(ADR-0083).
 """
 
 import logging
@@ -183,7 +184,7 @@ class MockAdapter(DroneInterface):
             self.land()
             self._drop_to_ground()  # the Crazyflie adapter waits for touchdown; the mock lands at once
             self._publish_state()  # the last telemetry, so a test can see where the drone ended up
-        # The Crazyflie adapter's silence, confirmed: the writes before it reach the drone first.
+        # The Crazyflie adapter's silence and its wait: the writes before it reach the drone first (ADR-0085).
         self._deliver_buzzer_writes()
         self._playing_tone = None
         self._is_connected = False

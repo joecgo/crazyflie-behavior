@@ -645,7 +645,7 @@ def test_a_chirp_or_a_silence_leaves_no_tone_playing(command: str) -> None:
 
 
 def test_disconnect_silences_a_tone_left_on_even_one_sent_just_before() -> None:
-    # The Crazyflie adapter's silence at shutdown, which waits for the drone's answer (ADR-0083).
+    # The Crazyflie adapter's silence at shutdown, with its wait (ADR-0083, ADR-0085).
     clock = SimClock()
     drone = MockAdapter(clock)
     drone.connect()
