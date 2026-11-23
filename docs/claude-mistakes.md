@@ -73,20 +73,20 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 22 |
 | recommendation | 7 | 7 |
 | environment | 4 | 10 |
-| communication | 14 | 60 |
-| testing | 1 | 24 |
-| process | 7 | 29 |
-| **Total** | **43** | **172** |
+| communication | 14 | 62 |
+| testing | 1 | 26 |
+| process | 7 | 30 |
+| **Total** | **43** | **177** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 49 |
+| said-without-checking | 51 |
 | how-I-work | 24 |
 | records-ahead-of-code | 23 |
-| weak-test | 20 |
-| vocabulary | 18 |
+| weak-test | 22 |
+| vocabulary | 19 |
 | safety-judgment | 18 |
 | reading-field-data | 15 |
 | recommendation | 13 |
@@ -112,6 +112,11 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-220 | 2026-11-22 | New mock test names used terms not in the glossary | communication | vocabulary | working rule 6: check a new name's words against the glossary before using them |
+| M-219 | 2026-11-22 | `TICK_PERIOD`'s docstring promised exactness that depends on `STALE_AFTER` | communication | said-without-checking | a docstring for a value computed from another module's constant states what its claim depends on |
+| M-218 | 2026-11-22 | Backlog #133 removed while #142 still waited on it | process | said-without-checking | before removing a backlog row, search the docs for its number (M-213), and update each row that waits on it |
+| M-217 | 2026-11-22 | Two mock "too long" tests checked a whole tick past the motor cut | testing | weak-test | a test past a time limit checks 0.01 s past it, and a planted limit plus 0.04 s proves it |
+| M-216 | 2026-11-22 | Two "mid hover" tick-step tests set up mid-climb | testing | weak-test | a test reaches the state its name says by ticking until a condition holds, not by a fixed count of ticks |
 | M-215 | 2026-11-22 | Said the draft filed every PR #29 entry under "I had to point out" | communication | said-without-checking | working rule 2: read the whole document before saying what it says, not a line found by search |
 | M-214 | 2026-11-22 | Two tick-loop tests expected a tick's log line without a garbage-collector pause | testing | weak-test | a test that compares a log line exactly holds fixed every optional part the line can carry |
 | M-213 | 2026-11-22 | A backlog row's removal drafted without searching for pointers to it | process | said-without-checking | before removing a backlog row, search the code and the docs for its number |
@@ -754,6 +759,44 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-220, 2026-11-22: New mock test names used terms not in the glossary
+
+- **What happened:** three new tests in `tests/drone/test_mock_adapter.py` were named with "the motor cut limit" and "a velocity exactly its wait old", and a helper's docstring with "a setpoint timeout's limit". None is a glossary term, and "its wait old" is hard to parse. Caught by the project review of #133 part 2 (Q-38). Renamed in plain words: "the wait before the motors cut", "its wait before it stops following".
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** working rule 6: check a new name's words against the glossary before using them.
+
+### M-219, 2026-11-22: `TICK_PERIOD`'s docstring promised exactness that depends on `STALE_AFTER`
+
+- **What happened:** `tests/loop/test_tick_step.py`'s `TICK_PERIOD = STALE_AFTER / 2.0`, chosen so it follows a change to `STALE_AFTER`, said "half of it stays exact in binary". That holds only while `STALE_AFTER` is exact, and the hover test compared its hover length with an exact float equality that relied on it. Caught by the project review of #133 part 2. The docstring now states the condition, and the comparison uses `pytest.approx`.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** a docstring for a value computed from another module's constant states what its claim depends on.
+
+### M-218, 2026-11-22: Backlog #133 removed while #142 still waited on it
+
+- **What happened:** removing #133 (the boundary tests, done) left #142's "when" as "After the boundary tests (#133)": a trigger that had fired, pointing to a row that no longer exists, and missing from the next-up brief. M-213's guard, from the same day, says to search for a row's number before removing it. Caught by the project review of #133 part 2. #142's trigger now says it's due, and it's second in Next three.
+- **Kind:** process.
+- **Pattern:** said-without-checking.
+- **Guard:** before removing a backlog row, search the docs for its number (M-213), and update each row that waits on it.
+- **Takeaway:** repeats M-213, so the escalation ladder asks for a mechanism: backlog #144.
+
+### M-217, 2026-11-22: Two mock "too long" tests checked a whole tick past the motor cut
+
+- **What happened:** for #133 part 2 (rows 18 and 19), `test_an_initial_climb_without_updates_for_too_long_drops_the_drone` and `test_the_drone_drops_when_velocities_stop_arriving_for_too_long` checked the mock's motor cut one tick (0.05 s) past `SETPOINT_CUT_MOTORS_AFTER`, so a cut limit up to 2.049 s passed. Joe had chosen 0.01 s past for rows 14 and 20 because the same gap let a limit plus 0.04 s pass there (M-206). The plants run for the rows didn't include a limit plus 0.04 s. Caught by the project review; both tests now check 0.01 s past, and planting 2.04 s fails each one.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a test past a time limit checks 0.01 s past it, and a planted limit plus 0.04 s proves it.
+- **Takeaway:** repeats M-206, so the escalation ladder asks for a mechanism: a limit plus 0.04 s among the bug-planting tool's plants (backlog #142).
+
+### M-216, 2026-11-22: Two "mid hover" tick-step tests set up mid-climb
+
+- **What happened:** `test_a_low_battery_mid_hover_lands_the_drone_before_the_run_ends` and `test_a_link_gone_quiet_mid_hover_lands_the_drone` ticked a fixed 4 times, commented "arm, take off, hovering". That held when written (`c4872d5`), but once ADR-0048's build gave the mock its initial climb (`9deb5a4`, 2026-11-07), the drone was still climbing at 0.1 m after those ticks, and nobody updated the count. Caught by Claude while halving the tests' tick period for backlog #140, by checking the drone's state after each setup tick. Fixed with a helper that ticks until the drone is at its take-off height.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a test reaches the state its name says by ticking until a condition holds, not by a fixed count of ticks.
+- **Takeaway:** the weak-test pattern is past its third entry; the mechanism here is the helper, `tick_until_hovering`. Close to `REVIEW.md` Q-49 (comments that relied on a changed step), so no new question.
 
 ### M-215, 2026-11-22: Said the draft filed every PR #29 entry under "I had to point out"
 
