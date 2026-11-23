@@ -73,16 +73,16 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 22 |
 | recommendation | 7 | 7 |
 | environment | 4 | 10 |
-| communication | 14 | 62 |
+| communication | 14 | 63 |
 | testing | 1 | 26 |
 | process | 7 | 30 |
-| **Total** | **43** | **177** |
+| **Total** | **43** | **178** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 51 |
+| said-without-checking | 52 |
 | how-I-work | 24 |
 | records-ahead-of-code | 23 |
 | weak-test | 22 |
@@ -112,6 +112,7 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-221 | 2026-11-22 | The next-up brief said 84 planted bugs for the recorder; it was 87 | communication | said-without-checking | working rule 4: a count in a record comes from the whole run, recounted when the record is written |
 | M-220 | 2026-11-22 | New mock test names used terms not in the glossary | communication | vocabulary | working rule 6: check a new name's words against the glossary before using them |
 | M-219 | 2026-11-22 | `TICK_PERIOD`'s docstring promised exactness that depends on `STALE_AFTER` | communication | said-without-checking | a docstring for a value computed from another module's constant states what its claim depends on |
 | M-218 | 2026-11-22 | Backlog #133 removed while #142 still waited on it | process | said-without-checking | before removing a backlog row, search the docs for its number (M-213), and update each row that waits on it |
@@ -759,6 +760,13 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-221, 2026-11-22: The next-up brief said 84 planted bugs for the recorder; it was 87
+
+- **What happened:** the brief's "Done last" line for the recorder gave 84 planted bugs, a count taken before the last few were planted. The project review of the recorder caught it before the commit; fixed to 87.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 4: a count in a record comes from the whole run, recounted when the record is written.
 
 ### M-220, 2026-11-22: New mock test names used terms not in the glossary
 
