@@ -227,7 +227,7 @@ the repository until they're decided. Module names are working names.
 |---|---|---|
 | The Crazyflie adapter becomes parts inside `drone/crazyflie/`: `link.py`, `log_blocks.py` and `commands.py`, which with `adapter.py` are the only cflib importers; and `flight_phases.py`, the take-off and landing logic with no cflib import and strict typing. `DroneInterface` stays as it is. | Section 2; rule 1 narrows to the named modules | An ADR; the glossary's *Crazyflie adapter* |
 | A tick reports an outcome, up to the program. | Section 3 | ADR-0036 is accepted; how the outcome travels is open |
-| Recordings, replay tests, and program tests on the sim clock. | A recorder beside the tick step | ADR-0034 is accepted; its details are open |
+| Recordings, replay tests, and program tests on the sim clock. | A recorder beside the tick step | The recorder is decided (ADR-0034, ADR-0087, ADR-0088), not built (backlog #145). Program tests on the sim clock are built (ADR-0076). Replay tests are open |
 | Tuning values are grouped, passed in, and logged with every run. | Where constants live | An ADR |
 | The mock adapter runs the Crazyflie adapter's take-off and landing code. | Section 4, the mock's row | An ADR |
 
