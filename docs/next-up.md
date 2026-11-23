@@ -9,12 +9,17 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-22 (Pacific)
-- **Last commit:** this brief, with the work log, after the boundary tests
-  part 2, the mistakes log and backlog, and ADR-0087, on `main`.
+- **Last commit:** this brief, with the work log, after ADR-0088 and its
+  records (`8e58e2e`), on `main`, pushed.
   Uncommitted: nothing.
 
 ## Done last
 
+- 2026-11-22: #145's design points decided (ADR-0088, all four as
+  recommended): the tick step holds the recorder and wraps `ask`; the tick
+  loop's optional `on_tick_measured`; the header's settings are the
+  command-line arguments and whether the tree was clean; a write error stops
+  the recording, not the flight. #147 added (C7, tuning values).
 - 2026-11-22: boundary tests part 2 (#133, now done): rows 4-6, 8-11 and
   18-20, every planted bug caught; a test past a time limit checks 0.01 s
   past it (Joe's choice). #140: the tick-step tests tick every
@@ -34,15 +39,15 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## Next three
 
-1. Decide the recorder's design points (#145: where it plugs in, the tick's
-   timing, the header's settings; C5 of
-   `drafts/2026-11-13-code-recommendations.md`), then build it before
-   session 7. Opus, high.
+1. Build the recorder (#145, ADR-0034, ADR-0087, ADR-0088) before
+   session 7. It touches the tick step and the tick loop, so
+   `/project-review` before committing. Opus, Extra or Max.
 2. Decide #142 (a bug-planting tool), due now that the boundary tests are
    done; #144 (rows that wait on a removed backlog row) beside it. Opus,
    high.
-3. `ARCHITECTURE.md` still says ADR-0034's details are open (about line
-   230); ADR-0087 settled some. Editing it needs Joe's ask. Sonnet, low.
+3. Decide #55 (where analysis scripts live): the recorder drops the text
+   log's snapshot line, which breaks the scripts in `drafts/`, so the two
+   go together. Opus, high.
 
 ## Explain-backs waiting
 
@@ -54,6 +59,9 @@ from `drafts/explain-back-notes.md`; don't open it first.
   and which command still raises on its own after one, and why?
 - **E2.** A recording writes a NaN battery voltage as the string `"nan"`,
   not as `null`. What would go wrong in a replay test if it wrote `null`?
+- **E3.** The tick's timing reaches the recorder through a callable the
+  tick loop calls (ADR-0088). Why can't the tick step measure a tick's
+  lateness and work time itself?
 
 ## Last reviewed
 
