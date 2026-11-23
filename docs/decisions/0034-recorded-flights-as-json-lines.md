@@ -1,6 +1,6 @@
 # 0034: A recording is one JSON Lines file per run; chosen ones are committed compressed
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended by [ADR-0087](0087-a-recordings-first-version-strings-for-non-finite-floats-no-adapter-events-and-a-last-line.md) (2026-11-22): non-finite floats as strings, the first version's events, a last line for how the run ended, old logs converted on demand.
 - **Date:** 2026-11-01
 - **Origin:** AI recommendation accepted.
 
