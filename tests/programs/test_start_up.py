@@ -24,8 +24,10 @@ from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_loop import TickStep
 from crazyflie_behavior.programs import start_up as start_up_module
 from crazyflie_behavior.programs.start_up import (
+    command_line_arguments,
     logging_for_run,
     make_drone,
+    make_recorder,
     mode_without_quick_edit,
     quick_edit_off,
     restored_mode,
@@ -33,6 +35,8 @@ from crazyflie_behavior.programs.start_up import (
     run_tick_loop,
     take_off_log_description,
 )
+from crazyflie_behavior.recording.encoding import CodeVersion, LastLine, RecordedError, Recording, read_recording
+from crazyflie_behavior.recording.recorder import Recorder
 from crazyflie_behavior.timing.clock import SimClock
 
 START_UP_LOGGER = "crazyflie_behavior.programs.start_up"
@@ -522,3 +526,81 @@ def test_make_drone_passes_the_take_off_log_on_to_the_crazyflie_adapter(sim_cloc
 def test_the_description_says_when_the_take_off_block_runs_and_when_the_adapter_has_none() -> None:
     assert take_off_log_description(use_crazyflie=True) == ", with the take-off block"
     assert take_off_log_description(use_crazyflie=False) == ", with the take-off block (the mock adapter has none)"
+
+
+# --- The recording (ADR-0088) ---------------------------------------------------------
+
+
+def run_recorded_test_program(clock: SimClock, tick_step: TickStep) -> int:
+    recorder = Recorder("mock", ["--test-argument"])
+    return run_program("test", "Test program, the mock adapter", MockAdapter(clock), tick_step, clock, recorder)
+
+
+def the_recording(tmp_path: Path) -> Recording:
+    [path] = (tmp_path / "recordings").glob("*.jsonl")
+    return read_recording(path)
+
+
+def test_a_program_with_a_recorder_records_its_run_under_its_log_files_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    assert run_recorded_test_program(sim_clock, CountingTickStep(3)) == 0
+
+    [log_file] = (tmp_path / "logs").glob("*.log")
+    recording = read_recording(tmp_path / "recordings" / f"{log_file.stem}.jsonl")
+    assert recording.header.program == "test"
+    assert recording.header.adapter == "mock"
+    assert recording.header.arguments == ("--test-argument",)
+    assert [tick.tick_number for tick in recording.ticks] == [0, 1, 2]
+    assert recording.last_line == LastLine(None)
+
+
+def test_an_error_that_ends_a_run_is_named_in_its_recordings_last_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    assert run_recorded_test_program(sim_clock, FailingTickStep()) == 1
+
+    recording = the_recording(tmp_path)
+    assert len(recording.ticks) == 1  # the tick that raised, with its timing
+    assert recording.last_line == LastLine(RecordedError("RuntimeError", "the tick step broke"))
+
+
+def test_the_interrupt_signal_while_connecting_is_named_in_the_recordings_last_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sim_clock: SimClock
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def interrupted(*_arguments: object) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(start_up_module, "run_tick_loop", interrupted)
+
+    assert run_recorded_test_program(sim_clock, CountingTickStep(1)) == 130
+    recording = the_recording(tmp_path)
+    assert recording.ticks == ()
+    assert recording.last_line == LastLine(RecordedError("KeyboardInterrupt", ""))
+
+
+def test_a_recording_has_the_arguments_a_program_was_given_or_else_the_command_lines(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["hover.py", "--chirp"])
+
+    assert command_line_arguments(None) == ("--chirp",)
+    assert command_line_arguments(["--hover-seconds", "1"]) == ("--hover-seconds", "1")
+
+
+@pytest.mark.parametrize(("use_crazyflie", "adapter"), [(True, "crazyflie"), (False, "mock")])
+def test_a_recordings_header_names_the_adapter_by_its_short_name(
+    use_crazyflie: bool, adapter: str, tmp_path: Path
+) -> None:
+    recorder = make_recorder(use_crazyflie, [])
+
+    recorder.start(tmp_path / "run.jsonl", "test", CodeVersion(None, None))
+    recorder.finish(None)
+
+    assert read_recording(tmp_path / "run.jsonl").header.adapter == adapter

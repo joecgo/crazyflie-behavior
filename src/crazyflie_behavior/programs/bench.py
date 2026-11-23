@@ -22,9 +22,12 @@ from crazyflie_behavior.loop.tick_loop import TickStep
 from crazyflie_behavior.programs.start_up import (
     add_take_off_log_option,
     make_drone,
+    make_recorder,
     run_program,
     take_off_log_description,
 )
+from crazyflie_behavior.recording.recorder import Recorder
+from crazyflie_behavior.safety.safety_layer import SafetyEvents
 from crazyflie_behavior.snapshot import RangeReading, RangeStatus, Snapshot, Stamped
 from crazyflie_behavior.timing.clock import Clock, RealClock
 
@@ -40,10 +43,12 @@ class BenchTickStep(TickStep):
     """Takes a snapshot each tick and logs it. Never commands the drone.
 
     It still updates take-off and landing each tick (ADR-0055), as every tick step does.
+    With a recorder, each snapshot is recorded, with no requests or events (ADR-0088).
     """
 
-    def __init__(self, drone: DroneInterface) -> None:
+    def __init__(self, drone: DroneInterface, recorder: Recorder | None = None) -> None:
         self._drone = drone
+        self._recorder = recorder
         self._next_summary_time: float | None = None
         self._is_stop_requested = False
 
@@ -54,6 +59,8 @@ class BenchTickStep(TickStep):
     def run(self, time: float, dt: float) -> bool:
         snapshot = self._drone.take_snapshot(dt)
         logger.debug("Snapshot: %s", snapshot)
+        if self._recorder is not None:
+            self._recorder.record_tick(snapshot, SafetyEvents(pre_check_failures=(), replaced_requests=()), None)
         self._drone.update_take_off_and_landing(snapshot)
         if self._next_summary_time is None or time >= self._next_summary_time:
             logger.info("%s", snapshot_summary(snapshot))
@@ -138,10 +145,11 @@ def main(arguments: list[str] | None = None, *, clock: Clock | None = None) -> i
         clock = RealClock()
     drone = make_drone(use_crazyflie, clock, take_off_log=take_off_log)
     adapter_name = "the Crazyflie" if use_crazyflie else "the mock adapter"
+    recorder = make_recorder(use_crazyflie, arguments)
     description = f"Bench program, {adapter_name}"
     if take_off_log:
         description += take_off_log_description(use_crazyflie)
-    return run_program("bench", description, drone, BenchTickStep(drone), clock)
+    return run_program("bench", description, drone, BenchTickStep(drone, recorder), clock, recorder)
 
 
 if __name__ == "__main__":

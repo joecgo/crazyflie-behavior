@@ -42,6 +42,7 @@ from crazyflie_behavior.programs.start_up import (
     EXIT_OK,
     add_take_off_log_option,
     make_drone,
+    make_recorder,
     run_program,
     take_off_log_description,
 )
@@ -85,13 +86,14 @@ def main(arguments: list[str] | None = None, *, clock: Clock | None = None) -> i
     drone = ForgedLowBatteryDrone(make_drone(use_crazyflie, clock, take_off_log=take_off_log), trigger)
     safety_layer = SafetyLayer(drone)
     failsafe_test = FailsafeTest(height)
-    tick_step = BehaviorTickStep(drone, safety_layer, failsafe_test)
     adapter_name = "the Crazyflie" if use_crazyflie else "the mock adapter"
+    recorder = make_recorder(use_crazyflie, arguments)
+    tick_step = BehaviorTickStep(drone, safety_layer, failsafe_test, recorder)
     test_name = TEST_NAMES[trigger]
     description = f"Failsafe program, {adapter_name}, {test_name} ({height:g} m)"
     if take_off_log:
         description += take_off_log_description(use_crazyflie)
-    exit_code = run_program("failsafe", description, drone, tick_step, clock)
+    exit_code = run_program("failsafe", description, drone, tick_step, clock, recorder)
     if exit_code != EXIT_OK:
         return exit_code
     # The run ended without an error (`disconnect()` returned). It passed if the fault was injected, the

@@ -13,6 +13,7 @@ from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.programs import bench as bench_module
 from crazyflie_behavior.programs.bench import BenchTickStep, main, snapshot_summary
+from crazyflie_behavior.recording.recorder import Recorder
 from crazyflie_behavior.snapshot import RangeDirection, RangeReading, RangeReadings, Snapshot
 from crazyflie_behavior.timing.clock import Clock, SimClock
 
@@ -191,8 +192,8 @@ def test_the_summary_marks_an_invalid_range_reading(sim_clock: SimClock) -> None
 class InterruptSignalOnThirdTick(BenchTickStep):
     """The bench tick step, with the interrupt signal sent on its third tick."""
 
-    def __init__(self, drone: DroneInterface) -> None:
-        super().__init__(drone)
+    def __init__(self, drone: DroneInterface, recorder: Recorder | None = None) -> None:
+        super().__init__(drone, recorder)
         self._ticks_run = 0
 
     def run(self, time: float, dt: float) -> bool:

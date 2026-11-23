@@ -10,6 +10,7 @@ import logging
 import math
 import threading
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import TextIO
 
 from crazyflie_behavior.timing.clock import Clock
@@ -173,6 +174,11 @@ class TickLoop:
 
     Errors from the tick step aren't caught here. They rise to the program,
     which disconnects and lands (ADR-0026).
+
+    `on_tick_measured`, if given, gets each tick's lateness and work time, in
+    seconds, also for a tick whose tick step raised. It runs after the work
+    time is measured, so its own time shows in the next tick's lateness
+    (ADR-0088).
     """
 
     def __init__(
@@ -181,12 +187,15 @@ class TickLoop:
         tick_step: TickStep,
         hang_watchdog: HangWatchdog,
         tick_rate: float = TICK_RATE,
+        *,
+        on_tick_measured: Callable[[float, float], None] | None = None,
     ) -> None:
         if tick_rate <= 0.0:
             raise ValueError(f"The tick rate must be positive: {tick_rate}")
         self._clock = clock
         self._tick_step = tick_step
         self._hang_watchdog = hang_watchdog
+        self._on_tick_measured = on_tick_measured
         self._tick_rate = tick_rate
         self._tick_period = 1.0 / tick_rate
         self._stop_requested = threading.Event()
@@ -263,6 +272,8 @@ class TickLoop:
             if pauses.count_this_tick > 0:
                 message += f", garbage collector {_ms(pauses.total_this_tick)} (pauses: {pauses.count_this_tick})"
             logger.debug(message)
+        if self._on_tick_measured is not None:
+            self._on_tick_measured(lateness, work_time)
 
         next_due_time = due_time + self._tick_period
         if end <= next_due_time:

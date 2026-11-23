@@ -11,7 +11,7 @@ import logging
 import sys
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import NamedTuple
 
@@ -634,3 +634,71 @@ def test_the_loop_stops_measuring_the_garbage_collector_after_a_run(sim_clock: S
     make_loop(clock, ScriptedTickStep(clock, [0.125])).run()
 
     assert gc.callbacks == callbacks_before
+
+
+# --- On tick measured, for the recorder (ADR-0088) -------------------------------------
+
+
+def measuring_loop(
+    clock: SimClock,
+    tick_step: TickStep,
+    on_tick_measured: Callable[[float, float], None],
+    hang_watchdog: HangWatchdog | None = None,
+) -> TickLoop:
+    return TickLoop(
+        clock, tick_step, hang_watchdog or FakeHangWatchdog(), TEST_TICK_RATE, on_tick_measured=on_tick_measured
+    )
+
+
+def test_on_tick_measured_gets_each_ticks_lateness_and_work_time() -> None:
+    clock = LateWakingClock(wake_lateness=0.0625)
+    measured: list[tuple[float, float]] = []
+
+    def keep(lateness: float, work_time: float) -> None:
+        measured.append((lateness, work_time))
+
+    measuring_loop(clock, ScriptedTickStep(clock, [0.125, 0.0625]), keep).run()
+
+    assert measured == [(0.0, 0.125), (0.0625, 0.0625)]
+
+
+def test_the_time_on_tick_measured_takes_shows_in_the_next_ticks_lateness_not_in_its_work_time(
+    sim_clock: SimClock,
+) -> None:
+    """As the recorder's write does: the write isn't in the work time (ADR-0088)."""
+    clock = sim_clock
+    measured: list[tuple[float, float]] = []
+
+    def slow_write(lateness: float, work_time: float) -> None:
+        measured.append((lateness, work_time))
+        clock.advance(0.1875)  # past the slack left in the tick period
+
+    measuring_loop(clock, ScriptedTickStep(clock, [0.125, 0.125]), slow_write).run()
+
+    assert measured == [(0.0, 0.125), (0.0625, 0.125)]
+
+
+def test_on_tick_measured_also_gets_a_tick_whose_tick_step_raised(sim_clock: SimClock) -> None:
+    measured: list[tuple[float, float]] = []
+    loop = measuring_loop(
+        sim_clock, FailingTickStep(fail_on_tick=1), lambda lateness, work_time: measured.append((lateness, work_time))
+    )
+
+    with pytest.raises(RuntimeError, match="the tick step broke"):
+        loop.run()
+
+    assert len(measured) == 2
+
+
+def test_on_tick_measured_runs_while_the_hang_watchdog_watches(sim_clock: SimClock) -> None:
+    """So a hang while writing the recording is reported too (ADR-0026)."""
+    events: list[str] = []
+
+    measuring_loop(
+        sim_clock,
+        RecordingTickStep(events, tick_count=2),
+        lambda _lateness, _work_time: events.append("measured"),
+        FakeHangWatchdog(events),
+    ).run()
+
+    assert events == ["arm", "tick", "measured", "disarm", "arm", "tick", "measured", "disarm"]

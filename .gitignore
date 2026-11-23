@@ -49,5 +49,8 @@ cache/
 
 # Flight data and logs
 logs/
+# Every run's recording; chosen ones are committed compressed (ADR-0034)
+recordings/*
+!recordings/*.jsonl.gz
 *.csv
 flights/

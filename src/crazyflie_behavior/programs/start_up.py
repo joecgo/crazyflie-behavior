@@ -1,8 +1,9 @@
-"""Start-up code every program shares (ADR-0026, ADR-0028, ADR-0035).
+"""Start-up code every program shares (ADR-0026, ADR-0028, ADR-0035, ADR-0088).
 
 Choosing the drone, logging to the console and a log file, QuickEdit off in an
-old Windows console window, and running the tick loop between connecting and
-disconnecting the drone, with the interrupt signal as a stop request.
+old Windows console window, the run's recording, and running the tick loop
+between connecting and disconnecting the drone, with the interrupt signal as a
+stop request.
 """
 
 import argparse
@@ -23,12 +24,16 @@ from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_loop import HangWatchdog, TickLoop, TickStep
 from crazyflie_behavior.programs.console_output import console_output
+from crazyflie_behavior.recording.recorder import Recorder, read_code_version
 from crazyflie_behavior.timing.clock import Clock
 
 logger = logging.getLogger(__name__)
 
 LOG_DIRECTORY = Path("logs")
 """Where each run's log file goes, relative to the working directory (git-ignored)."""
+RECORDING_DIRECTORY = Path("recordings")
+"""Where each run's recording goes, relative to the working directory (ADR-0034). Git ignores all but the
+compressed ones committed."""
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -84,18 +89,37 @@ def take_off_log_description(use_crazyflie: bool) -> str:
     return ", with the take-off block" if use_crazyflie else ", with the take-off block (the mock adapter has none)"
 
 
-def run_program(program_name: str, description: str, drone: DroneInterface, tick_step: TickStep, clock: Clock) -> int:
-    """Run a program: its log, then the tick loop between connecting and disconnecting.
+def command_line_arguments(arguments: list[str] | None) -> tuple[str, ...]:
+    """The arguments a program parses: `arguments`, or the command line's when None, as argparse takes them."""
+    return tuple(sys.argv[1:] if arguments is None else arguments)
+
+
+def make_recorder(use_crazyflie: bool, arguments: list[str] | None) -> Recorder:
+    """The run's recorder. Its header names the adapter, "crazyflie" or "mock", and the program's arguments."""
+    return Recorder("crazyflie" if use_crazyflie else "mock", command_line_arguments(arguments))
+
+
+def run_program(
+    program_name: str,
+    description: str,
+    drone: DroneInterface,
+    tick_step: TickStep,
+    clock: Clock,
+    recorder: Recorder | None = None,
+) -> int:
+    """Run a program: its log and its recording, then the tick loop between connecting and disconnecting.
 
     Returns the exit code: 0 when the tick loop ran until done, after a stop
     request too, 1 after an error, a lost link included (ADR-0084), 130 when the
     interrupt signal stopped the program while connecting.
     Every error goes to the log with its stack trace (ADR-0020).
+    The recording, if `recorder` is given, has its log file's name (ADR-0088).
     """
     with logging_for_run(program_name) as log_file, quick_edit_off():
         try:
             logger.info("%s", description)
-            run_tick_loop(drone, tick_step, clock, log_file)
+            with _recording(recorder, program_name, log_file):
+                run_tick_loop(drone, tick_step, clock, log_file, None if recorder is None else recorder.write_tick)
         except KeyboardInterrupt as interrupt:
             if interrupt.__context__ is not None:
                 # The interrupt signal came while an error was being handled: log that error too (ADR-0020).
@@ -110,6 +134,21 @@ def run_program(program_name: str, description: str, drone: DroneInterface, tick
             logger.critical("The %s program stopped with an error", program_name, exc_info=True)
             return EXIT_ERROR
     return EXIT_OK
+
+
+@contextmanager
+def _recording(recorder: Recorder | None, program_name: str, log_file: TextIO) -> Generator[None]:
+    """Start the recorder, and have it write the last line however the run ends (ADR-0087, ADR-0088)."""
+    if recorder is None:
+        yield
+        return
+    recorder.start(RECORDING_DIRECTORY / f"{Path(log_file.name).stem}.jsonl", program_name, read_code_version())
+    try:
+        yield
+    except BaseException as error:
+        recorder.finish(error)
+        raise
+    recorder.finish(None)
 
 
 @contextmanager
@@ -287,7 +326,13 @@ class _InterruptSignalHandler:
             raise KeyboardInterrupt
 
 
-def run_tick_loop(drone: DroneInterface, tick_step: TickStep, clock: Clock, log_file: TextIO) -> None:
+def run_tick_loop(
+    drone: DroneInterface,
+    tick_step: TickStep,
+    clock: Clock,
+    log_file: TextIO,
+    on_tick_measured: Callable[[float, float], None] | None = None,
+) -> None:
     """Connect, run the tick loop until it's done, then disconnect (ADR-0026).
 
     Disconnecting always happens, also after an error or a failed connect (it
@@ -300,8 +345,10 @@ def run_tick_loop(drone: DroneInterface, tick_step: TickStep, clock: Clock, log_
     This uses `try`/`finally` rather than `with drone:` so that the interrupt
     signal's handler is in place before connecting and stays until after the
     landing.
+
+    `on_tick_measured` gets each tick's lateness and work time, for the recorder (ADR-0088).
     """
-    tick_loop = TickLoop(clock, tick_step, HangWatchdog(log_file))
+    tick_loop = TickLoop(clock, tick_step, HangWatchdog(log_file), on_tick_measured=on_tick_measured)
     with _InterruptSignalHandler(tick_loop) as interrupt_signal_handler:
         try:
             drone.connect()

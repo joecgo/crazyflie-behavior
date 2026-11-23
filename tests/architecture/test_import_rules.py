@@ -19,6 +19,9 @@ BEHAVIORS_ROOT = PACKAGE_ROOT / "behaviors"
 SAFETY_ROOT = PACKAGE_ROOT / "safety"
 DRONE_ROOT = PACKAGE_ROOT / "drone"
 TICK_LOOP = PACKAGE_ROOT / "loop" / "tick_loop.py"
+TICK_STEP = PACKAGE_ROOT / "loop" / "tick_step.py"
+RECORDING_ROOT = PACKAGE_ROOT / "recording"
+RECORDING_PACKAGE = "crazyflie_behavior.recording"
 PROGRAMS_ROOT = PACKAGE_ROOT / "programs"
 FAILSAFE_PROGRAM = PROGRAMS_ROOT / "failsafe.py"
 FORGED_BATTERY_WRAPPER = "crazyflie_behavior.programs.failsafe_fault"
@@ -235,6 +238,40 @@ def test_only_the_rescue_landing_program_asks_to_take_over_a_flight() -> None:
     assert relative_paths(askers) == relative_paths([RESCUE_LANDING_PROGRAM, START_UP])
 
 
+def test_only_the_tick_steps_and_the_programs_import_the_recording_package() -> None:
+    """ADR-0088: the programs make the recorder and the tick steps hand it each tick. The safety layer, the
+    behaviors, the drone package and the tick loop never hold it."""
+    importers = [
+        path
+        for path in python_files(PACKAGE_ROOT)
+        if not path.is_relative_to(RECORDING_ROOT)
+        and (imports_any(path, [RECORDING_PACKAGE]) or imports_module_in_any_form(path, RECORDING_PACKAGE))
+    ]
+
+    offenders = [path for path in importers if path != TICK_STEP and not path.is_relative_to(PROGRAMS_ROOT)]
+
+    assert relative_paths(offenders) == []
+
+
+def test_the_recording_package_imports_only_the_snapshot_the_geometry_and_the_safety_package() -> None:
+    """ADR-0088: a recording holds the snapshots, the command requests and the events, so the recorder needs
+    nothing else from the project: not the drone package, the tick loop or a behavior."""
+    allowed = [
+        RECORDING_PACKAGE,
+        "crazyflie_behavior.snapshot",
+        "crazyflie_behavior.geometry",
+        "crazyflie_behavior.safety",
+    ]
+    offenders = sorted(
+        f"{path.name}: {name}"
+        for path in python_files(RECORDING_ROOT)
+        for name in imported_modules(path)
+        if imports_any_of(name, ["crazyflie_behavior"]) and not imports_any_of(name, allowed)
+    )
+
+    assert offenders == []
+
+
 def test_the_import_scanner_sees_real_imports() -> None:
     """Guards the fitness functions themselves: if the scanner silently found
     nothing, every rule above would pass for the wrong reason."""
@@ -243,6 +280,8 @@ def test_the_import_scanner_sees_real_imports() -> None:
     assert imports_any(PACKAGE_ROOT / "timing" / "clock.py", ["time"])
     assert imports_any(PACKAGE_ROOT / "drone" / "mock_adapter.py", ["crazyflie_behavior.drone"])
     assert imports_any(TICK_LOOP, ["crazyflie_behavior.timing"])
+    assert imports_any(TICK_STEP, [RECORDING_PACKAGE])
+    assert imports_any(RECORDING_ROOT / "recorder.py", ["crazyflie_behavior.snapshot"])
     assert imports_any(BEHAVIORS_ROOT / "hover_test.py", ["crazyflie_behavior.safety"])
     assert drone_commands_called(SAFETY_ROOT / "safety_layer.py") >= {"arm", "take_off", "land", "chirp", "silence"}
     assert drone_commands_called(FORGED_BATTERY_FILE) >= {"arm", "take_off", "land"}  # why it needs its exemption

@@ -39,6 +39,7 @@ from crazyflie_behavior.programs.start_up import (
     EXIT_OK,
     add_take_off_log_option,
     make_drone,
+    make_recorder,
     run_program,
     take_off_log_description,
 )
@@ -95,14 +96,15 @@ def main(arguments: list[str] | None = None, *, clock: Clock | None = None) -> i
     if clock is None:  # a test passes a sim clock (ADR-0076)
         clock = RealClock()
     drone = make_drone(use_crazyflie, clock, take_off_log=take_off_log)
-    tick_step = BehaviorTickStep(drone, SafetyLayer(drone), hover_test)
     adapter_name = "the Crazyflie" if use_crazyflie else "the mock adapter"
+    recorder = make_recorder(use_crazyflie, arguments)
+    tick_step = BehaviorTickStep(drone, SafetyLayer(drone), hover_test, recorder)
     description = f"Hover program, {adapter_name}, hovering {hover_duration:g} s at {take_off_height:g} m"
     if chirp:
         description += ", with chirps"
     if take_off_log:
         description += take_off_log_description(use_crazyflie)
-    exit_code = run_program("hover", description, drone, tick_step, clock)
+    exit_code = run_program("hover", description, drone, tick_step, clock, recorder)
     # A failed hover test exits 1 even though the program itself ran fine: see `has_failed` (ADR-0062).
     return EXIT_ERROR if exit_code == EXIT_OK and hover_test.has_failed else exit_code
 

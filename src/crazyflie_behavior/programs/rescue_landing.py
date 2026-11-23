@@ -20,7 +20,7 @@ import sys
 
 from crazyflie_behavior.behaviors.rescue_landing import RescueLanding
 from crazyflie_behavior.loop.tick_step import BehaviorTickStep
-from crazyflie_behavior.programs.start_up import EXIT_ERROR, EXIT_OK, make_drone, run_program
+from crazyflie_behavior.programs.start_up import EXIT_ERROR, EXIT_OK, make_drone, make_recorder, run_program
 from crazyflie_behavior.safety.safety_layer import SafetyLayer
 from crazyflie_behavior.timing.clock import Clock, RealClock
 
@@ -41,9 +41,11 @@ def main(arguments: list[str] | None = None, *, clock: Clock | None = None) -> i
         clock = RealClock()
     drone = make_drone(use_crazyflie, clock, take_over_flight=True)
     rescue_landing = RescueLanding()
-    tick_step = BehaviorTickStep(drone, SafetyLayer(drone), rescue_landing)
     adapter_name = "the Crazyflie" if use_crazyflie else "the mock adapter"
-    exit_code = run_program("rescue_landing", f"Rescue landing program, {adapter_name}", drone, tick_step, clock)
+    recorder = make_recorder(use_crazyflie, arguments)
+    tick_step = BehaviorTickStep(drone, SafetyLayer(drone), rescue_landing, recorder)
+    description = f"Rescue landing program, {adapter_name}"
+    exit_code = run_program("rescue_landing", description, drone, tick_step, clock, recorder)
     # A refused landing or the time limit is a failed rescue, even though the program itself ran fine.
     return EXIT_ERROR if exit_code == EXIT_OK and rescue_landing.has_failed else exit_code
 
