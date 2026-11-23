@@ -117,7 +117,7 @@ def report_status(adapter: CrazyflieAdapter, status: DroneStatus) -> None:
 
 
 def skip_to_a_whole_second(clock: SimClock) -> None:
-    """Move the clock to the next whole second: from there, advancing by STALE_AFTER gives an exact age."""
+    """Move the clock to the next whole second, so a time limit counted from there adds up exactly."""
     clock.sleep_until(math.floor(clock.now()) + 1.0)
 
 
@@ -301,6 +301,28 @@ def test_a_landing_already_at_the_final_descent_height_skips_the_landing_approac
 
     fake_link.cf.high_level_commander.go_to.assert_not_called()
     assert level_setpoints(fake_link) == [pytest.approx(-FINAL_DESCENT_SPEED)]
+
+
+def test_a_landing_at_exactly_the_final_descent_height_skips_the_landing_approach(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    read_down(adapter, RangeReading.at_distance(FINAL_DESCENT_HEIGHT))
+
+    adapter.land()
+
+    fake_link.cf.high_level_commander.go_to.assert_not_called()
+    assert level_setpoints(fake_link) == [pytest.approx(-FINAL_DESCENT_SPEED)]
+
+
+def test_a_landing_1_cm_above_the_final_descent_height_starts_the_landing_approach(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    read_down(adapter, RangeReading.at_distance(FINAL_DESCENT_HEIGHT + 0.01))
+
+    adapter.land()
+
+    assert len(landing_approach_moves(fake_link)) == 1
+    assert level_setpoints(fake_link) == []
 
 
 def test_the_motors_keep_running_when_the_landing_approach_ends_without_touchdown(

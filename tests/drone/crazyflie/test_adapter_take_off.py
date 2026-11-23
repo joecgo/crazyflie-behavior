@@ -97,13 +97,19 @@ def climb_tick(
     down: RangeReading | None = None,
     x: float = 0.5,
     velocity_uncertainty: float | None = 0.01,
+    at: float | None = None,
 ) -> None:
     """One tick of the initial climb: the drone reports `height`, then the adapter updates.
 
     `down`: the down range reading; None means a distance equal to the height.
     `velocity_uncertainty`: m/s; the default means flow is arriving. None sends none this tick.
+    `at`: the tick's time; None means one tick after the last.
     """
-    clock.advance(TICK)
+    last_tick = clock.now()
+    if at is None:
+        clock.advance(TICK)
+    else:
+        clock.sleep_until(at)
     telemetry = adapter._telemetry
     telemetry.write_estimates_and_status(
         Vector3(x, -0.25, height), Vector3(horizontal_speed, 0.0, INITIAL_CLIMB_SPEED), FLYING, None
@@ -113,11 +119,19 @@ def climb_tick(
     )
     if velocity_uncertainty is not None:
         telemetry.write_velocity_uncertainty(velocity_uncertainty, None)
-    adapter.update_take_off_and_landing(adapter.take_snapshot(TICK))
+    adapter.update_take_off_and_landing(adapter.take_snapshot(clock.now() - last_tick))
+
+
+def adapter_with_a_clock_from_0(fake_link: MagicMock) -> tuple[CrazyflieAdapter, SimClock]:
+    """A connected adapter on the floor whose clock starts at 0.0, so a time limit counted from it is exact."""
+    clock = BoundedSimClock(start=0.0)
+    adapter = CrazyflieAdapter(clock)
+    adapter._sync_crazyflie = fake_link
+    return adapter, clock
 
 
 def skip_to_a_whole_second(clock: SimClock) -> None:
-    """Move the clock to the next whole second: from there, advancing by STALE_AFTER gives an exact age."""
+    """Move the clock to the next whole second, so a time limit counted from there adds up exactly."""
     clock.sleep_until(math.floor(clock.now()) + 1.0)
 
 
@@ -298,6 +312,24 @@ def test_a_climb_without_a_usable_down_range_lands_at_its_time_limit(
     assert fake_link.cf.high_level_commander.go_to.call_args.kwargs == {"relative": True, "linear": True}
 
 
+def test_a_climb_lands_at_exactly_its_time_limit(fake_link: MagicMock) -> None:
+    adapter, clock = adapter_with_a_clock_from_0(fake_link)
+    adapter.take_off(1.0)  # sent at 0.0
+
+    climb_tick(adapter, clock, 0.08, at=INITIAL_CLIMB_TIME_LIMIT)
+
+    assert level_setpoints(fake_link)[-1] == pytest.approx(-FINAL_DESCENT_SPEED)  # the final descent
+
+
+def test_a_climb_keeps_climbing_one_tick_before_its_time_limit(fake_link: MagicMock) -> None:
+    adapter, clock = adapter_with_a_clock_from_0(fake_link)
+    adapter.take_off(1.0)  # sent at 0.0
+
+    climb_tick(adapter, clock, 0.08, at=INITIAL_CLIMB_TIME_LIMIT - TICK)
+
+    assert level_setpoints(fake_link)[-1] == pytest.approx(INITIAL_CLIMB_SPEED)
+
+
 def test_a_fast_speed_estimate_at_the_final_descent_height_hands_over(
     adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock
 ) -> None:
@@ -368,6 +400,34 @@ def test_land_during_a_climb_that_never_left_the_floor_just_stops_the_motors(
 
     assert level_setpoints(fake_link) == [pytest.approx(INITIAL_CLIMB_SPEED)]  # only the climb's first
     fake_link.cf.high_level_commander.stop.assert_called_once()
+
+
+def test_land_at_exactly_the_end_of_the_take_off_grace_on_a_status_that_says_on_the_floor_just_stops_the_motors(
+    fake_link: MagicMock,
+) -> None:
+    adapter, clock = adapter_with_a_clock_from_0(fake_link)
+    adapter.take_off(1.0)  # sent at 0.0
+    clock.sleep_until(TAKE_OFF_STATUS_GRACE)
+    adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)
+
+    adapter.land()
+
+    assert level_setpoints(fake_link) == [pytest.approx(INITIAL_CLIMB_SPEED)]  # only the climb's first
+    fake_link.cf.high_level_commander.stop.assert_called_once()
+
+
+def test_land_one_tick_before_the_end_of_the_take_off_grace_lands(fake_link: MagicMock) -> None:
+    adapter, clock = adapter_with_a_clock_from_0(fake_link)
+    adapter.take_off(1.0)  # sent at 0.0
+    clock.sleep_until(TAKE_OFF_STATUS_GRACE - TICK)
+    # Under the final descent height, so the landing skips the landing approach.
+    adapter._telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(0.02)}, None)
+    adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)
+
+    adapter.land()
+
+    assert level_setpoints(fake_link)[-1] == pytest.approx(-FINAL_DESCENT_SPEED)
+    fake_link.cf.high_level_commander.stop.assert_not_called()
 
 
 def test_land_during_a_climb_with_touchdown_already_confirmed_stops_the_motors_at_once(

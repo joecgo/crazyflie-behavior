@@ -153,7 +153,7 @@ SNAPSHOT_WITH_AGE: dict[str, Callable[[float], Snapshot]] = {
 def test_a_value_is_fresh_at_its_limit_and_stale_past_it(name: str, limit: float) -> None:
     snapshot_with_age = SNAPSHOT_WITH_AGE[name]
 
-    failures = safety_pre_check(snapshot_with_age(limit + 0.25))
+    failures = safety_pre_check(snapshot_with_age(limit + 0.01))
 
     assert safety_pre_check(snapshot_with_age(limit)) == []
     assert len(failures) == 1
@@ -798,6 +798,15 @@ def test_the_take_off_rule_keeps_its_flow_threshold_whatever_the_height() -> Non
     assert judge(TakeOff(1.0), without_flow).is_approved  # without, it isn't
 
 
+def test_a_velocity_uncertainty_at_exactly_the_flow_threshold_is_no_flow_for_a_take_off() -> None:
+    away_from_the_reset_point = Vector3(0.0, TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT + 0.01, 0.0)
+    at_the_threshold = with_estimate(
+        snapshot(ARMED, velocity_uncertainty=FLOW_VELOCITY_UNCERTAINTY), position=away_from_the_reset_point
+    )
+
+    assert judge(TakeOff(1.0), at_the_threshold).is_approved  # no flow: the estimate isn't checked
+
+
 @pytest.mark.parametrize("uncertainty", [math.nan, math.inf])
 def test_in_flight_a_velocity_uncertainty_that_isnt_finite_fails(uncertainty: float) -> None:
     assert safety_pre_check(snapshot(FLYING, velocity_uncertainty=uncertainty)) != []
@@ -839,7 +848,9 @@ def test_a_take_off_is_refused_unless_the_down_range_reads_the_floor() -> None:
     above_the_floor = with_down_range(snapshot(ARMED), RangeReading.at_distance(TOUCHDOWN_DOWN_RANGE + 0.01))
     no_distance = with_down_range(snapshot(ARMED), RangeReading.out_of_range())
 
-    assert judge(TakeOff(1.0), with_down_range(snapshot(ARMED), RangeReading.at_distance(TOUCHDOWN_DOWN_RANGE)))
+    assert judge(
+        TakeOff(1.0), with_down_range(snapshot(ARMED), RangeReading.at_distance(TOUCHDOWN_DOWN_RANGE))
+    ).is_approved
     for refused in (above_the_floor, no_distance):
         verdict = judge(TakeOff(1.0), refused)
         assert not verdict.is_approved
@@ -882,6 +893,10 @@ def test_a_take_off_is_refused_without_a_fresh_velocity_uncertainty() -> None:
 
     for refused in (missing, stale, not_a_number):
         assert judge(TakeOff(1.0), refused) == Verdict.refused("no fresh velocity uncertainty")
+
+
+def test_a_take_off_is_approved_on_a_velocity_uncertainty_exactly_at_its_age_limit() -> None:
+    assert judge(TakeOff(1.0), snapshot(ARMED, velocity_uncertainty_age=STALE_AFTER)).is_approved
 
 
 def test_an_estimate_reset_is_approved_only_on_the_floor() -> None:

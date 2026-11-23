@@ -9,6 +9,7 @@ import pytest
 from crazyflie_behavior.behaviors.behavior import Behavior
 from crazyflie_behavior.behaviors.hover_test import TAKE_OFF_HEIGHT, HoverTest
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_HEIGHT
+from crazyflie_behavior.drone.interface import STALE_AFTER
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_step import FLIGHT_END_TIME_LIMIT, BehaviorTickStep
 from crazyflie_behavior.safety.requests import Arm, CommandRequest, Hover, TakeOff, Verdict
@@ -16,8 +17,8 @@ from crazyflie_behavior.safety.safety_layer import FlightEndReason, SafetyLayer
 from crazyflie_behavior.snapshot import Snapshot
 from crazyflie_behavior.timing.clock import SimClock
 
-TICK_PERIOD = 0.25
-"""Quarter-second ticks keep every time exact in binary."""
+TICK_PERIOD = STALE_AFTER / 2.0
+"""Under the age limit, so a value a tick old isn't at it. Exact in binary only while STALE_AFTER is."""
 GIVE_UP_AFTER_TICKS = 200
 """A flight that never reports done stops after this many ticks."""
 HOVER_DURATION = 2.0
@@ -81,6 +82,22 @@ def connected_mock(clock: SimClock) -> MockAdapter:
 
 def hover_flight(drone: MockAdapter) -> BehaviorTickStep:
     return BehaviorTickStep(drone, SafetyLayer(drone), HoverTest(HOVER_DURATION))
+
+
+def tick_until_hovering(tick_step: BehaviorTickStep, drone: MockAdapter, clock: SimClock) -> None:
+    """Tick the hover test until the drone is at its take-off height, past the initial climb."""
+    for _ in range(GIVE_UP_AFTER_TICKS):
+        if drone.take_snapshot(0.0).may_be_flying and height_now(drone) == TAKE_OFF_HEIGHT:
+            return
+        assert not tick_step.run(clock.now(), TICK_PERIOD)
+        clock.advance(TICK_PERIOD)
+    pytest.fail(f"Not hovering after {GIVE_UP_AFTER_TICKS} ticks")
+
+
+def height_now(drone: MockAdapter) -> float:
+    position_estimate = drone.take_snapshot(0.0).position_estimate
+    assert position_estimate is not None
+    return position_estimate.value.z
 
 
 # --- The order --------------------------------------------------------------------
@@ -149,7 +166,7 @@ def test_the_hover_test_arms_takes_off_hovers_and_lands(sim_clock: SimClock) -> 
     climb, descent = heights[:first_at_height], heights[first_at_height + ticks_at_height :]
     assert climb == sorted(climb)
     assert max(climb) < FINAL_DESCENT_HEIGHT
-    assert ticks_at_height * TICK_PERIOD == HOVER_DURATION + 2 * TICK_PERIOD
+    assert ticks_at_height * TICK_PERIOD == pytest.approx(HOVER_DURATION + 2 * TICK_PERIOD)
     assert descent == sorted(descent, reverse=True)
     assert descent[0] < FINAL_DESCENT_HEIGHT
     assert heights[-1] == 0.0
@@ -163,9 +180,7 @@ def test_a_low_battery_mid_hover_lands_the_drone_before_the_run_ends(
     clock = sim_clock
     drone = connected_mock(clock)
     tick_step = hover_flight(drone)
-    for _ in range(4):  # arm, take off, hovering
-        tick_step.run(clock.now(), TICK_PERIOD)
-        clock.advance(TICK_PERIOD)
+    tick_until_hovering(tick_step, drone, clock)
 
     drone.set_battery_voltage(3.1)
     drone.set_battery_voltage(3.1)  # two readings in a row (ADR-0069)
@@ -183,9 +198,7 @@ def test_a_link_gone_quiet_mid_hover_lands_the_drone(sim_clock: SimClock) -> Non
     clock = sim_clock
     drone = connected_mock(clock)
     tick_step = hover_flight(drone)
-    for _ in range(4):  # arm, take off, hovering
-        tick_step.run(clock.now(), TICK_PERIOD)
-        clock.advance(TICK_PERIOD)
+    tick_until_hovering(tick_step, drone, clock)
 
     drone.stop_telemetry()
     fly(tick_step, clock)

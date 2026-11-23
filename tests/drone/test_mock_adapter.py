@@ -11,6 +11,7 @@ from crazyflie_behavior.drone.interface import FLOW_VELOCITY_UNCERTAINTY
 from crazyflie_behavior.drone.mock_adapter import (
     FLOOR_DOWN_RANGE,
     SETPOINT_CUT_MOTORS_AFTER,
+    SETPOINT_STOP_FOLLOWING_AFTER,
     TAKEN_OVER_HEIGHT,
     MockAdapter,
 )
@@ -60,6 +61,11 @@ def height_now(drone: MockAdapter) -> float:
 def status_of(snapshot: Snapshot) -> DroneStatus:
     assert snapshot.drone_status is not None
     return snapshot.drone_status.value
+
+
+def skip_to_a_whole_second(clock: SimClock) -> None:
+    """Move the clock to the next whole second, so a time limit counted from there adds up exactly."""
+    clock.sleep_until(math.floor(clock.now()) + 1.0)
 
 
 def flying_drone(clock: SimClock, height: float = 0.5) -> MockAdapter:
@@ -148,16 +154,28 @@ def test_commands_during_the_initial_climb_are_ignored() -> None:
 
 def test_an_initial_climb_without_updates_for_too_long_drops_the_drone() -> None:
     # The level setpoints stopped: the firmware cuts the motors (ADR-0048).
-    clock = SimClock()
+    clock = SimClock(start=0.0)
     drone = MockAdapter(clock)
     drone.connect()
     drone.arm()
-    drone.take_off(0.5)
+    drone.take_off(0.5)  # the level part's first setpoint, at 0.0
 
-    tick(drone, clock, SETPOINT_CUT_MOTORS_AFTER + TICK)
+    tick(drone, clock, SETPOINT_CUT_MOTORS_AFTER + 0.01)
 
     assert not status_of(snapshot_now(drone)).is_flying
     assert height_now(drone) == 0.0
+
+
+def test_an_initial_climb_without_updates_for_exactly_the_wait_before_the_motors_cut_still_flies() -> None:
+    clock = SimClock(start=0.0)
+    drone = MockAdapter(clock)
+    drone.connect()
+    drone.arm()
+    drone.take_off(0.5)  # the level part's first setpoint, at 0.0
+
+    tick(drone, clock, SETPOINT_CUT_MOTORS_AFTER)
+
+    assert status_of(snapshot_now(drone)).is_flying
 
 
 # --- Landing: the landing approach, then the level final descent (ADR-0048) -------
@@ -260,9 +278,10 @@ def test_streaming_a_velocity_every_tick_keeps_the_drone_moving() -> None:
 def test_the_drone_stops_following_a_velocity_that_stops_arriving() -> None:
     clock = SimClock()
     drone = flying_drone(clock)
+    skip_to_a_whole_second(clock)
 
     drone.set_velocity(Vector3(0.2, 0.0, 0.0))
-    tick(drone, clock, 0.6)  # no new set_velocity for longer than the drone waits
+    tick(drone, clock, SETPOINT_STOP_FOLLOWING_AFTER + 0.01)  # no new set_velocity for longer than the drone waits
 
     snapshot = snapshot_now(drone)
     assert snapshot.velocity_estimate is not None
@@ -270,12 +289,37 @@ def test_the_drone_stops_following_a_velocity_that_stops_arriving() -> None:
     assert status_of(snapshot).is_flying
 
 
+def test_the_drone_still_follows_a_velocity_for_exactly_its_wait_before_it_stops_following() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock)
+    skip_to_a_whole_second(clock)
+
+    drone.set_velocity(Vector3(0.2, 0.0, 0.0))
+    tick(drone, clock, SETPOINT_STOP_FOLLOWING_AFTER)
+
+    snapshot = snapshot_now(drone)
+    assert snapshot.velocity_estimate is not None
+    assert snapshot.velocity_estimate.value == Vector3(0.2, 0.0, 0.0)
+
+
+def test_the_drone_still_flies_when_velocities_stop_arriving_for_exactly_the_wait_before_the_motors_cut() -> None:
+    clock = SimClock()
+    drone = flying_drone(clock)
+    skip_to_a_whole_second(clock)
+
+    drone.set_velocity(Vector3(0.2, 0.0, 0.0))
+    tick(drone, clock, SETPOINT_CUT_MOTORS_AFTER)
+
+    assert status_of(snapshot_now(drone)).is_flying
+
+
 def test_the_drone_drops_when_velocities_stop_arriving_for_too_long() -> None:
     clock = SimClock()
     drone = flying_drone(clock)
+    skip_to_a_whole_second(clock)
 
     drone.set_velocity(Vector3(0.2, 0.0, 0.0))
-    tick(drone, clock, 2.5)
+    tick(drone, clock, SETPOINT_CUT_MOTORS_AFTER + 0.01)
 
     assert not status_of(snapshot_now(drone)).is_flying
     assert height_now(drone) == 0.0
