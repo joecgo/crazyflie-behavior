@@ -53,12 +53,12 @@ snapshot line.
 
 - **Pitfall accepted:** the touchdown detector's replay has no recorded
   touchdown to compare with until the adapter's events are added. Adding
-  them bumps the format version. Backlog row: the adapter's events in
+  them bumps the format version. Backlog #146: the adapter's events in
   recordings, before that replay test.
 - A converted recording has no verdicts, and lacks the fields its log's format
   didn't have. It suits the detector replays and analysis, not decision
   replay, unless its format had every field.
 - A tool reading the raw file without the decoder sees a string where a
   number should be.
-- Backlog #137 is closed. The recorder itself isn't built: backlog row.
+- Backlog #137 is closed. The recorder itself isn't built: backlog #145.
 - Glossary: *Recording* gains the last line and the converted mark.
