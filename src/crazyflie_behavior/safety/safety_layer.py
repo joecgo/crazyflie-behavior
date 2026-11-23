@@ -24,6 +24,7 @@ flight (backlog #8).
 
 import logging
 import math
+from dataclasses import dataclass
 from enum import Enum
 from typing import NamedTuple
 
@@ -293,7 +294,7 @@ def _judge_take_off_estimate(snapshot: Snapshot) -> Verdict:
     return Verdict.approved()
 
 
-class _CommandSlot[T]:
+class _CommandSlot[T: CommandRequest]:
     """One command slot (ADR-0025): the request to send at the end of this tick."""
 
     def __init__(self, name: str) -> None:
@@ -302,12 +303,19 @@ class _CommandSlot[T]:
         self._replaced_this_tick = False
         self._replaced_last_tick = False
 
-    def fill(self, request: T) -> None:
-        """Hold `request` for this tick. One already held is replaced, with a warning once per streak (ADR-0020)."""
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def fill(self, request: T) -> T | None:
+        """Hold `request` for this tick. One already held is replaced, with a warning once per streak (ADR-0020).
+
+        Returns the request it replaced, if any.
+        """
         replaced = self._request
         self._request = request
         if replaced is None:
-            return
+            return None
         logger.debug("%s replaces %s in the %s slot", request, replaced, self._name)
         if not (self._replaced_this_tick or self._replaced_last_tick):
             logger.warning(
@@ -318,6 +326,7 @@ class _CommandSlot[T]:
                 replaced,
             )
         self._replaced_this_tick = True
+        return replaced
 
     def take(self) -> T | None:
         """The request to send this tick, if any. Empties the slot for the next tick."""
@@ -333,6 +342,25 @@ class FlightEndReason(Enum):
     PRE_CHECK_FAILED = "the safety pre-check failed"
     STOP_REQUEST = "a stop request"
     BEHAVIOR_DONE_IN_FLIGHT = "the behavior was done while the drone may be flying"
+
+
+@dataclass(frozen=True, slots=True)
+class ReplacedRequest:
+    """A command request that a later one replaced in its command slot, in the same tick (ADR-0025)."""
+
+    slot: str
+    """The command slot's name: movement or buzzer."""
+    replaced: CommandRequest
+    replaced_by: CommandRequest
+
+
+@dataclass(frozen=True, slots=True)
+class SafetyEvents:
+    """The safety layer's events in one tick, for its recording (glossary: Event; ADR-0087, ADR-0088)."""
+
+    pre_check_failures: tuple[str, ...]
+    """Why the safety pre-check failed. Empty when it passed or didn't run, as after the flight end."""
+    replaced_requests: tuple[ReplacedRequest, ...]
 
 
 class SafetyLayer:
@@ -352,6 +380,13 @@ class SafetyLayer:
         """An approved estimate reset waits for the end of the tick. It has no slot (ADR-0054)."""
         self._pre_check_has_failed = False
         self._flight_end_reason: FlightEndReason | None = None
+        self._pre_check_failures: tuple[str, ...] = ()
+        self._replaced_requests: list[ReplacedRequest] = []
+
+    @property
+    def events_this_tick(self) -> SafetyEvents:
+        """This tick's events, from its safety pre-check on: still there after `send()` (ADR-0088)."""
+        return SafetyEvents(self._pre_check_failures, tuple(self._replaced_requests))
 
     @property
     def pre_check_has_failed(self) -> bool:
@@ -386,11 +421,15 @@ class SafetyLayer:
         which the status alone can't tell (ADR-0039).
         """
         self._snapshot = snapshot
+        # Each tick starts here, so this tick's events start empty.
+        self._pre_check_failures = ()
+        self._replaced_requests = []
         if self._flight_end_reason is not None:
             return False
         failures = safety_pre_check(snapshot)
         if not failures:
             return True
+        self._pre_check_failures = tuple(failures)
         self._pre_check_has_failed = True
         self._set_flight_end(FlightEndReason.PRE_CHECK_FAILED)
         logger.warning("Safety pre-check failed: %s. Landing.", "; ".join(failures))
@@ -414,9 +453,9 @@ class SafetyLayer:
         elif isinstance(command_request, ResetEstimate):
             self._is_estimate_reset_requested = True
         elif isinstance(command_request, Chirp | Tone | Silence):
-            self._buzzer_slot.fill(command_request)
+            self._fill(self._buzzer_slot, command_request)
         else:
-            self._movement_slot.fill(command_request)
+            self._fill(self._movement_slot, command_request)
         return verdict
 
     def send(self) -> None:
@@ -440,7 +479,13 @@ class SafetyLayer:
     def _set_flight_end(self, flight_end_reason: FlightEndReason) -> None:
         """The failsafe's land takes the movement slot (ADR-0030, ADR-0083)."""
         self._flight_end_reason = flight_end_reason
-        self._movement_slot.fill(Land())
+        self._fill(self._movement_slot, Land())
+
+    def _fill[T: CommandRequest](self, slot: _CommandSlot[T], command_request: T) -> None:
+        """Fill a command slot, keeping any request it replaces for this tick's events."""
+        replaced = slot.fill(command_request)
+        if replaced is not None:
+            self._replaced_requests.append(ReplacedRequest(slot.name, replaced, command_request))
 
     def _send_movement(self, command: MovementRequest) -> None:
         logger.info("Sending %s", command)

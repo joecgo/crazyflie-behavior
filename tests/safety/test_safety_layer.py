@@ -35,6 +35,8 @@ from crazyflie_behavior.safety.safety_layer import (
     TAKE_OFF_BATTERY_VOLTAGE,
     TAKE_OFF_MAX_DISTANCE_FROM_RESET_POINT,
     FlightEndReason,
+    ReplacedRequest,
+    SafetyEvents,
     SafetyLayer,
     in_flight_velocity_uncertainty_limit,
     judge,
@@ -941,3 +943,76 @@ def test_an_estimate_reset_is_sent_once_per_approval() -> None:
     safety_layer.send()
 
     assert drone.command_log.count("reset_estimate") == 1
+
+
+# --- This tick's events, for its recording (ADR-0088) ----------------------------------
+
+NO_EVENTS = SafetyEvents(pre_check_failures=(), replaced_requests=())
+
+
+def test_a_tick_with_a_passing_pre_check_and_one_request_per_slot_has_no_events() -> None:
+    safety_layer = SafetyLayer(RecordingDrone())
+
+    safety_layer.pre_check(snapshot(FLYING))
+    safety_layer.request(Hover())
+    safety_layer.request(Chirp())
+    safety_layer.send()
+
+    assert safety_layer.events_this_tick == NO_EVENTS
+
+
+def test_a_failed_pre_checks_reasons_are_events_on_its_tick_only() -> None:
+    """After the flight end the pre-check doesn't run, so it has no reasons either."""
+    safety_layer = SafetyLayer(RecordingDrone())
+
+    safety_layer.pre_check(snapshot(FLYING, position_age=1.0, battery_voltage=3.1))
+    failing_tick = safety_layer.events_this_tick
+    safety_layer.send()
+    safety_layer.pre_check(snapshot(FLYING, battery_voltage=3.1))
+
+    assert failing_tick == SafetyEvents(
+        pre_check_failures=(
+            "position estimate is 1.00 s old (stale after 0.25 s)",
+            "battery at 3.10 V (land below 3.20 V)",
+        ),
+        replaced_requests=(),
+    )
+    assert safety_layer.events_this_tick == NO_EVENTS
+
+
+def test_each_replaced_request_is_an_event_with_its_command_slot() -> None:
+    safety_layer = SafetyLayer(RecordingDrone())
+
+    safety_layer.pre_check(snapshot(FLYING))
+    for command_request in [Hover(), Chirp(), Land(), Silence()]:
+        safety_layer.request(command_request)
+
+    assert safety_layer.events_this_tick.replaced_requests == (
+        ReplacedRequest("movement", Hover(), Land()),
+        ReplacedRequest("buzzer", Chirp(), Silence()),
+    )
+
+
+def test_the_landing_for_a_behavior_done_in_flight_replaces_its_request_that_tick() -> None:
+    """The flight end's Land takes the movement slot at once (ADR-0083)."""
+    safety_layer = SafetyLayer(RecordingDrone())
+
+    safety_layer.pre_check(snapshot(FLYING))
+    safety_layer.request(Hover())
+    safety_layer.end_flight(FlightEndReason.BEHAVIOR_DONE_IN_FLIGHT)
+
+    assert safety_layer.events_this_tick.replaced_requests == (ReplacedRequest("movement", Hover(), Land()),)
+
+
+def test_this_ticks_events_are_still_there_after_the_send_and_start_empty_at_the_next_pre_check() -> None:
+    safety_layer = SafetyLayer(RecordingDrone())
+    safety_layer.pre_check(snapshot(FLYING))
+    safety_layer.request(Hover())
+    safety_layer.request(Land())
+
+    safety_layer.send()
+    after_the_send = safety_layer.events_this_tick
+    safety_layer.pre_check(snapshot(FLYING))
+
+    assert after_the_send.replaced_requests == (ReplacedRequest("movement", Hover(), Land()),)
+    assert safety_layer.events_this_tick == NO_EVENTS
