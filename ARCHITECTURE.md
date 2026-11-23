@@ -29,6 +29,7 @@ Each rule is marked with where it comes from:
    3  update_take_off_and_landing(snapshot)   → every tick, after a failed pre-check too
    4  Behavior.tick(snapshot, ask)            → ask(CommandRequest) returns a Verdict at once
    5  SafetyLayer.send()                      → one command per command slot
+      with a recorder: the tick's line, with its snapshot, requests and verdicts, events and timing
                                    │ DroneInterface: commands that don't block
                                    ▼
  drone ◄══ radio ══ the adapter: setpoints, high-level moves, parameters
@@ -53,6 +54,7 @@ request through the safety layer to the drone. Nothing skips a step.
 | `behaviors/` | Decisions: a snapshot in, command requests out. Each is a state machine (ADR-0036); a field-test behavior states its failure rule (ADR-0033). |
 | `loop/tick_loop.py` | Keeping time, and nothing else: due times, measurements, the hang watchdog, stop requests (ADR-0024, ADR-0026). |
 | `loop/tick_step.py` | The order of one tick. |
+| `recording/` | A recording's format and reading it back (`encoding.py`), and the recorder (`recorder.py`): one JSON Lines file per run, written on the tick's thread. An error stops the recording, never the flight (ADR-0034, ADR-0087, ADR-0088). |
 | `programs/` | Putting it together: the clock, the drone, the safety layer, the behavior and the loop; logging; the interrupt signal; exit codes (ADR-0028). `failsafe_fault.py` holds fault injection, for test programs only (ADR-0041). |
 | `tools/` (repository root) | Standalone scripts that may use cflib. `src/` never imports them (ADR-0002). |
 
@@ -95,6 +97,8 @@ mostly create wide interfaces. By review: no fitness function.
 | Drone to every layer | `Snapshot`. | Read-only. Each telemetry value is `Stamped` with its arrival time and the drone's, and is `None` until it first arrives. It also carries the adapter's `is_in_initial_climb` and `may_be_flying` (ADR-0054, ADR-0060) and the previous battery reading (ADR-0069). Its `time` is read after the copy (ADR-0046). |
 | cflib's thread to the tick's | `TelemetryBuffer`: its writers and `snapshot()`. | Values that arrive together are written together, so no snapshot mixes two samples (ADR-0007, ADR-0021). |
 | Tick loop to tick step | `TickStep.run(time, dt) -> bool` (done). `TickStep.request_stop()`, abstract. | The loop knows nothing else about a tick (ADR-0026). It calls `request_stop()` once, on the tick's thread, when it first sees a stop request, then ticks until `run()` reports done (ADR-0083). |
+| Tick step to recorder | `record_request(request, verdict)`, `record_tick(snapshot, events, flight_end_reason)`. The events are `SafetyLayer.events_this_tick`. | Each request as it's asked; the rest once the send is done, or after an error part way. The recorder never raises (ADR-0088). |
+| Tick loop to recorder | `on_tick_measured(lateness, work_time)`, optional. | On the tick's thread, after the work time is measured, so the write's own time shows as the next tick's lateness (ADR-0088). |
 | Any thread to tick loop | `TickLoop.request_stop()`. | Safe from any thread. In a program with a safety layer it sets the flight end, so a flying drone lands inside the loop before the program's `disconnect()`; later interrupt signals are ignored (ADR-0026, ADR-0083). |
 | Everything to time | `Clock.now()`, `Clock.sleep_until()`. | Injected, never read from the system directly (ADR-0009). |
 
@@ -116,8 +120,9 @@ layer, then the drone, then the shared values.
 | `drone/mock_adapter.py` | the same four rows, and `drone/crazyflie/bad_flow_zone.py` for the numbers it mimics |
 | `safety/safety_layer.py` | `safety.requests`, `snapshot`, `drone.interface` |
 | `behaviors/` | `safety.requests`, `snapshot`, `geometry`, other behaviors |
+| `recording/` | `snapshot`, `geometry`, `safety` |
 | `loop/tick_loop.py` | `timing.clock` |
-| `loop/tick_step.py` | `loop.tick_loop`, `behaviors.behavior`, `safety.safety_layer`, `drone.interface` |
+| `loop/tick_step.py` | `loop.tick_loop`, `behaviors.behavior`, `safety.safety_layer`, `drone.interface`, `recording` |
 | `programs/` | anything in `src/` |
 
 Forbidden:
@@ -141,6 +146,8 @@ Forbidden:
 9. `safety/`, `behaviors/`, `loop/` or `programs/` from `drone/`; `behaviors/`,
    `loop/` or `programs/` from `safety/`. True of the code today, with no ADR
    line or fitness function of its own. **[target]** give it both.
+10. `recording/` imported by anything but the tick steps and the programs, or
+    importing more than its row above (ADR-0088). **[fitness]**, both.
 
 ## 5. Timing and threads
 
@@ -171,6 +178,8 @@ Forbidden:
   limit, counted from its arrival.
 - **Logging:** log-file writes run on the caller's thread (ADR-0028). Console
   output moves to a background thread (ADR-0035, accepted, not built).
+- **Recording:** one write and a flush per tick, on the tick's thread, after
+  the tick's work time is measured (ADR-0088).
 
 ## 6. Safety: never and always
 
@@ -227,7 +236,7 @@ the repository until they're decided. Module names are working names.
 |---|---|---|
 | The Crazyflie adapter becomes parts inside `drone/crazyflie/`: `link.py`, `log_blocks.py` and `commands.py`, which with `adapter.py` are the only cflib importers; and `flight_phases.py`, the take-off and landing logic with no cflib import and strict typing. `DroneInterface` stays as it is. | Section 2; rule 1 narrows to the named modules | An ADR; the glossary's *Crazyflie adapter* |
 | A tick reports an outcome, up to the program. | Section 3 | ADR-0036 is accepted; how the outcome travels is open |
-| Recordings, replay tests, and program tests on the sim clock. | A recorder beside the tick step | The recorder is decided (ADR-0034, ADR-0087, ADR-0088), not built (backlog #145). Program tests on the sim clock are built (ADR-0076). Replay tests are open |
+| Recordings, replay tests, and program tests on the sim clock. | A recorder beside the tick step | The recorder is built (ADR-0034, ADR-0087, ADR-0088). Program tests on the sim clock are built (ADR-0076). Replay tests are open |
 | Tuning values are grouped, passed in, and logged with every run. | Where constants live | An ADR |
 | The mock adapter runs the Crazyflie adapter's take-off and landing code. | Section 4, the mock's row | An ADR |
 

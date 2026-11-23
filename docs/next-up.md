@@ -9,12 +9,21 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-22 (Pacific)
-- **Last commit:** this brief, with the work log, after ADR-0088 and its
-  records (`8e58e2e`), on `main`, pushed.
-  Uncommitted: nothing.
+- **Last commit:** the recorder (#145), its tests and its records, then this
+  brief, on `main`, pushed.
+  Uncommitted: nothing (today's work-log row waits for `/wrap-up`).
 
 ## Done last
 
+- 2026-11-22: the recorder built (ADR-0034, ADR-0087, ADR-0088; #145
+  removed): `recording/` (the format, `read_recording`, the recorder),
+  `SafetyLayer.events_this_tick`, the tick step's recording, the tick
+  loop's `on_tick_measured`; every program records to `recordings/`. 87
+  planted bugs, all caught. `/project-review high` with `fresh`: no
+  correctness bug, 12 small findings, not fixed: Joe wants them as comments
+  on the review's pull request. Measured on this laptop: the write takes about
+  85 µs a tick, 4.3 ms at worst in 18,000 ticks. #148 added (a converter
+  for old logs, ADR-0087).
 - 2026-11-22: #145's design points decided (ADR-0088, all four as
   recommended): the tick step holds the recorder and wraps `ask`; the tick
   loop's optional `on_tick_measured`; the header's settings are the
@@ -35,13 +44,21 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
-- Nothing.
+- The review of everything after `e8f7e10` (the "Next" row of `REVIEW.md`'s
+  review log), the recorder included: committed and pushed; the review
+  packet and pull request are next.
 
 ## Next three
 
-1. Build the recorder (#145, ADR-0034, ADR-0087, ADR-0088) before
-   session 7. It touches the tick step and the tick loop, so
-   `/project-review` before committing. Opus, Extra or Max.
+1. The review's packet and pull request: `/review-packet` on
+   `e8f7e10..main`, then the pull request the way #24 to #29 were opened
+   (a `review-base/*` branch at the range's start; `REVIEW.md`'s review
+   log). Post each finding in `drafts/review-findings-2026-11-22-recorder.md`
+   as its own comment at its line, as one review: Joe asked for this on
+   2026-11-22 ("save each finding as a comment in the PR for the code
+   review"). The project review ran in an earlier context, so the packet
+   takes its findings from that file. Confirm before pushing the review
+   branches. Opus, high.
 2. Decide #142 (a bug-planting tool), due now that the boundary tests are
    done; #144 (rows that wait on a removed backlog row) beside it. Opus,
    high.
@@ -62,6 +79,9 @@ from `drafts/explain-back-notes.md`; don't open it first.
 - **E3.** The tick's timing reaches the recorder through a callable the
   tick loop calls (ADR-0088). Why can't the tick step measure a tick's
   lateness and work time itself?
+- **E4.** A behavior raises halfway through a tick, after one command
+  request. What does that tick's line in the recording hold, and what makes
+  sure the line, and the recording's last line, still get written?
 
 ## Last reviewed
 
