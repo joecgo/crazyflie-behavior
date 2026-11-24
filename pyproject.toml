@@ -31,7 +31,7 @@ addopts = ["--import-mode=importlib"]
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-src = ["src", "tests", "tools"]
+src = ["src", "tests", "tools", "analysis"]
 # Docs quote cflib's own examples in cflib's style; don't reformat them.
 extend-exclude = ["docs"]
 
@@ -55,7 +55,7 @@ select = [
 # Strict everywhere. Files that touch untyped cflib (the Crazyflie adapter and
 # tools/) opt down to basic mode with a "# pyright: basic" comment and a reason.
 [tool.pyright]
-include = ["src", "tests", "tools"]
+include = ["src", "tests", "tools", "analysis"]
 typeCheckingMode = "strict"
 pythonVersion = "3.12"
 venvPath = "."

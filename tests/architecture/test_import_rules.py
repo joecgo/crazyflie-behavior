@@ -14,6 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_ROOT = REPO_ROOT / "src"
 PACKAGE_ROOT = SOURCE_ROOT / "crazyflie_behavior"
 TOOLS_ROOT = REPO_ROOT / "tools"
+ANALYSIS_ROOT = REPO_ROOT / "analysis"
 CRAZYFLIE_ADAPTER_ROOT = PACKAGE_ROOT / "drone" / "crazyflie"
 BEHAVIORS_ROOT = PACKAGE_ROOT / "behaviors"
 SAFETY_ROOT = PACKAGE_ROOT / "safety"
@@ -153,6 +154,20 @@ def test_project_code_never_imports_tools() -> None:
     assert relative_paths(offenders) == []
 
 
+def test_project_code_never_imports_analysis_scripts() -> None:
+    """ADR-0092: analysis scripts read recordings after a run; the flying code never depends on them."""
+    offenders = [path for path in python_files(PACKAGE_ROOT) if imports_any(path, ["analysis"])]
+
+    assert relative_paths(offenders) == []
+
+
+def test_analysis_scripts_never_import_cflib() -> None:
+    """ADR-0092: an analysis script reads committed recordings and never touches the drone."""
+    offenders = [path for path in python_files(ANALYSIS_ROOT) if imports_any(path, ["cflib"])]
+
+    assert relative_paths(offenders) == []
+
+
 def test_behaviors_never_import_the_drone_package() -> None:
     """ADR-0008: behaviors send command requests to the safety layer instead."""
     offenders = [path for path in python_files(BEHAVIORS_ROOT) if imports_any(path, ["crazyflie_behavior.drone"])]
@@ -276,6 +291,7 @@ def test_the_import_scanner_sees_real_imports() -> None:
     """Guards the fitness functions themselves: if the scanner silently found
     nothing, every rule above would pass for the wrong reason."""
     assert imports_any(TOOLS_ROOT / "first_flight.py", ["cflib"])
+    assert ANALYSIS_ROOT.is_dir()  # python_files finds nothing in a folder that isn't there
     assert imports_any(CRAZYFLIE_ADAPTER_ROOT / "adapter.py", ["cflib"])
     assert imports_any(PACKAGE_ROOT / "timing" / "clock.py", ["time"])
     assert imports_any(PACKAGE_ROOT / "drone" / "mock_adapter.py", ["crazyflie_behavior.drone"])

@@ -5,8 +5,10 @@ names, plus `kind`, which says which line it is. A float that isn't finite is th
 "-inf", never null, which means missing (ADR-0087). The file holds standard JSON only.
 """
 
+import gzip
 import json
 import math
+import zlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -533,12 +535,28 @@ def _parse_line(line: str) -> dict[str, object]:
     return cast(dict[str, object], value)
 
 
-def read_recording(path: Path) -> Recording:
-    """Read a recording back. Raises ValueError for a format version newer than `FORMAT_VERSION`, or a bad line.
+def _read_text(path: Path) -> str:
+    """A recording's text, through gzip for a path ending `.gz`: committed recordings are compressed (ADR-0034).
 
-    A final line that isn't whole JSON was cut off, by a crash or a failed write, and is left out.
+    A damaged or cut-off compressed file raises ValueError, like any bad recording.
     """
-    lines = [line for line in path.read_text(encoding="utf-8").split("\n") if line]
+    if path.suffix == ".gz":
+        try:
+            with gzip.open(path, "rt", encoding="utf-8") as file:
+                return file.read()
+        except (EOFError, gzip.BadGzipFile, zlib.error) as error:
+            raise ValueError(f"Not a whole gzip file: {path}") from error
+    return path.read_text(encoding="utf-8")
+
+
+def read_recording(path: Path) -> Recording:
+    """Read a recording back, plain or compressed. Raises ValueError for a format version newer than `FORMAT_VERSION`,
+    a bad line, or a damaged compressed file.
+
+    A plain file's final line that isn't whole JSON was cut off, by a crash or a failed write, and is left out. A
+    compressed file that was cut off is refused whole.
+    """
+    lines = [line for line in _read_text(path).split("\n") if line]
     if not lines:
         raise ValueError(f"No header: {path}")
     first = _parse_line(lines[0])

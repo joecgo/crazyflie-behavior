@@ -1,6 +1,6 @@
 # 0034: A recording is one JSON Lines file per run; chosen ones are committed compressed
 
-- **Status:** Accepted. Amended by [ADR-0087](0087-a-recordings-first-version-strings-for-non-finite-floats-no-adapter-events-and-a-last-line.md) (2026-11-22): non-finite floats as strings, the first version's events, a last line for how the run ended, old logs converted on demand.
+- **Status:** Accepted. Amended by [ADR-0087](0087-a-recordings-first-version-strings-for-non-finite-floats-no-adapter-events-and-a-last-line.md) (2026-11-22): non-finite floats as strings, the first version's events, a last line for how the run ended, old logs converted on demand. Amended by [ADR-0092](0092-cited-analysis-scripts-are-committed-to-analysis-and-the-snapshot-line-goes-after-the-first-recorded-session.md) (2026-11-24): the snapshot line goes once the first recorded session's recordings match it.
 - **Date:** 2026-11-01
 - **Origin:** AI recommendation accepted.
 

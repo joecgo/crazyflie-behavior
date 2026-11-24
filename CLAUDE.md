@@ -59,8 +59,8 @@ the ADRs: an accepted ADR wins where the two disagree.
 
 **Never:**
 
-- Import cflib outside `drone/crazyflie/` and `tools/`, or `tools/` from
-  `src/`.
+- Import cflib outside `drone/crazyflie/` and `tools/`, or `tools/` or
+  `analysis/` from `src/`.
 - Let a behavior import the drone package, a clock, or anything in `safety/`
   but `requests.py`.
 - Send a command to the drone from outside the safety layer and the drone
@@ -226,6 +226,11 @@ number, so renumbering means updating those guards.
   After it, help analyze the data and turn findings into code, simulator or ADR
   changes. `docs/field-testing/README.md` opens with a short status brief and
   its last-updated date; update both with every change to the README.
+- **Analysis scripts** ([ADR-0092](docs/decisions/0092-cited-analysis-scripts-are-committed-to-analysis-and-the-snapshot-line-goes-after-the-first-recorded-session.md)):
+  explore in `drafts/<session>/`. Whenever Claude writes a new analysis
+  script, it asks at the end of the task, in one choice dialog for all of
+  them, whether to commit each to `analysis/`, marking those a committed doc
+  cites. One kept out is cited as `drafts/` (not in the repository).
 - **Continuous integration** (focus area 6). Set up GitHub Actions as soon as the repo is on GitHub
   and the first test exists, rather than later. Keep everything runnable
   headless and without hardware so it always runs in continuous integration.

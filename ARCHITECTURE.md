@@ -58,6 +58,7 @@ request through the safety layer to the drone. Nothing skips a step.
 | `recording/` | A recording's format and reading it back (`encoding.py`), and the recorder (`recorder.py`): one JSON Lines file per run, written on the tick's thread. An error stops the recording, never the flight (ADR-0034, ADR-0087, ADR-0088). |
 | `programs/` | Putting it together: the clock, the drone, the safety layer, the behavior and the loop; logging; the interrupt signal; exit codes (ADR-0028). `failsafe_fault.py` holds fault injection, for test programs only (ADR-0041). |
 | `tools/` (repository root) | Standalone scripts that may use cflib. `src/` never imports them (ADR-0002). |
+| `analysis/` (repository root) | Scripts whose numbers or charts a committed doc cites. They read committed recordings only. `src/` never imports them, and they never import cflib (ADR-0092). |
 
 ### When to split a module
 
@@ -129,7 +130,7 @@ layer, then the drone, then the shared values.
 Forbidden:
 
 1. cflib anywhere but `drone/crazyflie/` and `tools/` (ADR-0002). **[fitness]**
-2. `tools/` from `src/` (ADR-0002). **[fitness]**
+2. `tools/` or `analysis/` from `src/` (ADR-0002, ADR-0092). **[fitness]**
 3. In a behavior: the drone package (ADR-0002); anything in `safety/` but
    `requests.py`; a clock, meaning `time`, `datetime` or `timing/`
    (ADR-0009). **[fitness]**, all three.

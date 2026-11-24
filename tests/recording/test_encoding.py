@@ -1,6 +1,7 @@
 """A recording's format (ADR-0034, ADR-0087): each record to JSON and back, reading a recording, the golden file."""
 
 import dataclasses
+import gzip
 import json
 import math
 import typing
@@ -491,6 +492,30 @@ def test_the_only_golden_file_is_the_current_format_versions() -> None:
 def test_the_golden_file_reads_back_as_its_data() -> None:
     # NaN never equals itself, so the records are compared by their repr, which writes it as nan.
     assert repr(read_recording(GOLDEN_FILE)) == repr(GOLDEN_RECORDING)
+
+
+def test_a_compressed_recording_reads_back_as_its_data(tmp_path: Path) -> None:
+    """Committed recordings are compressed with gzip (ADR-0034), and analysis scripts read them (ADR-0092)."""
+    path = tmp_path / "run.jsonl.gz"
+    path.write_bytes(gzip.compress(GOLDEN_FILE.read_bytes()))
+
+    assert repr(read_recording(path)) == repr(GOLDEN_RECORDING)
+
+
+@pytest.mark.parametrize("damage", ["cut off", "an invalid block", "not gzip"])
+def test_a_damaged_compressed_recording_is_refused(tmp_path: Path, damage: str) -> None:
+    """gzip's EOFError, BadGzipFile and zlib.error come out as ValueError, as for any bad recording."""
+    data = gzip.compress(GOLDEN_FILE.read_bytes())
+    damaged = {
+        "cut off": data[:-12],
+        "an invalid block": data[:10] + b"" + data[11:],  # the first block's type set to the reserved one
+        "not gzip": GOLDEN_FILE.read_bytes(),
+    }[damage]
+    path = tmp_path / "run.jsonl.gz"
+    path.write_bytes(damaged)
+
+    with pytest.raises(ValueError, match="Not a whole gzip file"):
+        read_recording(path)
 
 
 def test_todays_code_writes_the_golden_files_data_byte_for_byte() -> None:
