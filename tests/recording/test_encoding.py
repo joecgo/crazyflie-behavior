@@ -1,4 +1,4 @@
-"""A recording's format (ADR-0034, ADR-0087): each record to JSON and back, and reading a recording."""
+"""A recording's format (ADR-0034, ADR-0087): each record to JSON and back, reading a recording, the golden file."""
 
 import dataclasses
 import json
@@ -16,6 +16,7 @@ from crazyflie_behavior.recording.encoding import (
     LastLine,
     RecordedError,
     RecordedTick,
+    Recording,
     RecordingHeader,
     RequestAndVerdict,
     decode_float,
@@ -32,6 +33,7 @@ from crazyflie_behavior.recording.encoding import (
     encode_tick,
     read_recording,
 )
+from crazyflie_behavior.recording.recorder import Recorder
 from crazyflie_behavior.safety.requests import (
     Arm,
     Chirp,
@@ -46,8 +48,8 @@ from crazyflie_behavior.safety.requests import (
     Tone,
     Verdict,
 )
-from crazyflie_behavior.safety.safety_layer import FlightEndReason, ReplacedRequest
-from crazyflie_behavior.snapshot import DroneStatus, RangeReading, RangeReadings, Snapshot, Stamped
+from crazyflie_behavior.safety.safety_layer import FlightEndReason, ReplacedRequest, SafetyEvents
+from crazyflie_behavior.snapshot import DroneStatus, RangeReading, RangeReadings, RangeStatus, Snapshot, Stamped
 
 COMMAND_REQUESTS: list[CommandRequest] = [
     Arm(),
@@ -353,3 +355,177 @@ def test_a_recording_that_breaks_the_format_is_refused(
 
     with pytest.raises(ValueError, match=message):
         read_recording(path)
+
+
+# --- The golden file (ADR-0089) -------------------------------------------------------
+
+GOLDEN_FOLDER = Path(__file__).parent / "golden"
+GOLDEN_FILE = GOLDEN_FOLDER / f"format_v{FORMAT_VERSION}.jsonl"
+
+GOLDEN_HEADER = RecordingHeader(
+    format_version=FORMAT_VERSION,
+    code_version=CodeVersion("5d41402abc4b2a76b9719d911017c592ab3f00d1", is_tree_clean=False),
+    program="hover",
+    adapter="crazyflie",
+    arguments=("--crazyflie", "--hover-seconds", "2.5"),
+)
+
+GOLDEN_SNAPSHOT = Snapshot(
+    time=31.25,
+    dt=0.05,
+    position_estimate=Stamped(Vector3(0.25, -0.125, 0.5), arrival_time=31.23, drone_time=18.5),
+    velocity_estimate=Stamped(Vector3(0.03, -0.01, 0.002), arrival_time=31.23, drone_time=18.5),
+    velocity_uncertainty=Stamped(0.0125, arrival_time=31.22, drone_time=None),
+    range_readings=RangeReadings(
+        front=Stamped(RangeReading.at_distance(1.75), arrival_time=31.21, drone_time=18.45),
+        back=Stamped(RangeReading.out_of_range(), arrival_time=31.21, drone_time=18.45),
+        left=Stamped(RangeReading.invalid(), arrival_time=31.21, drone_time=18.45),
+        right=None,
+        up=Stamped(RangeReading.at_distance(0.0), arrival_time=31.21, drone_time=None),
+        down=Stamped(RangeReading.at_distance(0.5), arrival_time=31.24, drone_time=18.55),
+    ),
+    battery_voltage=Stamped(3.87, arrival_time=31.0, drone_time=None),
+    previous_battery_voltage=Stamped(3.88, arrival_time=30.0, drone_time=None),
+    drone_status=Stamped(
+        DroneStatus(is_armed=True, is_flying=True, is_crashed=False, is_tumbled=False, can_arm=False, is_locked=False),
+        arrival_time=31.2,
+        drone_time=18.4,
+    ),
+    is_in_initial_climb=False,
+    may_be_flying=True,
+)
+"""Every field set, each range status and both kinds of drone time."""
+
+GOLDEN_SNAPSHOT_MISSING_OR_NON_FINITE = Snapshot(
+    time=31.3,
+    dt=0.05,
+    position_estimate=Stamped(Vector3(math.nan, 0.25, 0.5), arrival_time=31.28, drone_time=18.55),
+    velocity_estimate=Stamped(Vector3(0.0, 0.0, -math.inf), arrival_time=31.28, drone_time=18.55),
+    velocity_uncertainty=Stamped(math.inf, arrival_time=31.27, drone_time=None),
+    range_readings=RangeReadings(front=None, back=None, left=None, right=None, up=None, down=None),
+    battery_voltage=None,
+    previous_battery_voltage=None,
+    drone_status=None,
+    is_in_initial_climb=True,
+    may_be_flying=False,
+)
+"""Missing values, and each float that isn't finite."""
+
+GOLDEN_TICKS = (
+    RecordedTick(
+        tick_number=0,
+        snapshot=None,
+        requests=(),
+        pre_check_failures=(),
+        replaced_requests=(),
+        flight_end_reason=None,
+        lateness=0.0,
+        work_time=0.0031,
+    ),
+    RecordedTick(
+        tick_number=1,
+        snapshot=GOLDEN_SNAPSHOT,
+        requests=(
+            RequestAndVerdict(Arm(), Verdict.approved()),
+            RequestAndVerdict(TakeOff(0.5), Verdict.approved()),
+            RequestAndVerdict(Hover(), Verdict.approved()),
+            RequestAndVerdict(SetVelocity(Vector3(0.25, 0.0, -0.125)), Verdict.refused("no speed envelope yet")),
+            RequestAndVerdict(MoveTo(Vector3(1.0, -0.5, 0.5), 2.5), Verdict.approved()),
+            RequestAndVerdict(Land(), Verdict.approved()),
+            RequestAndVerdict(Chirp(), Verdict.approved()),
+            RequestAndVerdict(Tone(523.25), Verdict.approved()),
+            RequestAndVerdict(Silence(), Verdict.approved()),
+            RequestAndVerdict(ResetEstimate(), Verdict.refused("may be flying: tilted 35°")),
+        ),
+        pre_check_failures=(),
+        replaced_requests=(
+            ReplacedRequest("movement", Hover(), MoveTo(Vector3(1.0, -0.5, 0.5), 2.5)),
+            ReplacedRequest("buzzer", Chirp(), Tone(523.25)),
+        ),
+        flight_end_reason=None,
+        lateness=0.0004,
+        work_time=0.0027,
+    ),
+    RecordedTick(
+        tick_number=2,
+        snapshot=GOLDEN_SNAPSHOT_MISSING_OR_NON_FINITE,
+        requests=(),
+        pre_check_failures=("no drone status", "the position estimate isn't finite"),
+        replaced_requests=(ReplacedRequest("movement", Hover(), Land()),),
+        flight_end_reason=FlightEndReason.PRE_CHECK_FAILED,
+        lateness=0.0125,
+        work_time=0.0019,
+    ),
+    RecordedTick(3, GOLDEN_SNAPSHOT, (), (), (), FlightEndReason.STOP_REQUEST, lateness=0.0, work_time=0.0022),
+    RecordedTick(
+        4, GOLDEN_SNAPSHOT, (), (), (), FlightEndReason.BEHAVIOR_DONE_IN_FLIGHT, lateness=0.0, work_time=0.0024
+    ),
+)
+"""Every kind of tick line. Not a real run: a run records one flight end reason, and this holds each one."""
+
+GOLDEN_LAST_LINE = LastLine(RecordedError("ConnectionError", "the link is lost"))
+
+GOLDEN_RECORDING = Recording(GOLDEN_HEADER, GOLDEN_TICKS, GOLDEN_LAST_LINE)
+"""The golden file's data (glossary: Golden file)."""
+
+
+def golden_text() -> str:
+    """The golden file's data as today's code writes it: a new format version's golden file is this, written once."""
+    lines = [
+        encode_header(GOLDEN_HEADER),
+        *(encode_tick(tick) for tick in GOLDEN_TICKS),
+        encode_last_line(GOLDEN_LAST_LINE),
+    ]
+    return "".join(as_line(line) + "\n" for line in lines)
+
+
+def golden_lines() -> list[str]:
+    return GOLDEN_FILE.read_bytes().decode("utf-8").split("\n")
+
+
+def test_the_only_golden_file_is_the_current_format_versions() -> None:
+    """After a format change, a golden file the new code writes replaces the old one (ADR-0089)."""
+    assert sorted(path.name for path in GOLDEN_FOLDER.iterdir()) == [GOLDEN_FILE.name]
+
+
+def test_the_golden_file_reads_back_as_its_data() -> None:
+    # NaN never equals itself, so the records are compared by their repr, which writes it as nan.
+    assert repr(read_recording(GOLDEN_FILE)) == repr(GOLDEN_RECORDING)
+
+
+def test_todays_code_writes_the_golden_files_data_byte_for_byte() -> None:
+    """A failure here is a format change: bump FORMAT_VERSION, and replace the golden file (ADR-0089)."""
+    assert golden_lines() == golden_text().split("\n")
+
+
+def test_the_recorder_writes_the_golden_files_lines_byte_for_byte(tmp_path: Path) -> None:
+    """All but ticks 3 and 4, since a run records only its first flight end reason."""
+    path = tmp_path / "run.jsonl"
+    recorder = Recorder(GOLDEN_HEADER.adapter, GOLDEN_HEADER.arguments)
+    recorder.start(path, GOLDEN_HEADER.program, GOLDEN_HEADER.code_version)
+    for tick in GOLDEN_TICKS[:3]:
+        for answered in tick.requests:
+            recorder.record_request(answered.request, answered.verdict)
+        if tick.snapshot is not None:
+            events = SafetyEvents(tick.pre_check_failures, tick.replaced_requests)
+            recorder.record_tick(tick.snapshot, events, tick.flight_end_reason)
+        recorder.write_tick(tick.lateness, tick.work_time)
+    recorder.finish(ConnectionError("the link is lost"))
+
+    lines = golden_lines()
+    assert path.read_bytes().decode("utf-8").split("\n") == lines[:4] + lines[-2:]
+
+
+def test_the_golden_files_data_has_each_command_request_type_flight_end_reason_and_range_status() -> None:
+    """So a new one can't be left out of the golden file."""
+    range_readings = [tick.snapshot.range_readings for tick in GOLDEN_TICKS if tick.snapshot is not None]
+    range_statuses = {
+        reading.value.status
+        for readings in range_readings
+        for reading in (readings.front, readings.back, readings.left, readings.right, readings.up, readings.down)
+        if reading is not None
+    }
+
+    assert {type(answered.request) for tick in GOLDEN_TICKS for answered in tick.requests} == command_request_types()
+    assert {tick.flight_end_reason for tick in GOLDEN_TICKS} == {*FlightEndReason, None}
+    assert range_statuses == set(RangeStatus)
