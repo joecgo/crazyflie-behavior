@@ -73,20 +73,20 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 22 |
 | recommendation | 7 | 8 |
 | environment | 4 | 10 |
-| communication | 14 | 63 |
+| communication | 14 | 64 |
 | testing | 2 | 26 |
-| process | 7 | 31 |
-| **Total** | **44** | **180** |
+| process | 7 | 32 |
+| **Total** | **44** | **182** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
 | said-without-checking | 52 |
-| how-I-work | 25 |
+| how-I-work | 26 |
 | weak-test | 23 |
 | records-ahead-of-code | 23 |
-| vocabulary | 19 |
+| vocabulary | 20 |
 | safety-judgment | 18 |
 | reading-field-data | 15 |
 | recommendation | 13 |
@@ -112,6 +112,8 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-226 | 2026-11-23 | The closing comment on pull request #30 wrote backlog rows as GitHub links | communication | vocabulary | in text GitHub renders (comments, pull request bodies), write "backlog row 149", never a bare `#149` |
+| M-225 | 2026-11-23 | Two docstrings rewritten after Joe's reply said they read fine | process | how-I-work | working rule 7: before fixing a review finding, read every reply in its thread; a reply that says it's fine closes it |
 | M-224 | 2026-11-23 | A backlog row offered a fix that doesn't fix it | recommendation | window-between-steps | working rule 2: read the code an option touches (here `finish`) before listing it as a fix |
 | M-223 | 2026-11-23 | ADR-0034 left an open question with no backlog row | process | how-I-work | backlog #150; `/decide`'s step 8, a row for each follow-up |
 | M-222 | 2026-11-23 | The format version's bump left with nothing to catch a missed one | testing | weak-test | the golden file's tests in `tests/recording/test_encoding.py` (ADR-0089) and `REVIEW.md` Q-57 |
@@ -771,6 +773,22 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-226, 2026-11-23: The closing comment on pull request #30 wrote backlog rows as GitHub links
+
+- **What happened:** closing review pull request #30, Claude's comment said the findings moved to the backlog as "#149-#151". On GitHub, `#149` links to issue or pull request 149, not to backlog row 149. Claude noticed it right after posting.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** in text GitHub renders (comments, pull request bodies), write "backlog row 149", never a bare `#149`.
+- **Takeaway:** a number's meaning depends on where it's read; the backlog's `#` and GitHub's `#` collide.
+
+### M-225, 2026-11-23: Two docstrings rewritten after Joe's reply said they read fine
+
+- **What happened:** Joe answered the review finding on `start_up.py:36` (the `RECORDING_DIRECTORY` and `command_line_arguments` docstrings) with "this reads fine to me", but an earlier work session's fixes rewrote both anyway. Claude found it comparing the working tree with the pull request's replies; Joe chose to revert them.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** working rule 7: before fixing a review finding, read every reply in its thread; a reply that says it's fine closes it.
+- **Takeaway:** a review finding is Joe's to confirm; the fix list comes from his replies, not from the findings as posted.
 
 ### M-224, 2026-11-23: A backlog row offered a fix that doesn't fix it
 

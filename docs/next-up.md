@@ -9,31 +9,24 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-23 (Pacific)
-- **Last commit:** the records for pull request #30's fixes (glossary,
-  ARCHITECTURE.md, backlog, mistakes log, this brief), on `main`, pushed.
-  Uncommitted: nothing.
+- **Last commit:** "Work log 2026-11-23, mistakes M-225 and M-226, next-up
+  brief", on `main`. Uncommitted: nothing.
 
 ## Done last
 
-- 2026-11-23: pull request #30's findings fixed on `main` (Joe's comments
-  and Claude's), or moved to the backlog (#149, #150, #151). ADR-0089 built:
-  the golden file and Q-57. `_TickStepPart` renamed `_TickStepRecord`
-  (glossary: Tick step record); the test doubles renamed `CallNoting*`.
-  #30 closed, its review-log row added. `/project-review high`: no correctness bug; one finding accepted (an
-  interrupt signal after disconnect is logged as before the tick loop).
-- 2026-11-22: review pull request #30 opened on `e8f7e10..fdcd31c` (the
-  recorder and the boundary tests), branches `review/2026-11-22-recorder`
-  into `review-base/2026-11-22-recorder`. Packet:
-  `drafts/review-packets/2026-11-22-recorder.md`. The project review's 12
-  findings posted as comments, one review: 10 at their lines, 2 in the
-  summary (lines outside the diff). None fixed. M-221 logged (84 vs 87).
-- 2026-11-22: the recorder built (ADR-0034, ADR-0087, ADR-0088; #145
-  removed): `recording/`, `SafetyLayer.events_this_tick`, the tick step's
-  recording, the tick loop's `on_tick_measured`; every program records to
-  `recordings/`. 87 planted bugs, all caught. #148 added (a converter for
-  old logs).
-- 2026-11-22: boundary tests done (#133), #140 done, ADR-0085 and ADR-0086
-  built, #29 closed.
+- 2026-11-23: review pull request #30 (the recorder, `e8f7e10..fdcd31c`)
+  closed. Its findings fixed on `main` (`05637fa`): `_TickStepRecord`
+  (glossary: Tick step record), the `CallNoting*` test doubles, the
+  interrupt message at start-up, "Recording finished". Others moved to
+  backlog #149 to #151. `/project-review high`: no correctness bug; one
+  finding accepted (an interrupt signal after disconnect is logged as before
+  the tick loop).
+- 2026-11-23: ADR-0089 decided and built (`33125ea`): the golden file
+  `tests/recording/golden/format_v1.jsonl`, its tests, and `REVIEW.md`
+  Q-57. Glossary: Code version, Format version, Golden file, Replaced
+  request. Mistakes M-222 to M-226.
+- 2026-11-22: the recorder built (ADR-0034, ADR-0087, ADR-0088); every
+  program records to `recordings/`.
 
 ## In progress
 
@@ -73,6 +66,6 @@ from `drafts/explain-back-notes.md`; don't open it first.
 ## Last reviewed
 
 `0846826`, 2026-11-04: the last full row of `REVIEW.md`'s review log. Pull
-requests #24 to #29 read single ADRs ahead of the full review; #30 (open)
-reads `e8f7e10..fdcd31c`. The full line-by-line walk comes after the
-refactor (W9).
+requests #24 to #30 read single changes ahead of the full review; the last,
+#30, read up to `fdcd31c` and closed 2026-11-23. The full line-by-line walk
+comes after the refactor (W9).
