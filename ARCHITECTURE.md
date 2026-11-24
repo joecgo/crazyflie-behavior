@@ -29,7 +29,8 @@ Each rule is marked with where it comes from:
    3  update_take_off_and_landing(snapshot)   → every tick, after a failed pre-check too
    4  Behavior.tick(snapshot, ask)            → ask(CommandRequest) returns a Verdict at once
    5  SafetyLayer.send()                      → one command per command slot
-      with a recorder: the tick's line, with its snapshot, requests and verdicts, events and timing
+      with a recorder: steps 1–5 hand it the snapshot, requests and verdicts, and events
+ after the tick step: the TickLoop measures the tick, then the recorder writes the tick's line with its timing
                                    │ DroneInterface: commands that don't block
                                    ▼
  drone ◄══ radio ══ the adapter: setpoints, high-level moves, parameters
@@ -97,7 +98,7 @@ mostly create wide interfaces. By review: no fitness function.
 | Drone to every layer | `Snapshot`. | Read-only. Each telemetry value is `Stamped` with its arrival time and the drone's, and is `None` until it first arrives. It also carries the adapter's `is_in_initial_climb` and `may_be_flying` (ADR-0054, ADR-0060) and the previous battery reading (ADR-0069). Its `time` is read after the copy (ADR-0046). |
 | cflib's thread to the tick's | `TelemetryBuffer`: its writers and `snapshot()`. | Values that arrive together are written together, so no snapshot mixes two samples (ADR-0007, ADR-0021). |
 | Tick loop to tick step | `TickStep.run(time, dt) -> bool` (done). `TickStep.request_stop()`, abstract. | The loop knows nothing else about a tick (ADR-0026). It calls `request_stop()` once, on the tick's thread, when it first sees a stop request, then ticks until `run()` reports done (ADR-0083). |
-| Tick step to recorder | `record_request(request, verdict)`, `record_tick(snapshot, events, flight_end_reason)`. The events are `SafetyLayer.events_this_tick`. | Each request as it's asked; the rest once the send is done, or after an error part way. The recorder never raises (ADR-0088). |
+| Tick step to recorder | `record_request(request, verdict)`, `record_tick(snapshot, events, flight_end_reason)`. The events are `SafetyLayer.events_this_tick`. | Each request as it's asked; the tick step record once the send is done, or after an error part way. The recorder never raises (ADR-0088). |
 | Tick loop to recorder | `on_tick_measured(lateness, work_time)`, optional. | On the tick's thread, after the work time is measured, so the write's own time shows as the next tick's lateness (ADR-0088). |
 | Any thread to tick loop | `TickLoop.request_stop()`. | Safe from any thread. In a program with a safety layer it sets the flight end, so a flying drone lands inside the loop before the program's `disconnect()`; later interrupt signals are ignored (ADR-0026, ADR-0083). |
 | Everything to time | `Clock.now()`, `Clock.sleep_until()`. | Injected, never read from the system directly (ADR-0009). |

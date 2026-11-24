@@ -186,6 +186,11 @@ A review walks only the sections for the paths it touches:
 - **Q-56.** Does a test that compares a log line or message exactly hold fixed
   every optional part it can carry (a garbage-collector pause, a warning, a
   timing)? (M-214)
+- **Q-57.** A change to what a recording holds, how it's written, or what a
+  recorded value means (its unit or frame): did `FORMAT_VERSION` go up, with
+  a golden file the new code wrote replacing the old one? Does the golden
+  file's diff show only that change? A golden file edited in place is the
+  missed bump it exists to catch (ADR-0089). (M-222)
 
 Takeaways about recommendations and explanations stay in the mistakes log
 only: they're for me, when I weigh Claude's options.
@@ -262,4 +267,5 @@ goes in.
 | 2026-11-21 | `fab1d5d`, ADR-0081 only | [#27](https://github.com/joecgo/crazyflie-behavior/pull/27), closed unmerged | ADR-0081 alone (one age limit, `STALE_AFTER`). Led to `2bf62ae`: the low-light warning's (time, quality) pair became `Stamped[int]`, and `STALE_AFTER`'s placeholder comment went |
 | 2026-11-21 | `edbc4a9`, ADR-0082 only | [#28](https://github.com/joecgo/crazyflie-behavior/pull/28), closed unmerged | ADR-0082 alone (the sim-time limit for every tick-loop test). No comments from Joe, and no project review ran on it |
 | 2026-11-22 | `1b673f9` to `e8f7e10`, ADR-0083 and ADR-0084, then ADR-0085 and ADR-0086 | [#29](https://github.com/joecgo/crazyflie-behavior/pull/29), closed unmerged | ADR-0083 and ADR-0084 (flight ends land in the tick loop, a lost link is an error), updated during the review to include ADR-0085 and ADR-0086. Led to `4a97e68` (review fixes: `FlightEndReason`, plain names) and ADR-0086, which moved the lost-link check to `take_snapshot()`. M-207 and M-209 |
+| 2026-11-23 | `e8f7e10` to `fdcd31c`, ADR-0087 and ADR-0088 | [#30](https://github.com/joecgo/crazyflie-behavior/pull/30), closed unmerged | The recorder and the boundary tests. Led to the review fixes on `main` (`_TickStepRecord`, the `CallNoting*` test doubles, the interrupt message at start-up, the "Recording finished" line), ADR-0089 (the golden file, Q-57) and backlog #149 to #151. M-222 to M-224 |
 | Next | | [#30](https://github.com/joecgo/crazyflie-behavior/pull/30), open | Everything after `e8f7e10`; #30 reads `e8f7e10..fdcd31c` (the recorder and the boundary tests), 12 findings posted as comments. #24 to #29 read C1, ADR-0077, ADR-0076, ADR-0081, ADR-0082, and ADR-0083 to ADR-0086 ahead of it; their `review-base/*` branches stay so their diffs stay viewable |

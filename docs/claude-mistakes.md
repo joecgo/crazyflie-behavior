@@ -71,27 +71,27 @@ entries go at the top of their section without an ID.
 |---|---|---|
 | design | 5 | 20 |
 | safety design | 5 | 22 |
-| recommendation | 7 | 7 |
+| recommendation | 7 | 8 |
 | environment | 4 | 10 |
 | communication | 14 | 63 |
-| testing | 1 | 26 |
-| process | 7 | 30 |
-| **Total** | **43** | **178** |
+| testing | 2 | 26 |
+| process | 7 | 31 |
+| **Total** | **44** | **180** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
 | said-without-checking | 52 |
-| how-I-work | 24 |
+| how-I-work | 25 |
+| weak-test | 23 |
 | records-ahead-of-code | 23 |
-| weak-test | 22 |
 | vocabulary | 19 |
 | safety-judgment | 18 |
 | reading-field-data | 15 |
 | recommendation | 13 |
 | message-misstates-outcome | 13 |
-| window-between-steps | 11 |
+| window-between-steps | 12 |
 | environment | 8 |
 | leftover-state | 3 |
 <!-- end generated -->
@@ -112,6 +112,9 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-224 | 2026-11-23 | A backlog row offered a fix that doesn't fix it | recommendation | window-between-steps | working rule 2: read the code an option touches (here `finish`) before listing it as a fix |
+| M-223 | 2026-11-23 | ADR-0034 left an open question with no backlog row | process | how-I-work | backlog #150; `/decide`'s step 8, a row for each follow-up |
+| M-222 | 2026-11-23 | The format version's bump left with nothing to catch a missed one | testing | weak-test | the golden file's tests in `tests/recording/test_encoding.py` (ADR-0089) and `REVIEW.md` Q-57 |
 | M-221 | 2026-11-22 | The next-up brief said 84 planted bugs for the recorder; it was 87 | communication | said-without-checking | working rule 4: a count in a record comes from the whole run, recounted when the record is written |
 | M-220 | 2026-11-22 | New mock test names used terms not in the glossary | communication | vocabulary | working rule 6: check a new name's words against the glossary before using them |
 | M-219 | 2026-11-22 | `TICK_PERIOD`'s docstring promised exactness that depends on `STALE_AFTER` | communication | said-without-checking | a docstring for a value computed from another module's constant states what its claim depends on |
@@ -338,6 +341,14 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-222, 2026-11-23: The format version's bump left with nothing to catch a missed one
+
+- **What happened:** ADR-0034 named the pitfall: "every format change must bump the version." Building the recorder (ADR-0087, ADR-0088), Claude wrote `FORMAT_VERSION = 1` and round-trip tests. Those pass when a change reaches the encoder and the decoder together, as a renamed field does, so a format change could ship without a bump and recordings made before it would stop reading back. Q-32 asks what enforces a rule about the code; neither the build nor its project review asked it for this rule. Joe caught it reading #30: "Is there a note in Review.md to maintain this encode.py file as anything changes that it references?", then "an oversight that we didn't even have a reminder to increase the FORMAT_VERSION".
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** the golden file's tests in `tests/recording/test_encoding.py` (ADR-0089) and `REVIEW.md` Q-57.
+- **Takeaway:** a repeat of M-209: Q-32 wasn't asked, at the build or in the review. A rule an ADR states as a pitfall ("every format change must") is a rule about the code, and the change that builds it needs the guard that enforces it. The ladder's second step, a "Guards" line in the ADR template's Consequences, was proposed; Joe kept Q-32 alone (2026-11-23).
 
 ### M-209, 2026-11-22: A lost-link check copied into every adapter method, with nothing to catch a method without it
 
@@ -760,6 +771,22 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-224, 2026-11-23: A backlog row offered a fix that doesn't fix it
+
+- **What happened:** backlog #149 (from the review of pull request #30) listed "move `start` inside the `try`" as a fix for a recording left without a header. With `start` inside the `try`, the interrupt signal between opening the file and writing the header reaches `finish`, which adds a last line to the file with no header, so `read_recording` still refuses it. Claude found it when Joe asked whether moving it was enough; the row is corrected.
+- **Kind:** recommendation.
+- **Pattern:** window-between-steps.
+- **Guard:** working rule 2: read the code an option touches (here `finish`) before listing it as a fix.
+- **Takeaway:** a fix for a cleanup gap is traced through every step after the gap, not only the step that opens it.
+
+### M-223, 2026-11-23: ADR-0034 left an open question with no backlog row
+
+- **What happened:** ADR-0034 says "What a reader does with an old version is decided with the first replay test", but no backlog row ever tracked it (the backlog and its git history searched on 2026-11-23). `CLAUDE.md` has asked for a row for each deferral since 2026-10-18. Claude found it while weighing ADR-0089's options.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** backlog #150; `/decide`'s step 8, a row for each follow-up.
+- **Takeaway:** an ADR's "decided later" is a follow-up, and gets its backlog row when the ADR is written.
 
 ### M-221, 2026-11-22: The next-up brief said 84 planted bugs for the recorder; it was 87
 

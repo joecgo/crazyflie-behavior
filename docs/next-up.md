@@ -8,12 +8,19 @@ request merged, a step built), update this page in the same step: remove or
 move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
-- **Date:** 2026-11-22 (Pacific)
-- **Last commit:** the work log, mistakes log, review log and this brief, on
-  `main`, pushed. Uncommitted: nothing.
+- **Date:** 2026-11-23 (Pacific)
+- **Last commit:** the records for pull request #30's fixes (glossary,
+  ARCHITECTURE.md, backlog, mistakes log, this brief), on `main`, pushed.
+  Uncommitted: nothing.
 
 ## Done last
 
+- 2026-11-23: pull request #30's findings fixed on `main` (Joe's comments
+  and Claude's), or moved to the backlog (#149, #150, #151). ADR-0089 built:
+  the golden file and Q-57. `_TickStepPart` renamed `_TickStepRecord`
+  (glossary: Tick step record); the test doubles renamed `CallNoting*`.
+  #30 closed, its review-log row added. `/project-review high`: no correctness bug; one finding accepted (an
+  interrupt signal after disconnect is logged as before the tick loop).
 - 2026-11-22: review pull request #30 opened on `e8f7e10..fdcd31c` (the
   recorder and the boundary tests), branches `review/2026-11-22-recorder`
   into `review-base/2026-11-22-recorder`. Packet:
@@ -30,9 +37,7 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
-- Joe's review of pull request #30. Afterwards: fix the findings Joe
-  confirms (on `main`, never the review branch), merge or close #30, and
-  add its row to `REVIEW.md`'s review log.
+- Nothing.
 
 ## Next three
 
@@ -42,8 +47,7 @@ move the item, renumber "Next three", and update "Last commit" and
 2. Decide #55 (where analysis scripts live): the recorder drops the text
    log's snapshot line, which breaks the scripts in `drafts/`, so the two
    go together. Opus, high.
-3. Fix the findings Joe confirms on #30. Opus, high (the tick loop and
-   `start_up.py` are tier 1).
+3. Not chosen yet: Joe picks it from the backlog.
 
 ## Explain-backs waiting
 
@@ -61,6 +65,10 @@ from `drafts/explain-back-notes.md`; don't open it first.
 - **E4.** A behavior raises halfway through a tick, after one command
   request. What does that tick's line in the recording hold, and what makes
   sure the line, and the recording's last line, still get written?
+- **E5.** Change the name a recording uses for a flight end reason, in the
+  one table both the encoder and the decoder read. Why do the round-trip
+  tests still pass, which golden file tests fail (ADR-0089), and what
+  does the golden file deliberately not catch?
 
 ## Last reviewed
 
