@@ -111,8 +111,8 @@ def snapshot(
     )
 
 
-class RecordingDrone(MockAdapter):
-    """The mock adapter, also recording each take-off height it's sent."""
+class CallNotingDrone(MockAdapter):
+    """The mock adapter, also noting each take-off height it's sent."""
 
     def __init__(self) -> None:
         super().__init__(SimClock())
@@ -343,7 +343,7 @@ def test_hovering_and_landing_are_approved_without_a_drone_status(command_reques
 
 
 def test_an_approved_request_is_sent_at_the_end_of_the_tick() -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(ON_THE_FLOOR))
 
@@ -355,7 +355,7 @@ def test_an_approved_request_is_sent_at_the_end_of_the_tick() -> None:
 
 
 def test_a_take_off_is_sent_with_its_height() -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(ARMED))
 
@@ -367,7 +367,7 @@ def test_a_take_off_is_sent_with_its_height() -> None:
 
 @pytest.mark.parametrize(("command_request", "command"), [(Hover(), "hover"), (Land(), "land")])
 def test_hover_and_land_are_sent_as_themselves(command_request: CommandRequest, command: str) -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(FLYING))
 
@@ -378,7 +378,7 @@ def test_hover_and_land_are_sent_as_themselves(command_request: CommandRequest, 
 
 
 def test_each_command_is_sent_once() -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(ON_THE_FLOOR))
     safety_layer.request(Arm())
@@ -391,7 +391,7 @@ def test_each_command_is_sent_once() -> None:
 
 
 def test_a_refused_request_sends_nothing() -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(ON_THE_FLOOR))
 
@@ -402,7 +402,7 @@ def test_a_refused_request_sends_nothing() -> None:
 
 
 def test_a_request_before_any_pre_check_is_refused() -> None:
-    assert not SafetyLayer(RecordingDrone()).request(Arm()).is_approved
+    assert not SafetyLayer(CallNotingDrone()).request(Arm()).is_approved
 
 
 # --- The movement slot -----------------------------------------------------------
@@ -412,7 +412,7 @@ def test_a_later_request_in_the_same_tick_replaces_the_earlier_with_a_warning(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger=SAFETY_LOGGER)
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(FLYING))
 
@@ -429,7 +429,7 @@ def test_replacements_warn_once_per_streak_and_every_one_is_logged_at_debug(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger=SAFETY_LOGGER)
-    safety_layer = SafetyLayer(RecordingDrone())
+    safety_layer = SafetyLayer(CallNotingDrone())
 
     def tick(replacements: int) -> None:
         safety_layer.pre_check(snapshot(FLYING))
@@ -471,8 +471,8 @@ def test_buzzer_requests_are_approved_without_a_drone_status_or_a_charged_batter
     assert judge(command_request, low_battery_and_no_status).is_approved
 
 
-class BuzzerRecordingDrone(RecordingDrone):
-    """Also records every command in one list, buzzer commands with their pitch."""
+class BuzzerCallNotingDrone(CallNotingDrone):
+    """Also notes every command in one list, buzzer commands with their pitch."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -500,7 +500,7 @@ class BuzzerRecordingDrone(RecordingDrone):
     [(Chirp(), "chirp"), (Tone(523.25), "play_tone 523.25"), (Silence(), "silence")],
 )
 def test_a_buzzer_request_is_sent_at_the_end_of_the_tick(command_request: CommandRequest, command: str) -> None:
-    drone = BuzzerRecordingDrone()
+    drone = BuzzerCallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(FLYING))
 
@@ -514,7 +514,7 @@ def test_a_buzzer_request_is_sent_at_the_end_of_the_tick(command_request: Comman
 def test_a_movement_and_a_buzzer_request_in_one_tick_are_both_sent_movement_first(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    drone = BuzzerRecordingDrone()
+    drone = BuzzerCallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(FLYING))
 
@@ -530,7 +530,7 @@ def test_a_later_buzzer_request_in_the_same_tick_replaces_the_earlier_with_a_war
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger=SAFETY_LOGGER)
-    drone = BuzzerRecordingDrone()
+    drone = BuzzerCallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(ON_THE_FLOOR))
 
@@ -545,7 +545,7 @@ def test_a_later_buzzer_request_in_the_same_tick_replaces_the_earlier_with_a_war
 
 def test_each_slot_has_its_own_replacement_streak(caplog: pytest.LogCaptureFixture) -> None:
     """A movement streak going on doesn't hide the start of a buzzer streak."""
-    safety_layer = SafetyLayer(BuzzerRecordingDrone())
+    safety_layer = SafetyLayer(BuzzerCallNotingDrone())
 
     safety_layer.pre_check(snapshot(FLYING))
     safety_layer.request(Hover())
@@ -565,7 +565,7 @@ def test_each_slot_has_its_own_replacement_streak(caplog: pytest.LogCaptureFixtu
 
 
 def test_after_the_failsafe_buzzer_requests_are_refused_too() -> None:
-    drone = BuzzerRecordingDrone()
+    drone = BuzzerCallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(FLYING, position_age=1.0))
     safety_layer.send()
@@ -584,7 +584,7 @@ def test_after_the_failsafe_buzzer_requests_are_refused_too() -> None:
 def test_a_failed_pre_check_lands_a_flying_drone_and_skips_behaviors(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
 
     behaviors_may_run = safety_layer.pre_check(snapshot(FLYING, battery_voltage=3.1))
@@ -598,7 +598,7 @@ def test_a_failed_pre_check_lands_a_flying_drone_and_skips_behaviors(
 
 
 def test_the_failsafe_lands_on_a_stale_drone_status_that_says_flying() -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
 
     safety_layer.pre_check(snapshot(FLYING, status_age=1.0))
@@ -612,7 +612,7 @@ def test_the_failsafe_always_lands_and_leaves_whether_the_drone_may_be_flying_to
     status: DroneStatus, caplog: pytest.LogCaptureFixture
 ) -> None:
     """The status lags a take-off by about a second, so it can't gate the landing (ADR-0039)."""
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
 
     safety_layer.pre_check(snapshot(status, position_age=1.0))
@@ -626,7 +626,7 @@ def test_the_failsafe_always_lands_and_leaves_whether_the_drone_may_be_flying_to
 
 
 def test_the_failsafe_lands_without_any_drone_status() -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
 
     safety_layer.pre_check(replace(snapshot(FLYING), drone_status=None))
@@ -636,7 +636,7 @@ def test_the_failsafe_lands_without_any_drone_status() -> None:
 
 
 def test_after_the_failsafe_the_flight_never_resumes() -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(FLYING, position_age=1.0))
     safety_layer.send()
@@ -660,7 +660,7 @@ TICK_STEP_FLIGHT_END_REASONS = [FlightEndReason.STOP_REQUEST, FlightEndReason.BE
 def test_a_flight_end_lands_once_skips_behaviors_and_refuses_every_later_request(
     flight_end_reason: FlightEndReason,
 ) -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
 
     safety_layer.end_flight(flight_end_reason)
@@ -678,7 +678,7 @@ def test_a_flight_end_lands_once_skips_behaviors_and_refuses_every_later_request
 
 def test_after_a_stop_request_the_pre_check_never_fails_so_it_cant_count_as_the_failsafe() -> None:
     # The failsafe program's pass needs a failed pre-check (ADR-0041).
-    safety_layer = SafetyLayer(RecordingDrone())
+    safety_layer = SafetyLayer(CallNotingDrone())
 
     safety_layer.end_flight(FlightEndReason.STOP_REQUEST)
     safety_layer.pre_check(snapshot(FLYING, battery_voltage=3.1, previous_battery_voltage=3.1))
@@ -689,7 +689,7 @@ def test_after_a_stop_request_the_pre_check_never_fails_so_it_cant_count_as_the_
 
 @pytest.mark.parametrize("flight_end_reason", TICK_STEP_FLIGHT_END_REASONS)
 def test_the_first_flight_end_stays(flight_end_reason: FlightEndReason) -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(FLYING, position_age=1.0))
 
@@ -701,7 +701,7 @@ def test_the_first_flight_end_stays(flight_end_reason: FlightEndReason) -> None:
 
 
 def test_only_the_pre_check_sets_the_flight_end_for_a_failed_pre_check() -> None:
-    safety_layer = SafetyLayer(RecordingDrone())
+    safety_layer = SafetyLayer(CallNotingDrone())
 
     with pytest.raises(ValueError, match="Only the safety pre-check"):
         safety_layer.end_flight(FlightEndReason.PRE_CHECK_FAILED)
@@ -718,7 +718,7 @@ def test_a_flight_end_is_logged_with_its_reason(
 ) -> None:
     caplog.set_level(logging.INFO, logger=SAFETY_LOGGER)
 
-    SafetyLayer(RecordingDrone()).end_flight(flight_end_reason)
+    SafetyLayer(CallNotingDrone()).end_flight(flight_end_reason)
 
     assert [(record.levelno, record.getMessage()) for record in caplog.records] == [
         (level, f"The flight is over: {flight_end_reason.value}. Landing.")
@@ -909,7 +909,7 @@ def test_an_estimate_reset_is_approved_only_on_the_floor() -> None:
 
 
 def test_an_approved_estimate_reset_is_sent_after_the_slots_commands_and_takes_no_slot() -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     drone.connect()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(ON_THE_FLOOR))
@@ -923,7 +923,7 @@ def test_an_approved_estimate_reset_is_sent_after_the_slots_commands_and_takes_n
 
 
 def test_a_refused_estimate_reset_is_not_sent() -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(FLYING))
 
@@ -934,7 +934,7 @@ def test_a_refused_estimate_reset_is_not_sent() -> None:
 
 
 def test_an_estimate_reset_is_sent_once_per_approval() -> None:
-    drone = RecordingDrone()
+    drone = CallNotingDrone()
     safety_layer = SafetyLayer(drone)
     safety_layer.pre_check(snapshot(ON_THE_FLOOR))
     safety_layer.request(ResetEstimate())
@@ -951,7 +951,7 @@ NO_EVENTS = SafetyEvents(pre_check_failures=(), replaced_requests=())
 
 
 def test_a_tick_with_a_passing_pre_check_and_one_request_per_slot_has_no_events() -> None:
-    safety_layer = SafetyLayer(RecordingDrone())
+    safety_layer = SafetyLayer(CallNotingDrone())
 
     safety_layer.pre_check(snapshot(FLYING))
     safety_layer.request(Hover())
@@ -963,7 +963,7 @@ def test_a_tick_with_a_passing_pre_check_and_one_request_per_slot_has_no_events(
 
 def test_a_failed_pre_checks_reasons_are_events_on_its_tick_only() -> None:
     """After the flight end the pre-check doesn't run, so it has no reasons either."""
-    safety_layer = SafetyLayer(RecordingDrone())
+    safety_layer = SafetyLayer(CallNotingDrone())
 
     safety_layer.pre_check(snapshot(FLYING, position_age=1.0, battery_voltage=3.1))
     failing_tick = safety_layer.events_this_tick
@@ -981,7 +981,7 @@ def test_a_failed_pre_checks_reasons_are_events_on_its_tick_only() -> None:
 
 
 def test_each_replaced_request_is_an_event_with_its_command_slot() -> None:
-    safety_layer = SafetyLayer(RecordingDrone())
+    safety_layer = SafetyLayer(CallNotingDrone())
 
     safety_layer.pre_check(snapshot(FLYING))
     for command_request in [Hover(), Chirp(), Land(), Silence()]:
@@ -995,7 +995,7 @@ def test_each_replaced_request_is_an_event_with_its_command_slot() -> None:
 
 def test_the_landing_for_a_behavior_done_in_flight_replaces_its_request_that_tick() -> None:
     """The flight end's Land takes the movement slot at once (ADR-0083)."""
-    safety_layer = SafetyLayer(RecordingDrone())
+    safety_layer = SafetyLayer(CallNotingDrone())
 
     safety_layer.pre_check(snapshot(FLYING))
     safety_layer.request(Hover())
@@ -1005,7 +1005,7 @@ def test_the_landing_for_a_behavior_done_in_flight_replaces_its_request_that_tic
 
 
 def test_this_ticks_events_are_still_there_after_the_send_and_start_empty_at_the_next_pre_check() -> None:
-    safety_layer = SafetyLayer(RecordingDrone())
+    safety_layer = SafetyLayer(CallNotingDrone())
     safety_layer.pre_check(snapshot(FLYING))
     safety_layer.request(Hover())
     safety_layer.request(Land())

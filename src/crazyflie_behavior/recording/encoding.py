@@ -34,7 +34,7 @@ FORMAT_VERSION = 1
 """Every change to the format bumps it (ADR-0034). A reader refuses a version newer than it knows."""
 
 type Json = bool | int | float | str | list[Json] | dict[str, Json] | None
-"""A value `json` writes and reads back as it was."""
+"""A value `json` writes and reads back as it was. Its floats are finite: `encode_float` turns the rest into strings."""
 
 _NON_FINITE_FLOATS = {"nan": math.nan, "inf": math.inf, "-inf": -math.inf}
 

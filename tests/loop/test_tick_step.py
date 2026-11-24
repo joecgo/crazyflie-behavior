@@ -27,7 +27,7 @@ GIVE_UP_AFTER_TICKS = 200
 HOVER_DURATION = 2.0
 
 
-class RecordingDrone(MockAdapter):
+class CallNotingDrone(MockAdapter):
     def __init__(self, clock: SimClock, events: list[str]) -> None:
         super().__init__(clock)
         self._events = events
@@ -44,7 +44,7 @@ class RecordingDrone(MockAdapter):
         super().update_take_off_and_landing(snapshot)
 
 
-class RecordingSafetyLayer(SafetyLayer):
+class CallNotingSafetyLayer(SafetyLayer):
     def __init__(self, drone: MockAdapter, events: list[str]) -> None:
         super().__init__(drone)
         self._events = events
@@ -58,8 +58,8 @@ class RecordingSafetyLayer(SafetyLayer):
         super().send()
 
 
-class RecordingBehavior(Behavior):
-    """Asks to hover each tick, and records when it ran."""
+class CallNotingBehavior(Behavior):
+    """Asks to hover each tick, and notes when it ran."""
 
     def __init__(self, events: list[str]) -> None:
         self._events = events
@@ -112,9 +112,9 @@ def height_now(drone: MockAdapter) -> float:
 def test_a_tick_runs_snapshot_pre_check_take_off_and_landing_behavior_send_in_that_order(sim_clock: SimClock) -> None:
     clock = sim_clock
     events: list[str] = []
-    drone = RecordingDrone(clock, events)
+    drone = CallNotingDrone(clock, events)
     drone.connect()
-    tick_step = BehaviorTickStep(drone, RecordingSafetyLayer(drone, events), RecordingBehavior(events))
+    tick_step = BehaviorTickStep(drone, CallNotingSafetyLayer(drone, events), CallNotingBehavior(events))
 
     tick_step.run(clock.now(), TICK_PERIOD)
 
@@ -126,11 +126,11 @@ def test_a_failed_pre_check_skips_the_behavior_but_not_take_off_and_landing_and_
 ) -> None:
     clock = sim_clock
     events: list[str] = []
-    drone = RecordingDrone(clock, events)
+    drone = CallNotingDrone(clock, events)
     drone.connect()
     drone.set_battery_voltage(3.0)
     drone.set_battery_voltage(3.0)  # two readings in a row (ADR-0069)
-    tick_step = BehaviorTickStep(drone, RecordingSafetyLayer(drone, events), RecordingBehavior(events))
+    tick_step = BehaviorTickStep(drone, CallNotingSafetyLayer(drone, events), CallNotingBehavior(events))
 
     is_done = tick_step.run(clock.now(), TICK_PERIOD)
 
@@ -296,7 +296,7 @@ def test_a_stop_request_on_the_floor_sends_a_land_and_ends_the_run_on_that_tick(
     clock = sim_clock
     events: list[str] = []
     drone = connected_mock(clock)
-    tick_step = BehaviorTickStep(drone, SafetyLayer(drone), RecordingBehavior(events))
+    tick_step = BehaviorTickStep(drone, SafetyLayer(drone), CallNotingBehavior(events))
 
     tick_step.request_stop()
     is_done = tick_step.run(clock.now(), TICK_PERIOD)
@@ -366,7 +366,7 @@ class FakeRecorder(Recorder):
         super().__init__("mock", ())
         self._events = events if events is not None else []
         self.requests: list[RequestAndVerdict] = []
-        self.parts: list[tuple[Snapshot, SafetyEvents, FlightEndReason | None]] = []
+        self.tick_step_records: list[tuple[Snapshot, SafetyEvents, FlightEndReason | None]] = []
 
     def record_request(self, command_request: CommandRequest, verdict: Verdict) -> None:
         self._events.append("record request")
@@ -374,7 +374,7 @@ class FakeRecorder(Recorder):
 
     def record_tick(self, snapshot: Snapshot, events: SafetyEvents, flight_end_reason: FlightEndReason | None) -> None:
         self._events.append("record tick")
-        self.parts.append((snapshot, events, flight_end_reason))
+        self.tick_step_records.append((snapshot, events, flight_end_reason))
 
 
 class AskingBehavior(Behavior):
@@ -398,15 +398,15 @@ class FailingBehavior(Behavior):
         raise RuntimeError("the behavior broke")
 
 
-def test_with_a_recorder_a_tick_hands_it_each_request_as_asked_then_its_part_after_the_send(
+def test_with_a_recorder_a_tick_hands_it_each_request_as_asked_then_its_record_after_the_send(
     sim_clock: SimClock,
 ) -> None:
     clock = sim_clock
     events: list[str] = []
-    drone = RecordingDrone(clock, events)
+    drone = CallNotingDrone(clock, events)
     drone.connect()
     recorder = FakeRecorder(events)
-    tick_step = BehaviorTickStep(drone, RecordingSafetyLayer(drone, events), RecordingBehavior(events), recorder)
+    tick_step = BehaviorTickStep(drone, CallNotingSafetyLayer(drone, events), CallNotingBehavior(events), recorder)
 
     tick_step.run(clock.now(), TICK_PERIOD)
 
@@ -436,11 +436,11 @@ def test_each_request_is_recorded_with_the_verdict_the_behavior_got(sim_clock: S
     assert [verdict.is_approved for verdict in behavior.verdicts] == [True, False, True]
 
 
-def test_the_recorded_part_is_the_ticks_snapshot_and_its_events_once_the_behavior_has_run(
+def test_the_tick_step_record_is_the_ticks_snapshot_and_its_events_once_the_behavior_has_run(
     sim_clock: SimClock,
 ) -> None:
     clock = sim_clock
-    drone = RecordingDrone(clock, [])
+    drone = CallNotingDrone(clock, [])
     drone.connect()
     recorder = FakeRecorder()
 
@@ -448,27 +448,27 @@ def test_the_recorded_part_is_the_ticks_snapshot_and_its_events_once_the_behavio
 
     [snapshot] = drone.snapshots
     replaced = SafetyEvents(pre_check_failures=(), replaced_requests=(ReplacedRequest("movement", Hover(), Land()),))
-    assert recorder.parts == [(snapshot, replaced, None)]
+    assert recorder.tick_step_records == [(snapshot, replaced, None)]
 
 
-def test_a_failed_pre_checks_part_has_its_reasons_and_the_flight_end_reason(sim_clock: SimClock) -> None:
+def test_a_failed_pre_checks_record_has_its_reasons_and_the_flight_end_reason(sim_clock: SimClock) -> None:
     clock = sim_clock
     drone = connected_mock(clock)
     drone.set_battery_voltage(3.0)
     drone.set_battery_voltage(3.0)  # two readings in a row (ADR-0069)
     recorder = FakeRecorder()
 
-    BehaviorTickStep(drone, SafetyLayer(drone), RecordingBehavior([]), recorder).run(clock.now(), TICK_PERIOD)
+    BehaviorTickStep(drone, SafetyLayer(drone), CallNotingBehavior([]), recorder).run(clock.now(), TICK_PERIOD)
 
-    [(_snapshot, events, flight_end_reason)] = recorder.parts
+    [(_snapshot, events, flight_end_reason)] = recorder.tick_step_records
     assert events.pre_check_failures == ("battery at 3.00 V (land below 3.20 V)",)
     assert flight_end_reason is FlightEndReason.PRE_CHECK_FAILED
 
 
-def test_a_tick_that_raised_after_its_snapshot_still_hands_its_part_over(sim_clock: SimClock) -> None:
+def test_a_tick_that_raised_after_its_snapshot_still_hands_its_record_over(sim_clock: SimClock) -> None:
     """So the recording keeps what that tick saw, up to the error."""
     clock = sim_clock
-    drone = RecordingDrone(clock, [])
+    drone = CallNotingDrone(clock, [])
     drone.connect()
     recorder = FakeRecorder()
     tick_step = BehaviorTickStep(drone, SafetyLayer(drone), FailingBehavior(), recorder)
@@ -477,4 +477,4 @@ def test_a_tick_that_raised_after_its_snapshot_still_hands_its_part_over(sim_clo
         tick_step.run(clock.now(), TICK_PERIOD)
 
     assert recorder.requests == [RequestAndVerdict(Hover(), Verdict.approved())]
-    assert [snapshot for snapshot, _events, _flight_end_reason in recorder.parts] == drone.snapshots
+    assert [snapshot for snapshot, _events, _flight_end_reason in recorder.tick_step_records] == drone.snapshots

@@ -253,6 +253,20 @@ def test_the_last_line_closes_the_file(tmp_path: Path, monkeypatch: pytest.Monke
     assert len(file.lines) == 2
 
 
+def test_the_log_says_when_the_recording_finished_and_only_then(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO, logger=RECORDER_LOGGER)
+    finished = started_recorder(tmp_path / "finished.jsonl")
+    a_file_with_room_for(monkeypatch, lines=1)  # the header's
+    failed = started_recorder(tmp_path / "failed.jsonl")
+
+    finished.finish(None)
+    failed.finish(None)
+
+    assert [record.getMessage() for record in records_at(caplog, logging.INFO)].count("Recording finished") == 1
+
+
 def test_a_write_error_is_logged_once_with_its_stack_trace_and_stops_the_recording_without_raising(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
