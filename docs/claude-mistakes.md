@@ -74,18 +74,18 @@ entries go at the top of their section without an ID.
 | recommendation | 7 | 8 |
 | environment | 4 | 10 |
 | communication | 14 | 64 |
-| testing | 2 | 26 |
-| process | 7 | 32 |
-| **Total** | **44** | **182** |
+| testing | 2 | 27 |
+| process | 7 | 35 |
+| **Total** | **44** | **186** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 52 |
+| said-without-checking | 53 |
 | how-I-work | 26 |
-| weak-test | 23 |
-| records-ahead-of-code | 23 |
+| records-ahead-of-code | 25 |
+| weak-test | 24 |
 | vocabulary | 20 |
 | safety-judgment | 18 |
 | reading-field-data | 15 |
@@ -112,6 +112,10 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-230 | 2026-11-24 | `.gz` reading broke `read_recording`'s promise of a ValueError | testing | weak-test | a new way to read input gets a test for each way it can fail, checked against the errors its function's docstring names |
+| M-229 | 2026-11-24 | `/debrief`'s new step for committing scripts left out their recordings | process | records-ahead-of-code | working rule 3: before an ADR says a step is in a skill, read the step against each bullet of the Decision |
+| M-228 | 2026-11-24 | The glossary called an unbuilt tool real, and ADR-0092 called built work unbuilt | process | records-ahead-of-code | working rule 3; for a tool decided but not built, the glossary says "once it's built" and names the backlog row |
+| M-227 | 2026-11-24 | Searches that skipped `drafts/` reported C6 missing and missed Joe's no to a mutation-testing dependency | process | said-without-checking | working rule 1: when a search for a term Joe uses finds nothing, search `drafts/` too (ripgrep's `--no-ignore`) before saying it doesn't exist |
 | M-226 | 2026-11-23 | The closing comment on pull request #30 wrote backlog rows as GitHub links | communication | vocabulary | in text GitHub renders (comments, pull request bodies), write "backlog row 149", never a bare `#149` |
 | M-225 | 2026-11-23 | Two docstrings rewritten after Joe's reply said they read fine | process | how-I-work | working rule 7: before fixing a review finding, read every reply in its thread; a reply that says it's fine closes it |
 | M-224 | 2026-11-23 | A backlog row offered a fix that doesn't fix it | recommendation | window-between-steps | working rule 2: read the code an option touches (here `finish`) before listing it as a fix |
@@ -773,6 +777,38 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-230, 2026-11-24: `.gz` reading broke `read_recording`'s promise of a ValueError
+
+- **What happened:** the #55 work session added `.gz` reading to `read_recording` with a test for a whole file only. `/project-review high` found that a cut-off `.gz` raises `EOFError` and a file that isn't gzip raises `BadGzipFile`, an `OSError`, where the docstring promises `ValueError`, and that a cut-off compressed file can't be read at all while a cut-off plain one drops its last line. Fixed: `_read_text` raises `ValueError` for each, with a test per case, proven by bug planting.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a new way to read input gets a test for each way it can fail, checked against the errors its function's docstring names. `REVIEW.md`'s map now sends `recording/` to Failures (Q-11, Q-13), which caught this.
+- **Takeaway:** a second format behind the same reader brings the second format's errors with it.
+
+### M-229, 2026-11-24: `/debrief`'s new step for committing scripts left out their recordings
+
+- **What happened:** ADR-0092 says a committed analysis script reads only committed recordings and a debrief commits them, and its Consequences said "the ask is in `CLAUDE.md` and `/debrief`". The step added to `/debrief` asked about the scripts only and never mentioned recordings. `/project-review high` found it.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** working rule 3: before an ADR says a step is in a skill, read the step against each bullet of the Decision.
+- **Takeaway:** a rule copied into a skill gets checked against the whole Decision, not only the line it came from.
+
+### M-228, 2026-11-24: The glossary called an unbuilt tool real, and ADR-0092 called built work unbuilt
+
+- **What happened:** the glossary's Bug planting said it's "done by hand, or by the bug-planting tool (`tools/plant_bugs.py`)", which isn't built (#152). ADR-0092's Consequences still said the `analysis/` folder and `.gz` reading weren't built (#154) after the same change built them. `/project-review high` found both.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** working rule 3; for a tool decided but not built, the glossary says "once it's built" and names the backlog row. After building part of an ADR, reread its Consequences as well as the index's Built column.
+- **Takeaway:** ADR-0091's test (#153) and #143 are the mechanisms this pattern is waiting on.
+
+### M-227, 2026-11-24: Searches that skipped `drafts/` reported C6 missing and missed Joe's no to a mutation-testing dependency
+
+- **What happened:** Joe named C6 as his priority. Claude searched with ripgrep, which skips git-ignored files, and said "c6" wasn't anywhere in the repo's markdown. C6 (split the Crazyflie adapter) is defined in `drafts/2026-11-13-code-recommendations.md`. The same blind spot let `/decide #142` offer an off-the-shelf mutation-testing tool without saying that Joe had declined one on 2026-11-21 (D19 in that file). Claude found both later in the session, reading `drafts/` for another reason; ADR-0090 now cites D19.
+- **Kind:** process.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 1: when a search for a term Joe uses finds nothing, search `drafts/` too (ripgrep's `--no-ignore`) before saying it doesn't exist.
+- **Takeaway:** decisions still waiting to become ADRs live in `drafts/` (the 2026-11-13 code and workflow recommendations), so a search of the records alone can miss Joe's earlier answers.
 
 ### M-226, 2026-11-23: The closing comment on pull request #30 wrote backlog rows as GitHub links
 
