@@ -174,6 +174,11 @@ each.
   test fails, fails on its own (an escaped KeyboardInterrupt or crash stops
   the whole run) and doesn't hang. Then restore the code. A test that no
   planted bug can fail is a gap.
+- **For a limit, plant the other comparison** and, for a time limit, the
+  limit plus 0.8 of a tick period (`0.8 / TICK_RATE`, 0.04 s at 20 Hz). A
+  test one whole tick past the limit lets that pass. This covers what the
+  bug-planting tool, once built, can't see, such as a typed number
+  ([ADR-0090](decisions/0090-a-bug-planting-tool-generates-plants-for-every-named-limit-and-runs-on-demand.md)).
 - **Compare computed floats with `pytest.approx`**, never `==`: most decimals
   (0.1, 0.3) aren't exact in binary, so `0.1 + 0.2 == 0.3` is false. `==` is
   fine for a value passed through unchanged, or for exact values (whole

@@ -19,6 +19,8 @@ A review walks only the sections for the paths it touches:
 | `safety/`, `loop/`, `timing/`, `drone/interface.py`, `drone/telemetry_buffer.py`, `snapshot.py`, `geometry.py` | Failures; Time; Rules and records |
 | `behaviors/` | Failures; Rules and records |
 | `programs/` | Failures; Time; How I run things; Rules and records |
+| `recording/` | Failures; Rules and records |
+| `analysis/` (repository root) | Rules and records |
 | `drone/mock_adapter.py`, test fakes | Fakes and the real drone |
 | `tests/` | Rules and records (the questions about tests) |
 | docs only | Rules and records |
