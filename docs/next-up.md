@@ -9,10 +9,9 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-25 (Pacific)
-- **Last commit:** "Records after #157 stage 4 and ADR-0094: mistakes
-  M-245 to M-250, next-up brief", on `main`, after `91e1eeb`. Not pushed:
-  the six commits after `479f64f`. Uncommitted: nothing. The checks pass
-  (997 passed, 1 skipped).
+- **Last commit:** "A test pins the cleanup before the threading lock
+  error's log (ADR-0094)", on `main`, after `fa3f995`. Uncommitted:
+  nothing. The checks pass (997 passed, 1 skipped).
 
 ## Done last
 

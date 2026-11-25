@@ -115,7 +115,7 @@ times so far).
 | M-250 | 2026-11-25 | Two docstrings in stage 4's take-off and landing part said more than the code | communication | records-ahead-of-code | a docstring that says "as X does" is checked against both methods line by line, and a fact another module owns is pointed to, not copied (`docs/coding-style.md`) |
 | M-249 | 2026-11-25 | A comment that read backwards and a docstring that said "turned into", in ADR-0094's fix | communication | vocabulary | read each new comment as someone who knows only the code and the glossary, before the review does (`/project-review` step 4) |
 | M-248 | 2026-11-25 | "Lock error" in ADR-0094's code, where the glossary's "lock" is the drone lock | communication | vocabulary | working rule 6, for words the glossary already uses in another sense, not only for missing terms (Q-41) |
-| M-247 | 2026-11-25 | ADR-0094's fix logged the threading lock error before the cleanup | design | window-between-steps | in an `except` block that cleans up, the cleanup comes first and any logging after it (`time_limit.py`, and Q-19, which names log lines) |
+| M-247 | 2026-11-25 | ADR-0094's fix logged the threading lock error before the cleanup | design | window-between-steps | in an `except` block that cleans up, the cleanup comes first and any logging after it (`time_limit.py`, its order pinned by a test; and Q-19, which names log lines) |
 | M-246 | 2026-11-25 | The interrupt signal landing inside a threading wait came out as CPython's lock error | design | window-between-steps | ADR-0094: `run_with_time_limit` raises the interrupt signal that CPython hides in a lock error, with a test that sends no real signal; and Q-19 (an interruption landing between two lines) |
 | M-245 | 2026-11-24 | A work order's bug-planting script was copied from a scratch file a failed edit had broken | process | how-I-work | the handoff skill's step 3: name a script in an order only after running it from where it's saved (added with Joe's OK, 2026-11-24); and M-233's: after a script writes or copies a file, read or run what it wrote |
 | M-244 | 2026-11-24 | The blocking-call fitness function missed a blocking call imported under another name | testing | weak-test | a scanner that matches by name lists every way a name can change (an import alias, an assignment, a stored callable) and has a test for each (`REVIEW.md` Q-32) |
@@ -827,7 +827,7 @@ times so far).
 - **What happened:** the fix's first version logged the hidden threading lock error, with its traceback, at the top of `run_with_time_limit`'s `except` block, before `step.abandon()` and `on_abandon`. A second interrupt signal landing in that log call would have left the block without the cleanup. Caught by Claude's project review (Q-19); the log now comes after the cleanup, with a comment saying why.
 - **Kind:** design.
 - **Pattern:** window-between-steps.
-- **Guard:** in an `except` block that cleans up, the cleanup comes first and any logging after it (`time_limit.py`, and Q-19, which names log lines).
+- **Guard:** in an `except` block that cleans up, the cleanup comes first and any logging after it (`time_limit.py`, its order pinned by a test; and Q-19, which names log lines).
 - **Takeaway:** Q-19 already asks about log lines; the build didn't ask it, the same day as M-246 and about the same window. No cheap mechanism knows which calls clean up, so the question stays.
 
 ### M-246, 2026-11-25: The interrupt signal landing inside a threading wait came out as CPython's lock error

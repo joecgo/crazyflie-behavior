@@ -140,14 +140,14 @@ def test_an_interrupt_signal_hidden_in_a_cpython_threading_lock_error_still_rise
 ) -> None:
     start = time_limit_module._HelperStep.start
 
-    def start_then_hide_the_interrupt_in_a_lock_error(step: time_limit_module._HelperStep) -> None:
+    def start_then_hide_the_interrupt_in_a_threading_lock_error(step: time_limit_module._HelperStep) -> None:
         start(step)
         lock = threading.Lock()
         with lock:
             lock.release()  # as Condition.wait does while it waits
             raise KeyboardInterrupt  # before the lock is taken back, so the with block's exit raises (ADR-0094)
 
-    monkeypatch.setattr(time_limit_module._HelperStep, "start", start_then_hide_the_interrupt_in_a_lock_error)
+    monkeypatch.setattr(time_limit_module._HelperStep, "start", start_then_hide_the_interrupt_in_a_threading_lock_error)
     caplog.set_level(logging.DEBUG, logger=TIME_LIMIT_LOGGER)
     events: list[str] = []
 
@@ -158,11 +158,11 @@ def test_an_interrupt_signal_hidden_in_a_cpython_threading_lock_error_still_rise
             1.0,
             what_to_check="",
             clock=SimClock(),
-            on_abandon=lambda: events.append("abandoned"),
+            on_abandon=lambda: events.append(f"abandoned with {len(caplog.records)} log records"),
         )
 
     assert raised.value.__context__ is None  # a context would read as an error being handled
-    assert events == ["abandoned"]
+    assert events == ["abandoned with 0 log records"]  # cleaned up before the threading lock error is logged
     [record] = caplog.records
     assert record.levelno == logging.DEBUG
     assert record.exc_info is not None
