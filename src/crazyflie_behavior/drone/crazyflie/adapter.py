@@ -20,13 +20,11 @@ How the interface maps onto cflib:
 
 import logging
 import math
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import Callable
 from enum import Enum
 
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
-from cflib.crazyflie.commander import SET_SETPOINT_CHANNEL
 from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.supervisor import (
     BIT_CAN_BE_ARMED,
@@ -38,7 +36,6 @@ from cflib.crazyflie.supervisor import (
     BIT_IS_TUMBLED,
 )
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
-from cflib.crtp.crtpstack import CRTPPacket, CRTPPort
 
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
     FINAL_DESCENT_HEIGHT,
@@ -47,15 +44,16 @@ from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
     INITIAL_CLIMB_TIME_LIMIT,
     has_fresh_flow,
 )
+
+# TODO: test-only, until the tests import it from commands.py (#158).
+from crazyflie_behavior.drone.crazyflie.commands import DEFAULT_YAW_RAD as DEFAULT_YAW_RAD
+from crazyflie_behavior.drone.crazyflie.commands import CrazyflieCommands, land_as_a_last_resort
 from crazyflie_behavior.drone.crazyflie.conversions import (
-    alt_hold_packet_data,
     battery_voltage_from_mv,
     drone_time_from_timestamp,
     move_duration,
     range_reading_from_mm,
-    sound_frequency_from_pitch,
     velocity_uncertainty_from_variances,
-    yaw_rate_deg_per_s,
 )
 from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE, run_with_time_limit
 from crazyflie_behavior.drone.crazyflie.touchdown import (
@@ -65,7 +63,7 @@ from crazyflie_behavior.drone.crazyflie.touchdown import (
     final_descent_deadline,
     fresh_down_distance,
 )
-from crazyflie_behavior.drone.interface import FLOOR_MAX_SPEED, STALE_AFTER, DroneInterface
+from crazyflie_behavior.drone.interface import STALE_AFTER, DroneInterface
 from crazyflie_behavior.drone.telemetry_buffer import TelemetryBuffer
 from crazyflie_behavior.geometry import Vector3
 from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading, Snapshot, Stamped
@@ -74,10 +72,6 @@ from crazyflie_behavior.timing.clock import Clock
 logger = logging.getLogger(__name__)
 
 DEFAULT_URI = "radio://0/80/2M/E7E7E7E7E7"
-
-DEFAULT_YAW_RAD = 0.0
-"""The heading commands use unless told otherwise: world +x is where the drone faced at
-take-off."""
 
 # Telemetry periods (ADR-0023). The state block and the down range stream faster
 # than the 20 Hz tick, so a snapshot's latest value is at most about 20 ms old.
@@ -154,8 +148,6 @@ _VELOCITY_VARIANCE_VARIABLES = ("kalman.varPX", "kalman.varPY")
 """m²/s²: the velocity variances in the drone's forward and sideways directions (ADR-0054)."""
 _DOWN_VARIABLES = (_DOWN_RANGE_VARIABLE, *_VELOCITY_VARIANCE_VARIABLES)
 """A uint16 and 2 floats: 10 bytes of a log block's 26 (ADR-0054)."""
-_RESET_ESTIMATE_PARAMETER = "kalman.resetEstimation"
-"""Written 1 for an estimate reset; the firmware sets it back to 0 (ADR-0054)."""
 _THRUST_BASE_PARAMETER = "posCtlPid.thrustBase"
 _IMAGE_QUALITY_VARIABLE = "motion.squal"
 # The diagnostic block (ADR-0050, ADR-0053): 3 floats, 4 uint16, a uint8 and two uint16, 25 bytes.
@@ -191,15 +183,6 @@ _CONTROLLER_FETCH_AS = "FP16"
 """2 bytes a variable, about 3 significant digits (ADR-0063)."""
 # The take-off block (ADR-0063): 3 floats and 4 uint16, 20 bytes.
 _TAKE_OFF_VARIABLES = (*_ATTITUDE_VARIABLES, *_MOTOR_VARIABLES)
-# Buzzer parameters (ADR-0053). `sound.effect` picks an entry in the firmware's effects table.
-_SOUND_EFFECT_PARAMETER = "sound.effect"
-_SOUND_FREQUENCY_PARAMETER = "sound.freq"
-"""The steady tone's pitch, in whole hertz."""
-_SOUND_EFFECT_OFF = 0
-_SOUND_EFFECT_CHIRP = 4
-"""The firmware's "charging done" tune: two notes, then it switches itself off."""
-_SOUND_EFFECT_TONE = 12
-"""A steady tone at `sound.freq`. The parameter's own description numbers it wrongly."""
 _STATUS_VARIABLE = "supervisor.info"  # the supervisor's state bitfield
 _POSITION_VARIABLES = ("stateEstimate.x", "stateEstimate.y", "stateEstimate.z")
 _VELOCITY_VARIABLES = ("stateEstimate.vx", "stateEstimate.vy", "stateEstimate.vz")
@@ -281,10 +264,8 @@ class CrazyflieAdapter(DroneInterface):
         self._telemetry = TelemetryBuffer(clock)
         self._sync_crazyflie: SyncCrazyflie | None = None
         self._log_configs: list[LogConfig] = []
-        self._is_streaming = False
-        """Low-level setpoints are being sent, velocity or level: a high-level command needs a hand-over."""
-        self._level_vertical_speed: float | None = None
-        """Meters per second, up: the latest level setpoint's, while the stream is level."""
+        self._commands = CrazyflieCommands(lambda: self._crazyflie, lambda: self._telemetry)
+        """The commands sent to the drone (ADR-0093). `connect()` builds a new one, with no setpoint stream."""
         self._is_airborne = False
         """A take-off was sent (or the flight was taken over) and the motors haven't been stopped since."""
         self._has_stopped_motors = False
@@ -319,9 +300,6 @@ class CrazyflieAdapter(DroneInterface):
         self._latest_status_bitfield: int | None = None
         """The supervisor bitfield of the latest state packet, for bits `DroneStatus`
         doesn't carry (auto-arming, ADR-0037). Written on cflib's receive thread."""
-        self._is_skipping_buzzer_commands = False
-        """The latest buzzer command was skipped because the link is closed: the warning for it
-        comes once per streak."""
         self._is_ignoring_estimate_reset = False
         """The latest estimate reset was ignored because the drone may be flying: the warning for it
         comes once per streak."""
@@ -353,7 +331,6 @@ class CrazyflieAdapter(DroneInterface):
         self._is_airborne = False  # a new session learns what the drone is doing from the drone
         self._has_stopped_motors = False
         self._is_ignoring_hover = False
-        self._is_skipping_buzzer_commands = False
         self._is_ignoring_estimate_reset = False
         self._latest_image_quality = None
         self._is_thrust_base_confirmed = False
@@ -363,8 +340,7 @@ class CrazyflieAdapter(DroneInterface):
         # Nor does it carry on a take-off, landing or setpoint stream from an earlier session.
         self._is_in_initial_climb = False
         self._cancel_landing()
-        self._is_streaming = False
-        self._level_vertical_speed = None
+        self._commands = CrazyflieCommands(lambda: self._crazyflie, lambda: self._telemetry)
         self._is_ignoring_commands = False
         # A new session starts with no values, so the wait for the first telemetry
         # can't pass on values left from an earlier one (ADR-0031).
@@ -442,7 +418,9 @@ class CrazyflieAdapter(DroneInterface):
                 self._land_and_wait_for_touchdown()
         except Exception:
             if was_airborne and self._lost_link_message is None:
-                self._land_as_a_last_resort()
+                land_as_a_last_resort(
+                    lambda: self._crazyflie, LAST_RESORT_LANDING_DURATION, self._clock, self._close_radio_link_only
+                )
             raise
         self._silence_and_keep_the_link_open()
         if self._has_stopped_motors:
@@ -464,11 +442,11 @@ class CrazyflieAdapter(DroneInterface):
                 _yes_no(status.value.can_arm),
                 _yes_no(status.value.is_locked),
             )
-        self._crazyflie.supervisor.send_arming_request(True)
+        self._commands.arm()
 
     def disarm(self) -> None:
         self._stop_motors()
-        self._crazyflie.supervisor.send_arming_request(False)
+        self._commands.disarm()
 
     def take_off(self, height: float) -> None:
         """Raises for a height at or below the final descent height: no hover there can fly (ADR-0056, ADR-0077)."""
@@ -482,8 +460,7 @@ class CrazyflieAdapter(DroneInterface):
         if self._may_be_flying():
             # Already in the air, above the bad-flow zone: no initial climb.
             self._cancel_landing()
-            with self._handing_over_to_high_level():
-                self._go_to_height(height)
+            self._go_to_height(height)
         else:
             self._log_low_light_warning()
             self._log_thrust_base_warning()
@@ -510,11 +487,7 @@ class CrazyflieAdapter(DroneInterface):
         if self._is_ignored_while_crossing_the_bad_flow_zone("Set-velocity"):
             return
         self._cancel_landing()
-        self._crazyflie.commander.send_velocity_world_setpoint(
-            velocity.x, velocity.y, velocity.z, yaw_rate_deg_per_s(yaw_rate_rad_per_s)
-        )
-        self._is_streaming = True
-        self._level_vertical_speed = None
+        self._commands.send_velocity_setpoint(velocity, yaw_rate_rad_per_s)
 
     def move_to(self, position: Vector3, duration: float) -> None:
         if duration <= 0.0:
@@ -522,14 +495,7 @@ class CrazyflieAdapter(DroneInterface):
         if self._is_ignored_while_crossing_the_bad_flow_zone("Move-to"):
             return
         self._cancel_landing()
-        with self._handing_over_to_high_level():
-            self._crazyflie.high_level_commander.go_to(
-                position.x,
-                position.y,
-                position.z,
-                DEFAULT_YAW_RAD,
-                max(duration, MIN_MOVE_DURATION),
-            )
+        self._commands.go_to(position, max(duration, MIN_MOVE_DURATION))
 
     def hover(self) -> None:
         if self._is_ignored_while_crossing_the_bad_flow_zone("Hover"):
@@ -543,22 +509,17 @@ class CrazyflieAdapter(DroneInterface):
             return
         self._is_ignoring_hover = False  # this hover goes through: the streak is over
         self._cancel_landing()
-        commander = self._crazyflie.high_level_commander
         position_estimate = self._telemetry.latest_position_estimate()
-        with self._handing_over_to_high_level():
-            if position_estimate is None:
-                # No estimate yet: hold relative to the commander's own position.
-                commander.go_to(0.0, 0.0, 0.0, DEFAULT_YAW_RAD, HOVER_SETTLE_DURATION, relative=True)
-            else:
-                here = position_estimate.value
-                commander.go_to(here.x, here.y, here.z, DEFAULT_YAW_RAD, HOVER_SETTLE_DURATION)
+        if position_estimate is None:
+            # No estimate yet: hold relative to the commander's own position.
+            self._commands.go_to_relative(Vector3.ZERO, HOVER_SETTLE_DURATION)
+        else:
+            self._commands.go_to(position_estimate.value, HOVER_SETTLE_DURATION)
 
     def emergency_stop(self) -> None:
-        self._crazyflie.supervisor.send_emergency_stop()
+        self._commands.emergency_stop()
         self._is_airborne = False
         self._is_in_initial_climb = False
-        self._is_streaming = False
-        self._level_vertical_speed = None
         self._cancel_landing()
 
     def reset_estimate(self) -> None:
@@ -570,21 +531,16 @@ class CrazyflieAdapter(DroneInterface):
                 self._is_ignoring_estimate_reset = True
             return
         self._is_ignoring_estimate_reset = False  # this reset goes through: the streak is over
-        self._send_estimate_reset()
+        self._commands.send_estimate_reset()
 
     def chirp(self) -> None:
-        # A chirp that a silence or a tone cuts short leaves the firmware partway through its
-        # tune, so the next chirp plays only the rest.
-        self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_CHIRP)
+        self._commands.chirp()
 
     def play_tone(self, pitch: float) -> None:
-        frequency = sound_frequency_from_pitch(pitch)
-        # The pitch first: the tone plays whatever `sound.freq` holds when it starts.
-        self._write_buzzer_parameter(_SOUND_FREQUENCY_PARAMETER, frequency)
-        self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_TONE)
+        self._commands.play_tone(pitch)
 
     def silence(self) -> None:
-        self._write_buzzer_parameter(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_OFF)
+        self._commands.silence()
 
     def take_snapshot(self, dt: float) -> Snapshot:
         """Raises after a lost link (ADR-0084). Every tick starts with a snapshot, so nothing else a tick calls
@@ -681,50 +637,11 @@ class CrazyflieAdapter(DroneInterface):
                 pass  # this firmware doesn't know the parameter: not attached
         return False
 
-    def _write_buzzer_parameter(self, name: str, value: int) -> None:
-        """Queue one parameter write, or skip it with a warning while the link is closed (ADR-0053)."""
-        # Once the link is lost, cflib forgets the parameter list and a write raises, while a
-        # movement command is only dropped.
-        if self._crazyflie.link is None:
-            if not self._is_skipping_buzzer_commands:
-                logger.warning("Buzzer command not sent: the link is closed. Warned once per streak.")
-                self._is_skipping_buzzer_commands = True
-            return
-        self._is_skipping_buzzer_commands = False  # this write goes through: the streak is over
-        self._crazyflie.param.set_value(name, value)
-
     def _silence_and_keep_the_link_open(self) -> None:
         """Silence the buzzer, then keep the link open for WAIT_AFTER_SILENCE (ADR-0085). A write that fails gets
         a warning instead, and no wait."""
-        try:
-            self._crazyflie.param.set_value(_SOUND_EFFECT_PARAMETER, _SOUND_EFFECT_OFF)
-        except KeyError:
-            # Once the link is lost, cflib forgets the parameter list and a write raises.
-            # The firmware may also lack it without a Buzzer deck: not checked (backlog #136).
-            if self._crazyflie.link is None:
-                logger.warning("Buzzer not silenced: the link is closed.")
-            else:
-                logger.warning("Buzzer not silenced: the drone has no %s parameter.", _SOUND_EFFECT_PARAMETER)
-            return
-        self._clock.sleep_until(self._clock.now() + WAIT_AFTER_SILENCE)
-
-    def _send_estimate_reset(self) -> None:
-        """Write the reset without waiting (ADR-0054), then log the estimate it erases (ADR-0020)."""
-        # Once the link is lost, cflib forgets the parameter list and a write raises.
-        if self._crazyflie.link is None:
-            logger.warning("Estimate reset not sent: the link is closed.")
-            return
-        # Read before the write: telemetry that arrives after it may already show the reset.
-        position = self._telemetry.latest_position_estimate()
-        velocity = self._telemetry.latest_velocity_estimate()
-        try:
-            self._crazyflie.param.set_value(_RESET_ESTIMATE_PARAMETER, 1)
-        except (KeyError, AttributeError):
-            # The link can be lost after the check above. The drone is on the floor, so carry on (ADR-0020).
-            cause = "the link is closed" if self._crazyflie.link is None else "the firmware can't write it"
-            logger.warning("Estimate reset not sent: %s.", cause)
-            return
-        self._log_estimate_before_reset(position, velocity)
+        if self._commands.silence_at_disconnect():
+            self._clock.sleep_until(self._clock.now() + WAIT_AFTER_SILENCE)
 
     def _write_thrust_base(self) -> None:
         """Write THRUST_BASE and log what the drone reports back, unless taking over a flight (ADR-0061)."""
@@ -752,26 +669,6 @@ class CrazyflieAdapter(DroneInterface):
         else:
             logger.warning("Thrust base not confirmed: the drone reports %s, not %d.", value, THRUST_BASE)
 
-    def _log_estimate_before_reset(self, position: Stamped[Vector3] | None, velocity: Stamped[Vector3] | None) -> None:
-        if position is None or velocity is None:
-            logger.info("Estimate reset, with no estimate before it.")
-            return
-        p, v = position.value, velocity.value
-        speed = math.hypot(v.x, v.y)
-        # The comparison is false for NaN too: an estimate that isn't finite is implausible.
-        is_plausible = speed < FLOOR_MAX_SPEED
-        logger.log(
-            logging.INFO if is_plausible else logging.WARNING,
-            "Estimate reset. Before it: position (%.3f, %.3f, %.3f) m, velocity (%.3f, %.3f, %.3f) m/s%s",
-            p.x,
-            p.y,
-            p.z,
-            v.x,
-            v.y,
-            v.z,
-            "" if is_plausible else f": implausible on the floor, the speed must be under {FLOOR_MAX_SPEED:g} m/s",
-        )
-
     def _log_low_light_warning(self) -> None:
         """At take-off, warn of sideways drift when the Flow deck sees little (ADR-0054). Never refuses."""
         quality = self._latest_image_quality
@@ -789,33 +686,6 @@ class CrazyflieAdapter(DroneInterface):
         """At take-off, warn of a slow climb unless the drone confirmed the thrust base (ADR-0061). Never refuses."""
         if not self._is_thrust_base_confirmed:
             logger.warning("Taking off without a confirmed thrust base: the climb may be slow.")
-
-    @contextmanager
-    def _handing_over_to_high_level(self) -> Iterator[None]:
-        """Wraps a high-level command so it takes over from a setpoint stream (ADR-0048, ADR-0056).
-
-        The order: a level stream's last setpoint, the high-level command, then the
-        release. A setpoint stops the high-level planner, and a stopped planner
-        commands the motors off once the stream is released. The planner plans the
-        command from the current estimate (sources in ADR-0056).
-        """
-        if self._level_vertical_speed is not None:
-            self._send_level_setpoint(self._level_vertical_speed)
-        yield
-        if self._is_streaming:
-            self._crazyflie.commander.send_notify_setpoint_stop()
-            self._is_streaming = False
-            self._level_vertical_speed = None
-
-    def _send_level_setpoint(self, vertical_speed: float) -> None:
-        """One altHold setpoint: roll and pitch held at 0, `vertical_speed` m/s up (ADR-0048)."""
-        packet = CRTPPacket()
-        packet.port = CRTPPort.COMMANDER_GENERIC
-        packet.channel = SET_SETPOINT_CHANNEL
-        packet.data = alt_hold_packet_data(vertical_speed)
-        self._crazyflie.send_packet(packet)
-        self._is_streaming = True
-        self._level_vertical_speed = vertical_speed
 
     def _is_ignored_while_crossing_the_bad_flow_zone(self, command: str) -> bool:
         """Whether a command is ignored: it is during the initial climb and the final descent (ADR-0056).
@@ -836,30 +706,19 @@ class CrazyflieAdapter(DroneInterface):
 
     def _go_to_height(self, height: float) -> None:
         """A high-level move straight up or down to `height`, at the estimated x and y (ADR-0048)."""
-        commander = self._crazyflie.high_level_commander
         position_estimate = self._telemetry.latest_position_estimate()
         if position_estimate is None:
             # No estimate yet, which connect() rules out (ADR-0031): hold where it is.
-            commander.go_to(0.0, 0.0, 0.0, DEFAULT_YAW_RAD, HOVER_SETTLE_DURATION, relative=True)
+            self._commands.go_to_relative(Vector3.ZERO, HOVER_SETTLE_DURATION)
             return
         here = position_estimate.value
         duration = move_duration(height - here.z, VERTICAL_SPEED, MIN_MOVE_DURATION)
-        commander.go_to(here.x, here.y, height, DEFAULT_YAW_RAD, duration)
+        self._commands.go_to(Vector3(here.x, here.y, height), duration)
 
     def _stop_motors(self) -> None:
-        """Stop the motors, then release the setpoint priority (ADR-0058).
-
-        Without the release, the stopped planner's motors-off setpoints are refused, and a
-        drone that still counts as flying locks once its setpoint is 2 s old.
-        """
-        commander = self._crazyflie.commander
-        if self._is_streaming:
-            commander.send_stop_setpoint()
-            self._is_streaming = False
-            self._level_vertical_speed = None
-        self._crazyflie.high_level_commander.stop()  # stops the trajectory and the motors
-        # The release hands the motors to the planner, so it comes after the planner's stop.
-        commander.send_notify_setpoint_stop()
+        """Stop the motors and clear the flight state together: a stop that left the state would leave "may be
+        flying" true (ADR-0093)."""
+        self._commands.stop_motors()
         self._has_stopped_motors = True
         self._is_airborne = False
         self._is_in_initial_climb = False
@@ -903,7 +762,7 @@ class CrazyflieAdapter(DroneInterface):
         # A landing during the climb sets its final descent's time limit from these readings (ADR-0049).
         self._touchdown_detector = TouchdownDetector()
         logger.info("Initial climb at %g m/s.", INITIAL_CLIMB_SPEED)
-        self._send_level_setpoint(INITIAL_CLIMB_SPEED)
+        self._commands.send_level_setpoint(INITIAL_CLIMB_SPEED)
 
     def _update_initial_climb(self, snapshot: Snapshot) -> None:
         now = self._clock.now()
@@ -914,7 +773,7 @@ class CrazyflieAdapter(DroneInterface):
             return
         down = fresh_down_distance(snapshot, now)
         if down is None or not math.isfinite(down.value) or down.value < FINAL_DESCENT_HEIGHT:
-            self._send_level_setpoint(INITIAL_CLIMB_SPEED)
+            self._commands.send_level_setpoint(INITIAL_CLIMB_SPEED)
         elif has_fresh_flow(snapshot, now):
             self._end_initial_climb(down.value)
         else:
@@ -940,8 +799,7 @@ class CrazyflieAdapter(DroneInterface):
         logger.info(
             "Initial climb done at %.3f m by the down range. Climbing to %.2f m.", down_distance, self._take_off_height
         )
-        with self._handing_over_to_high_level():
-            self._go_to_height(self._take_off_height)
+        self._go_to_height(self._take_off_height)
 
     def _start_landing_approach(self) -> None:
         """A high-level move aimed below the final descent height, or the final descent at once if already there."""
@@ -952,19 +810,17 @@ class CrazyflieAdapter(DroneInterface):
             return
         # A go_to, not the firmware's landing, which switches the motors off when it
         # ends, even above the floor (ADR-0032).
-        commander = self._crazyflie.high_level_commander
         position_estimate = self._telemetry.latest_position_estimate()
-        with self._handing_over_to_high_level():
-            if position_estimate is None:
-                # No estimate yet: straight down from the commander's own position, until the
-                # down range reaches the final descent height.
-                duration = move_duration(HEIGHT_IF_UNKNOWN, VERTICAL_SPEED, MIN_MOVE_DURATION)
-                commander.go_to(0.0, 0.0, -HEIGHT_IF_UNKNOWN, DEFAULT_YAW_RAD, duration, relative=True)
-            else:
-                here = position_estimate.value
-                height = min(here.z, FINAL_DESCENT_HEIGHT - LANDING_APPROACH_AIM_BELOW)
-                duration = move_duration(here.z - height, VERTICAL_SPEED, MIN_MOVE_DURATION)
-                commander.go_to(here.x, here.y, height, DEFAULT_YAW_RAD, duration)
+        if position_estimate is None:
+            # No estimate yet: straight down from the commander's own position, until the
+            # down range reaches the final descent height.
+            duration = move_duration(HEIGHT_IF_UNKNOWN, VERTICAL_SPEED, MIN_MOVE_DURATION)
+            self._commands.go_to_relative(Vector3(0.0, 0.0, -HEIGHT_IF_UNKNOWN), duration)
+        else:
+            here = position_estimate.value
+            height = min(here.z, FINAL_DESCENT_HEIGHT - LANDING_APPROACH_AIM_BELOW)
+            duration = move_duration(here.z - height, VERTICAL_SPEED, MIN_MOVE_DURATION)
+            self._commands.go_to(Vector3(here.x, here.y, height), duration)
         # The drone trails the `go_to`, so the down range, not the `go_to`'s end, should start
         # the final descent (ADR-0068).
         self._landing_approach_ends_at = self._clock.now() + duration + LANDING_APPROACH_BACKUP
@@ -1005,7 +861,7 @@ class CrazyflieAdapter(DroneInterface):
                     )
                     self._stop_motors()
                 elif self._is_final_descent_level:
-                    self._send_level_setpoint(-FINAL_DESCENT_SPEED)
+                    self._commands.send_level_setpoint(-FINAL_DESCENT_SPEED)
             case _LandingPhase.NOT_LANDING:
                 pass  # handled by the early return above
 
@@ -1027,7 +883,7 @@ class CrazyflieAdapter(DroneInterface):
             self._is_final_descent_level = True
             self._final_descent_deadline = final_descent_deadline(now, highest, FINAL_DESCENT_SPEED)
             logger.info("Final descent: level, from %.3f m by the down range.", down.value)
-            self._send_level_setpoint(-FINAL_DESCENT_SPEED)
+            self._commands.send_level_setpoint(-FINAL_DESCENT_SPEED)
             return
         self._is_final_descent_level = False
         self._final_descent_deadline = final_descent_deadline(now, highest, SLOW_DESCENT_SPEED)
@@ -1036,16 +892,7 @@ class CrazyflieAdapter(DroneInterface):
         # deadline, past the floor if need be. Unlike streamed setpoints, it
         # keeps going if ticks stop (ADR-0011).
         duration = self._final_descent_deadline - now
-        with self._handing_over_to_high_level():
-            self._crazyflie.high_level_commander.go_to(
-                0.0,
-                0.0,
-                -SLOW_DESCENT_SPEED * duration,
-                DEFAULT_YAW_RAD,
-                duration,
-                relative=True,
-                linear=True,
-            )
+        self._commands.go_to_relative(Vector3(0.0, 0.0, -SLOW_DESCENT_SPEED * duration), duration, linear=True)
 
     def _latest_fresh_down_distance(self) -> Stamped[float] | None:
         snapshot = self.take_snapshot(0.0)
@@ -1060,35 +907,6 @@ class CrazyflieAdapter(DroneInterface):
         while self._landing_phase is not _LandingPhase.NOT_LANDING:
             self._clock.sleep_until(self._clock.now() + TOUCHDOWN_POLL_PERIOD)
             self._update_landing(self.take_snapshot(0.0))
-
-    def _land_as_a_last_resort(self) -> None:
-        """The last-resort landing (ADR-0084): the firmware's land, the release, a wait with the link open, then
-        the radio link closes. It reads no telemetry and no landing state, and logs its errors instead of
-        raising them."""
-        logger.critical("Our landing failed: sending the firmware's land as a last resort.")
-        try:
-            crazyflie = self._crazyflie
-            crazyflie.high_level_commander.land(0.0, LAST_RESORT_LANDING_DURATION)
-        except Exception:
-            logger.exception(
-                "The last-resort landing wasn't sent. "
-                "Run the rescue landing, or tools/emergency_stop.py with something soft under the drone."
-            )
-        else:
-            try:
-                # Released before the land, the firmware's motors-off setpoint would get through first (ADR-0084).
-                crazyflie.commander.send_notify_setpoint_stop()
-            except Exception:
-                logger.exception(
-                    "The last-resort landing was sent, but the setpoint priority wasn't released. "
-                    "Run the rescue landing, or tools/emergency_stop.py with something soft under the drone."
-                )
-            # Closing the link throws away packets not yet sent, so wait with it open (ADR-0084).
-            self._clock.sleep_until(self._clock.now() + LAST_RESORT_LANDING_DURATION)
-        try:
-            self._close_radio_link_only()
-        except Exception:
-            logger.exception("Closing the radio link after the last-resort landing failed")
 
     # --- Telemetry ----------------------------------------------------------
 
@@ -1196,7 +1014,7 @@ class CrazyflieAdapter(DroneInterface):
             )
         self._is_drone_state_unknown = False  # on the floor: a normal link close is safe from here
         # No wait for the estimate to settle: the take-off rule judges it (ADR-0054).
-        self._send_estimate_reset()
+        self._commands.send_estimate_reset()
         # The state block kept streaming, so drop what it wrote before the reset (ADR-0038).
         # Nothing waits for the reset, so values from before it can still arrive until it
         # reaches the drone, and a take-off judged on them may be refused (ADR-0054).
