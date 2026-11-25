@@ -67,7 +67,7 @@ STATE_SAMPLE = {
 }
 
 
-ADAPTER_LOGGER = "crazyflie_behavior.drone.crazyflie.adapter"
+ADAPTER_LOGGER = "crazyflie_behavior.drone.crazyflie"
 
 
 @pytest.fixture

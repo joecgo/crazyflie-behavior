@@ -264,7 +264,7 @@ def test_connecting_logs_that_the_drone_arms_itself(
 ) -> None:
     fake_cflib.samples["state"]["supervisor.info"] = float(1 << adapter_module.BIT_IS_AUTO_ARMED)
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.connect()
 
     assert [r.getMessage() for r in caplog.records if "arms itself" in r.getMessage()] == [
@@ -275,7 +275,7 @@ def test_connecting_logs_that_the_drone_arms_itself(
 def test_connecting_logs_that_the_drone_does_not_arm_itself(
     adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
 ) -> None:
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.connect()
 
     assert [r.getMessage() for r in caplog.records if "arm itself" in r.getMessage()] == [
@@ -292,7 +292,7 @@ def test_connecting_logs_a_buzzer_deck(
 ) -> None:
     fake_cflib.parameters["deck.bcBuzzer"] = "1"
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.connect()
 
     assert buzzer_deck_logs(caplog) == ["Buzzer deck detected."]
@@ -306,7 +306,7 @@ def test_connecting_without_a_buzzer_deck_logs_that_buzzer_commands_make_no_soun
     if deck_parameter is not None:
         fake_cflib.parameters["deck.bcBuzzer"] = deck_parameter
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.connect()
 
     assert buzzer_deck_logs(caplog) == ["No Buzzer deck: buzzer commands will make no sound."]
@@ -317,7 +317,7 @@ def test_connecting_again_warns_again_about_a_buzzer_command_on_a_closed_link(
     adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
 ) -> None:
     """The once-per-streak warning starts over with each connection."""
-    caplog.set_level(logging.WARNING, logger=adapter_module.logger.name)
+    caplog.set_level(logging.WARNING, logger=adapter_module.__package__)
     adapter.connect()
     fake_cflib.link.cf.link = None  # the link is lost
     adapter.chirp()
@@ -739,7 +739,7 @@ def test_taking_over_accepts_a_flying_drone_and_never_resets_its_estimate(
 ) -> None:
     fake_cflib.samples["state"]["supervisor.info"] = FLYING
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         taking_over_adapter.connect()
 
     assert fake_cflib.reset_count == 0
@@ -965,7 +965,7 @@ def thrust_base_logs(caplog: pytest.LogCaptureFixture) -> list[str]:
 def take_off_logs(adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture) -> list[str]:
     """Take off from the floor, and return what the adapter logged about the thrust base meanwhile."""
     caplog.clear()
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.take_off(1.0)
     return thrust_base_logs(caplog)
 
@@ -993,7 +993,7 @@ def test_taking_over_leaves_the_thrust_base_as_it_is(
 ) -> None:
     fake_cflib.samples["state"]["supervisor.info"] = status
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         taking_over_adapter.connect()
 
     assert thrust_base_writes(fake_cflib) == []
@@ -1028,7 +1028,7 @@ def test_each_thrust_base_report_is_logged_with_whether_it_confirms_the_write(
     adapter.connect()
     caplog.clear()
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         fake_cflib.report_parameter("posCtlPid.thrustBase", value)
 
     assert [(record.levelno, record.getMessage()) for record in caplog.records] == [(level, message)]
@@ -1075,7 +1075,7 @@ def test_a_thrust_base_the_firmware_cannot_write_is_warned_and_the_drone_still_f
     """A missing write never stops a flight (ADR-0061)."""
     fake_cflib.thrust_base_error = error
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.connect()
 
     assert thrust_base_logs(caplog) == ["Thrust base not sent: the firmware can't write it."]
@@ -1093,7 +1093,7 @@ def test_a_thrust_base_write_after_the_link_is_lost_says_the_link_is_closed(
 
     fake_cflib.on_reset_estimate = lose_the_link  # the write just before the thrust base's
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.connect()
 
     assert thrust_base_logs(caplog) == ["Thrust base not sent: the link is closed."]
@@ -1314,7 +1314,7 @@ def test_a_lost_link_is_logged_once_as_an_error_and_the_next_call_raises(
 ) -> None:
     adapter.connect()
 
-    with caplog.at_level(logging.ERROR, logger=adapter_module.__name__):
+    with caplog.at_level(logging.ERROR, logger=adapter_module.__package__):
         lose_the_link(fake_cflib)
 
     assert [record.getMessage() for record in caplog.records if record.levelno >= logging.ERROR] == [
