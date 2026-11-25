@@ -1,6 +1,6 @@
 # 0029: Connecting has time limits: each step waits on a helper thread
 
-- **Status:** Accepted. Amended by [ADR-0054](0054-a-fresh-estimate-for-every-take-off.md), 2026-11-08: `connect()` no longer waits for the position estimate, so its 20 s time limit goes.
+- **Status:** Accepted. Amended by [ADR-0054](0054-a-fresh-estimate-for-every-take-off.md), 2026-11-08: `connect()` no longer waits for the position estimate, so its 20 s time limit goes. Amended by [ADR-0094](0094-connecting-raises-the-interrupt-signal-that-a-cpython-lock-error-hides.md), 2026-11-25: a KeyboardInterrupt that CPython 3.12 hides in a lock error is raised as the interrupt.
 - **Date:** 2026-10-30
 - **Origin:** AI recommendation accepted, after I asked why the simpler option (time limits for two of the three waits) wasn't recommended.
 
