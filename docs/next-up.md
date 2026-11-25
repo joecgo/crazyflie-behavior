@@ -9,14 +9,16 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-24 (Pacific)
-- **Last commit:** "Next-up brief after the review of #157's stages 1 to
-  3", on `main`, after `3f1221e`. Not pushed: the six commits after
-  `eca324c` (the first five each pass their tests on their own).
-  Uncommitted: nothing. The continuous integration checks pass (948 passed,
-  1 skipped).
+- **Last commit:** "Next-up brief after the blocking-call fitness
+  function", on `main`, after `1cc5081`. Not pushed: the eight commits
+  after `eca324c`. Uncommitted: nothing. The continuous integration checks
+  pass (987 passed, 1 skipped).
 
 ## Done last
 
+- 2026-11-24: built and committed #157's blocking-call fitness function
+  (ADR-0093, `1cc5081`): 14 blocking functions listed, 4 stored callables
+  allow-listed, 39 tests, 23 planted bugs all caught.
 - 2026-11-24: `/project-review` (xhigh, with the fresh-context read) of
   #157's stages 1 to 3: no safety or correctness bugs, 10 findings, all
   fixed except the blocking-call guard, which is decided. Joe's decisions,
@@ -36,22 +38,21 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
-- #157 (ADR-0093): stages 1 to 3 committed. Next, the blocking-call fitness
-  function, then stage 4, take-off and landing.
+- #157 (ADR-0093): stages 1 to 3 and the blocking-call fitness function
+  committed. Next, the fitness function's `/project-review`, then stage 4,
+  take-off and landing.
 
 ## Next three
 
-1. #157's blocking-call fitness function (ADR-0093's Failure modes and the
-   backlog row): every function in `drone/crazyflie/` that sleeps, waits or
-   joins is listed, and called only from `connect()`, `disconnect()` or
-   another listed one, with an allow-list for calls through a stored
-   callable and a test for each form the scanner handles, proven by bug
-   planting. Opus, high.
-2. #157's stage 4: take-off and landing to `take_off_and_landing.py`
+1. #157's stage 4: take-off and landing to `take_off_and_landing.py`
    (ADR-0093), move-only, then its strict-typing fixes in their own commit.
-   Read `drafts/2026-11-13-code-recommendations.md`, C6. Opus, Max.
-3. Build #153, the test for citations of removed backlog rows (ADR-0091),
+   Read `drafts/2026-11-13-code-recommendations.md`, C6. A blocking
+   function that moves gets its new file's name in the fitness function's
+   `BLOCKING_FUNCTIONS`. Opus, Max.
+2. Build #153, the test for citations of removed backlog rows (ADR-0091),
    before the next backlog row is removed. Sonnet, medium.
+3. #157's next stage: the log blocks to `log_blocks.py` (ADR-0093),
+   move-only. Opus, Max, or high if Joe judges it enough (backlog #157).
 
 ## Explain-backs waiting
 
@@ -100,6 +101,12 @@ from `drafts/explain-back-notes.md`; don't open it first.
   must a tick never reach one, why build it before stage 4 rather than with
   the other fitness functions, and why does a check by function name miss
   `on_abandon=self._close_radio_link_only`?
+- **E12.** The blocking-call fitness function matches calls by name alone.
+  When bug planting added a join to `_HelperStep.start` (in `time_limit.py`,
+  reached only from `connect()`), `take_off` also failed the rule that only
+  `connect()` and `disconnect()` of the drone interface's methods may block.
+  Why, is that a missed bug or a false alarm, and would you fix the test or
+  the code?
 
 ## Last reviewed
 
