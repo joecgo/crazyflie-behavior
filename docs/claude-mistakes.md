@@ -73,20 +73,20 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 22 |
 | recommendation | 7 | 8 |
 | environment | 4 | 10 |
-| communication | 14 | 64 |
-| testing | 2 | 27 |
-| process | 7 | 35 |
-| **Total** | **44** | **186** |
+| communication | 14 | 66 |
+| testing | 2 | 29 |
+| process | 7 | 40 |
+| **Total** | **44** | **195** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 53 |
-| how-I-work | 26 |
-| records-ahead-of-code | 25 |
-| weak-test | 24 |
-| vocabulary | 20 |
+| said-without-checking | 54 |
+| how-I-work | 29 |
+| records-ahead-of-code | 27 |
+| weak-test | 26 |
+| vocabulary | 21 |
 | safety-judgment | 18 |
 | reading-field-data | 15 |
 | recommendation | 13 |
@@ -112,6 +112,15 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-239 | 2026-11-24 | ADR-0093 narrowed two older rules without marking either | process | how-I-work | before an ADR is accepted, check its design against CLAUDE.md's Never and Always lists, and mark the status line of every ADR it narrows (Q-33) |
+| M-238 | 2026-11-24 | ADR-0093 and `commands.py` used Hand-over for more than the glossary's meaning | communication | vocabulary | working rule 6: read a glossary term's row, not only its name, before using it in a new sense; `REVIEW.md` Q-41 |
+| M-237 | 2026-11-24 | The glossary's Transcript test row repeated the overclaim M-232 fixed in ADR-0093 | testing | weak-test | a fix for an overclaim searches the records written with it (the glossary, the index, the backlog) for the same claim; `REVIEW.md` Q-40 |
+| M-236 | 2026-11-24 | `ARCHITECTURE.md` kept a module name and a Built status that ADR-0093 had changed | process | records-ahead-of-code | working rule 3, for `ARCHITECTURE.md` too: when a decision names a module or a stage is built, search `ARCHITECTURE.md` for the old name and update its row's Needs cell |
+| M-235 | 2026-11-24 | `commands.py`'s docstrings said more than its code does | communication | records-ahead-of-code | an "every" or "only" in a docstring is checked against a search for its exceptions (`REVIEW.md` Q-32), and a "because" names the step that makes it true |
+| M-234 | 2026-11-24 | The transcript fake relied on two cflib facts with no facts-register rows | process | how-I-work | CLAUDE.md's facts-register rule applies to a test fake's docstrings too; `REVIEW.md` Q-01 |
+| M-233 | 2026-11-24 | A script copied E9's heading into the explain-back notes for E10 | process | how-I-work | after a script writes to a file, read the lines it wrote |
+| M-232 | 2026-11-24 | ADR-0093 said the transcripts catch a reorder of three orders, but none of its flights reaches the third | testing | weak-test | a claim that tests catch a list of cases names the test or flight that reaches each one, and bug planting a swap of each order proves it |
+| M-231 | 2026-11-24 | ADR-0093 counted 45 test lines that set the adapter's log level, but there are 49 | process | said-without-checking | working rule 1 applied to counts: search every form the code uses (a name, a string, a constant), and say which forms a count covers |
 | M-230 | 2026-11-24 | `.gz` reading broke `read_recording`'s promise of a ValueError | testing | weak-test | a new way to read input gets a test for each way it can fail, checked against the errors its function's docstring names |
 | M-229 | 2026-11-24 | `/debrief`'s new step for committing scripts left out their recordings | process | records-ahead-of-code | working rule 3: before an ADR says a step is in a skill, read the step against each bullet of the Decision |
 | M-228 | 2026-11-24 | The glossary called an unbuilt tool real, and ADR-0092 called built work unbuilt | process | records-ahead-of-code | working rule 3; for a tool decided but not built, the glossary says "once it's built" and names the backlog row |
@@ -777,6 +786,78 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-239, 2026-11-24: ADR-0093 narrowed two older rules without marking either
+
+- **What happened:** ADR-0093's status line said it narrows ADR-0002, but ADR-0002's own status line wasn't marked (`REVIEW.md` Q-33). Its design also has the parts pass a cflib object between modules, against ADR-0004's rule and CLAUDE.md's "Never: Pass a cflib object or an untyped value across a module boundary", which the ADR didn't name. Found by `/project-review` of #157's stage 3. Joe chose to scope the rule to the modules that import cflib, now in ADR-0093, both older ADRs' status lines, CLAUDE.md and `ARCHITECTURE.md` section 3.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** before an ADR is accepted, check its design against CLAUDE.md's Never and Always lists, and mark the status line of every ADR it narrows (Q-33).
+- **Takeaway:** a design that needs an exception to a standing rule says so in its own ADR, not in a later review.
+
+### M-238, 2026-11-24: ADR-0093 and `commands.py` used Hand-over for more than the glossary's meaning
+
+- **What happened:** The glossary's Hand-over was only the switch at the end of the initial climb. ADR-0093 ("three orders matter: the hand-over"), `commands.py`'s heading and the brief's E10 used it for any high-level move after a setpoint stream. Found by the fresh-context read and `/project-review` (Q-41). Joe widened the glossary's row.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** working rule 6: read a glossary term's row, not only its name, before using it in a new sense; `REVIEW.md` Q-41.
+- **Takeaway:** a code name older than the glossary row can carry a wider meaning than the row gives it.
+
+### M-237, 2026-11-24: The glossary's Transcript test row repeated the overclaim M-232 fixed in ADR-0093
+
+- **What happened:** The new row said a transcript test "fails when a change reorders or alters a send". It was written in the same change that fixed M-232 in ADR-0093: no flight reaches the last-resort landing, so its order isn't caught. Found by `/project-review` (Q-40). Fixed with Joe's OK: the row now says a send no flight reaches needs its own test.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a fix for an overclaim searches the records written with it (the glossary, the index, the backlog) for the same claim; `REVIEW.md` Q-40.
+- **Takeaway:** one claim is often written in several records at once, and a fix in one leaves the rest.
+
+### M-236, 2026-11-24: `ARCHITECTURE.md` kept a module name and a Built status that ADR-0093 had changed
+
+- **What happened:** ADR-0093 named the take-off and landing module `take_off_and_landing.py`, but `ARCHITECTURE.md` section 7 kept `flight_phases.py`. Its Needs cell, set to "not built" with the decision, stayed that way after stages 1 to 3 were built. Found by `/project-review`. Fixed with Joe's OK.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** working rule 3, for `ARCHITECTURE.md` too: when a decision names a module or a stage is built, search `ARCHITECTURE.md` for the old name and update its row's Needs cell.
+- **Takeaway:** the architecture map's target table is a record like the index, and goes stale the same way.
+
+### M-235, 2026-11-24: `commands.py`'s docstrings said more than its code does
+
+- **What happened:** #157's stage 3 wrote "every send" in `commands.py`'s module and class docstrings and in the adapter's `_commands` field. But the thrust base write, the log blocks and both link closes stay in `adapter.py`, as ADR-0093's table plans. `go_to_relative`'s docstring said `linear` is passed on, when it goes only when True. The class docstring's reason for the lookups ("connect() replaces both") hid the real one: `connect()` replaces them after building the part. Found by `/project-review`. Fixed before the first commit.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** an "every" or "only" in a docstring is checked against a search for its exceptions (`REVIEW.md` Q-32), and a "because" names the step that makes it true.
+- **Takeaway:** a moved module's "every" needs checking against what stayed behind.
+
+### M-234, 2026-11-24: The transcript fake relied on two cflib facts with no facts-register rows
+
+- **What happened:** The transcript tests' fake says cflib's `param.get_value` returns text and raises `KeyError`, and that `SyncCrazyflie` keeps its `Crazyflie` as `.cf`. Neither was in the facts register, which CLAUDE.md asks for ("one not there is checked, then added"). Found by `/project-review` (Q-01). Checked in source the same day and added.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** CLAUDE.md's facts-register rule applies to a test fake's docstrings too; `REVIEW.md` Q-01.
+- **Takeaway:** a fake states facts about the library it stands in for.
+
+### M-233, 2026-11-24: A script copied E9's heading into the explain-back notes for E10
+
+- **What happened:** A script that added E10 to `drafts/explain-back-notes.md` copied E9's heading for it, text and all ("#157 stage 1"). Caught and fixed at once.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** after a script writes to a file, read the lines it wrote.
+- **Takeaway:** a copy-and-edit script carries over whatever it doesn't replace.
+
+### M-232, 2026-11-24: ADR-0093 said the transcripts catch a reorder of three orders, but none of its flights reaches the third
+
+- **What happened:** ADR-0093's Failure modes name three send orders that matter (the hand-over, the motor stop then the release, the land then the release) and say "The transcripts catch a reorder". None of D15's five scripted flights reaches the last-resort landing, so no transcript covers its land, then release (ADR-0084): only the unit test `test_a_landing_that_raises_sends_the_firmwares_land_then_the_release_then_closes_only_the_radio_link` guards it. Found while designing #157's transcript tests, before any was built. Joe kept five flights, with the unit test as that order's guard, and ADR-0093 now says so (edited before its first commit).
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a claim that tests catch a list of cases names the test or flight that reaches each one, and bug planting a swap of each order proves it.
+- **Takeaway:** a list of cases in a Failure mode gets checked one case at a time against the tests meant to reach it.
+
+### M-231, 2026-11-24: ADR-0093 counted 45 test lines that set the adapter's log level, but there are 49
+
+- **What happened:** ADR-0093's D14 says a prep commit moves "the 45 test lines that set the log level on the adapter's logger". 45 counts two forms, `logger=adapter_module.logger.name` (33 lines) and `logger=adapter_module.__name__` (12), and misses a third: `test_adapter_telemetry.py` sets it four times through its constant `ADAPTER_LOGGER`. Found by counting every form for #157's logger prep. Fixed: ADR-0093 now says 49 (edited before its first commit).
+- **Kind:** process.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 1 applied to counts: search every form the code uses (a name, a string, a constant), and say which forms a count covers.
+- **Takeaway:** one search pattern rarely finds every form of the same thing.
 
 ### M-230, 2026-11-24: `.gz` reading broke `read_recording`'s promise of a ValueError
 
