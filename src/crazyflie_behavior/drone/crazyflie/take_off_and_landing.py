@@ -1,5 +1,3 @@
-# pyright: basic
-# TODO: basic mode only until the next commit fixes what strict mode finds in the code moved here (ADR-0093).
 """Take-off and landing for the Crazyflie adapter: the initial climb, the landing approach, the final descent and
 "may be flying" (ADR-0012, ADR-0019, ADR-0048, ADR-0049).
 
@@ -376,8 +374,6 @@ class TakeOffAndLanding:
                     self.stop_motors()
                 elif self._is_final_descent_level:
                     self._commands.send_level_setpoint(-FINAL_DESCENT_SPEED)
-            case _LandingPhase.NOT_LANDING:
-                pass  # handled by the early return above
 
     def _start_final_descent(self, down: Stamped[float] | None) -> None:
         """Level on a usable down range, else ADR-0019's slow high-level descent (ADR-0048).
