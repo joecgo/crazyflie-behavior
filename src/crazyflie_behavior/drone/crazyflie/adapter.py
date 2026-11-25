@@ -24,15 +24,15 @@ from collections.abc import Callable
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.log import LogConfig
-from cflib.crazyflie.supervisor import (
-    BIT_CAN_BE_ARMED,
-    BIT_IS_ARMED,
-    BIT_IS_AUTO_ARMED,
-    BIT_IS_CRASHED,
-    BIT_IS_FLYING,
-    BIT_IS_LOCKED,
-    BIT_IS_TUMBLED,
-)
+
+# TODO: test-only, until the tests take the bit positions from cflib themselves (#158).
+from cflib.crazyflie.supervisor import BIT_IS_ARMED as BIT_IS_ARMED
+
+# The adapter's own.
+from cflib.crazyflie.supervisor import BIT_IS_AUTO_ARMED
+
+# TODO: test-only, until the tests take the bit positions from cflib themselves (#158).
+from cflib.crazyflie.supervisor import BIT_IS_FLYING as BIT_IS_FLYING
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_HEIGHT
@@ -40,12 +40,18 @@ from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_HEIGH
 # TODO: test-only, until the tests import it from commands.py (#158).
 from crazyflie_behavior.drone.crazyflie.commands import DEFAULT_YAW_RAD as DEFAULT_YAW_RAD
 from crazyflie_behavior.drone.crazyflie.commands import CrazyflieCommands, land_as_a_last_resort
-from crazyflie_behavior.drone.crazyflie.conversions import (
-    battery_voltage_from_mv,
-    drone_time_from_timestamp,
-    range_reading_from_mm,
-    velocity_uncertainty_from_variances,
-)
+
+# TODO: test-only, until the tests import them from log_blocks.py (#158).
+from crazyflie_behavior.drone.crazyflie.log_blocks import _CONTROLLER_VARIABLES as _CONTROLLER_VARIABLES
+from crazyflie_behavior.drone.crazyflie.log_blocks import _DIAGNOSTIC_VARIABLES as _DIAGNOSTIC_VARIABLES
+from crazyflie_behavior.drone.crazyflie.log_blocks import _DOWN_VARIABLES as _DOWN_VARIABLES
+from crazyflie_behavior.drone.crazyflie.log_blocks import _STATE_VARIABLES as _STATE_VARIABLES
+from crazyflie_behavior.drone.crazyflie.log_blocks import _TAKE_OFF_VARIABLES as _TAKE_OFF_VARIABLES
+from crazyflie_behavior.drone.crazyflie.log_blocks import TAKE_OFF_BLOCK_DURATION as TAKE_OFF_BLOCK_DURATION
+from crazyflie_behavior.drone.crazyflie.log_blocks import TAKE_OFF_PERIOD_MS as TAKE_OFF_PERIOD_MS
+
+# The adapter's own.
+from crazyflie_behavior.drone.crazyflie.log_blocks import LogBlocks, drone_status_from_bitfield
 from crazyflie_behavior.drone.crazyflie.take_off_and_landing import (
     HOVER_SETTLE_DURATION,
     MIN_MOVE_DURATION,
@@ -65,30 +71,12 @@ from crazyflie_behavior.drone.crazyflie.touchdown import HEIGHT_IF_UNKNOWN
 from crazyflie_behavior.drone.interface import STALE_AFTER, DroneInterface
 from crazyflie_behavior.drone.telemetry_buffer import TelemetryBuffer
 from crazyflie_behavior.geometry import Vector3
-from crazyflie_behavior.snapshot import DroneStatus, RangeDirection, RangeReading, Snapshot, Stamped
+from crazyflie_behavior.snapshot import Snapshot, Stamped
 from crazyflie_behavior.timing.clock import Clock
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_URI = "radio://0/80/2M/E7E7E7E7E7"
-
-# Telemetry periods (ADR-0023). The state block and the down range stream faster
-# than the 20 Hz tick, so a snapshot's latest value is at most about 20 ms old.
-STATE_PERIOD_MS = 20
-"""Position, velocity and drone status. The estimate itself updates at 100 Hz (ADR-0023)."""
-DOWN_RANGE_PERIOD_MS = 20
-"""The Flow deck reads the down range every 25 ms (ADR-0023)."""
-MULTIRANGER_PERIOD_MS = 100
-"""The firmware reads the Multi-ranger every 100 ms (ADR-0022); faster only repeats."""
-BATTERY_PERIOD_MS = 1000
-DIAGNOSTIC_PERIOD_MS = 100
-"""Attitude, motor power and flow quality, for the debug log only (ADR-0050)."""
-CONTROLLER_PERIOD_MS = 100
-"""The controller block, for the debug log only (ADR-0063)."""
-TAKE_OFF_PERIOD_MS = 10
-"""The take-off block, for the debug log only (ADR-0063)."""
-TAKE_OFF_BLOCK_DURATION = 2.0
-"""Seconds the take-off block runs from the end of connect and from each take-off (ADR-0065)."""
 
 # --- PLACEHOLDERS, NOT DECISIONS ---------------------------------------------
 # Flight parameters wait on speed envelopes (ADR-0005) and the safety layer.
@@ -119,63 +107,7 @@ motor outputs."""
 LAST_RESORT_LANDING_DURATION = HEIGHT_IF_UNKNOWN / VERTICAL_SPEED
 """Seconds: the last-resort landing's fixed time, down from the highest height assumed (ADR-0084)."""
 
-_MULTIRANGER_VARIABLES = {
-    RangeDirection.FRONT: "range.front",
-    RangeDirection.BACK: "range.back",
-    RangeDirection.LEFT: "range.left",
-    RangeDirection.RIGHT: "range.right",
-    RangeDirection.UP: "range.up",
-}
-_DOWN_RANGE_VARIABLE = "range.zrange"  # on the Flow deck
-_VELOCITY_VARIANCE_VARIABLES = ("kalman.varPX", "kalman.varPY")
-"""m²/s²: the velocity variances in the drone's forward and sideways directions (ADR-0054)."""
-_DOWN_VARIABLES = (_DOWN_RANGE_VARIABLE, *_VELOCITY_VARIANCE_VARIABLES)
-"""A uint16 and 2 floats: 10 bytes of a log block's 26 (ADR-0054)."""
 _THRUST_BASE_PARAMETER = "posCtlPid.thrustBase"
-_IMAGE_QUALITY_VARIABLE = "motion.squal"
-# The diagnostic block (ADR-0050, ADR-0053): 3 floats, 4 uint16, a uint8 and two uint16, 25 bytes.
-_ATTITUDE_VARIABLES = ("stateEstimate.roll", "stateEstimate.pitch", "stateEstimate.yaw")
-"""Degrees. The firmware logs pitch with the legacy inverted sign."""
-_MOTOR_VARIABLES = ("motor.m1", "motor.m2", "motor.m3", "motor.m4")
-"""Motor power, 0-65535."""
-_FLOW_QUALITY_VARIABLES = (_IMAGE_QUALITY_VARIABLE, "motion.shutter")
-"""Surface features seen, and shutter time (longer in low light)."""
-_DIAGNOSTIC_BATTERY_VARIABLE = "pm.vbatMV"
-"""Millivolts: the battery voltage, faster than the battery block's once a second."""
-_DIAGNOSTIC_VARIABLES = (
-    *_ATTITUDE_VARIABLES,
-    *_MOTOR_VARIABLES,
-    *_FLOW_QUALITY_VARIABLES,
-    _DIAGNOSTIC_BATTERY_VARIABLE,
-)
-# The controller block (ADR-0063): 10 floats fetched as FP16, 20 bytes. Each pair is roll, then pitch,
-# with the signs the firmware logs.
-_CONTROLLER_VARIABLES = (
-    "pid_attitude.roll_outI",  # the attitude controllers' integrals: degrees per second of rate setpoint
-    "pid_attitude.pitch_outI",
-    "pid_rate.roll_outI",  # the rate controllers' integrals, in command units
-    "pid_rate.pitch_outI",
-    "controller.cmd_roll",  # the controller's commands: 16-bit, signed
-    "controller.cmd_pitch",
-    "controller.roll",  # the attitude setpoint: degrees
-    "controller.pitch",
-    "gyro.x",  # degrees per second
-    "gyro.y",
-)
-_CONTROLLER_FETCH_AS = "FP16"
-"""2 bytes a variable, about 3 significant digits (ADR-0063)."""
-# The take-off block (ADR-0063): 3 floats and 4 uint16, 20 bytes.
-_TAKE_OFF_VARIABLES = (*_ATTITUDE_VARIABLES, *_MOTOR_VARIABLES)
-_STATUS_VARIABLE = "supervisor.info"  # the supervisor's state bitfield
-_POSITION_VARIABLES = ("stateEstimate.x", "stateEstimate.y", "stateEstimate.z")
-_VELOCITY_VARIABLES = ("stateEstimate.vx", "stateEstimate.vy", "stateEstimate.vz")
-_STATE_VARIABLES = (*_POSITION_VARIABLES, *_VELOCITY_VARIABLES, _STATUS_VARIABLE)
-"""6 floats and a 2-byte bitfield: exactly a log block's 26-byte limit (ADR-0021)."""
-
-type _LogData = dict[str, float]
-"""One log sample: variable name to value, as cflib delivers it."""
-type _LogCallback = Callable[[int, _LogData, LogConfig], None]
-"""cflib's log callback signature: (timestamp in ms, data, the log block)."""
 
 _drivers_initialized = False
 
@@ -191,22 +123,6 @@ def _init_drivers_once() -> None:
 
 def _yes_no(flag: bool) -> str:
     return "yes" if flag else "no"
-
-
-def drone_status_from_bitfield(bitfield: int) -> DroneStatus:
-    """Decode the supervisor's state bitfield (bit positions from cflib)."""
-
-    def bit(position: int) -> bool:
-        return bool((bitfield >> position) & 1)
-
-    return DroneStatus(
-        is_armed=bit(BIT_IS_ARMED),
-        is_flying=bit(BIT_IS_FLYING),
-        is_crashed=bit(BIT_IS_CRASHED),
-        is_tumbled=bit(BIT_IS_TUMBLED),
-        can_arm=bit(BIT_CAN_BE_ARMED),
-        is_locked=bit(BIT_IS_LOCKED),
-    )
 
 
 class CrazyflieAdapter(DroneInterface):
@@ -232,13 +148,14 @@ class CrazyflieAdapter(DroneInterface):
         self._uri = uri
         self._cache_directory = cache_directory
         self._take_over_flight = take_over_flight
-        self._telemetry = TelemetryBuffer(clock)
+        self._log_blocks = LogBlocks(clock, lambda: self._crazyflie, take_over_flight=take_over_flight)
+        """The log blocks, which own the telemetry buffer (ADR-0093). `connect()` builds a new one, with no
+        values."""
         self._sync_crazyflie: SyncCrazyflie | None = None
-        self._log_configs: list[LogConfig] = []
-        self._commands = CrazyflieCommands(lambda: self._crazyflie, lambda: self._telemetry)
+        self._commands = CrazyflieCommands(lambda: self._crazyflie, lambda: self._log_blocks.telemetry)
         """The commands sent to the drone (ADR-0093). `connect()` builds a new one, with no setpoint stream."""
         self._take_off_and_landing = TakeOffAndLanding(
-            clock, self._commands, lambda: self._telemetry, self.take_snapshot
+            clock, self._commands, lambda: self._log_blocks.telemetry, self.take_snapshot
         )
         """Take-off and landing (ADR-0093). It sends through `_commands`, so `connect()` builds a new one right after
         them, with no flight under way."""
@@ -249,28 +166,13 @@ class CrazyflieAdapter(DroneInterface):
         """True from the start of `connect()` until the drone is known to be on the floor or its
         flight is taken over (ADR-0038). It stays True when the drone is found flying and refused:
         while True, the drone may be flying, so the link is closed without a zero-thrust setpoint."""
-        self._last_drone_time: float | None = None
-        self._dropped_state_count = 0
-        """State packets in a row with an estimate that isn't finite."""
-        self._latest_status_bitfield: int | None = None
-        """The supervisor bitfield of the latest state packet, for bits `DroneStatus`
-        doesn't carry (auto-arming, ADR-0037). Written on cflib's receive thread."""
         self._is_ignoring_estimate_reset = False
         """The latest estimate reset was ignored because the drone may be flying: the warning for it
         comes once per streak."""
-        self._latest_image_quality: Stamped[int] | None = None
-        """The latest image quality (`motion.squal`), for the low-light warning (ADR-0054).
-        Written on cflib's receive thread."""
         self._is_thrust_base_confirmed = False
         """The drone's latest report of its thrust base was THRUST_BASE (ADR-0061). Written on cflib's
         receive thread."""
         self._take_off_log = take_off_log
-        self._take_off_block: LogConfig | None = None
-        """Created last in connect with `take_off_log`, for this link."""
-        self._is_take_off_block_running = False
-        """A start or create was sent for the take-off block, and no stop since."""
-        self._take_off_block_stops_at = 0.0
-        """When the take-off block's run is over. Meaningful while it runs."""
         self._lost_link_message: str | None = None
         """cflib's message for a lost link (ADR-0084). Written on whichever thread cflib reports it from."""
         self._is_lost_link_raised = False
@@ -280,25 +182,22 @@ class CrazyflieAdapter(DroneInterface):
 
     def connect(self) -> None:
         _init_drivers_once()
-        self._last_drone_time = None  # a new session: the drone may have rebooted
-        self._dropped_state_count = 0
-        self._latest_status_bitfield = None
         self._is_ignoring_hover = False
         self._is_ignoring_estimate_reset = False
-        self._latest_image_quality = None
         self._is_thrust_base_confirmed = False
         self._lost_link_message = None
         self._is_lost_link_raised = False
         self._is_drone_state_unknown = True
         # A new session learns what the drone is doing from the drone, and carries on no take-off, landing or
         # setpoint stream from an earlier one.
-        self._commands = CrazyflieCommands(lambda: self._crazyflie, lambda: self._telemetry)
+        self._commands = CrazyflieCommands(lambda: self._crazyflie, lambda: self._log_blocks.telemetry)
         self._take_off_and_landing = TakeOffAndLanding(
-            self._clock, self._commands, lambda: self._telemetry, self.take_snapshot
+            self._clock, self._commands, lambda: self._log_blocks.telemetry, self.take_snapshot
         )
         # A new session starts with no values, so the wait for the first telemetry
-        # can't pass on values left from an earlier one (ADR-0031).
-        self._telemetry = TelemetryBuffer(self._clock)
+        # can't pass on values left from an earlier one (ADR-0031), and with no drone
+        # time: the drone may have rebooted.
+        self._log_blocks = LogBlocks(self._clock, lambda: self._crazyflie, take_over_flight=self._take_over_flight)
         sync_crazyflie = SyncCrazyflie(self._uri, cf=Crazyflie(rw_cache=self._cache_directory))
         self._sync_crazyflie = sync_crazyflie  # tracked from the start, so cleanup always finds it
         # Before the link opens, so no lost link goes unheard (ADR-0084).
@@ -328,16 +227,16 @@ class CrazyflieAdapter(DroneInterface):
                 raise RuntimeError("Flow deck not detected: autonomous flight needs it.")
             # Find out whether the drone is flying before anything else touches it: the
             # estimate reset below expects a drone sitting still (ADR-0038).
-            self._start_state_logging()
+            self._log_blocks.start_state_logging()
             self._settle_whether_the_drone_is_flying(self._wait_for_drone_status())
             self._write_thrust_base()
-            self._start_remaining_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
+            self._log_blocks.start_remaining_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
             self._wait_for_first_telemetry()
             self._log_whether_the_drone_arms_itself()
             self._log_whether_the_buzzer_deck_is_attached()
             if self._take_off_log:
                 # Last, so its run falls in the first ticks: cflib starts a block once it's created (ADR-0065).
-                self._create_take_off_block()
+                self._log_blocks.create_take_off_block()
         except BaseException:
             self._close_link()
             raise
@@ -367,7 +266,7 @@ class CrazyflieAdapter(DroneInterface):
         was_airborne = self._take_off_and_landing.is_airborne
         try:
             # The landing below doesn't tick, so nothing else would stop the take-off block (ADR-0065).
-            self._stop_take_off_block()
+            self._log_blocks.stop_take_off_block()
             if self._take_off_and_landing.is_airborne:
                 self._take_off_and_landing.land_and_wait_for_touchdown()
         except Exception:
@@ -384,7 +283,7 @@ class CrazyflieAdapter(DroneInterface):
     # --- Commands -----------------------------------------------------------
 
     def arm(self) -> None:
-        status = self._telemetry.latest_drone_status()
+        status = self._log_blocks.telemetry.latest_drone_status()
         if status is not None:
             # The drone answers an arm request with only "refused", never why (ADR-0058).
             level = logging.WARNING if status.value.is_locked else logging.INFO
@@ -411,7 +310,7 @@ class CrazyflieAdapter(DroneInterface):
         if not self._take_off_and_landing.take_off(height, self._log_take_off_warnings):
             return
         self._is_ignoring_hover = False  # flying from now on: a hover on the floor later is a new streak
-        self._run_take_off_block()  # after the take-off's own commands (ADR-0065)
+        self._log_blocks.run_take_off_block()  # after the take-off's own commands (ADR-0065)
 
     def land(self) -> None:
         self._take_off_and_landing.land()
@@ -442,7 +341,7 @@ class CrazyflieAdapter(DroneInterface):
             return
         self._is_ignoring_hover = False  # this hover goes through: the streak is over
         self._take_off_and_landing.cancel_landing()
-        position_estimate = self._telemetry.latest_position_estimate()
+        position_estimate = self._log_blocks.telemetry.latest_position_estimate()
         if position_estimate is None:
             # No estimate yet: hold relative to the commander's own position.
             self._commands.go_to_relative(Vector3.ZERO, HOVER_SETTLE_DURATION)
@@ -476,7 +375,7 @@ class CrazyflieAdapter(DroneInterface):
         """Raises after a lost link (ADR-0084). Every tick starts with a snapshot, so nothing else a tick calls
         needs its own check (ADR-0086)."""
         self._raise_if_the_link_is_lost()
-        return self._telemetry.snapshot(
+        return self._log_blocks.telemetry.snapshot(
             dt,
             is_in_initial_climb=self._take_off_and_landing.is_in_initial_climb,
             may_be_flying=self._take_off_and_landing.may_be_flying(),
@@ -485,7 +384,7 @@ class CrazyflieAdapter(DroneInterface):
     def update_take_off_and_landing(self, snapshot: Snapshot) -> None:
         """Also stops the take-off block once its run is over (ADR-0065)."""
         self._take_off_and_landing.update(snapshot)
-        self._stop_take_off_block_once_its_run_is_over()
+        self._log_blocks.stop_take_off_block_once_its_run_is_over()
 
     # --- Internals ----------------------------------------------------------
 
@@ -503,10 +402,7 @@ class CrazyflieAdapter(DroneInterface):
             else:
                 self._sync_crazyflie.close_link()
             self._sync_crazyflie = None
-        # They belonged to that link, as did the take-off block's state.
-        self._log_configs.clear()
-        self._take_off_block = None
-        self._is_take_off_block_running = False
+        self._log_blocks.forget_log_blocks()
 
     def _close_radio_link_only(self) -> None:
         """Turn off the radio link and nothing else, so a flying drone keeps flying (ADR-0038).
@@ -600,7 +496,7 @@ class CrazyflieAdapter(DroneInterface):
 
     def _log_low_light_warning(self) -> None:
         """At take-off, warn of sideways drift when the Flow deck sees little (ADR-0054). Never refuses."""
-        quality = self._latest_image_quality
+        quality = self._log_blocks.latest_image_quality
         if quality is None or quality.age(self._clock.now()) > STALE_AFTER:
             logger.warning("Taking off with the Flow deck's image quality unknown: it may be low light.")
         elif quality.value < LOW_LIGHT_IMAGE_QUALITY:
@@ -622,8 +518,7 @@ class CrazyflieAdapter(DroneInterface):
         self._log_thrust_base_warning()
 
     def _shut_down_link(self) -> None:
-        for log_config in self._log_configs:
-            log_config.stop()
+        self._log_blocks.stop_log_blocks()
         self._close_link()
 
     # --- Test-only forwards to the parts (ADR-0093) --------------------------
@@ -653,73 +548,73 @@ class CrazyflieAdapter(DroneInterface):
     def _has_stopped_motors(self, has_stopped_motors: bool) -> None:
         self._take_off_and_landing._has_stopped_motors = has_stopped_motors
 
+    # TODO: test-only, until the tests reach the log-block part themselves (#158).
+
+    @property
+    def _telemetry(self) -> TelemetryBuffer:
+        return self._log_blocks.telemetry
+
+    @property
+    def _log_configs(self) -> list[LogConfig]:
+        return self._log_blocks._log_configs
+
+    @property
+    def _latest_status_bitfield(self) -> int | None:
+        return self._log_blocks.latest_status_bitfield
+
+    @_latest_status_bitfield.setter
+    def _latest_status_bitfield(self, bitfield: int | None) -> None:
+        self._log_blocks._latest_status_bitfield = bitfield
+
+    @property
+    def _latest_image_quality(self) -> Stamped[int] | None:
+        return self._log_blocks.latest_image_quality
+
+    @_latest_image_quality.setter
+    def _latest_image_quality(self, quality: Stamped[int] | None) -> None:
+        self._log_blocks._latest_image_quality = quality
+
+    @property
+    def _take_off_block(self) -> LogConfig | None:
+        return self._log_blocks._take_off_block
+
+    @_take_off_block.setter
+    def _take_off_block(self, block: LogConfig | None) -> None:
+        self._log_blocks._take_off_block = block
+
+    @property
+    def _is_take_off_block_running(self) -> bool:
+        return self._log_blocks._is_take_off_block_running
+
+    @_is_take_off_block_running.setter
+    def _is_take_off_block_running(self, is_running: bool) -> None:
+        self._log_blocks._is_take_off_block_running = is_running
+
+    @property
+    def _on_state(self) -> Callable[[int, dict[str, float], LogConfig], None]:
+        return self._log_blocks._on_state
+
+    @property
+    def _on_down_range(self) -> Callable[[int, dict[str, float], LogConfig], None]:
+        return self._log_blocks._on_down_range
+
+    @property
+    def _on_diagnostic(self) -> Callable[[int, dict[str, float], LogConfig], None]:
+        return self._log_blocks._on_diagnostic
+
+    @property
+    def _on_controller(self) -> Callable[[int, dict[str, float], LogConfig], None]:
+        return self._log_blocks._on_controller
+
+    @property
+    def _on_take_off_block(self) -> Callable[[int, dict[str, float], LogConfig], None]:
+        return self._log_blocks._on_take_off_block
+
+    @property
+    def _on_multiranger(self) -> Callable[[int, dict[str, float], LogConfig], None]:
+        return self._log_blocks._on_multiranger
+
     # --- Telemetry ----------------------------------------------------------
-
-    def _start_state_logging(self) -> None:
-        self._add_log_block("state", STATE_PERIOD_MS, list(_STATE_VARIABLES), self._on_state)
-
-    def _start_remaining_logging(self, has_multiranger: bool) -> None:
-        self._add_log_block("battery", BATTERY_PERIOD_MS, ["pm.vbat"], self._on_battery)
-        self._add_log_block("down", DOWN_RANGE_PERIOD_MS, list(_DOWN_VARIABLES), self._on_down_range)
-        # A take-over connects to a drone that may be flying: a missing debug-only variable mustn't fail it (ADR-0067).
-        if not self._take_over_flight:
-            self._add_log_block("diagnostic", DIAGNOSTIC_PERIOD_MS, list(_DIAGNOSTIC_VARIABLES), self._on_diagnostic)
-            self._add_log_block(
-                "controller",
-                CONTROLLER_PERIOD_MS,
-                list(_CONTROLLER_VARIABLES),
-                self._on_controller,
-                fetch_as=_CONTROLLER_FETCH_AS,
-            )
-        if has_multiranger:
-            self._add_log_block(
-                "multiranger",
-                MULTIRANGER_PERIOD_MS,
-                list(_MULTIRANGER_VARIABLES.values()),
-                self._on_multiranger,
-            )
-        else:
-            # No Multi-ranger: say so explicitly. These directions are unknown,
-            # never clear.
-            self._telemetry.write_range_readings(
-                dict.fromkeys(_MULTIRANGER_VARIABLES, RangeReading.invalid()), drone_time=None
-            )
-
-    # The take-off block (ADR-0063, ADR-0065). Nothing waits for it. cflib sends one packet for each start
-    # or stop, and sets `started` on its receive thread once the drone confirms a start.
-
-    def _create_take_off_block(self) -> None:
-        """Its run counts from the create request: cflib starts it once the drone confirms the create."""
-        self._take_off_block = self._add_log_block(
-            "take_off", TAKE_OFF_PERIOD_MS, list(_TAKE_OFF_VARIABLES), self._on_take_off_block
-        )
-        self._is_take_off_block_running = True
-        self._take_off_block_stops_at = self._clock.now() + TAKE_OFF_BLOCK_DURATION
-
-    def _run_take_off_block(self) -> None:
-        """Run it from now: a start, or just a later stop for a run under way."""
-        if self._take_off_block is None:
-            return
-        if not self._is_take_off_block_running:
-            self._take_off_block.start()  # the drone kept the block from connect, so no create
-            self._is_take_off_block_running = True
-        self._take_off_block_stops_at = self._clock.now() + TAKE_OFF_BLOCK_DURATION
-
-    def _stop_take_off_block_once_its_run_is_over(self) -> None:
-        """Only once the drone has confirmed its start, so the stop can't overtake cflib's start."""
-        block = self._take_off_block
-        if (
-            block is not None
-            and self._is_take_off_block_running
-            and self._clock.now() >= self._take_off_block_stops_at
-            and block.started
-        ):
-            self._stop_take_off_block()
-
-    def _stop_take_off_block(self) -> None:
-        if self._take_off_block is not None and self._is_take_off_block_running:
-            self._take_off_block.stop()
-            self._is_take_off_block_running = False
 
     def _wait_for_drone_status(self) -> int:
         """Return the supervisor bitfield of the first state packet since connecting (ADR-0038).
@@ -728,14 +623,14 @@ class CrazyflieAdapter(DroneInterface):
         never arrives is a time-limit error: unknown fails safe.
         """
         self._wait_until(
-            lambda: self._latest_status_bitfield is not None,
+            lambda: self._log_blocks.latest_status_bitfield is not None,
             FIRST_TELEMETRY_TIME_LIMIT,
             lambda: (
                 f"Waiting for the drone's status took longer than {FIRST_TELEMETRY_TIME_LIMIT:g} s. "
                 "Check the Crazyflie is in range, and that its firmware logs its status."
             ),
         )
-        bitfield = self._latest_status_bitfield
+        bitfield = self._log_blocks.latest_status_bitfield
         if bitfield is None:
             raise RuntimeError("The drone's status vanished after it arrived")  # the callback never clears it
         return bitfield
@@ -760,7 +655,7 @@ class CrazyflieAdapter(DroneInterface):
         # The state block kept streaming, so drop what it wrote before the reset (ADR-0038).
         # Nothing waits for the reset, so values from before it can still arrive until it
         # reaches the drone, and a take-off judged on them may be refused (ADR-0054).
-        self._telemetry = TelemetryBuffer(self._clock)
+        self._log_blocks.replace_telemetry_buffer()
 
     def _wait_for_first_telemetry(self) -> None:
         """Return once every telemetry value has arrived once (ADR-0031)."""
@@ -768,7 +663,7 @@ class CrazyflieAdapter(DroneInterface):
 
         def has_every_value() -> bool:
             nonlocal missing_values
-            missing_values = self._telemetry.missing_values()
+            missing_values = self._log_blocks.telemetry.missing_values()
             return not missing_values
 
         # The message uses the list from the check that timed out: a value arriving just after
@@ -802,7 +697,7 @@ class CrazyflieAdapter(DroneInterface):
         """
 
         def is_not_flying() -> bool:
-            status = self._telemetry.latest_drone_status()
+            status = self._log_blocks.telemetry.latest_drone_status()
             if status is None or status.age(self._clock.now()) > STALE_AFTER:
                 return False
             return not status.value.is_flying
@@ -819,7 +714,7 @@ class CrazyflieAdapter(DroneInterface):
         except TimeoutError as error:
             logger.warning("%s", error)
             return
-        status = self._telemetry.latest_drone_status()
+        status = self._log_blocks.telemetry.latest_drone_status()
         if status is None:
             return  # can't happen: the wait just saw it, and the buffer never clears a value
         if status.value.is_locked:
@@ -846,7 +741,7 @@ class CrazyflieAdapter(DroneInterface):
 
     def _log_whether_the_drone_arms_itself(self) -> None:
         """Log once whether the firmware arms the drone by itself (ADR-0037)."""
-        bitfield = self._latest_status_bitfield
+        bitfield = self._log_blocks.latest_status_bitfield
         if bitfield is None:
             return  # can't happen once the first telemetry has arrived (ADR-0031)
         if (bitfield >> BIT_IS_AUTO_ARMED) & 1:
@@ -860,122 +755,3 @@ class CrazyflieAdapter(DroneInterface):
             logger.info("Buzzer deck detected.")
         else:
             logger.info("No Buzzer deck: buzzer commands will make no sound.")
-
-    def _add_log_block(
-        self, name: str, period_ms: int, variables: list[str], on_data: _LogCallback, fetch_as: str | None = None
-    ) -> LogConfig:
-        """Create and start a log block. `fetch_as`: the cflib type to fetch every variable as; by default,
-        each comes as the type the drone stores."""
-        log_config = LogConfig(name=name, period_in_ms=period_ms)
-        for variable in variables:
-            log_config.add_variable(variable, fetch_as)
-        try:
-            self._crazyflie.log.add_config(log_config)
-        except KeyError as error:
-            raise RuntimeError(
-                f"The drone's firmware doesn't log a variable this adapter needs ({error}). Update the firmware."
-            ) from error
-        log_config.data_received_cb.add_callback(on_data)
-        log_config.start()
-        self._log_configs.append(log_config)
-        return log_config
-
-    # Log callbacks run on cflib's receive thread. Keep them tiny: convert and
-    # write to the telemetry buffer, nothing else.
-
-    def _drone_time(self, timestamp: int) -> float:
-        # Every log callback runs on cflib's single receive thread, so this
-        # state needs no lock.
-        self._last_drone_time = drone_time_from_timestamp(timestamp, self._last_drone_time)
-        return self._last_drone_time
-
-    def _on_state(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
-        drone_time = self._drone_time(timestamp)
-        position = Vector3(*(data[variable] for variable in _POSITION_VARIABLES))
-        velocity = Vector3(*(data[variable] for variable in _VELOCITY_VARIABLES))
-        bitfield = int(data[_STATUS_VARIABLE])
-        self._latest_status_bitfield = bitfield
-        status = drone_status_from_bitfield(bitfield)
-        if position.is_finite() and velocity.is_finite():
-            self._telemetry.write_estimates_and_status(position, velocity, status, drone_time)
-            if self._dropped_state_count > 0:
-                logger.info("Finite estimates are back after %d dropped state packets", self._dropped_state_count)
-                self._dropped_state_count = 0
-            return
-        # An estimate that isn't finite is dropped, so any earlier finite one stays
-        # and goes stale, and the safety pre-check fails on it (ADR-0030). The
-        # drone's own estimate is then NaN, so it can't follow the failsafe's
-        # landing either (ADR-0045, backlog #45).
-        if position.is_finite():
-            self._telemetry.write_position_estimate(position, drone_time)
-        if velocity.is_finite():
-            self._telemetry.write_velocity_estimate(velocity, drone_time)
-        self._telemetry.write_drone_status(status, drone_time)
-        if self._dropped_state_count == 0:
-            logger.warning(
-                "Dropped an estimate that isn't finite (position %s, velocity %s). Warned once per streak.",
-                position,
-                velocity,
-            )
-        self._dropped_state_count += 1
-
-    def _on_battery(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
-        self._telemetry.write_battery_voltage(data["pm.vbat"], self._drone_time(timestamp))
-
-    def _on_down_range(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
-        drone_time = self._drone_time(timestamp)
-        reading = range_reading_from_mm(int(data[_DOWN_RANGE_VARIABLE]))
-        self._telemetry.write_range_readings({RangeDirection.DOWN: reading}, drone_time)
-        # NaN when a variance isn't finite: the safety layer counts it as missing (ADR-0054).
-        variance_px, variance_py = (data[variable] for variable in _VELOCITY_VARIANCE_VARIABLES)
-        self._telemetry.write_velocity_uncertainty(
-            velocity_uncertainty_from_variances(variance_px, variance_py), drone_time
-        )
-
-    def _on_diagnostic(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
-        """One debug line, nothing in the telemetry buffer (ADR-0050)."""
-        roll_deg, pitch_deg, yaw_deg = (data[variable] for variable in _ATTITUDE_VARIABLES)
-        squal, shutter = (int(data[variable]) for variable in _FLOW_QUALITY_VARIABLES)
-        drone_time = self._drone_time(timestamp)
-        self._latest_image_quality = Stamped(squal, self._clock.now(), drone_time)
-        battery_voltage = battery_voltage_from_mv(int(data[_DIAGNOSTIC_BATTERY_VARIABLE]))
-        logger.debug(
-            "Diagnostic: drone_time=%.3f roll_deg=%.2f pitch_deg=%.2f yaw_deg=%.2f motors=%s squal=%d shutter=%d "
-            "battery_voltage=%.3f",
-            drone_time,
-            roll_deg,
-            pitch_deg,
-            yaw_deg,
-            [int(data[variable]) for variable in _MOTOR_VARIABLES],
-            squal,
-            shutter,
-            battery_voltage,
-        )
-
-    def _on_controller(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
-        """One debug line, nothing in the telemetry buffer (ADR-0063)."""
-        logger.debug(
-            "Controller block: drone_time=%.3f attitude_integral_deg_per_s=[%.4g, %.4g] rate_integral=[%.4g, %.4g] "
-            "command=[%.4g, %.4g] attitude_setpoint_deg=[%.4g, %.4g] gyro_deg_per_s=[%.4g, %.4g]",
-            self._drone_time(timestamp),
-            *(data[variable] for variable in _CONTROLLER_VARIABLES),
-        )
-
-    def _on_take_off_block(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
-        """One debug line, nothing in the telemetry buffer (ADR-0063)."""
-        roll_deg, pitch_deg, yaw_deg = (data[variable] for variable in _ATTITUDE_VARIABLES)
-        logger.debug(
-            "Take-off block: drone_time=%.3f roll_deg=%.2f pitch_deg=%.2f yaw_deg=%.2f motors=%s",
-            self._drone_time(timestamp),
-            roll_deg,
-            pitch_deg,
-            yaw_deg,
-            [int(data[variable]) for variable in _MOTOR_VARIABLES],
-        )
-
-    def _on_multiranger(self, timestamp: int, data: _LogData, log_config: LogConfig) -> None:
-        readings = {
-            direction: range_reading_from_mm(int(data[variable]))
-            for direction, variable in _MULTIRANGER_VARIABLES.items()
-        }
-        self._telemetry.write_range_readings(readings, self._drone_time(timestamp))

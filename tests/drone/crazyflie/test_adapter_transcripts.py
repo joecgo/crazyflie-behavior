@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, NonCallableMock
 import pytest
 
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
+from crazyflie_behavior.drone.crazyflie import log_blocks as log_blocks_module
 from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import (
     FINAL_DESCENT_HEIGHT,
@@ -193,7 +194,7 @@ def flight(monkeypatch: pytest.MonkeyPatch) -> ScriptedFlight:
     monkeypatch.setattr(adapter_module, "_drivers_initialized", True)
     monkeypatch.setattr(adapter_module, "SyncCrazyflie", cflib.SyncCrazyflie)
     monkeypatch.setattr(adapter_module, "Crazyflie", cflib.Crazyflie)
-    monkeypatch.setattr(adapter_module, "LogConfig", cflib.LogConfig)
+    monkeypatch.setattr(log_blocks_module, "LogConfig", cflib.LogConfig)
     return scripted_flight
 
 

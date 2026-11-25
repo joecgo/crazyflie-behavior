@@ -245,12 +245,14 @@ def test_only_the_failsafe_program_imports_the_forged_battery_wrapper() -> None:
 def test_only_the_rescue_landing_program_asks_to_take_over_a_flight() -> None:
     """ADR-0038: behaviors and game programs have no way to ask for take-over.
 
-    `start_up.make_drone` only passes the setting on to the adapter it builds,
-    and the adapters themselves are in the drone package, which only defines it.
+    `start_up.make_drone` only passes the setting on to the adapter it builds, and
+    the Crazyflie adapter only passes it on to its log-block part (ADR-0093).
     """
     askers = [path for path in python_files(PACKAGE_ROOT) if passes_keyword(path, TAKE_OVER_SETTING)]
 
-    assert relative_paths(askers) == relative_paths([RESCUE_LANDING_PROGRAM, START_UP])
+    assert relative_paths(askers) == relative_paths(
+        [CRAZYFLIE_ADAPTER_ROOT / "adapter.py", RESCUE_LANDING_PROGRAM, START_UP]
+    )
 
 
 def test_only_the_tick_steps_and_the_programs_import_the_recording_package() -> None:

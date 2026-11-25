@@ -4,7 +4,7 @@
 """The commands sent to a Crazyflie, and the setpoint stream's state (ADR-0093).
 
 Setpoints, high-level moves, the motor stop, arming, the emergency stop, the buzzer and the estimate reset. Opening
-and closing the link, the log blocks and the thrust base write stay in the adapter.
+and closing the link and the thrust base write stay in the adapter; the log blocks are in `log_blocks.py`.
 """
 
 import logging

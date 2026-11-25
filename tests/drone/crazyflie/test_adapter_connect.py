@@ -19,6 +19,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
+from crazyflie_behavior.drone.crazyflie import log_blocks as log_blocks_module
 from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_BLOCK_DURATION, CrazyflieAdapter
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_HEIGHT
 from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE
@@ -229,7 +230,7 @@ def fake_cflib(monkeypatch: pytest.MonkeyPatch) -> Generator[FakeCflib]:
     monkeypatch.setattr(adapter_module, "_drivers_initialized", True)
     monkeypatch.setattr(adapter_module, "SyncCrazyflie", MagicMock(return_value=fake.link))
     monkeypatch.setattr(adapter_module, "Crazyflie", MagicMock())
-    monkeypatch.setattr(adapter_module, "LogConfig", fake.make_log_block)
+    monkeypatch.setattr(log_blocks_module, "LogConfig", fake.make_log_block)
     yield fake
     fake.stop()  # ends the streaming threads
 
