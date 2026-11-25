@@ -40,7 +40,6 @@ BLOCKING_FUNCTIONS = {
     "adapter.py::CrazyflieAdapter.disconnect",
     "adapter.py::CrazyflieAdapter._close_link",
     "adapter.py::CrazyflieAdapter._close_radio_link_only",
-    "adapter.py::CrazyflieAdapter._land_and_wait_for_touchdown",
     "adapter.py::CrazyflieAdapter._land_silence_and_wait",
     "adapter.py::CrazyflieAdapter._shut_down_link",
     "adapter.py::CrazyflieAdapter._silence_and_keep_the_link_open",
@@ -49,6 +48,7 @@ BLOCKING_FUNCTIONS = {
     "adapter.py::CrazyflieAdapter._wait_for_not_flying",
     "adapter.py::CrazyflieAdapter._wait_until",
     "commands.py::land_as_a_last_resort",
+    "take_off_and_landing.py::TakeOffAndLanding.land_and_wait_for_touchdown",
     "time_limit.py::run_with_time_limit",
 }
 """Every function in `drone/crazyflie/` that blocks, as "file::Class.method" or "file::function". One that starts
