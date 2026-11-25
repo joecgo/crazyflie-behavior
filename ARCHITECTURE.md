@@ -167,8 +167,10 @@ Forbidden:
   (ADR-0011). So whatever streams setpoints is fed on every tick, and nothing
   in a tick may wait.
 - **No waiting:** no sleep, wait or blocking read in a tick, a command or a
-  cflib callback (ADR-0003). Known exception: a cflib send can wait up to 2 s
-  during radio trouble (ADR-0027).
+  cflib callback (ADR-0003). **[fitness]** for the Crazyflie adapter: its
+  sleeps, waits and joins are reached only from `connect()` and
+  `disconnect()` (ADR-0093). Known exception: a cflib send can wait up to
+  2 s during radio trouble (ADR-0027).
 - **Threads:** the tick's thread, which is the main thread and runs the
   signal handler; cflib's receive thread, where a callback converts, writes
   to the telemetry buffer and returns; cflib's own radio and parameter
@@ -237,7 +239,7 @@ the repository until they're decided. Module names are working names.
 
 | Target | Changes here | Needs |
 |---|---|---|
-| The Crazyflie adapter becomes parts inside `drone/crazyflie/`: `link.py`, `log_blocks.py` and `commands.py`, which with `adapter.py` are the only cflib importers; and `take_off_and_landing.py`, the take-off and landing logic with no cflib import and strict typing. `DroneInterface` stays as it is. | Section 2; rule 1 narrows to the named modules | ADR-0093 accepted; partly built: the transcript tests and `commands.py` (backlog #157) |
+| The Crazyflie adapter becomes parts inside `drone/crazyflie/`: `link.py`, `log_blocks.py` and `commands.py`, which with `adapter.py` are the only cflib importers; and `take_off_and_landing.py`, the take-off and landing logic with no cflib import and strict typing. `DroneInterface` stays as it is. | Section 2; rule 1 narrows to the named modules | ADR-0093 accepted; partly built: the transcript tests, `commands.py` and the blocking-call fitness function (backlog #157) |
 | A tick reports an outcome, up to the program. | Section 3 | ADR-0036 is accepted; how the outcome travels is open |
 | Recordings, replay tests, and program tests on the sim clock. | A recorder beside the tick step | The recorder is built (ADR-0034, ADR-0087, ADR-0088). Program tests on the sim clock are built (ADR-0076). Replay tests are open |
 | Tuning values are grouped, passed in, and logged with every run. | Where constants live | An ADR |
