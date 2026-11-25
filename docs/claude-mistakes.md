@@ -69,29 +69,29 @@ entries go at the top of their section without an ID.
 <!-- generated: kinds -->
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 5 | 20 |
+| design | 5 | 22 |
 | safety design | 5 | 22 |
 | recommendation | 7 | 8 |
 | environment | 4 | 10 |
-| communication | 14 | 68 |
+| communication | 14 | 71 |
 | testing | 2 | 32 |
-| process | 7 | 40 |
-| **Total** | **44** | **200** |
+| process | 7 | 41 |
+| **Total** | **44** | **206** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
 | said-without-checking | 54 |
+| how-I-work | 30 |
+| records-ahead-of-code | 30 |
 | weak-test | 29 |
-| how-I-work | 29 |
-| records-ahead-of-code | 29 |
-| vocabulary | 21 |
+| vocabulary | 23 |
 | safety-judgment | 18 |
 | reading-field-data | 15 |
+| window-between-steps | 14 |
 | recommendation | 13 |
 | message-misstates-outcome | 13 |
-| window-between-steps | 12 |
 | environment | 8 |
 | leftover-state | 3 |
 <!-- end generated -->
@@ -112,6 +112,12 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-250 | 2026-11-25 | Two docstrings in stage 4's take-off and landing part said more than the code | communication | records-ahead-of-code | a docstring that says "as X does" is checked against both methods line by line, and a fact another module owns is pointed to, not copied (`docs/coding-style.md`) |
+| M-249 | 2026-11-25 | A comment that read backwards and a docstring that said "turned into", in ADR-0094's fix | communication | vocabulary | read each new comment as someone who knows only the code and the glossary, before the review does (`/project-review` step 4) |
+| M-248 | 2026-11-25 | "Lock error" in ADR-0094's code, where the glossary's "lock" is the drone lock | communication | vocabulary | working rule 6, for words the glossary already uses in another sense, not only for missing terms (Q-41) |
+| M-247 | 2026-11-25 | ADR-0094's fix logged the threading lock error before the cleanup | design | window-between-steps | in an `except` block that cleans up, the cleanup comes first and any logging after it (`time_limit.py`, and Q-19, which names log lines) |
+| M-246 | 2026-11-25 | The interrupt signal landing inside a threading wait came out as CPython's lock error | design | window-between-steps | ADR-0094: `run_with_time_limit` raises the interrupt signal that CPython hides in a lock error, with a test that sends no real signal; and Q-19 (an interruption landing between two lines) |
+| M-245 | 2026-11-24 | A work order's bug-planting script was copied from a scratch file a failed edit had broken | process | how-I-work | the handoff skill's step 3: name a script in an order only after running it from where it's saved (added with Joe's OK, 2026-11-24); and M-233's: after a script writes or copies a file, read or run what it wrote |
 | M-244 | 2026-11-24 | The blocking-call fitness function missed a blocking call imported under another name | testing | weak-test | a scanner that matches by name lists every way a name can change (an import alias, an assignment, a stored callable) and has a test for each (`REVIEW.md` Q-32) |
 | M-243 | 2026-11-24 | The fitness function read the drone interface's methods by one decorator spelling | testing | weak-test | a fitness function's reader of real code doesn't depend on how the code is spelled, or has a test for each spelling (Q-32) |
 | M-242 | 2026-11-24 | Two forms the blocking-call scanner handles had no test | testing | weak-test | before calling a scanner's tests complete, list each `case` of its `match` and name the test that reaches it (Q-32) |
@@ -791,6 +797,54 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-250, 2026-11-25: Two docstrings in stage 4's take-off and landing part said more than the code
+
+- **What happened:** writing #157 stage 4 (2026-11-24), Claude gave `TakeOffAndLanding.emergency_stop` the docstring "clear the flight state together, as `stop_motors` does", though unlike `stop_motors` it records no motor stop, on purpose (ADR-0058). The class docstring also copied a count that `connect()` owns, "replaces it twice", which later stages change. Caught by Claude's project review of stage 4 (2026-11-25); both reworded, in commit E.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** a docstring that says "as X does" is checked against both methods line by line, and a fact another module owns is pointed to, not copied (`docs/coding-style.md`).
+- **Takeaway:** records-ahead-of-code is past its third entry, and no cheap mechanism checks a docstring's comparison, so it stays a review check (`/project-review` step 4).
+
+### M-249, 2026-11-25: A comment that read backwards and a docstring that said "turned into", in ADR-0094's fix
+
+- **What happened:** the comment on `run_with_time_limit`'s late raise said "so the lock error doesn't become its context, as if the interrupt signal had come while an error was being handled", which reads as if the raise were meant to look that way. `_interrupt_hidden_in`'s docstring said CPython "turned" the interrupt into the error, when the error only carries it as its context, and left out the None it returns otherwise. The new debug line also put the capitalized step name mid-sentence ("during Opening the link"). Caught by Claude's project review (2026-11-25); all three reworded before the commit.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** read each new comment as someone who knows only the code and the glossary, before the review does (`/project-review` step 4).
+- **Takeaway:** the comment that explains why code is shaped oddly is the one whose misreading undoes the code. M-173's mechanism, the fresh-context read, didn't run on this change (Joe chose to skip it, to save usage), so the review's own read caught it.
+
+### M-248, 2026-11-25: "Lock error" in ADR-0094's code, where the glossary's "lock" is the drone lock
+
+- **What happened:** ADR-0094's code called CPython's `RuntimeError: release unlocked lock` a "lock error" in a test name, a debug line and two docstrings, with no glossary row, though in the glossary "lock" means the drone lock (*Drone lock*, and "locked" in the drone status). Caught by Claude's project review (Q-38, Q-41); Joe chose "threading lock error", with no glossary row (2026-11-25).
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** working rule 6, for words the glossary already uses in another sense, not only for missing terms (Q-41).
+- **Takeaway:** in this codebase a word the glossary owns (lock, flying, stop) reads in its glossary sense, whatever the code means by it. Vocabulary is past its third entry, and no cheap mechanism can tell which sense a word is used in, so Q-41 stays.
+
+### M-247, 2026-11-25: ADR-0094's fix logged the threading lock error before the cleanup
+
+- **What happened:** the fix's first version logged the hidden threading lock error, with its traceback, at the top of `run_with_time_limit`'s `except` block, before `step.abandon()` and `on_abandon`. A second interrupt signal landing in that log call would have left the block without the cleanup. Caught by Claude's project review (Q-19); the log now comes after the cleanup, with a comment saying why.
+- **Kind:** design.
+- **Pattern:** window-between-steps.
+- **Guard:** in an `except` block that cleans up, the cleanup comes first and any logging after it (`time_limit.py`, and Q-19, which names log lines).
+- **Takeaway:** Q-19 already asks about log lines; the build didn't ask it, the same day as M-246 and about the same window. No cheap mechanism knows which calls clean up, so the question stays.
+
+### M-246, 2026-11-25: The interrupt signal landing inside a threading wait came out as CPython's lock error
+
+- **What happened:** three tests written 2026-11-02 (`878c16f`) send the interrupt signal from the helper thread as a step starts. CPython 3.12 can raise the KeyboardInterrupt while `Thread.start()`'s wait has its lock released, and `Event.wait`'s `with` block then raises `RuntimeError: release unlocked lock` instead. The tests failed at random (once in 117 runs on its own on `479f64f`), and a Ctrl+C while connecting could end the program as an error, with exit code 1 instead of 130. `run_with_time_limit` caught every exception, so its cleanup was right; only the exception's type was wrong. Caught by Claude when the check run before #157 stage 4's review failed. Fixed by ADR-0094.
+- **Kind:** design.
+- **Pattern:** window-between-steps.
+- **Guard:** ADR-0094: `run_with_time_limit` raises the interrupt signal that CPython hides in a lock error, with a test that sends no real signal; and Q-19 (an interruption landing between two lines).
+- **Takeaway:** the pattern is past its third entry, and here the mechanism is ADR-0094's code. The interruption landed between the standard library's lines, not the project's.
+
+### M-245, 2026-11-24: A work order's bug-planting script was copied from a scratch file a failed edit had broken
+
+- **What happened:** writing #157 stage 4's hand-off, Claude copied its first bug-planting script from the scratchpad to `drafts/157-stage-4/` without checking it, though a failed edit had broken that scratch copy earlier in the work session (a syntax error). Caught when Claude re-ran the script for the order's expected results; rewritten and re-run before the order named it.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** the handoff skill's step 3: name a script in an order only after running it from where it's saved (added with Joe's OK, 2026-11-24); and M-233's: after a script writes or copies a file, read or run what it wrote.
+- **Takeaway:** the second time a script's output went unchecked (M-233), so it climbed the ladder's second step: a template line, in the handoff skill.
 
 ### M-244, 2026-11-24: The blocking-call fitness function missed a blocking call imported under another name
 

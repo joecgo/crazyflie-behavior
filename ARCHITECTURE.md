@@ -69,12 +69,12 @@ the properties below (ADR-0074). Split a part out when any of these is true
 of it:
 
 1. **It needs fewer dependencies than the file.** The take-off and landing
-   logic needs no cflib, but it sits in a file that imports cflib, so it can
-   only run with cflib present. This one is checkable by the import fitness
-   tests.
+   logic needs no cflib, but it sat in a file that imports cflib, so it could
+   only run with cflib present, until ADR-0093 moved it out. This one is
+   checkable by the import fitness tests.
 2. **Another module needs it.** The section 7 target has the mock adapter
-   running the Crazyflie adapter's take-off and landing code. It cannot do
-   that while the code sits inside `CrazyflieAdapter`.
+   running the Crazyflie adapter's take-off and landing code, which it could
+   not do while the code sat inside `CrazyflieAdapter`.
 3. **It runs on a different thread.** Code called from cflib callbacks and
    code called from the tick should not share a file's worth of private state.
    Putting the cross-thread part in one small module makes what crosses the
@@ -239,7 +239,7 @@ the repository until they're decided. Module names are working names.
 
 | Target | Changes here | Needs |
 |---|---|---|
-| The Crazyflie adapter becomes parts inside `drone/crazyflie/`: `link.py`, `log_blocks.py` and `commands.py`, which with `adapter.py` are the only cflib importers; and `take_off_and_landing.py`, the take-off and landing logic with no cflib import and strict typing. `DroneInterface` stays as it is. | Section 2; rule 1 narrows to the named modules | ADR-0093 accepted; partly built: the transcript tests, `commands.py` and the blocking-call fitness function (backlog #157) |
+| The Crazyflie adapter becomes parts inside `drone/crazyflie/`: `link.py`, `log_blocks.py` and `commands.py`, which with `adapter.py` are the only cflib importers; and `take_off_and_landing.py`, the take-off and landing logic with no cflib import and strict typing. `DroneInterface` stays as it is. | Section 2; rule 1 narrows to the named modules | ADR-0093 accepted; partly built: the transcript tests, `commands.py`, the blocking-call fitness function and `take_off_and_landing.py` (backlog #157) |
 | A tick reports an outcome, up to the program. | Section 3 | ADR-0036 is accepted; how the outcome travels is open |
 | Recordings, replay tests, and program tests on the sim clock. | A recorder beside the tick step | The recorder is built (ADR-0034, ADR-0087, ADR-0088). Program tests on the sim clock are built (ADR-0076). Replay tests are open |
 | Tuning values are grouped, passed in, and logged with every run. | Where constants live | An ADR |

@@ -8,14 +8,28 @@ request merged, a step built), update this page in the same step: remove or
 move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
-- **Date:** 2026-11-24 (Pacific)
-- **Last commit:** "Mistakes M-240 to M-244, next-up brief after the
-  fitness function's review", on `main`, after `531c638`. Not pushed: the
-  ten commits after `eca324c`. Uncommitted: nothing. The continuous
-  integration checks pass (994 passed, 1 skipped).
+- **Date:** 2026-11-25 (Pacific)
+- **Last commit:** "Records after #157 stage 4 and ADR-0094: mistakes
+  M-245 to M-250, next-up brief", on `main`, after `91e1eeb`. Not pushed:
+  the six commits after `479f64f`. Uncommitted: nothing. The checks pass
+  (997 passed, 1 skipped).
 
 ## Done last
 
+- 2026-11-25: `/project-review` (max, run inline, without the
+  fresh-context read) of #157's stage 4 and ADR-0094's fix: no
+  correctness bugs, and the move is move-only (every moved body, constant
+  and the landing phase enum match the originals after the renames). 7
+  findings, all nits, all fixed (`419791c`, `91e1eeb`); they're in
+  `docs/review-queue.md`. Mistakes M-247 to M-250.
+- 2026-11-25: committed #157's stage 4 (ADR-0093): the two new tests
+  (`9e0338d`), the move to `take_off_and_landing.py` (`6710a79`,
+  move-only), its strict typing (`2aa215d`) and the review's docstring
+  fixes (`91e1eeb`). Each commit passed the checks on its own.
+- 2026-11-25: decided and built ADR-0094 (`419791c`): connecting raises
+  the interrupt signal that a CPython 3.12 threading lock error hides. The
+  three tests that send the interrupt signal no longer fail at random (300
+  runs, no failure; the fix caught the race twice). Mistake M-246.
 - 2026-11-24: `/project-review` (high) of the blocking-call fitness
   function: 5 findings, all fixed in `531c638` (an import alias hid a
   blocking call; the interface was read by one decorator spelling; two
@@ -33,30 +47,20 @@ move the item, renumber "Next three", and update "Last commit" and
   Hand-over widened, Level setpoint added, Transcript test reworded.
   Mistakes M-233 to M-239. The fresh read's other items are in
   `drafts/2026-11-24-fresh-read-c6-stage-3.md`, for the full review (W9).
-- 2026-11-24: committed ADR-0093 and #157's stages 1 to 3: the transcript
-  tests (five scripted flights), the logger prep, and `commands.py`
-  (`CrazyflieCommands`: the commands sent to the drone, with the hand-over
-  inside `go_to` and `go_to_relative`).
-- 2026-11-24: decided #142 as ADR-0090 (the bug-planting tool, not built:
-  #152), #144 as ADR-0091 (not built: #153) and #55 as ADR-0092 (partly
-  built: #155, #156 open).
 
 ## In progress
 
-- #157 (ADR-0093): stages 1 to 3 and the blocking-call fitness function
-  committed, with its review's fixes. Next, stage 4, take-off and landing.
+- #157 (ADR-0093): stages 1 to 4 and the blocking-call fitness function
+  committed, with their reviews' fixes. Next: stage 5, the log blocks.
 
 ## Next three
 
-1. #157's stage 4: take-off and landing to `take_off_and_landing.py`
-   (ADR-0093), move-only, then its strict-typing fixes in their own commit.
-   Read `drafts/2026-11-13-code-recommendations.md`, C6. A blocking
-   function that moves gets its new file's name in the fitness function's
-   `BLOCKING_FUNCTIONS`. Opus, Max.
-2. Build #153, the test for citations of removed backlog rows (ADR-0091),
+1. Build #153, the test for citations of removed backlog rows (ADR-0091),
    before the next backlog row is removed. Sonnet, medium.
-3. #157's next stage: the log blocks to `log_blocks.py` (ADR-0093),
+2. #157's next stage: the log blocks to `log_blocks.py` (ADR-0093),
    move-only. Opus, Max, or high if Joe judges it enough (backlog #157).
+3. #157's stage after that: the link to `link.py` (ADR-0093), move-only.
+   Opus, Max.
 
 ## Explain-backs waiting
 
@@ -111,10 +115,25 @@ from `drafts/explain-back-notes.md`; don't open it first.
   `connect()` and `disconnect()` of the drone interface's methods may block.
   Why, is that a missed bug or a false alarm, and would you fix the test or
   the code?
+- **E13.** Stage 4's take-off and landing part keeps the commands object it
+  was built with. What would go wrong if `connect()` built the part before
+  its new commands, in which flight would it show, and why did the five
+  transcript flights miss it?
+- **E14.** A Ctrl+C while connecting can come out of `Thread.start()` as
+  `RuntimeError: release unlocked lock` (ADR-0094). Why did the radio link
+  still close, why does `run_with_time_limit` raise the KeyboardInterrupt
+  after its `except` block rather than inside it, and why did the test that
+  sends a real signal fail only about once in a hundred runs?
 
 ## Last reviewed
 
 `0846826`, 2026-11-04: the last full row of `REVIEW.md`'s review log. Pull
 requests #24 to #30 read single changes ahead of the full review; the last,
 #30, read up to `fdcd31c` and closed 2026-11-23. The full line-by-line walk
-comes after the refactor (W9).
+comes after the refactor (W9). Drafted for its pull request: the
+blocking-call fitness function's review comments, one per decision or
+finding from its build and its review
+(`drafts/2026-11-24-blocking-call-review-comments.md`), and stage 4's, in
+the same shape (`drafts/2026-11-24-stage-4-review-comments.md`). Stage 4's
+project review (2026-11-25) put its findings in `docs/review-queue.md`,
+which `/review-packet` posts along with both drafts.
