@@ -9,13 +9,18 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-24 (Pacific)
-- **Last commit:** "Next-up brief after the blocking-call fitness
-  function", on `main`, after `1cc5081`. Not pushed: the eight commits
-  after `eca324c`. Uncommitted: nothing. The continuous integration checks
-  pass (987 passed, 1 skipped).
+- **Last commit:** "Mistakes M-240 to M-244, next-up brief after the
+  fitness function's review", on `main`, after `531c638`. Not pushed: the
+  ten commits after `eca324c`. Uncommitted: nothing. The continuous
+  integration checks pass (994 passed, 1 skipped).
 
 ## Done last
 
+- 2026-11-24: `/project-review` (high) of the blocking-call fitness
+  function: 5 findings, all fixed in `531c638` (an import alias hid a
+  blocking call; the interface was read by one decorator spelling; two
+  scanner forms had no test; the glossary's Blocking call row and a test
+  name said more than the check). Mistakes M-240 to M-244.
 - 2026-11-24: built and committed #157's blocking-call fitness function
   (ADR-0093, `1cc5081`): 14 blocking functions listed, 4 stored callables
   allow-listed, 39 tests, 23 planted bugs all caught.
@@ -39,8 +44,7 @@ move the item, renumber "Next three", and update "Last commit" and
 ## In progress
 
 - #157 (ADR-0093): stages 1 to 3 and the blocking-call fitness function
-  committed. Next, the fitness function's `/project-review`, then stage 4,
-  take-off and landing.
+  committed, with its review's fixes. Next, stage 4, take-off and landing.
 
 ## Next three
 

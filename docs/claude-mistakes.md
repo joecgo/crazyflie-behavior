@@ -73,19 +73,19 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 22 |
 | recommendation | 7 | 8 |
 | environment | 4 | 10 |
-| communication | 14 | 66 |
-| testing | 2 | 29 |
+| communication | 14 | 68 |
+| testing | 2 | 32 |
 | process | 7 | 40 |
-| **Total** | **44** | **195** |
+| **Total** | **44** | **200** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
 | said-without-checking | 54 |
+| weak-test | 29 |
 | how-I-work | 29 |
-| records-ahead-of-code | 27 |
-| weak-test | 26 |
+| records-ahead-of-code | 29 |
 | vocabulary | 21 |
 | safety-judgment | 18 |
 | reading-field-data | 15 |
@@ -112,6 +112,11 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-244 | 2026-11-24 | The blocking-call fitness function missed a blocking call imported under another name | testing | weak-test | a scanner that matches by name lists every way a name can change (an import alias, an assignment, a stored callable) and has a test for each (`REVIEW.md` Q-32) |
+| M-243 | 2026-11-24 | The fitness function read the drone interface's methods by one decorator spelling | testing | weak-test | a fitness function's reader of real code doesn't depend on how the code is spelled, or has a test for each spelling (Q-32) |
+| M-242 | 2026-11-24 | Two forms the blocking-call scanner handles had no test | testing | weak-test | before calling a scanner's tests complete, list each `case` of its `match` and name the test that reaches it (Q-32) |
+| M-241 | 2026-11-24 | The Blocking call glossary row read as covering locks the check skips | communication | records-ahead-of-code | a definition with "only" is checked against a search for its exceptions in the code, as M-235's guard asks of docstrings (Q-32) |
+| M-240 | 2026-11-24 | A fitness function's test name said "only" where it checked reachability | communication | records-ahead-of-code | M-235's guard, for test names too: an "only" in a name is checked against what its assert does (Q-32) |
 | M-239 | 2026-11-24 | ADR-0093 narrowed two older rules without marking either | process | how-I-work | before an ADR is accepted, check its design against CLAUDE.md's Never and Always lists, and mark the status line of every ADR it narrows (Q-33) |
 | M-238 | 2026-11-24 | ADR-0093 and `commands.py` used Hand-over for more than the glossary's meaning | communication | vocabulary | working rule 6: read a glossary term's row, not only its name, before using it in a new sense; `REVIEW.md` Q-41 |
 | M-237 | 2026-11-24 | The glossary's Transcript test row repeated the overclaim M-232 fixed in ADR-0093 | testing | weak-test | a fix for an overclaim searches the records written with it (the glossary, the index, the backlog) for the same claim; `REVIEW.md` Q-40 |
@@ -786,6 +791,46 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-244, 2026-11-24: The blocking-call fitness function missed a blocking call imported under another name
+
+- **What happened:** the scanner matched a call by the name written where it's called and recorded no import alias, so `from time import sleep as pause`, then `pause(0.1)` in a tick method, passed all six rules. Found by `/project-review` of `1cc5081`. Fixed in `531c638`: an alias counts as its original name, with three tests, proven by planting.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a scanner that matches by name lists every way a name can change (an import alias, an assignment, a stored callable) and has a test for each (`REVIEW.md` Q-32).
+- **Takeaway:** matching by name needs every renaming closed, not only the stored callable ADR-0093 named.
+
+### M-243, 2026-11-24: The fitness function read the drone interface's methods by one decorator spelling
+
+- **What happened:** `drone_interface_methods` counted a method only under a bare `@abstractmethod`, and its guard test named 5 of the 15 methods, so one written with `@abc.abstractmethod` would have dropped out of rule 1 unnoticed. Found by `/project-review` of `1cc5081`. Fixed in `531c638`: it reads every method but the double-underscore ones, with a test on made-up code.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a fitness function's reader of real code doesn't depend on how the code is spelled, or has a test for each spelling (Q-32).
+- **Takeaway:** a guard that checks a few names can't catch the ones it leaves out.
+
+### M-242, 2026-11-24: Two forms the blocking-call scanner handles had no test
+
+- **What happened:** code outside any function (filed as the file's `<module>`) and a class defined inside a function had no test, though `REVIEW.md` Q-32 asks for one per form. Found by `/project-review` of `1cc5081`. Fixed in `531c638`: three tests, proven by planting.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** before calling a scanner's tests complete, list each `case` of its `match` and name the test that reaches it (Q-32).
+- **Takeaway:** list the scanner's branches, not the forms that come to mind.
+
+### M-241, 2026-11-24: The Blocking call glossary row read as covering locks the check skips
+
+- **What happened:** the row defined a blocking call as one that waits until "something happens" and said only `connect()` and `disconnect()` may reach one, but every tick's `take_snapshot` takes the telemetry buffer's lock, and the fitness function counts no lock. Found by `/project-review` of `1cc5081`. Fixed in `531c638`, with Joe's OK: the row and the test's "Not counted" list name the locks.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** a definition with "only" is checked against a search for its exceptions in the code, as M-235's guard asks of docstrings (Q-32).
+- **Takeaway:** a general definition ("until something happens") reaches further than the list after it.
+
+### M-240, 2026-11-24: A fitness function's test name said "only" where it checked reachability
+
+- **What happened:** `test_every_blocking_function_runs_only_inside_connect_or_disconnect` checked only that `connect()` or `disconnect()` reaches each blocking function; the "only" comes from rules 1 and 3 together. Found by `/project-review` of `1cc5081`. Fixed in `531c638`: renamed `..._is_reached_from_connect_or_disconnect`, with a docstring that says how the three rules combine.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** M-235's guard, for test names too: an "only" in a name is checked against what its assert does (Q-32).
+- **Takeaway:** the pattern's second entry today. No cheap mechanism checks what a name claims, so the question stays.
 
 ### M-239, 2026-11-24: ADR-0093 narrowed two older rules without marking either
 
