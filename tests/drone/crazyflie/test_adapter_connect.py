@@ -797,6 +797,27 @@ def test_after_taking_over_land_runs_the_normal_landing_not_just_a_motor_stop(
     commander.stop.assert_not_called()
 
 
+def test_after_connecting_a_landing_hands_over_from_the_velocity_setpoints_before_it(
+    taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    """The landing approach goes through the commands `connect()` built, which know the stream to hand over from
+    (ADR-0056, ADR-0093)."""
+    fake_cflib.samples["state"]["stateEstimate.z"] = 0.6
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    fake_cflib.samples["down"]["range.zrange"] = 600.0
+    taking_over_adapter.connect()
+
+    taking_over_adapter.set_velocity(Vector3(0.1, 0.0, 0.0))
+    taking_over_adapter.land()
+
+    calls = [name for name, _, _ in fake_cflib.link.mock_calls]
+    assert calls[calls.index("cf.commander.send_velocity_world_setpoint") :] == [
+        "cf.commander.send_velocity_world_setpoint",
+        "cf.high_level_commander.go_to",  # the landing approach
+        "cf.commander.send_notify_setpoint_stop",  # the release, after the move that takes over
+    ]
+
+
 def test_taking_over_a_drone_that_reports_it_is_on_the_floor_only_stops_the_motors(
     taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
 ) -> None:

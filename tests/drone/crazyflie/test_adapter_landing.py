@@ -953,6 +953,18 @@ def test_after_a_lost_link_in_flight_disconnect_closes_without_landing_and_says_
     )
 
 
+def test_a_landing_in_flight_after_a_lost_link_raises_at_once_and_sends_nothing(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    # ADR-0086: `land()` in flight reads a snapshot of its own for the down range, and that snapshot checks the link.
+    lose_the_link(adapter, fake_link)
+
+    with pytest.raises(ConnectionError, match="The radio link to the drone was lost: Too many packets lost"):
+        adapter.land()
+
+    assert handed_to_cflib(fake_link) == 0
+
+
 def test_a_link_lost_since_the_last_snapshot_makes_disconnect_raise_so_the_run_ends_with_an_error(
     adapter: CrazyflieAdapter, fake_link: MagicMock
 ) -> None:
