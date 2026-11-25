@@ -105,6 +105,8 @@ file, a line, the claim, and what it costs if it stays.
 
 ## Afterwards
 
+- Add every finding to `docs/review-queue.md` ("Findings"), one writer at
+  a time (`CLAUDE.md`, "One writer"). After fixes, update its outcome there.
 - Before one of the user's code reviews, run `/review-packet` next.
 - When a finding is confirmed (fixed, or the user agrees it's real) and the
   code was Claude's, add it to `docs/claude-mistakes.md` under "Mistakes

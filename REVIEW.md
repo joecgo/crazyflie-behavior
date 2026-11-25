@@ -248,6 +248,9 @@ goes in.
   `reviewed`. Its description gives the range and the review packet's path
   in `drafts/`. Claude posts each finding as a comment at its line,
   starting with "Claude:", without asking.
+- Between reviews, every decision and every review finding goes into
+  `docs/review-queue.md` as it happens. The review's comments post the
+  whole queue (decisions in the summary), then empty it.
 - Nothing is pushed to the review branch once it's open (M-049). Work,
   flights and review fixes stay on `main`, and the fixes are in the next
   review.

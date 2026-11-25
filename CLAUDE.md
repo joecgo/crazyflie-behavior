@@ -200,10 +200,12 @@ number, so renumbering means updating those guards.
   PyCharm, with a review packet: before a review, Claude commits and pushes
   everything, writes the packet and opens the pull request, as `REVIEW.md`
   ("My reviews") describes. Afterwards, Claude adds the review to the log.
+  Every decision and review finding goes into `docs/review-queue.md` as it
+  happens, and the next review posts them as comments.
 - Follow `docs/coding-style.md`: strict typing, units in names, the cflib
   boundary ([ADR-0004](docs/decisions/0004-strict-typing-ruff-and-units-in-names.md)).
 - **One writer for the shared records.** The mistakes log, the decision
-  backlog, `REVIEW.md`, the work log and the next-up brief are written by one
+  backlog, `REVIEW.md`, the review queue, the work log and the next-up brief are written by one
   work session at a time. A second work session leaves its edits as text in
   `drafts/` for the first to apply, so no edit is lost to two writers.
 - Commit in small steps, especially when flight parameters or behavior change,

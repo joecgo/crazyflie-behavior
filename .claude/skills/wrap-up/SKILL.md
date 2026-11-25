@@ -153,6 +153,8 @@ from `drafts/explain-back-notes.md`; don't open it first.
 
 `<hash>`, <date>: the last row of `REVIEW.md`'s review log. The next code
 review covers everything after it.
+
+Review queue: <N> decisions, <N> findings waiting (`docs/review-queue.md`).
 ```
 
 ## Rules this keeps

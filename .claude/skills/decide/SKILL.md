@@ -94,6 +94,8 @@ code the hits point to.
      where it came from (the ADR) and when it's needed. A new row takes the
      next number after the highest ever used, from git history if a higher
      row was removed: ADRs and commits cite rows by number.
+   Then add the decision to `docs/review-queue.md` ("Decisions"), under the
+   same one-writer rule.
 9. **Report.** The files written, and the choices made while writing them,
    for the user to confirm (working rule 8).
 10. **One explain-back question** about the decision, using only terms the
