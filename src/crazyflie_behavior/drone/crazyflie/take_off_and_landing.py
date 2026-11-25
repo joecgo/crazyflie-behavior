@@ -85,8 +85,8 @@ class FlightCommands(Protocol):
 class TakeOffAndLanding:
     """Take-off and landing, moved on by one tick at each `update` (ADR-0055).
 
-    Looks up the telemetry buffer on every call, since `connect()` replaces it twice. Takes its snapshots through the
-    adapter's `take_snapshot`, which raises after a lost link (ADR-0084).
+    Looks up the telemetry buffer on every call, since `connect()` replaces it (ADR-0093). Takes its snapshots through
+    the adapter's `take_snapshot`, which raises after a lost link (ADR-0084).
     """
 
     def __init__(
@@ -210,7 +210,8 @@ class TakeOffAndLanding:
         self.cancel_landing()
 
     def emergency_stop(self) -> None:
-        """Cut the motors at once and clear the flight state together, as `stop_motors` does."""
+        """Cut the motors at once and clear the flight state, as `stop_motors` does, but record no motor stop: the
+        emergency stop locks the drone on purpose (ADR-0058)."""
         self._commands.emergency_stop()
         self._is_airborne = False
         self._is_in_initial_climb = False
