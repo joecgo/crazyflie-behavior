@@ -69,28 +69,28 @@ entries go at the top of their section without an ID.
 <!-- generated: kinds -->
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 5 | 22 |
+| design | 5 | 23 |
 | safety design | 5 | 22 |
-| recommendation | 7 | 8 |
+| recommendation | 7 | 10 |
 | environment | 4 | 10 |
-| communication | 14 | 71 |
+| communication | 14 | 73 |
 | testing | 2 | 32 |
 | process | 7 | 41 |
-| **Total** | **44** | **206** |
+| **Total** | **44** | **211** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
 | said-without-checking | 54 |
+| records-ahead-of-code | 31 |
 | how-I-work | 30 |
-| records-ahead-of-code | 30 |
 | weak-test | 29 |
-| vocabulary | 23 |
+| vocabulary | 24 |
 | safety-judgment | 18 |
+| recommendation | 15 |
+| window-between-steps | 15 |
 | reading-field-data | 15 |
-| window-between-steps | 14 |
-| recommendation | 13 |
 | message-misstates-outcome | 13 |
 | environment | 8 |
 | leftover-state | 3 |
@@ -112,6 +112,11 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-255 | 2026-11-25 | The take-over list change went against ADR-0093's move-only rule, unflagged | recommendation | recommendation | an option that touches code an ADR governs is checked against that ADR's Never and Always lines before it's offered (CLAUDE.md: point out a conflict with an accepted ADR and ask) |
+| M-254 | 2026-11-25 | Stage 5's comments and records said more than the code | communication | records-ahead-of-code | before marking an import test-only, search `src/` and `tools/` for its importers, not only `tests/`; a fact another module owns is pointed to, not copied (`docs/coding-style.md`); a record never says what the commit carrying it makes false (Q-46) |
+| M-253 | 2026-11-25 | "Session", "drone time" and "part" in the Crazyflie adapter's comments | communication | vocabulary | working rule 6, applied to each word of a new or rewritten comment, including words the glossary already uses in another sense (Q-38, Q-41) |
+| M-252 | 2026-11-25 | A link lost while connecting surfaces as cflib's AttributeError | design | window-between-steps | Q-03, for each cflib call `connect()` relies on: what it does once the link is already gone, read in the source, with the fact in the register |
+| M-251 | 2026-11-25 | A recommended constructor keyword broke the take-over fitness function | recommendation | recommendation | working rule 5, for a name or keyword an option adds: search `tests/architecture/` for it too, not only the backlog and the ADR index |
 | M-250 | 2026-11-25 | Two docstrings in stage 4's take-off and landing part said more than the code | communication | records-ahead-of-code | a docstring that says "as X does" is checked against both methods line by line, and a fact another module owns is pointed to, not copied (`docs/coding-style.md`) |
 | M-249 | 2026-11-25 | A comment that read backwards and a docstring that said "turned into", in ADR-0094's fix | communication | vocabulary | read each new comment as someone who knows only the code and the glossary, before the review does (`/project-review` step 4) |
 | M-248 | 2026-11-25 | "Lock error" in ADR-0094's code, where the glossary's "lock" is the drone lock | communication | vocabulary | working rule 6, for words the glossary already uses in another sense, not only for missing terms (Q-41) |
@@ -797,6 +802,46 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-255, 2026-11-25: The take-over list change went against ADR-0093's move-only rule, unflagged
+
+- **What happened:** for #157 stage 5, Claude offered listing `adapter.py` in the take-over fitness function as a pass-through (M-251) without saying that it changes a test body in the move commit, which ADR-0093's D14 and Never line rule out. Stage 4's move commit (`6710a79`) had done the same to `BLOCKING_FUNCTIONS`, also unflagged. Caught by Claude's project review of stage 5 (2026-11-25), in the architecture audit's move-only question; Joe chose to note it in the move commit's message and leave ADR-0093 as it is.
+- **Kind:** recommendation.
+- **Pattern:** recommendation.
+- **Guard:** an option that touches code an ADR governs is checked against that ADR's Never and Always lines before it's offered (CLAUDE.md: point out a conflict with an accepted ADR and ask).
+- **Takeaway:** the pattern is past its third entry; here the mechanism was the architecture audit's move-only question, which caught it before any commit. Nothing new to build.
+
+### M-254, 2026-11-25: Stage 5's comments and records said more than the code
+
+- **What happened:** building #157 stage 5 (2026-11-25), Claude marked the adapter's log-block re-exports test-only, though `programs/start_up.py` imports two of them, `TAKE_OFF_BLOCK_DURATION` and `TAKE_OFF_PERIOD_MS`; gave `LogBlocks` a docstring that copied `connect()`'s order ("`connect()` opens the link after building this"), M-250's pattern a day later; and wrote "not yet reviewed or committed" into backlog row #157, which the records commit would carry. Caught by Claude's project review of stage 5 (2026-11-25): `start_up.py` now imports them from `log_blocks.py`, the docstring points to ADR-0093, and the clause is gone.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** before marking an import test-only, search `src/` and `tools/` for its importers, not only `tests/`; a fact another module owns is pointed to, not copied (`docs/coding-style.md`); a record never says what the commit carrying it makes false (Q-46).
+- **Takeaway:** the docstring repeats M-250 within a day, and `/project-review`'s step 4 read is what catches it; no cheap mechanism. The test-only labels go with #158's forwards, so a check for them isn't worth building.
+
+### M-253, 2026-11-25: "Session", "drone time" and "part" in the Crazyflie adapter's comments
+
+- **What happened:** Claude's comments in `connect()` called a new connection "a new session" (stage 5 rewrote one of them), and `take_off_and_landing.py` said "sent this session", where the glossary's *Session* is a trip of field tests; stage 5's rewrite added "no drone time", which the glossary calls the drone's timestamp; and since stage 3 the code has used *part* as a term with no glossary row, against CLAUDE.md's rule to propose a term first. Caught by Claude's project review of #157 stage 5 (2026-11-25): reworded to "link" and "no earlier drone timestamp", and Joe approved a glossary row for *Part*.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** working rule 6, applied to each word of a new or rewritten comment, including words the glossary already uses in another sense (Q-38, Q-41).
+- **Takeaway:** the pattern is past its third entry, with no cheap mechanism: a lint can't tell a glossary word used in another sense. The questions stay.
+
+### M-252, 2026-11-25: A link lost while connecting surfaces as cflib's AttributeError
+
+- **What happened:** the Crazyflie adapter's `_add_log_block` (now in `log_blocks.py`) relies on cflib's `Log.add_config` raising for a block it can't add, but without a link it only logs and returns, so the block's `start()` raises AttributeError (cflib 0.1.34, `log.py` 461-464). A link lost just after `connect()`'s status wait succeeds ends the run with that error instead of the lost link's; it still fails safe, since `connect()` closes the link. Caught by Claude's project review of #157 stage 5 (2026-11-25), in code older than the split; Joe put it in the backlog (#161) for the link stage.
+- **Kind:** design.
+- **Pattern:** window-between-steps.
+- **Guard:** Q-03, for each cflib call `connect()` relies on: what it does once the link is already gone, read in the source, with the fact in the register.
+- **Takeaway:** the pattern is past its third entry; the cheap mechanism is a test whose fake cflib drops the link between two steps of `connect()`, which backlog #161 asks for.
+
+### M-251, 2026-11-25: A recommended constructor keyword broke the take-over fitness function
+
+- **What happened:** for #157 stage 5, Claude recommended passing the take-over setting to the new log-block part as a constructor keyword, `LogBlocks(..., take_over_flight=...)`, so the moved body stays unchanged. It didn't search for rules already written about that name: `test_only_the_rescue_landing_program_asks_to_take_over_a_flight` (ADR-0038) pins which files pass `take_over_flight=` in a call, and the adapter became a third. Caught by the first test run after the move (2026-11-25); Joe chose to list the adapter in the test as a pass-through, like `start_up.py`.
+- **Kind:** recommendation.
+- **Pattern:** recommendation.
+- **Guard:** working rule 5, for a name or keyword an option adds: search `tests/architecture/` for it too, not only the backlog and the ADR index.
+- **Takeaway:** the pattern is past its third entry, and here the mechanism worked: the fitness function caught the option at its first test run, before any commit. Nothing new to build.
 
 ### M-250, 2026-11-25: Two docstrings in stage 4's take-off and landing part said more than the code
 

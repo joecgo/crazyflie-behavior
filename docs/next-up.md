@@ -9,11 +9,34 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-25 (Pacific)
-- **Last commit:** "A test pins the cleanup before the threading lock
-  error's log (ADR-0094)", on `main`, after `fa3f995`. Uncommitted:
-  nothing. The checks pass (997 passed, 1 skipped).
+- **Last commit:** "Records after #157 stage 5: mistakes M-251 to M-255,
+  next-up brief", on `main`, after `06a432f`. Uncommitted: nothing. The
+  checks pass (997 passed, 1 skipped). Not pushed.
 
 ## Done last
+
+- 2026-11-25: committed #157's stage 5 (ADR-0093): the move to
+  `log_blocks.py` (`6651fb6`), the clearing's drop (`c19831b`), the review
+  fixes (`06a432f`) and the records.
+- 2026-11-25: `/project-review max` of #157's stage 5, run inline without the
+  fresh-context read (Joe's choices): no correctness bugs; the move is
+  move-only, and the clearing's drop is safe (`disconnect()` returns at once
+  after a close, and cflib's `stop()` does nothing once the link is closed).
+  8 findings, in `docs/review-queue.md`, fixed in `06a432f`:
+  `start_up.py` imports the take-off block's constants from `log_blocks.py`;
+  wording in `adapter.py`, `log_blocks.py` and `take_off_and_landing.py`; a
+  glossary row for *Part* (Joe approved the text); backlog #157's clause.
+  Joe's calls: the move commit's message notes its change to the take-over
+  fitness function's body (ADR-0093's D14), and a pre-existing lost-link
+  error while connecting is backlog #161. Mistakes M-252 to M-255.
+- 2026-11-25: built #157's stage 5 (ADR-0093):
+  the log blocks move to `log_blocks.py` (`LogBlocks`, with the interface
+  Joe approved), checked move-only by script (43 moved items match). Then
+  the clearing at the link close goes (Joe's choice: a fresh part on every
+  connect made it redundant). The take-over fitness function now lists
+  `adapter.py` as a pass-through (Joe's choice; M-251). 15 wiring bugs
+  planted, 14 caught; the survivor, `__init__`'s take-over flag, is never
+  read. Joe put C6 before #153.
 
 - 2026-11-25: `/project-review` (max, run inline, without the
   fresh-context read) of #157's stage 4 and ADR-0094's fix: no
@@ -49,17 +72,20 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
-- #157 (ADR-0093): stages 1 to 4 and the blocking-call fitness function
-  committed, with their reviews' fixes. Next: stage 5, the log blocks.
+- #157 (ADR-0093): stages 1 to 5 and the blocking-call fitness function
+  committed, with their reviews' fixes. Left: the link, rebuilding the parts
+  in `connect()`, and the last two fitness functions.
 
 ## Next three
 
-1. Build #153, the test for citations of removed backlog rows (ADR-0091),
-   before the next backlog row is removed. Sonnet, medium.
-2. #157's next stage: the log blocks to `log_blocks.py` (ADR-0093),
-   move-only. Opus, Max, or high if Joe judges it enough (backlog #157).
-3. #157's stage after that: the link to `link.py` (ADR-0093), move-only.
-   Opus, Max.
+1. #157's next stage: the link to `link.py` (ADR-0093), move-only. Opus,
+   Max.
+2. #157's stage after the link: rebuilding the parts in `connect()`
+   (ADR-0093's D13). Opus, Max.
+3. Build #153, the test for citations of removed backlog rows (ADR-0091),
+   before backlog row #157 is removed (#158 to #160 cite it). It first needs
+   Joe's OK on a glossary term: *Live doc* was proposed, *Live place* the
+   alternative. Sonnet, medium.
 
 ## Explain-backs waiting
 
@@ -123,6 +149,12 @@ from `drafts/explain-back-notes.md`; don't open it first.
   still close, why does `run_with_time_limit` raise the KeyboardInterrupt
   after its `except` block rather than inside it, and why did the test that
   sends a real signal fail only about once in a hundred runs?
+- **E15.** Stage 5 moved the log blocks into `log_blocks.py`, and
+  `connect()` now builds a fresh log-block part instead of resetting four
+  fields by hand. Why do the other parts read the telemetry buffer through
+  `log_blocks.telemetry` on every call instead of keeping it, which two
+  places replace the buffer, and why could the clearing of the log blocks at
+  the link close be dropped?
 
 ## Last reviewed
 
