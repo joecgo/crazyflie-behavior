@@ -48,7 +48,6 @@ from crazyflie_behavior.drone.crazyflie.log_blocks import _DOWN_VARIABLES as _DO
 from crazyflie_behavior.drone.crazyflie.log_blocks import _STATE_VARIABLES as _STATE_VARIABLES
 from crazyflie_behavior.drone.crazyflie.log_blocks import _TAKE_OFF_VARIABLES as _TAKE_OFF_VARIABLES
 from crazyflie_behavior.drone.crazyflie.log_blocks import TAKE_OFF_BLOCK_DURATION as TAKE_OFF_BLOCK_DURATION
-from crazyflie_behavior.drone.crazyflie.log_blocks import TAKE_OFF_PERIOD_MS as TAKE_OFF_PERIOD_MS
 
 # The adapter's own.
 from crazyflie_behavior.drone.crazyflie.log_blocks import LogBlocks, drone_status_from_bitfield
@@ -188,15 +187,15 @@ class CrazyflieAdapter(DroneInterface):
         self._lost_link_message = None
         self._is_lost_link_raised = False
         self._is_drone_state_unknown = True
-        # A new session learns what the drone is doing from the drone, and carries on no take-off, landing or
+        # A new link learns what the drone is doing from the drone, and carries on no take-off, landing or
         # setpoint stream from an earlier one.
         self._commands = CrazyflieCommands(lambda: self._crazyflie, lambda: self._log_blocks.telemetry)
         self._take_off_and_landing = TakeOffAndLanding(
             self._clock, self._commands, lambda: self._log_blocks.telemetry, self.take_snapshot
         )
-        # A new session starts with no values, so the wait for the first telemetry
-        # can't pass on values left from an earlier one (ADR-0031), and with no drone
-        # time: the drone may have rebooted.
+        # A new link starts with no values, so the wait for the first telemetry
+        # can't pass on values left from an earlier one (ADR-0031), and with no earlier
+        # drone timestamp: the drone may have rebooted.
         self._log_blocks = LogBlocks(self._clock, lambda: self._crazyflie, take_over_flight=self._take_over_flight)
         sync_crazyflie = SyncCrazyflie(self._uri, cf=Crazyflie(rw_cache=self._cache_directory))
         self._sync_crazyflie = sync_crazyflie  # tracked from the start, so cleanup always finds it

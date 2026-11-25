@@ -129,7 +129,7 @@ class TakeOffAndLanding:
 
     @property
     def has_stopped_motors(self) -> bool:
-        """A motor stop was sent this session, so closing the link waits for not flying (ADR-0058)."""
+        """A motor stop was sent on this link, so closing the link waits for not flying (ADR-0058)."""
         return self._has_stopped_motors
 
     @property

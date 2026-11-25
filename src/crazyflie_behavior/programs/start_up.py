@@ -19,7 +19,8 @@ from pathlib import Path
 from types import FrameType, TracebackType
 from typing import Any, Self, TextIO
 
-from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_BLOCK_DURATION, TAKE_OFF_PERIOD_MS, CrazyflieAdapter
+from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
+from crazyflie_behavior.drone.crazyflie.log_blocks import TAKE_OFF_BLOCK_DURATION, TAKE_OFF_PERIOD_MS
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_loop import HangWatchdog, TickLoop, TickStep

@@ -129,7 +129,7 @@ def drone_status_from_bitfield(bitfield: int) -> DroneStatus:
 class LogBlocks:
     """The log blocks, and their callbacks that write the telemetry buffer on cflib's receive thread (ADR-0093).
 
-    Looks up the drone on every call: `connect()` opens the link after building this.
+    Looks up the drone on every call and keeps no reference to it (ADR-0093).
     """
 
     def __init__(self, clock: Clock, current_crazyflie: Callable[[], Crazyflie], *, take_over_flight: bool) -> None:
