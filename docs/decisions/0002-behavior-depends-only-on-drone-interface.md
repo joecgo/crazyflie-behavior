@@ -1,6 +1,6 @@
 # 0002: Behavior depends only on the drone interface
 
-- **Status:** Accepted
+- **Status:** Accepted. Narrowed by [ADR-0093](0093-the-crazyflie-adapter-splits-into-parts-with-take-off-and-landing-free-of-cflib.md): once it's built, only the Crazyflie adapter's adapter, link, log-block and command modules import cflib.
 - **Date:** 2026-10-17
 - **Origin:** Carried over from the project's original plan (the handoff document); the tools exemption was an AI recommendation accepted.
 

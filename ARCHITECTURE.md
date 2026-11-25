@@ -105,7 +105,8 @@ mostly create wide interfaces. By review: no fitness function.
 | Everything to time | `Clock.now()`, `Clock.sleep_until()`. | Injected, never read from the system directly (ADR-0009). |
 
 Only project types cross a boundary. No cflib object, `dict` of raw values or
-untyped value does (ADR-0004).
+untyped value does (ADR-0004). Inside the Crazyflie adapter, only its modules
+that import cflib pass cflib objects to each other (ADR-0093).
 
 ## 4. Dependency rules
 
@@ -236,7 +237,7 @@ the repository until they're decided. Module names are working names.
 
 | Target | Changes here | Needs |
 |---|---|---|
-| The Crazyflie adapter becomes parts inside `drone/crazyflie/`: `link.py`, `log_blocks.py` and `commands.py`, which with `adapter.py` are the only cflib importers; and `flight_phases.py`, the take-off and landing logic with no cflib import and strict typing. `DroneInterface` stays as it is. | Section 2; rule 1 narrows to the named modules | An ADR; the glossary's *Crazyflie adapter* |
+| The Crazyflie adapter becomes parts inside `drone/crazyflie/`: `link.py`, `log_blocks.py` and `commands.py`, which with `adapter.py` are the only cflib importers; and `take_off_and_landing.py`, the take-off and landing logic with no cflib import and strict typing. `DroneInterface` stays as it is. | Section 2; rule 1 narrows to the named modules | ADR-0093 accepted; partly built: the transcript tests and `commands.py` (backlog #157) |
 | A tick reports an outcome, up to the program. | Section 3 | ADR-0036 is accepted; how the outcome travels is open |
 | Recordings, replay tests, and program tests on the sim clock. | A recorder beside the tick step | The recorder is built (ADR-0034, ADR-0087, ADR-0088). Program tests on the sim clock are built (ADR-0076). Replay tests are open |
 | Tuning values are grouped, passed in, and logged with every run. | Where constants live | An ADR |

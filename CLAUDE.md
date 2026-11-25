@@ -67,7 +67,8 @@ the ADRs: an accepted ADR wins where the two disagree.
   package.
 - Add a wait, a sleep or a blocking read to a tick, a command or a cflib
   callback. Only `connect()` and `disconnect()` may block.
-- Pass a cflib object or an untyped value across a module boundary.
+- Pass a cflib object or an untyped value across a module boundary, except
+  between the Crazyflie adapter's modules that import cflib (ADR-0093).
 - Stop the motors of a drone that may be flying before touchdown is confirmed
   or the final descent's time limit (except the last-resort landing,
   ADR-0084), or close its link with cflib's `close_link()`.
