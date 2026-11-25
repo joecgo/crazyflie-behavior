@@ -207,12 +207,6 @@ class LogBlocks:
         for log_config in self._log_configs:
             log_config.stop()
 
-    def forget_log_blocks(self) -> None:
-        """Forget the log blocks and the take-off block's state: they belonged to the link just closed."""
-        self._log_configs.clear()
-        self._take_off_block = None
-        self._is_take_off_block_running = False
-
     # The take-off block (ADR-0063, ADR-0065). Nothing waits for it. cflib sends one packet for each start
     # or stop, and sets `started` on its receive thread once the drone confirms a start.
 

@@ -402,7 +402,6 @@ class CrazyflieAdapter(DroneInterface):
             else:
                 self._sync_crazyflie.close_link()
             self._sync_crazyflie = None
-        self._log_blocks.forget_log_blocks()
 
     def _close_radio_link_only(self) -> None:
         """Turn off the radio link and nothing else, so a flying drone keeps flying (ADR-0038).
