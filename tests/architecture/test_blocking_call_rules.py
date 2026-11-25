@@ -1,7 +1,8 @@
 """Fitness function: in the Crazyflie adapter, only `connect()` and `disconnect()` may block (ADR-0093).
 
 Reads `drone/crazyflie/` without running it. A function blocks when it sleeps, waits or joins, or calls a function
-that does. Calls match by name alone, so `x.emergency_stop()` counts as a call to every `emergency_stop`. A function
+that does. Calls match by name alone, so `x.emergency_stop()` counts as a call to every `emergency_stop`, and a name
+imported under another name counts as the original (`pause` for `from time import sleep as pause`). A function
 passed or stored as a value is run later through another name, which a check by name can't follow, so each such use
 of a blocking function goes on an allow-list.
 """
@@ -27,8 +28,9 @@ BLOCKING_CALLS = {
     "wait_for_params",  # SyncCrazyflie.wait_for_params: until every parameter has a value
     "close_link",  # SyncCrazyflie.close_link: until the link is closed
 }
-"""The calls that sleep, wait or join. Not counted: cflib's sends, which can wait during radio trouble (ADR-0027), and
-its parameter reads and writes, which wait only until every parameter has a value: `connect()` waits for that first."""
+"""The calls that sleep, wait or join. Not counted: cflib's sends, which can wait during radio trouble (ADR-0027); its
+parameter reads and writes, which wait only until every parameter has a value: `connect()` waits for that first; and
+locks, held only for a quick read or write (the telemetry buffer's, `time_limit.py`'s)."""
 
 MAY_BLOCK = {"connect", "disconnect"}
 """The drone interface's methods that may block: programs call them, never a tick (ARCHITECTURE.md section 3)."""
@@ -83,8 +85,10 @@ class ScannedFunction:
 class _Scanner:
     """Records what each function in one file names. Code outside any function counts as the file's `<module>`."""
 
-    def __init__(self, file_name: str) -> None:
+    def __init__(self, file_name: str, aliases: dict[str, str]) -> None:
         self._file_name = file_name
+        self._aliases = aliases
+        """Each name the file imports under another name, to the original: `pause` to `sleep`."""
         self._class_names: list[str] = []
         self._function: str | None = None
         """The function or method being scanned, as "file::Class.method"."""
@@ -110,7 +114,7 @@ class _Scanner:
             case ast.Call():
                 self._scan_call(node)
             case ast.Name(ctx=ast.Load()):
-                self._current().values.append(Use(node.id, node.lineno))
+                self._current().values.append(Use(self._aliases.get(node.id, node.id), node.lineno))
             case ast.Attribute():
                 if isinstance(node.ctx, ast.Load):
                     self._current().values.append(Use(node.attr, node.lineno))
@@ -122,7 +126,7 @@ class _Scanner:
         callee = call.func
         match callee:
             case ast.Name():
-                self._record_call(Use(callee.id, call.lineno))
+                self._record_call(Use(self._aliases.get(callee.id, callee.id), call.lineno))
             case ast.Attribute():
                 if not _is_text_join(callee):
                     self._record_call(Use(callee.attr, call.lineno))
@@ -152,12 +156,24 @@ def _is_text_join(callee: ast.Attribute) -> bool:
     return callee.attr == "join" and isinstance(callee.value, ast.Constant) and isinstance(callee.value.value, str)
 
 
+def _import_aliases(tree: ast.AST) -> dict[str, str]:
+    """Each name a file imports under another name, to the original's last part: `pause` to `sleep`."""
+    return {
+        alias.asname: alias.name.split(".")[-1]
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import | ast.ImportFrom)
+        for alias in node.names
+        if alias.asname is not None and alias.asname != alias.name
+    }
+
+
 def scan_functions(root: Path) -> dict[str, ScannedFunction]:
     """Every function in the files under `root`, by "file::Class.method" or "file::function"."""
     functions: dict[str, ScannedFunction] = {}
     for path in sorted(root.rglob("*.py")):
-        scanner = _Scanner(path.relative_to(root).as_posix())
-        scanner.scan(ast.parse(path.read_text(encoding="utf-8")))
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        scanner = _Scanner(path.relative_to(root).as_posix(), _import_aliases(tree))
+        scanner.scan(tree)
         functions.update(scanner.functions)
     return functions
 
@@ -218,17 +234,15 @@ def reached_from_connect_and_disconnect(
     return reached
 
 
-def drone_interface_methods() -> set[str]:
-    """The abstract methods of `DroneInterface`, read from its class."""
-    tree = ast.parse(DRONE_INTERFACE.read_text(encoding="utf-8"))
+def drone_interface_methods(path: Path = DRONE_INTERFACE) -> set[str]:
+    """Every method `DroneInterface` declares, whatever decorates it, read from its class. Not those named with double
+    underscores, such as `__enter__`: programs use them, as they do `connect()`."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
     interface = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "DroneInterface")
     return {
         node.name
         for node in interface.body
-        if isinstance(node, ast.FunctionDef)
-        and any(
-            isinstance(decorator, ast.Name) and decorator.id == "abstractmethod" for decorator in node.decorator_list
-        )
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and not node.name.startswith("__")
     }
 
 
@@ -250,9 +264,11 @@ def test_no_drone_interface_method_blocks_but_connect_and_disconnect() -> None:
     assert offenders == []
 
 
-def test_every_blocking_function_runs_only_inside_connect_or_disconnect() -> None:
-    """Also catches a blocking function that nothing in the package calls by name: a constructor, a cflib
-    callback, or one only code outside the package calls."""
+def test_every_blocking_function_is_reached_from_connect_or_disconnect() -> None:
+    """Anything that calls a blocking function blocks too, so it must be reached from them as well. With the first
+    rule, no tick reaches one, and with the allow-list rule, none runs as a stored callable. Also catches a blocking
+    function that nothing in the package calls by name: a constructor, a cflib callback, or one only code outside the
+    package calls."""
     functions = scan_functions(CRAZYFLIE_ADAPTER_ROOT)
     blocking = blocking_functions(functions, ALLOWED_STORED_CALLABLES)
 
@@ -310,11 +326,42 @@ def test_the_scanner_reads_the_drone_interface_methods() -> None:
     }
 
 
+def test_the_scanner_reads_every_drone_interface_method_whatever_decorates_it(tmp_path: Path) -> None:
+    path = tmp_path / "interface.py"
+    path.write_text(
+        """\
+import abc
+from abc import abstractmethod
+
+
+class DroneInterface(abc.ABC):
+    def __enter__(self):
+        self.connect()
+
+    @abstractmethod
+    def land(self): ...
+
+    @abc.abstractmethod
+    def go_to(self): ...
+
+    @property
+    @abstractmethod
+    def is_flying(self): ...
+
+    def hover(self): ...
+""",
+        encoding="utf-8",
+    )
+
+    assert drone_interface_methods(path) == {"land", "go_to", "is_flying", "hover"}
+
+
 # --- Each form the scanner handles, on made-up code --------------------------
 
 MADE_UP_ADAPTER = """\
 import time
 from time import sleep
+from time import sleep as pause
 
 
 def wait_for_it(clock):
@@ -344,6 +391,7 @@ def scan_made_up_adapter(tmp_path: Path, body: str) -> dict[str, ScannedFunction
         "self._clock.sleep_until(1.0)",
         "time.sleep(0.1)",
         "sleep(0.1)",
+        "pause(0.1)",
         "self._finished.wait(0.1)",
         "self._thread.join(timeout=1)",
         "self._sync_crazyflie.open_link()",
@@ -363,15 +411,37 @@ def test_the_scanner_sees_every_form_of_a_blocking_call(body: str, tmp_path: Pat
     assert UPDATE in blocking_functions(functions, allowed=())
 
 
-def test_the_scanner_sees_a_call_to_a_blocking_function_in_another_file(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("import_line", "call"),
+    [
+        ("from time_limit import run_with_time_limit", "run_with_time_limit(self._event)"),
+        ("from time_limit import run_with_time_limit as run_limited", "run_limited(self._event)"),
+    ],
+)
+def test_the_scanner_sees_a_call_to_a_blocking_function_in_another_file(
+    import_line: str, call: str, tmp_path: Path
+) -> None:
     (tmp_path / "time_limit.py").write_text("def run_with_time_limit(event):\n    event.wait(0.1)\n", encoding="utf-8")
     (tmp_path / "adapter.py").write_text(
-        "from time_limit import run_with_time_limit\n\n\n"
-        "class Adapter:\n    def connect(self):\n        run_with_time_limit(self._event)\n",
+        f"{import_line}\n\n\nclass Adapter:\n    def connect(self):\n        {call}\n",
         encoding="utf-8",
     )
 
     assert "adapter.py::Adapter.connect" in blocking_functions(scan_functions(tmp_path), allowed=())
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import time\n\ntime.sleep(1)\n",
+        "import time\n\n\nclass Adapter:\n    PAUSE = time.sleep(1)\n",
+    ],
+)
+def test_the_scanner_counts_code_outside_any_function_as_the_module(source: str, tmp_path: Path) -> None:
+    """Code run at import or in a class body; no `connect()` reaches it, so the reach rule fails on it."""
+    (tmp_path / "made_up.py").write_text(source, encoding="utf-8")
+
+    assert "made_up.py::<module>" in blocking_functions(scan_functions(tmp_path), allowed=())
 
 
 @pytest.mark.parametrize(
@@ -405,6 +475,8 @@ def test_the_scanner_does_not_see_a_near_miss(body: str, tmp_path: Path) -> None
         ("run(self._sync_crazyflie.open_link)", "open_link"),
         ("run(lambda: self._wait())", "_wait"),
         ("def inner():\n    self._wait()\nrun(inner)", "_wait"),
+        ("class Inner:\n    def go(self):\n        self._wait()\nrun(Inner)", "_wait"),
+        ("run(pause)", "sleep"),
     ],
 )
 def test_the_scanner_sees_every_form_of_a_blocking_function_used_as_a_value(
