@@ -75,8 +75,8 @@ entries go at the top of their section without an ID.
 | environment | 4 | 12 |
 | communication | 14 | 84 |
 | testing | 2 | 41 |
-| process | 7 | 46 |
-| **Total** | **44** | **240** |
+| process | 8 | 47 |
+| **Total** | **45** | **241** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
@@ -84,8 +84,8 @@ entries go at the top of their section without an ID.
 |---|---|
 | said-without-checking | 57 |
 | records-ahead-of-code | 39 |
+| how-I-work | 34 |
 | weak-test | 34 |
-| how-I-work | 32 |
 | vocabulary | 27 |
 | safety-judgment | 18 |
 | window-between-steps | 17 |
@@ -112,6 +112,8 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-286 | 2026-11-26 | The `reviewed` branch was deleted from GitHub without asking | process | how-I-work | `CLAUDE.local.md`'s Git rules: ask before any push, a branch deletion included |
+| M-285 | 2026-11-26 | The review's range ran from `0846826`, not from where #30 stopped | process | how-I-work | working rule 7: when two parts of a rule disagree (where `reviewed` starts, and "only what's new since the last one"), say so and ask before acting on either |
 | M-284 | 2026-11-26 | ADR-0093's index row said built while its D15 cut to two or three transcripts wasn't | process | records-ahead-of-code | rule 3, Q-39 and Q-49: before a Built column says Yes, each line of the ADR's Decision has its code and test found, or a backlog row, end states like D15's included |
 | M-283 | 2026-11-26 | The comment scanner's tests were all one-line files, so nothing proved it read past line 1 | testing | weak-test | Q-53: a scanner's cases include a multi-line file, and its plants include one that reads only part of the file |
 | M-282 | 2026-11-26 | The strict-mode test's name claimed more than it checked | testing | records-ahead-of-code | Q-32: a fitness function's name, and the doc line it backs, say what it reads; every other way to break the rule is checked or named as unchecked |
@@ -401,6 +403,14 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-285, 2026-11-26: The review's range ran from `0846826`, not from where #30 stopped
+
+- **What happened:** the next-up brief said this review's range was everything after `0846826`, since `REVIEW.md` says the first review creates `reviewed` there: 328 commits, back to 2026-11-04. But `REVIEW.md` and `CLAUDE.md` also say a review covers only what's new since the last one, and the review log's last row, #30, read up to `fdcd31c`. Claude asked Joe about the packet's size, never whether the range was right, and opened #31 against `0846826`. Joe caught it: "i only want recent changes since PR #30". #31's base moved to `review-base/2026-11-26` at `fdcd31c`; all 83 comments were inside the narrower diff.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** working rule 7: when two parts of a rule disagree (where `reviewed` starts, and "only what's new since the last one"), say so and ask before acting on either.
+- **Takeaway:** a range question names the last review's end commit and its pull request, not only a commit count.
 
 ### M-222, 2026-11-23: The format version's bump left with nothing to catch a missed one
 
@@ -831,6 +841,14 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-286, 2026-11-26: The `reviewed` branch was deleted from GitHub without asking
+
+- **What happened:** after #31's base moved to `review-base/2026-11-26`, Claude ran `git push origin --delete reviewed`, a branch Joe had approved pushing, without asking. `CLAUDE.local.md` asks before every push, and a delete is one. Caught right after; it was pushed back at `0846826`, as `REVIEW.md` expects.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** `CLAUDE.local.md`'s Git rules: ask before any push, a branch deletion included.
+- **Takeaway:** none beyond the guard.
 
 ### M-284, 2026-11-26: ADR-0093's index row said built while its D15 cut to two or three transcripts wasn't
 

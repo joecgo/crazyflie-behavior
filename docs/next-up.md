@@ -9,14 +9,20 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-26 (Pacific)
-- **Last commit:** `a03e207`, "Records after #157's D13: mistakes M-274
-  to M-277, backlog #164, next-up brief", pushed. Uncommitted: #157's last
-  two fitness functions, their project review's fixes and the records of
-  both, this page included; the work log doesn't have them yet. The checks
-  pass (1113 passed, 1 skipped).
+- **Last commit:** `05d8b17` (Joe's glossary edit), after `acb0903`,
+  "Records after #157's fitness functions", both pushed. Uncommitted: the
+  records after opening review #31 (review queue emptied, `REVIEW.md`'s
+  log, mistakes M-285 and M-286, this page).
 
 ## Done last
 
+- **Review pull request #31 opened:** everything after #30
+  (`fdcd31c..acb0903`, base `review-base/2026-11-26`), mostly #157's
+  adapter split. Packet `drafts/review-packets/2026-11-26.md`; the review
+  queue and the two saved drafts posted as 83 line comments, in two reviews
+  (GitHub's limit on creating content refused one of 83). `reviewed` is on
+  GitHub at `0846826`. Mistakes M-285 (the range first ran from `0846826`)
+  and M-286.
 - **The project review of #157's last fitness functions (ADR-0093),
   uncommitted:** Joe chose the range: only the uncommitted work, since each
   earlier stage had its own. `/project-review max`, run inline (Joe's
@@ -73,24 +79,12 @@ move the item, renumber "Next three", and update "Last commit" and
   Mistakes M-247 to M-263.
 ## In progress
 
-- The review's pull request (Next three, 1): its project review and fixes
-  are done; the commits, the push, the review branch, the packet and the
-  pull request are left. C6 (#157) is built; its backlog row stays until
-  #153.
+- Joe's review of #31. When he's done: fix what he asks on `main`, close
+  #31 unmerged like #24 to #30, and give `REVIEW.md`'s log its row.
 
 ## Next three
 
-1. The rest of the code review's pull request, as Joe asked. Ask him
-   before committing (small chunks, with the work log's row), before
-   pushing, and before opening the pull request. Then, as `REVIEW.md`'s
-   "My reviews" says: the branch `review/<date>` at `main`'s last commit,
-   `/review-packet`, and the pull request into `reviewed`. `reviewed` isn't
-   on GitHub yet: this first review creates it at `0846826`, so the range is
-   everything after it (over 320 commits, 77 source and test files); check
-   the packet's size with Joe first. `REVIEW.md`'s "Next" row still says
-   #30 is open (it closed 2026-11-23): fix it with the log's row. Sonnet,
-   medium for the commits and the branch; Opus, high for a packet over the
-   whole range.
+1. Joe's review of #31 (above), then its fixes. Opus, high.
 2. Build #153, the test for citations of removed backlog rows (ADR-0091),
    then remove row #157 (built; #158 to #160 cite it). It first needs Joe's
    OK on a glossary term: *Live doc* was proposed, *Live place* the
@@ -164,13 +158,10 @@ from `drafts/explain-back-notes.md`; don't open it first.
 
 ## Last reviewed
 
-`0846826`, 2026-11-04: the last full row of `REVIEW.md`'s review log. The
-next code review covers everything after it. Pull requests #24 to #30 read
-single changes ahead of the full review; the last, #30, read up to
-`fdcd31c` and closed 2026-11-23. The full line-by-line walk comes after the
-refactor (W9). Drafted for its pull request: the blocking-call fitness
-function's review comments (`drafts/2026-11-24-blocking-call-review-comments.md`)
-and stage 4's (`drafts/2026-11-24-stage-4-review-comments.md`), which
-`/review-packet` posts along with the review queue.
+`fdcd31c`, #30, closed 2026-11-23. #31 reads everything after it. The
+code from 2026-11-04 to 11-16 that #24 to #30 didn't read waits for the
+full walk after the refactor (W9), with the fresh-context reads
+`drafts/2026-11-17-adr-0077-fresh-read.md` and
+`drafts/2026-11-24-fresh-read-c6-stage-3.md`.
 
-Review queue: 14 decisions, 57 findings waiting (`docs/review-queue.md`).
+Review queue: empty, posted on #31 (`docs/review-queue.md`).
