@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Crazyflie Adapter Tour</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="The project tour's first chapter: how the Crazyflie adapter turns the project's types into cflib calls and never drops a flying drone.">
+<link rel="stylesheet" href="tour.css">
+<script src="tour.js" defer></script>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-inner">
+    <div class="bar-title">The Crazyflie adapter <span>· project tour, chapter 1</span></div>
+    <div class="depth" role="group" aria-label="How much to show">
+      <button type="button" id="depth-tour" aria-pressed="true">5-minute tour</button>
+      <button type="button" id="depth-all" aria-pressed="false">Everything</button>
+    </div>
+    <nav class="route" aria-label="Sections">
+      <a href="#s1">1 What it is</a>
+      <a href="#s2">2 The parts</a>
+      <a href="#s3">3 Threads</a>
+      <a href="#s4" class="later">4 Commands</a>
+      <a href="#s5">5 Bad-flow zone</a>
+      <a href="#s6" class="later">6 May be flying</a>
+      <a href="#s7" class="later">7 Connect</a>
+      <a href="#s8" class="later">8 What if</a>
+      <a href="#s9" class="later">9 Tests</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="eyebrow"><span class="term" tabindex="0" data-term="Project tour">Project tour</span>, <span class="term" tabindex="0" data-term="Chapter">chapter</span> 1</div>
+  <h1>The Crazyflie adapter</h1>
+  <p class="lede">The one place where this project's Python code talks to a real drone. It has two jobs: turn the project's own types into calls to Bitcraze's library, and never drop a flying drone.</p>
+  <div class="meta">
+    <span>A nano drone, the Crazyflie 2.1+, flown by a PC over a USB radio</span>
+    <span>Every link opens the code at commit <code>5050718</code></span>
+    <span>Pass one: sections 1, 2, 3 and 5</span>
+  </div>
+  <div class="howto">
+    <div><b>Start simple</b>Each section opens with a short summary. That's the 5-minute tour.</div>
+    <div><b>Go deeper</b>Open any drop-down, or press <em>Everything</em> at the top to open them all.</div>
+    <div><b>Words with dots</b>are the project's <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/glossary.md">glossary</a> terms. Hover or tap one for its definition.</div>
+    <div><b>Focus areas</b>Chips mark the real-robot problems the project is built around (<a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/CLAUDE.md?plain=1#L98-L124">the list</a>).</div>
+  </div>
+</section>
+
+<!-- ======================================================= 1 -->
+<section class="stop" id="s1">
+  <div class="stop-head"><span class="stop-num">01</span><h2>What the adapter is</h2></div>
+  <p class="lede">Above the <span class="term" tabindex="0" data-term="Crazyflie adapter">Crazyflie adapter</span>, the code uses the project's own types and generic words: range readings, a position estimate, take off, land. Below it is Bitcraze's world: <span class="term" tabindex="0" data-term="cflib">cflib</span>, the <span class="term" tabindex="0" data-term="Crazyradio">Crazyradio</span> and the drone's <span class="term" tabindex="0" data-term="Firmware">firmware</span>. The adapter is the only code in <code>src/</code> that imports cflib, and a fitness function fails continuous integration if anything else does.</p>
+  <div class="focus-row"><span class="focus">Testing without hardware</span><span class="focus">Safety</span></div>
+
+  <figure class="fig">
+    <div class="split">
+      <div class="fig-frame">
+        <svg id="layers" viewBox="85 0 584 476" style="min-width:520px" role="img" aria-label="Seven layers, from behaviors at the top to the firmware on the drone. Commands flow down and telemetry flows up. Only the Crazyflie adapter imports cflib.">
+          <defs><marker id="ah1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ah" d="M0,0 L8,4 L0,8 z"/></marker></defs>
+          <g class="bracket">
+            <line x1="176" y1="12" x2="176" y2="260"/><line x1="176" y1="12" x2="184" y2="12"/><line x1="176" y1="260" x2="184" y2="260"/>
+            <text x="166" y="128" text-anchor="end" class="bl">This project's</text><text x="166" y="144" text-anchor="end" class="bl">Python code</text>
+            <line x1="176" y1="284" x2="176" y2="464"/><line x1="176" y1="284" x2="184" y2="284"/><line x1="176" y1="464" x2="184" y2="464"/>
+            <text x="166" y="362" text-anchor="end" class="bl">Bitcraze's</text><text x="166" y="378" text-anchor="end" class="bl">library, radio</text><text x="166" y="394" text-anchor="end" class="bl">and firmware</text>
+          </g>
+          <g class="layer click" data-layer="behaviors" tabindex="0" role="button" aria-label="Behaviors"><rect class="box" x="190" y="12" width="360" height="44" rx="6"/><text x="206" y="40" class="ln">Behaviors</text><text x="534" y="40" text-anchor="end" class="lr">decide</text></g>
+          <g class="layer click" data-layer="safety" tabindex="0" role="button" aria-label="Safety layer"><rect class="box" x="190" y="80" width="360" height="44" rx="6"/><text x="206" y="108" class="ln">Safety layer</text><text x="534" y="108" text-anchor="end" class="lr">judges and sends</text></g>
+          <g class="layer click" data-layer="interface" tabindex="0" role="button" aria-label="Drone interface"><rect class="box" x="190" y="148" width="360" height="44" rx="6"/><text x="206" y="176" class="ln">Drone interface</text><text x="534" y="176" text-anchor="end" class="lr">the contract</text></g>
+          <g class="layer click adapter sel" data-layer="adapter" tabindex="0" role="button" aria-label="Crazyflie adapter"><rect class="box" x="190" y="216" width="360" height="44" rx="6"/><text x="206" y="244" class="ln">Crazyflie adapter</text><text x="534" y="244" text-anchor="end" class="lr">this chapter</text></g>
+          <g class="layer click" data-layer="cflib" tabindex="0" role="button" aria-label="cflib"><rect class="box" x="190" y="284" width="360" height="44" rx="6"/><text x="206" y="312" class="ln">cflib</text><text x="534" y="312" text-anchor="end" class="lr">Bitcraze's Python library</text></g>
+          <g class="layer click" data-layer="radio" tabindex="0" role="button" aria-label="Crazyradio"><rect class="box" x="190" y="352" width="360" height="44" rx="6"/><text x="206" y="380" class="ln">Crazyradio</text><text x="534" y="380" text-anchor="end" class="lr">USB radio dongle</text></g>
+          <g class="layer click" data-layer="firmware" tabindex="0" role="button" aria-label="Firmware"><rect class="box" x="190" y="420" width="360" height="44" rx="6"/><text x="206" y="448" class="ln">Firmware</text><text x="534" y="448" text-anchor="end" class="lr">on the drone</text></g>
+          <g class="flows">
+            <line class="flow" x1="330" y1="57" x2="330" y2="78" marker-end="url(#ah1)"/><text x="322" y="72" text-anchor="end" class="gl">command requests</text>
+            <line class="flow" x1="410" y1="79" x2="410" y2="58" marker-end="url(#ah1)"/><text x="418" y="72" class="gl">snapshot</text>
+            <line class="flow" x1="330" y1="125" x2="330" y2="146" marker-end="url(#ah1)"/><text x="322" y="140" text-anchor="end" class="gl">commands</text>
+            <line class="flow" x1="410" y1="147" x2="410" y2="126" marker-end="url(#ah1)"/><text x="418" y="140" class="gl">snapshot</text>
+            <line class="flow" x1="330" y1="193" x2="330" y2="214" marker-end="url(#ah1)"/><text x="322" y="208" text-anchor="end" class="gl">commands that don't block</text>
+            <line class="flow" x1="410" y1="215" x2="410" y2="194" marker-end="url(#ah1)"/><text x="418" y="208" class="gl">take_snapshot()</text>
+            <line class="flow" x1="330" y1="261" x2="330" y2="282" marker-end="url(#ah1)"/><text x="322" y="276" text-anchor="end" class="gl">cflib calls</text>
+            <line class="flow" x1="410" y1="283" x2="410" y2="262" marker-end="url(#ah1)"/><text x="418" y="276" class="gl">log callbacks</text>
+            <line class="flow" x1="330" y1="329" x2="330" y2="350" marker-end="url(#ah1)"/><text x="322" y="344" text-anchor="end" class="gl">CRTP packets</text>
+            <line class="flow" x1="410" y1="351" x2="410" y2="330" marker-end="url(#ah1)"/><text x="418" y="344" class="gl">CRTP packets</text>
+            <line class="flow" x1="330" y1="397" x2="330" y2="418" marker-end="url(#ah1)"/><text x="322" y="412" text-anchor="end" class="gl">setpoints, moves</text>
+            <line class="flow" x1="410" y1="419" x2="410" y2="398" marker-end="url(#ah1)"/><text x="418" y="412" class="gl">log blocks</text>
+          </g>
+          <line x1="190" y1="408" x2="550" y2="408" class="air"/>
+          <text x="560" y="412" class="gl">over the air</text>
+          <text x="560" y="234" class="gl">◀ the only layer</text><text x="560" y="249" class="gl">that imports cflib</text>
+          <text x="560" y="200" class="gl">Crazyflie-only words</text><text x="560" y="214" class="gl">stay below this line</text>
+          <line x1="190" y1="204" x2="550" y2="204" class="edge-line"/>
+        </svg>
+      </div>
+      <div class="panel" id="layer-info" aria-live="polite">
+        <div class="layer-card" data-for="behaviors" hidden>
+          <span class="label">Layer</span><h3>Behaviors</h3>
+          <p><span class="term" tabindex="0" data-term="Behavior">Behaviors</span> decide. Each tick, a behavior reads the snapshot and asks the safety layer for commands. It holds no drone and no clock, so a behavior's test builds a snapshot by hand, with no drone, mock or thread.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/ARCHITECTURE.md?plain=1#L95">ARCHITECTURE.md, the boundary</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0007-snapshot-blackboard-telemetry-buffer.md">ADR-0007</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/architecture/test_import_rules.py#L266-L270">fitness function</a></div>
+        </div>
+        <div class="layer-card" data-for="safety" hidden>
+          <span class="label">Layer</span><h3>Safety layer</h3>
+          <p>Apart from two narrow exceptions, a test wrapper and the operator's kill switch (not built yet), the <span class="term" tabindex="0" data-term="Safety layer">safety layer</span> is the only code that sends commands to the drone. It runs the <span class="term" tabindex="0" data-term="Safety pre-check">safety pre-check</span> on every snapshot and answers each command request at once.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/ARCHITECTURE.md?plain=1#L141-L144">ARCHITECTURE.md, the exceptions</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/architecture/test_import_rules.py#L288-L304">fitness function</a></div>
+        </div>
+        <div class="layer-card" data-for="interface" hidden>
+          <span class="label">Layer</span><h3>Drone interface</h3>
+          <p>The <span class="term" tabindex="0" data-term="Drone interface">drone interface</span> is the contract every adapter implements. Its commands start an action and return; what happened shows in later snapshots. Only <code>connect()</code> and <code>disconnect()</code> may block.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/interface.py#L1-L16">interface.py 1-16</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/ARCHITECTURE.md?plain=1#L96-L98">ARCHITECTURE.md, the contracts</a></div>
+        </div>
+        <div class="layer-card" data-for="adapter">
+          <span class="label">Layer · this chapter</span><h3>Crazyflie adapter</h3>
+          <p>Implements the drone interface on a real Crazyflie. It converts between the project's SI units and cflib's millimeters, degrees and millisecond timestamps, in one place. Crazyflie-only ideas, such as decks, log blocks and radio addresses, stop here.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L4-L19">adapter.py 4-19</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/conversions.py#L1-L7">conversions.py 1-7</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/architecture/test_import_rules.py#L209-L217">fitness function</a></div>
+        </div>
+        <div class="layer-card" data-for="cflib" hidden>
+          <span class="label">Layer</span><h3>cflib</h3>
+          <p>Bitcraze's official Python library for the Crazyflie. It runs threads of its own: its receive thread calls the adapter's log callbacks. It has no type hints, so the four adapter modules that use it run the type checker in its basic mode.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/ARCHITECTURE.md?plain=1#L177-L182">ARCHITECTURE.md, threads</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L1-L3">adapter.py 1-3</a></div>
+        </div>
+        <div class="layer-card" data-for="radio" hidden>
+          <span class="label">Layer</span><h3>Crazyradio</h3>
+          <p>The USB radio dongle the PC uses to talk to the drone. Everything crosses it as <span class="term" tabindex="0" data-term="CRTP">CRTP</span> packets. The adapter's default address is <code>radio://0/80/2M/E7E7E7E7E7</code>.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L82">adapter.py 82</a></div>
+        </div>
+        <div class="layer-card" data-for="firmware" hidden>
+          <span class="label">Layer</span><h3>Firmware</h3>
+          <p>Code running on the drone itself: stabilization, estimation and motor control. Its <span class="term" tabindex="0" data-term="High-level commander">high-level commander</span> plans and flies smooth moves on the drone. If streamed setpoints stop, its supervisor warns after 0.5 s and times out after 2 s, which levels the drone and then cuts its motors.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L37">facts register: the watchdog</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L42">the timeout</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L48">the level-out</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0048-level-through-the-bad-flow-zone.md">ADR-0048, backups</a></div>
+        </div>
+      </div>
+    </div>
+    <figcaption>Click a layer. Commands flow down and telemetry flows up, one step at a time, and nothing skips a step (<a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/ARCHITECTURE.md?plain=1#L17-L41">ARCHITECTURE.md, data flow</a>).</figcaption>
+  </figure>
+
+  <details class="more why">
+    <summary><span class="kind">Why it's built this way</span>Why an adapter at all?</summary>
+    <div class="body">
+      <p>The project started before the drone was bought. Behaviors had to run and be tested with no hardware, then run unchanged on the real drone. If behaviors called cflib directly, nothing would run without a drone, and cflib's threading and blocking quirks would leak into every behavior.</p>
+      <p>So behaviors talk only to the drone interface, and adapters implement it: a mock adapter for tests and development, and the Crazyflie adapter for flights. cflib's quirks are solved once, in one place.</p>
+      <div class="links"><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0002-behavior-depends-only-on-drone-interface.md">ADR-0002</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0008-drone-interface.md">ADR-0008, the interface</a></div>
+    </div>
+  </details>
+  <details class="more why">
+    <summary><span class="kind">Why it's built this way</span>Why Crazyflie-focused, and not generic?</summary>
+    <div class="body">
+      <p>The Crazyflie is the only drone, and no other can be tested. So the interface is designed for it alone, but uses a generic name wherever most drones share the idea: range readings, position estimate, arm, take off, land. Crazyflie-only ideas (decks, log blocks, radio addresses, cflib's units) stay inside the adapter.</p>
+      <p>The accepted risk: some shapes are still Crazyflie-shaped, such as five fixed range directions. Another drone would likely become a separate project.</p>
+      <div class="links"><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0006-crazyflie-focused-interface.md">ADR-0006</a></div>
+    </div>
+  </details>
+  <details class="more py">
+    <summary><span class="kind">Python note</span>An abstract class, and <code>with</code> for a guaranteed landing</summary>
+    <div class="body">
+      <p><code>DroneInterface</code> is an abstract base class: a method marked <code>@abstractmethod</code> is like a pure virtual function in C++, and Python refuses to create an object of a class that leaves one unwritten.</p>
+      <p>It also defines <code>__enter__</code> and <code>__exit__</code>, so a program writes <code>with drone:</code>. Python calls <code>__exit__</code> when the block ends, even when it ends with an error, much like a C++ destructor in RAII. Here that means <code>disconnect()</code> always runs, and it lands a drone that may be flying.</p>
+      <figure class="code"><pre><code>def __enter__(self) -&gt; Self:
+    self.connect()
+    return self
+
+def __exit__(...) -&gt; None:
+    <span class="c"># Runs even when the code inside the `with` block raises, so the</span>
+    <span class="c"># drone always ends up on the ground.</span>
+    self.disconnect()</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/interface.py#L42-L54">interface.py 42-54</a>, parameters shortened</figcaption></figure>
+    </div>
+  </details>
+</section>
+
+<!-- ======================================================= 2 -->
+<section class="stop" id="s2">
+  <div class="stop-head"><span class="stop-num">02</span><h2>Meet the parts</h2></div>
+  <p class="lede">The adapter is nine modules. Four import cflib and run <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/pyproject.toml">pyright</a>, Python's type checker, in its basic mode. The other five don't import cflib, and all five are type-checked strictly. Four of those are tested without cflib. Take-off and landing is still tested through the adapter, with cflib's objects mocked, until <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decision-backlog.md?plain=1#L97">backlog #158</a>.</p>
+  <div class="focus-row"><span class="focus">Testing without hardware</span></div>
+
+  <figure class="fig">
+    <div class="split">
+      <div class="modules" id="modules">
+        <div class="mgroup cflib">
+          <span class="label">Import cflib · pyright basic</span>
+          <div class="mlist">
+            <button type="button" class="mod" data-mod="adapter" aria-pressed="true"><span class="name">adapter.py</span><span class="lines">656</span><span class="job">Builds the parts, runs connect and disconnect</span><span class="size"><i style="width:100%"></i></span></button>
+            <button type="button" class="mod" data-mod="log_blocks" aria-pressed="false"><span class="name">log_blocks.py</span><span class="lines">363</span><span class="job">Telemetry in, on cflib's thread</span><span class="size"><i style="width:55%"></i></span></button>
+            <button type="button" class="mod" data-mod="commands" aria-pressed="false"><span class="name">commands.py</span><span class="lines">285</span><span class="job">Every send to the drone</span><span class="size"><i style="width:43%"></i></span></button>
+            <button type="button" class="mod" data-mod="link" aria-pressed="false"><span class="name">link.py</span><span class="lines">206</span><span class="job">The radio link</span><span class="size"><i style="width:31%"></i></span></button>
+          </div>
+        </div>
+        <div class="mgroup">
+          <span class="label">No cflib · pyright strict</span>
+          <div class="mlist">
+            <button type="button" class="mod" data-mod="take_off_and_landing" aria-pressed="false"><span class="name">take_off_and_landing.py</span><span class="lines">410</span><span class="job">Take-off and landing, a tick at a time</span><span class="size"><i style="width:63%"></i></span></button>
+            <button type="button" class="mod" data-mod="time_limit" aria-pressed="false"><span class="name">time_limit.py</span><span class="lines">127</span><span class="job">Time limits for blocking steps</span><span class="size"><i style="width:19%"></i></span></button>
+            <button type="button" class="mod" data-mod="conversions" aria-pressed="false"><span class="name">conversions.py</span><span class="lines">106</span><span class="job">cflib's units to SI</span><span class="size"><i style="width:16%"></i></span></button>
+            <button type="button" class="mod" data-mod="touchdown" aria-pressed="false"><span class="name">touchdown.py</span><span class="lines">83</span><span class="job">Has it really touched down?</span><span class="size"><i style="width:13%"></i></span></button>
+            <button type="button" class="mod" data-mod="bad_flow_zone" aria-pressed="false"><span class="name">bad_flow_zone.py</span><span class="lines">31</span><span class="job">The bad-flow zone's numbers</span><span class="size"><i style="width:5%"></i></span></button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="mod-info" aria-live="polite">
+        <div class="mod-card" data-for="adapter">
+          <span class="label">imports cflib · 656 lines</span><h3><code>adapter.py</code></h3>
+          <p>Implements the drone interface. It builds the four parts, runs the steps of <code>connect()</code> and <code>disconnect()</code> in order, does the waiting, and forwards each command to a part in a line or two. About 110 of its lines are test-only forwards to the parts, marked to go with backlog #158.</p>
+          <dl class="kv"><dt>Owns</dt><dd>the <span class="term" tabindex="0" data-term="Part">parts</span>; the waits; whether the drone's state is unknown while connecting</dd></dl>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L110-L163">code 110-163</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L401-L514">test-only forwards</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py">tests: connect</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0093-the-crazyflie-adapter-splits-into-parts-with-take-off-and-landing-free-of-cflib.md">ADR-0093</a></div>
+        </div>
+        <div class="mod-card" data-for="log_blocks" hidden>
+          <span class="label">imports cflib · 363 lines</span><h3><code>log_blocks.py</code></h3>
+          <p>The <span class="term" tabindex="0" data-term="Log block">log blocks</span>, and their callbacks, which convert each sample to SI units and write it to the telemetry buffer on cflib's receive thread.</p>
+          <dl class="kv"><dt>Owns</dt><dd>the <span class="term" tabindex="0" data-term="Telemetry buffer">telemetry buffer</span>; the other parts read it from here on every call</dd></dl>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/log_blocks.py#L129-L162">code 129-162</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_telemetry.py">tests through the adapter</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0021-drone-status-streams-with-the-state.md">ADR-0021</a></div>
+        </div>
+        <div class="mod-card" data-for="commands" hidden>
+          <span class="label">imports cflib · 285 lines</span><h3><code>commands.py</code></h3>
+          <p>Every send: setpoints, high-level moves with their hand-over, the motor stop, arming, the emergency stop, the buzzer and the estimate reset.</p>
+          <dl class="kv"><dt>Owns</dt><dd>the <span class="term" tabindex="0" data-term="Setpoint stream">setpoint stream</span>'s state: whether one is running, and its vertical speed</dd></dl>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L49-L67">code 49-67</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_commands.py">tests through the adapter</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0058-release-setpoint-priority-after-motor-stop.md">ADR-0058</a></div>
+        </div>
+        <div class="mod-card" data-for="link" hidden>
+          <span class="label">imports cflib · 206 lines</span><h3><code>link.py</code></h3>
+          <p>The radio <span class="term" tabindex="0" data-term="Link">link</span>: opening and closing it with time limits, the parameters and deck checks, the lost link, and the thrust base.</p>
+          <dl class="kv"><dt>Owns</dt><dd>cflib's <code>SyncCrazyflie</code>; the other parts look up the drone through it on every call</dd></dl>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/link.py#L50-L75">code 50-75</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py">tests through the adapter</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0093-the-crazyflie-adapter-splits-into-parts-with-take-off-and-landing-free-of-cflib.md">ADR-0093</a></div>
+        </div>
+        <div class="mod-card" data-for="take_off_and_landing" hidden>
+          <span class="label">no cflib · strict · 410 lines</span><h3><code>take_off_and_landing.py</code></h3>
+          <p>The <span class="term" tabindex="0" data-term="Initial climb">initial climb</span>, the landing approach, the final descent and <span class="term" tabindex="0" data-term="May be flying">"may be flying"</span>, moved on by one tick at each update. It sends through <code>FlightCommands</code>, a <code>Protocol</code>, so it never imports cflib. Section 5 flies it.</p>
+          <dl class="kv"><dt>Owns</dt><dd>the <span class="term" tabindex="0" data-term="Landing phase">landing phase</span> and the flight state</dd></dl>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L85-L121">code 85-121</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py">tests: take-off</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py">tests: landing</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0048-level-through-the-bad-flow-zone.md">ADR-0048</a></div>
+        </div>
+        <div class="mod-card" data-for="time_limit" hidden>
+          <span class="label">no cflib · strict · 127 lines</span><h3><code>time_limit.py</code></h3>
+          <p>Runs a blocking step of connecting on a helper thread, with a time limit, so the interrupt signal still gets through: cflib's connect waits with no time limit.</p>
+          <dl class="kv"><dt>Tested</dt><dd>alone, without cflib</dd></dl>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/time_limit.py#L1-L7">code 1-7</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_time_limit.py">tests</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0029-connecting-has-time-limits.md">ADR-0029</a></div>
+        </div>
+        <div class="mod-card" data-for="conversions" hidden>
+          <span class="label">no cflib · strict · 106 lines</span><h3><code>conversions.py</code></h3>
+          <p>Conversions between cflib's units and data and the project's SI units, as plain functions: millimeters to meters, millisecond timestamps to seconds, radians to degrees, and the bytes of the level setpoint's packet.</p>
+          <dl class="kv"><dt>Tested</dt><dd>alone, without cflib</dd></dl>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/conversions.py#L1-L7">code 1-7</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_conversions.py">tests</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0004-strict-typing-ruff-and-units-in-names.md">ADR-0004</a></div>
+        </div>
+        <div class="mod-card" data-for="touchdown" hidden>
+          <span class="label">no cflib · strict · 83 lines</span><h3><code>touchdown.py</code></h3>
+          <p>Decides whether a landing has really touched down, from the down range, and when the final descent must be over.</p>
+          <dl class="kv"><dt>Tested</dt><dd>alone, without cflib</dd></dl>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/touchdown.py#L1-L8">code 1-8</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_touchdown.py">tests</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0019-final-descent-when-touchdown-unconfirmed.md">ADR-0019</a></div>
+        </div>
+        <div class="mod-card" data-for="bad_flow_zone" hidden>
+          <span class="label">no cflib · strict · 31 lines</span><h3><code>bad_flow_zone.py</code></h3>
+          <p>The <span class="term" tabindex="0" data-term="Bad-flow zone">bad-flow zone</span>'s numbers (the climb and descent speeds, the final descent height, the climb's time limit) and the flow check.</p>
+          <dl class="kv"><dt>Tested</dt><dd>alone, without cflib</dd></dl>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/bad_flow_zone.py#L1-L31">code 1-31</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_bad_flow_zone.py">tests</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0077-initial-climb-ends-at-a-fixed-0-15-m.md">ADR-0077</a></div>
+        </div>
+      </div>
+    </div>
+    <figcaption>Click a module. The bar is its length in lines at the pinned commit. Only the four on the left may import cflib, and a <span class="term" tabindex="0" data-term="Fitness function">fitness function</span> checks the list (<a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/architecture/test_import_rules.py#L220-L225">test_import_rules.py 220-225</a>).</figcaption>
+  </figure>
+
+  <details class="more">
+    <summary><span class="kind">More</span>Why <code>connect()</code> builds every part afresh</summary>
+    <div class="body">
+      <p>A new link learns what the drone is doing from the drone: nothing carries over from an earlier one. So <code>connect()</code> starts by calling the same builder as <code>__init__</code>, which makes new parts. Before the split, <code>connect()</code> reset 18 fields by hand. Now no part can carry state from an earlier link, because every part is new.</p>
+      <p>The order inside the builder matters: take-off and landing keeps the commands object it's given, so it's built right after the commands.</p>
+      <figure class="code"><pre><code><span class="k">def</span> connect(self) -&gt; None:
+    self._is_drone_state_unknown = True
+    <span class="c"># A new link learns what the drone is doing from the drone: nothing carries over from an earlier one.</span>
+    self._build_parts()</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L167-L173">adapter.py 167-173</a>, docstring left out · the builder: <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L140-L163">adapter.py 140-163</a></figcaption></figure>
+      <div class="links">Tests: <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L819-L827">connecting again waits for new telemetry</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L830-L844">connecting again drops an old landing</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0093-the-crazyflie-adapter-splits-into-parts-with-take-off-and-landing-free-of-cflib.md">ADR-0093, D13</a></div>
+    </div>
+  </details>
+  <details class="more py">
+    <summary><span class="kind">Python note</span>Why the parts get <code>lambda: self._link.crazyflie</code></summary>
+    <div class="body">
+      <p>A <code>lambda</code> is a small unnamed function. <code>lambda: self._link.crazyflie</code> reads <code>self._link</code> each time it's called, not when it's made, like a C++ lambda that captures <code>this</code> rather than a copy of the pointer.</p>
+      <p>That matters because <code>connect()</code> replaces the telemetry buffer twice, the second time after the estimate reset. A part that kept its own reference would read a dead buffer, and a high-level move would aim at an old position. So every part looks up the drone and the buffer on every call and keeps neither. It also lets the builder make the commands before the link exists.</p>
+      <figure class="code"><pre><code>self._commands = CrazyflieCommands(<span class="k">lambda</span>: self._link.crazyflie, <span class="k">lambda</span>: self._log_blocks.telemetry)</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L143">adapter.py 143</a> · where the buffer is replaced: <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L553-L557">adapter.py 553-557</a> · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L49-L60">commands.py 49-60</a></figcaption></figure>
+    </div>
+  </details>
+  <details class="more py">
+    <summary><span class="kind">Python note</span>A <code>Protocol</code>: how take-off and landing sends without cflib</summary>
+    <div class="body">
+      <p>A <code>Protocol</code> describes the methods a type must have, and a class fits it just by having them, with no inheritance. It's close to a C++20 concept. The commands part never names <code>FlightCommands</code>, yet pyright checks that it fits wherever it's passed in.</p>
+      <figure class="code"><pre><code><span class="k">class</span> FlightCommands(Protocol):
+    <span class="c">"""The sends take-off and landing makes. The adapter's `CrazyflieCommands` satisfies it (ADR-0093)."""</span>
+
+    <span class="k">def</span> send_level_setpoint(self, vertical_speed: float) -&gt; None: ...
+    <span class="k">def</span> go_to(self, position: Vector3, duration: float) -&gt; None: ...
+    <span class="k">def</span> go_to_relative(self, offset: Vector3, duration: float, *, linear: bool = False) -&gt; None: ...
+    <span class="k">def</span> stop_motors(self) -&gt; None: ...
+    <span class="k">def</span> emergency_stop(self) -&gt; None: ...</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L71-L82">take_off_and_landing.py 71-82</a>, blank lines left out</figcaption></figure>
+    </div>
+  </details>
+  <details class="more py">
+    <summary><span class="kind">Python note</span>Strict and basic type checking</summary>
+    <div class="body">
+      <p>Python doesn't check types when it runs. Pyright reads the type hints and checks them before the code runs. The project sets its strict mode for all its Python, tests included, and a file can turn it down only with a comment. cflib has no type hints, so the four modules that use it switch to basic mode with one comment on their first line. Everything they hand to the rest of the project is fully typed.</p>
+      <figure class="code"><pre><code><span class="c"># pyright: basic</span>
+<span class="c"># Basic mode because cflib has no type hints (ADR-0004). Everything this module</span>
+<span class="c"># exposes is fully typed; the looseness stays inside this file.</span></code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L1-L3">adapter.py 1-3</a> · the project's setting: <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/pyproject.toml">pyproject.toml</a></figcaption></figure>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>How the rules are enforced: four fitness functions</summary>
+    <div class="body">
+      <p>Fitness functions read the code instead of running it, and fail continuous integration when a rule breaks. Their <span class="term" tabindex="0" data-term="Import scanner">import scanner</span>, <span class="term" tabindex="0" data-term="Import follower">import follower</span> and <span class="term" tabindex="0" data-term="Comment scanner">comment scanner</span> each have tests of their own.</p>
+      <ul>
+        <li>Only the Crazyflie adapter imports cflib. <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/architecture/test_import_rules.py#L209-L217">209-217</a></li>
+        <li>Inside it, only the four named modules do. A module that starts or stops importing cflib changes the list, so the change shows in review. <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/architecture/test_import_rules.py#L220-L225">220-225</a></li>
+        <li>Take-off and landing reaches no cflib, not even through another module. <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/architecture/test_import_rules.py#L228-L233">228-233</a></li>
+        <li>Nothing turns pyright's strict mode down for take-off and landing. <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/architecture/test_import_rules.py#L236-L242">236-242</a></li>
+      </ul>
+    </div>
+  </details>
+  <details class="more why">
+    <summary><span class="kind">Why it's built this way</span>Why split the adapter, and why here?</summary>
+    <div class="body">
+      <p>The adapter was once one class of 1,421 lines. Size alone is no reason to split a module: parts that share state, dependencies and reasons to change belong together. The project splits a part out only when one of five tests is true of it: it needs fewer dependencies than the file, another module needs it, it runs on a different thread, it has its own state and invariants, or it changes for a different reason.</p>
+      <p>Take-off and landing passes four of the five tests (1, 2 once the mock adapter runs it, 4 and 5). The log blocks and the link pass 3 and 5. The commands pass 4 and 5.</p>
+      <div class="links"><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0074-split-a-module-by-five-tests-never-by-size.md">ADR-0074, the five tests</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0093-the-crazyflie-adapter-splits-into-parts-with-take-off-and-landing-free-of-cflib.md">ADR-0093, the split</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0004-strict-typing-ruff-and-units-in-names.md">ADR-0004, typing</a></div>
+    </div>
+  </details>
+</section>
+
+<!-- ======================================================= 3 -->
+<section class="stop" id="s3">
+  <div class="stop-head"><span class="stop-num">03</span><h2>Two threads, one lock</h2></div>
+  <p class="lede"><span class="term" tabindex="0" data-term="Telemetry">Telemetry</span> arrives on cflib's receive thread, whenever the radio delivers it. Decisions run on the tick's thread, 20 times a second. The two meet in one place: the telemetry buffer, guarded by the only lock in the data path. Each <span class="term" tabindex="0" data-term="Tick">tick</span> copies it into a <span class="term" tabindex="0" data-term="Snapshot">snapshot</span>, and every value carries the time it arrived, so any reader can tell how old it is.</p>
+  <div class="focus-row"><span class="focus">Latency</span><span class="focus">Safety</span><span class="focus">Testing without hardware</span></div>
+
+  <figure class="fig">
+    <div class="fig-frame">
+      <div class="controls">
+        <button type="button" class="btn" id="tl-play">Pause</button>
+        <button type="button" class="btn" id="tl-gap" aria-pressed="false">Lose 0.4 s of packets</button>
+        <span class="caption" style="margin:0">Click a tick to see each value's age.</span>
+      </div>
+      <svg id="timeline" viewBox="0 0 760 250" role="img" aria-label="A 1.2 second timeline. The state block and the down range packets arrive every 20 ms, the Multi-ranger every 100 ms and the battery once a second. Twenty-four ticks take a snapshot, one every 50 ms." style="min-width:560px"></svg>
+    </div>
+    <div class="split" style="margin-top:1rem">
+      <div class="panel" style="overflow-x:auto">
+        <span class="label" id="ages-title">Ages at tick 12</span>
+        <table class="ages" id="ages"><thead><tr><th>Value</th><th>From</th><th>Age</th><th>Limit</th><th></th></tr></thead><tbody></tbody></table>
+        <p class="verdict" id="ages-verdict"></p>
+      </div>
+      <div class="panel">
+        <span class="label">Reading the ages</span>
+        <p>Age is the time since a value arrived on the PC, measured at the snapshot. A value older than its limit is <span class="term" tabindex="0" data-term="Stale value">stale</span>: <code>STALE_AFTER</code>, 0.25 s <span class="ph">placeholder</span>, for everything but the battery, which streams once a second and gets 3.0 s <span class="ph">placeholder</span>.</p>
+        <p>The safety pre-check checks the age of four values: the position estimate, the drone status, the down range and the battery voltage. While the drone <span class="term" tabindex="0" data-term="May be flying">may be flying</span>, outside the initial climb, it also checks the velocity uncertainty. The table shows a flying drone, so it tags five. One stale value fails the pre-check, and the drone lands. It doesn't check the velocity estimate's age or the Multi-ranger's.</p>
+        <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/interface.py#L35-L36">interface.py 35-36</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/safety/safety_layer.py#L58-L62">safety_layer.py 58-62</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/safety/safety_layer.py#L94-L100">the four values</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/safety/safety_layer.py#L139-L163">the in-flight check</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0081-one-age-limit-for-every-reading.md">ADR-0081, still a placeholder</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0030-minimal-safety-layer-for-first-flight.md">ADR-0030, the pre-check</a></div>
+      </div>
+    </div>
+    <figcaption>Packets drawn at their log periods (<a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/log_blocks.py#L37-L46">log_blocks.py 37-46</a>) and ticks at 20 Hz (<a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0023-tick-rate-20-hz.md">ADR-0023</a>). Where each stream starts is chosen for the drawing, and real packets arrive late and unevenly.</figcaption>
+  </figure>
+
+  <details class="more">
+    <summary><span class="kind">More</span>The state block's 26 bytes</summary>
+    <div class="body">
+      <p>A <span class="term" tabindex="0" data-term="Log block">log block</span> carries at most 26 bytes of variables. The <span class="term" tabindex="0" data-term="State block">state block</span> fills all 26: the position and velocity estimates as six 4-byte floats, and the <span class="term" tabindex="0" data-term="Drone status">drone status</span> as a 2-byte bitfield. Because the three share one packet, they always come from the same moment, and a lost packet loses all three together, so they go stale together.</p>
+      <div style="overflow-x:auto"><div class="bytes" aria-label="26 bytes: x, y, z, vx, vy and vz take 4 bytes each, and supervisor.info takes 2.">
+        <span class="f">x</span><span class="f">x</span><span class="f">x</span><span class="f">x</span><span class="f">y</span><span class="f">y</span><span class="f">y</span><span class="f">y</span><span class="f">z</span><span class="f">z</span><span class="f">z</span><span class="f">z</span><span class="f">vx</span>
+        <span class="f">vx</span><span class="f">vx</span><span class="f">vx</span><span class="f">vy</span><span class="f">vy</span><span class="f">vy</span><span class="f">vy</span><span class="f">vz</span><span class="f">vz</span><span class="f">vz</span><span class="f">vz</span><span class="b">info</span><span class="b">info</span>
+      </div></div>
+      <p class="caption">Blue: <code>stateEstimate.x</code> to <code>.vz</code>, the estimates. Amber: <code>supervisor.info</code>, the status bitfield.</p>
+      <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/log_blocks.py#L101-L105">log_blocks.py 101-105</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_telemetry.py#L159-L164">test: it fits</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/test_telemetry_buffer.py#L187-L196">test: written together</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0021-drone-status-streams-with-the-state.md">ADR-0021</a></div>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>Stamped values: two clocks on every reading</summary>
+    <div class="body">
+      <p>Every value in a snapshot is a <span class="term" tabindex="0" data-term="Stamped value">stamped value</span>. Staleness uses the arrival time, on the PC's clock. The drone's own timestamp is kept for measuring latency, for recording and for replay.</p>
+      <figure class="code"><pre><code>@dataclass(frozen=True, slots=True)
+<span class="k">class</span> Stamped[T]:
+    value: T
+    arrival_time: float
+    drone_time: float | None
+
+    <span class="k">def</span> age(self, now: float) -&gt; float:
+        <span class="k">return</span> now - self.arrival_time</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/snapshot.py#L17-L37">snapshot.py 17-37</a>, docstrings left out · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/test_telemetry_buffer.py#L22-L33">test</a></figcaption></figure>
+      <p><b>Python note.</b> <code>@dataclass</code> writes the constructor and comparisons for you. <code>frozen=True</code> makes every field read-only after construction, and <code>slots=True</code> stops new fields being added. <code>Stamped[T]</code> is a generic class, like a C++ template.</p>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>The drone's clock wraps every 4.7 hours</summary>
+    <div class="body">
+      <p>The drone stamps each packet, and cflib unpacks the stamp as 24 bits, so it restarts at zero every 16,777,216 counts. The code reads the counts as milliseconds since the drone booted, which makes that about 4.7 hours of drone uptime. That unit is marked to verify at the bench.</p>
+      <p>So the adapter keeps counting up across the wrap, using the previous drone time as the reference. A jump of more than half the range is a wrap. Anything smaller is an ordinary out-of-order packet.</p>
+      <table class="ages"><thead><tr><th>Previous drone time</th><th>New stamp</th><th>Drone time</th><th>Why</th></tr></thead><tbody>
+        <tr><td class="num">16,777.100 s</td><td class="num">50</td><td class="num">16,777.266 s</td><td>the counter wrapped</td></tr>
+        <tr><td class="num">16,777.266 s</td><td class="num">16,777,200</td><td class="num">16,777.200 s</td><td>a late packet from before the wrap</td></tr>
+      </tbody></table>
+      <p class="caption">Both rows computed with <code>drone_time_from_timestamp</code> at the pinned commit.</p>
+      <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/conversions.py#L38-L61">conversions.py 38-61</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_conversions.py#L35-L52">tests: the wrap</a></div>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>A broken estimate goes stale on purpose</summary>
+    <div class="body">
+      <p>If the drone sends a position estimate that isn't a finite number (NaN or infinity), the callback drops it and warns once per <span class="term" tabindex="0" data-term="Streak">streak</span>. The last finite one stays in the buffer and goes stale within 0.25 s, so the safety pre-check fails on it and the drone lands. Its landing then aims at that last finite position, not at NaN. A velocity estimate that isn't finite is dropped the same way, but the pre-check doesn't check the velocity estimate's age, so a dropped one alone doesn't fail it.</p>
+      <figure class="code"><pre><code><span class="k">if</span> position.is_finite():
+    self._telemetry.write_position_estimate(position, drone_time)
+<span class="k">if</span> velocity.is_finite():
+    self._telemetry.write_velocity_estimate(velocity, drone_time)
+self._telemetry.write_drone_status(status, drone_time)</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/log_blocks.py#L281-L302">log_blocks.py 281-302</a>, shortened · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_telemetry.py#L115-L135">test</a> · <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0030-minimal-safety-layer-for-first-flight.md">ADR-0030</a></figcaption></figure>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>The snapshot's time is read after the copy</summary>
+    <div class="body">
+      <p>The buffer copies every value, then reads its clock, all under the lock. Every value was stamped before it was stored, so no value in a snapshot is newer than the snapshot's time, and no age is ever negative.</p>
+      <figure class="code"><pre><code><span class="k">with</span> self._lock:
+    position_estimate = self._position_estimate
+    velocity_estimate = self._velocity_estimate
+    <span class="c"># ... every other value ...</span>
+    drone_status = self._drone_status
+    time = self._clock.now()</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/telemetry_buffer.py#L149-L157">telemetry_buffer.py 149-157</a>, shortened · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/test_telemetry_buffer.py#L65-L76">test</a> · <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0046-snapshot-time-read-after-the-copy.md">ADR-0046</a></figcaption></figure>
+      <p><b>Python note.</b> <code>with self._lock:</code> takes the lock at the start of the block and releases it at the end, even when the block raises, like <code>std::lock_guard</code> in C++. The buffer's tests hold the lock themselves to prove that every read and write waits for it (<a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/test_telemetry_buffer.py#L131-L148">test</a>).</p>
+    </div>
+  </details>
+  <details class="more why">
+    <summary><span class="kind">Why it's built this way</span>Why a snapshot per tick?</summary>
+    <div class="body">
+      <p>If behaviors read shared values as they changed, one tick could see a mix of old and new values, and locks would spread through behavior code. A read-only snapshot per tick keeps every behavior in a tick on the same picture and confines thread safety to one hand-off: the copy at the start of the tick. It's also easy to build by hand in a test, and to replay from a recording.</p>
+      <p>Values that arrive together are written together, so no snapshot mixes two samples (<a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/test_telemetry_buffer.py#L151-L184">test</a>).</p>
+      <div class="links"><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0007-snapshot-blackboard-telemetry-buffer.md">ADR-0007</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0023-tick-rate-20-hz.md">ADR-0023, the rates</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/telemetry_buffer.py#L1-L9">telemetry_buffer.py 1-9</a></div>
+    </div>
+  </details>
+</section>
+
+<!-- ======================================================= 4 -->
+<section class="stop" id="s4">
+  <div class="later-card">
+    <span class="stop-num">04</span>
+    <h3>Commands that never wait</h3>
+    <p>Pass two.</p>
+  </div>
+</section>
+
+<!-- ======================================================= 5 -->
+<section class="stop" id="s5">
+  <div class="stop-head"><span class="stop-num">05</span><h2>Crossing the bad-flow zone</h2></div>
+  <p class="lede">Near the floor, the <span class="term" tabindex="0" data-term="Flow deck">Flow deck</span>'s flow can't be trusted, so the estimated horizontal speed and position go wrong: the <span class="term" tabindex="0" data-term="Bad-flow zone">bad-flow zone</span>. So take-off and landing cross it level. The adapter streams <span class="term" tabindex="0" data-term="Level setpoint">level setpoints</span>, which hold roll and pitch at zero and set only a vertical speed, and hands over to the drone's own planner only once it's 0.15 m up, with flow. In a landing, the motors stop only when the down range confirms <span class="term" tabindex="0" data-term="Touchdown">touchdown</span>, or when the final descent's deadline says the drone must be on the floor.</p>
+  <div class="focus-row"><span class="focus">Noisy sensors</span><span class="focus">Drift</span><span class="focus">Latency</span><span class="focus">Safety</span><span class="focus">Testing without hardware</span></div>
+
+  <figure class="fig">
+    <div class="fig-frame">
+      <div class="controls">
+        <button type="button" class="btn" id="fl-play">Play</button>
+        <label for="fl-speed">Speed <select id="fl-speed"><option value="0.25">¼×</option><option value="0.5" selected>½×</option><option value="1">1×</option></select></label>
+      </div>
+      <svg id="flight" viewBox="0 0 760 330" role="img" aria-label="Height against time for one modeled flight: a level climb at 0.4 meters per second to 0.15 meters, a hand-over to a high-level climb to 0.5 meters, a hover, a landing approach aimed at 0.10 meters, a level final descent at 0.3 meters per second, a 0.3 second touchdown hold, and the motor stop." style="min-width:560px"></svg>
+      <div class="scrub"><label for="fl-time" class="label">Time</label><input type="range" id="fl-time" min="0" max="5600" step="10" value="0"><output id="fl-out" for="fl-time">0.00 s</output></div>
+      <div class="readout" id="fl-readout"></div>
+      <div class="legend">
+        <span><i style="background:var(--stream)"></i>level setpoints, streamed every tick</span>
+        <span><i style="background:var(--planner)"></i>the drone's high-level commander</span>
+        <span><i style="background:var(--caution);opacity:.5"></i>at least the bad-flow zone</span>
+      </div>
+    </div>
+    <div class="split" style="margin-top:1rem">
+      <div class="panel">
+        <span class="label">The state machine · click an amber branch</span>
+        <div style="overflow-x:auto">
+        <svg id="sm" class="sm" viewBox="0 0 540 300" role="img" aria-label="Take-off and landing's states: on the floor, initial climb, flying, landing approach, final descent and the motor stop. Amber dashed branches are the failure paths." style="min-width:440px">
+          <defs><marker id="ah2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ah" d="M0,0 L8,4 L0,8 z"/></marker><marker id="ah3" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ahc" d="M0,0 L8,4 L0,8 z"/></marker></defs>
+          <path class="edge" d="M134,58 L196,58" marker-end="url(#ah2)"/><text class="elabel" x="165" y="48" text-anchor="middle">take-off</text>
+          <path class="edge" d="M334,58 L396,58" marker-end="url(#ah2)"/><text class="elabel" x="365" y="40" text-anchor="middle">flow at</text><text class="elabel" x="365" y="52" text-anchor="middle">0.15 m</text>
+          <path class="edge" d="M465,82 L465,206" marker-end="url(#ah2)"/><text class="elabel" x="472" y="148">land()</text>
+          <path class="edge" d="M396,230 L334,230" marker-end="url(#ah2)"/><text class="elabel" x="365" y="222" text-anchor="middle">down range</text><text class="elabel" x="365" y="258" text-anchor="middle">≤ 0.15 m</text>
+          <path class="edge" d="M196,230 L134,230" marker-end="url(#ah2)"/><text class="elabel" x="165" y="222" text-anchor="middle">touchdown</text><text class="elabel" x="165" y="258" text-anchor="middle">confirmed</text>
+          <path class="edge" d="M66,206 L66,82" marker-end="url(#ah2)"/><text class="elabel" x="74" y="148">off</text>
+          <path class="edge fail" d="M265,82 L265,206" marker-end="url(#ah3)"/>
+          <path class="edge fail" d="M430,254 C430,290 300,290 300,256" marker-end="url(#ah3)"/>
+          <path class="edge fail" d="M230,254 C230,290 100,290 100,256" marker-end="url(#ah3)"/>
+          <g class="node" data-node="floor"><rect x="10" y="34" width="124" height="48" rx="8"/><text x="72" y="63" text-anchor="middle">On the floor</text></g>
+          <g class="node" data-node="climb"><rect x="196" y="34" width="138" height="48" rx="8"/><text x="265" y="56" text-anchor="middle">Initial climb</text><text x="265" y="72" text-anchor="middle" class="elabel">level, +0.4 m/s</text></g>
+          <g class="node" data-node="flying"><rect x="396" y="34" width="134" height="48" rx="8"/><text x="463" y="56" text-anchor="middle">Flying</text><text x="463" y="72" text-anchor="middle" class="elabel">high-level moves</text></g>
+          <g class="node" data-node="approach"><rect x="396" y="206" width="134" height="48" rx="8"/><text x="463" y="228" text-anchor="middle">Landing approach</text><text x="463" y="244" text-anchor="middle" class="elabel">go_to aimed at 0.10 m</text></g>
+          <g class="node" data-node="final"><rect x="196" y="206" width="138" height="48" rx="8"/><text x="265" y="228" text-anchor="middle">Final descent</text><text x="265" y="244" text-anchor="middle" class="elabel">level, −0.3 m/s</text></g>
+          <g class="node" data-node="stop"><rect x="10" y="206" width="124" height="48" rx="8"/><text x="72" y="228" text-anchor="middle">Motor stop</text><text x="72" y="244" text-anchor="middle" class="elabel">then release</text></g>
+          <g class="branch click" data-branch="climb-fail" tabindex="0" role="button" aria-label="Failure branch: the initial climb lands"><rect class="hit" x="180" y="112" width="170" height="60"/><text class="flabel" x="273" y="128">no flow</text><text class="flabel" x="273" y="143">1.5 s limit</text><text class="flabel" x="273" y="158">land()</text></g>
+          <g class="branch click" data-branch="backup" tabindex="0" role="button" aria-label="Failure branch: the landing approach's backup"><rect class="hit" x="320" y="270" width="110" height="28"/><text class="flabel" x="365" y="293" text-anchor="middle">backup time</text></g>
+          <g class="branch click" data-branch="deadline" tabindex="0" role="button" aria-label="Failure branch: the final descent's deadline"><rect class="hit" x="110" y="270" width="110" height="28"/><text class="flabel" x="165" y="293" text-anchor="middle">deadline</text></g>
+          <g class="branch click" data-branch="no-range" tabindex="0" role="button" aria-label="Failure branch: no usable down range"><rect class="hit" x="166" y="184" width="96" height="20"/><text class="flabel" x="257" y="198" text-anchor="end">no down range?</text></g>
+        </svg>
+        </div>
+        <div class="branch-info" id="branch-info" aria-live="polite">
+          <div class="branch-card" data-for="none"><p class="caption" style="margin:0">The highlighted state follows the animation. Hover, move-to, set-velocity and take-off are ignored during the two level parts, logged once per streak (<a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L232-L247">232-247</a>, <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0056-adr-0048-as-built.md">ADR-0056</a>).</p></div>
+          <div class="branch-card" data-for="climb-fail" hidden>
+            <h3>The initial climb lands</h3>
+            <p>Three things end the climb in a landing that starts the final descent from where the drone is, with no landing approach: no flow at 0.15 m (a fresh velocity uncertainty under 0.03 m/s <span class="ph">placeholder</span>), 1.5 s since the take-off was sent <span class="ph">placeholder</span>, or a land request during the climb.</p>
+            <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L284-L311">code 284-311</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L525-L544">test: no flow</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L285-L296">test: time limit</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L347-L358">test: land()</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0077-initial-climb-ends-at-a-fixed-0-15-m.md">ADR-0077</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0049-failsafe-low-fires-its-fault-during-the-initial-climb.md">ADR-0049</a></div>
+          </div>
+          <div class="branch-card" data-for="backup" hidden>
+            <h3>The landing approach's backup</h3>
+            <p>The drone trails its high-level move, so the down range reaching 0.15 m starts the final descent, not the move's end. If the down range never gets there, the final descent starts anyway 1.0 s after the move should have ended. The backup runs on the clock, so it shares neither the down range nor the estimate.</p>
+            <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L355-L365">code 355-365</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L242-L266">test</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0068-landing-approach-aims-below-the-final-descent-height.md">ADR-0068</a></div>
+          </div>
+          <div class="branch-card" data-for="deadline" hidden>
+            <h3>The final descent's deadline</h3>
+            <p>Set once, when the final descent starts: the highest down range in the last 1.0 s, divided by the descent speed, plus a 2.0 s margin <span class="ph">placeholder</span>. When it passes without a confirmed touchdown, the drone must be on the floor, so the motors stop. Without any recent reading, it assumes the drone could be 2.0 m up <span class="ph">placeholder</span>.</p>
+            <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/touchdown.py#L42-L50">touchdown.py 42-50</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L370-L375">code 370-375</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L448-L458">test</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0019-final-descent-when-touchdown-unconfirmed.md">ADR-0019</a></div>
+          </div>
+          <div class="branch-card" data-for="no-range" hidden>
+            <h3>No usable down range</h3>
+            <p>A level descent from an unknown height could drift for seconds. So without a fresh down range, the final descent is one slow high-level move straight down at 0.1 m/s <span class="ph">placeholder</span>, timed to its deadline. Unlike streamed setpoints, it keeps going if the ticks stop.</p>
+            <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L399-L406">code 399-406</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L433-L445">test</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0048-level-through-the-bad-flow-zone.md">ADR-0048</a></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <span class="label">What the adapter sends</span>
+        <p class="caption" style="margin:0.2rem 0 0">The <span class="term" tabindex="0" data-term="Transcript test">transcript test</span> flies this flight against a fake cflib and checks every call, in order. These are its flight's lines.</p>
+        <div class="sends" id="sends">
+          <div data-phase="climb"><span class="n">75</span>send_packet(…04 … cdcccc3e)  <span class="c">level, +0.4 m/s</span></div>
+          <div data-phase="climb"><span class="n">77</span>send_packet(…04 … cdcccc3e)  <span class="c">one each tick</span></div>
+          <div data-phase="climb"><span class="n">⋮</span>…</div>
+          <div data-phase="handover"><span class="n">84</span>send_packet(…04 … cdcccc3e)  <span class="c">the last setpoint</span></div>
+          <div data-phase="handover"><span class="n">85</span>high_level_commander.go_to(0.0, 0.0, 0.5, 0.0, 1.133…)</div>
+          <div data-phase="handover"><span class="n">86</span>commander.send_notify_setpoint_stop()  <span class="c">the release</span></div>
+          <div data-phase="hover"><span class="n">88</span>high_level_commander.go_to(0.0, 0.0, 0.5, 0.0, 1.0)  <span class="c">hover</span></div>
+          <div data-phase="approach"><span class="n">89</span>high_level_commander.go_to(0.0, 0.0, 0.0999…, 0.0, 1.333…)</div>
+          <div data-phase="final"><span class="n">90</span>send_packet(…04 … 9a9999be)  <span class="c">level, −0.3 m/s</span></div>
+          <div data-phase="final"><span class="n">⋮</span>…  <span class="c">one each tick</span></div>
+          <div data-phase="final"><span class="n">101</span>send_packet(…04 … 9a9999be)</div>
+          <div data-phase="stop"><span class="n">102</span>commander.send_stop_setpoint()</div>
+          <div data-phase="stop"><span class="n">103</span>high_level_commander.stop()</div>
+          <div data-phase="stop"><span class="n">104</span>commander.send_notify_setpoint_stop()  <span class="c">the release, last</span></div>
+        </div>
+        <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/transcripts/take_off_to_touchdown.txt#L75-L104">transcript 75-104</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L280-L287">its test</a></div>
+      </div>
+    </div>
+    <figcaption>A model drawn from the code's numbers, not a recorded flight: here the drone follows each command at once and every reading is exact. A real drone trails its high-level moves (<a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0068-landing-approach-aims-below-the-final-descent-height.md">ADR-0068</a>), and its readings are noisy. The take-off target is 0.5 m, as in the transcript, and the hover's length is the model's.</figcaption>
+  </figure>
+
+  <details class="more why">
+    <summary><span class="kind">Why it's built this way</span>Why cross the zone level?</summary>
+    <div class="body">
+      <p>A high-level move holds position by the horizontal speed estimate. In the zone that estimate is wrong, so the controller chases a speed that isn't there and slides the drone sideways. A level setpoint ignores the horizontal estimate: the drone moves only vertically, so it doesn't need the flow there.</p>
+      <p>The risk accepted with it: while level there is no position hold, so a small tilt error pushes the drone sideways. Ending the level part at a fixed 0.15 m keeps that drift small.</p>
+      <div class="links"><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0048-level-through-the-bad-flow-zone.md">ADR-0048</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0056-adr-0048-as-built.md">ADR-0056, as built</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0077-initial-climb-ends-at-a-fixed-0-15-m.md">ADR-0077, a fixed 0.15 m</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0070-initial-climb-default-0-4-m-per-s.md">ADR-0070, 0.4 m/s</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0072-final-descent-0-3-m-per-s.md">ADR-0072, 0.3 m/s</a></div>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>The hand-over at 0.15 m, in three sends</summary>
+    <div class="body">
+      <p>The climb ends at the first fresh down range at or above the <span class="term" tabindex="0" data-term="Final descent height">final descent height</span>, 0.15 m <span class="ph">placeholder</span>. With flow there, a <span class="term" tabindex="0" data-term="Hand-over">hand-over</span> gives the drone to its high-level commander. The order is the point: a streamed setpoint stops the high-level commander, and a stopped high-level commander turns the motors off once the stream is released. So the release must come after the move.</p>
+      <figure class="code"><pre><code>@contextmanager
+<span class="k">def</span> _handing_over_to_high_level(self) -&gt; Iterator[None]:
+    <span class="k">if</span> self._level_vertical_speed <span class="k">is not</span> None:
+        self.send_level_setpoint(self._level_vertical_speed)   <span class="c"># 1. the last setpoint</span>
+    <span class="k">yield</span>                                                      <span class="c"># 2. the high-level move</span>
+    <span class="k">if</span> self._is_streaming:
+        self._current_crazyflie().commander.send_notify_setpoint_stop()   <span class="c"># 3. the release</span>
+        self._is_streaming = False
+        self._level_vertical_speed = None</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L110-L125">commands.py 110-125</a>, docstring left out, numbered comments added · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L197-L214">test: the order</a></figcaption></figure>
+      <p><b>Python note.</b> <code>@contextmanager</code> turns a generator into something a <code>with</code> block can use: the code before <code>yield</code> runs when the block starts, and the code after it when the block ends. <code>go_to</code> wraps its one high-level call in it, so no high-level move can skip the hand-over (<a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L91-L95">commands.py 91-95</a>).</p>
+      <p>Flow means a fresh <span class="term" tabindex="0" data-term="Velocity uncertainty">velocity uncertainty</span> under 0.03 m/s <span class="ph">placeholder</span>. Missing, stale, negative or not finite counts as no flow (<a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/bad_flow_zone.py#L20-L31">bad_flow_zone.py 20-31</a>, <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_bad_flow_zone.py#L50-L67">test</a>).</p>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>Landing: an approach, then the final descent</summary>
+    <div class="body">
+      <p>The <span class="term" tabindex="0" data-term="Landing approach">landing approach</span> is a high-level move straight down, aimed 5 cm below the final descent height. It isn't the firmware's own landing, which switches the motors off when it ends, even above the floor. The <span class="term" tabindex="0" data-term="Final descent">final descent</span> then streams one level setpoint down each tick until touchdown is confirmed.</p>
+      <figure class="code"><pre><code>match self._landing_phase:
+    case _LandingPhase.LANDING_APPROACH:
+        down = fresh_down_distance(snapshot, now)
+        <span class="k">if</span> down <span class="k">is not</span> None <span class="k">and</span> down.value &lt;= FINAL_DESCENT_HEIGHT:
+            self._start_final_descent(down)
+        <span class="k">elif</span> now &gt;= self._landing_approach_ends_at:
+            self._start_final_descent(down)   <span class="c"># the backup, with a warning</span>
+    case _LandingPhase.FINAL_DESCENT:
+        ...</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L354-L377">take_off_and_landing.py 354-377</a>, shortened</figcaption></figure>
+      <p><b>Python note.</b> <code>match</code> and <code>case</code> compare a value against patterns, here the members of an <code>Enum</code>. It reads like a C++ <code>switch</code> on an <code>enum class</code>, with no fall-through between cases.</p>
+      <div class="links">Tests: <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L172-L183">the approach's aim</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L228-L239">the down range ends it early</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L354-L363">one level setpoint each tick</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0032-landing-with-a-go-to.md">ADR-0032</a></div>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>Where noisy readings are handled</summary>
+    <div class="body">
+      <ul>
+        <li><b>The touchdown hold.</b> The down range must stay at or below 0.05 m <span class="ph">placeholder</span> for 0.3 s <span class="ph">placeholder</span>. A higher, missing or stale reading starts the <span class="term" tabindex="0" data-term="Touchdown hold">touchdown hold</span> over, so one noisy reading can't confirm touchdown. <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/touchdown.py#L64-L79">touchdown.py 64-79</a> <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_touchdown.py#L86-L91">test: one low reading</a> <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_touchdown.py#L144-L158">test: the hold restarts</a></li>
+        <li><b>The deadline.</b> It comes from the highest down range in the last second, so a short low outlier can't shorten it. <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L414-L430">test</a> <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_touchdown.py#L172-L177">test</a></li>
+        <li><b>The height estimate never decides.</b> On this drone the estimate's height comes mostly from the same down sensor, so it can't back that sensor up. <span class="term" tabindex="0" data-term="Drift">Drift</span> can't stop the motors in mid-air either. <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_touchdown.py#L161-L169">test</a> <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0019-final-descent-when-touchdown-unconfirmed.md">ADR-0019</a> <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0012-landing-confirms-touchdown.md">ADR-0012</a></li>
+      </ul>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>The motor stop, and the release after it</summary>
+    <div class="body">
+      <p>Every motor stop sends three things in order: the stop setpoint while a stream runs, the high-level stop, then the release of the <span class="term" tabindex="0" data-term="Setpoint priority">setpoint priority</span>. Without the release, the drone refuses the stopped high-level commander's motors-off setpoints, and a drone that still counts as flying locks once its setpoint is 2 s old.</p>
+      <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L129-L144">commands.py 129-144</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L731-L740">test</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0058-release-setpoint-priority-after-motor-stop.md">ADR-0058</a></div>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>Every number in the animation, and which are placeholders</summary>
+    <div class="body">
+      <table class="ages"><thead><tr><th>Number</th><th>Value</th><th>Where</th></tr></thead><tbody>
+        <tr><td>Initial climb speed</td><td class="num">0.4 m/s</td><td><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/bad_flow_zone.py#L9-L10">bad_flow_zone.py 9</a></td></tr>
+        <tr><td>Final descent height <span class="ph">placeholder</span></td><td class="num">0.15 m</td><td><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/bad_flow_zone.py#L13-L15">bad_flow_zone.py 13</a>, ADR-0077</td></tr>
+        <tr><td>Initial climb's time limit <span class="ph">placeholder</span></td><td class="num">1.5 s</td><td><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/bad_flow_zone.py#L16-L17">bad_flow_zone.py 16</a>, ADR-0077</td></tr>
+        <tr><td>High-level vertical speed <span class="ph">placeholder</span></td><td class="num">0.3 m/s</td><td><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L42-L56">take_off_and_landing.py 45</a></td></tr>
+        <tr><td>Hover settle <span class="ph">placeholder</span></td><td class="num">1.0 s</td><td><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L47-L48">take_off_and_landing.py 47</a></td></tr>
+        <tr><td>Approach aims below 0.15 m by</td><td class="num">0.05 m</td><td><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L36-L40">take_off_and_landing.py 36</a></td></tr>
+        <tr><td>Approach backup</td><td class="num">1.0 s</td><td><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L38-L40">take_off_and_landing.py 38</a></td></tr>
+        <tr><td>Final descent speed</td><td class="num">0.3 m/s</td><td><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/bad_flow_zone.py#L11-L12">bad_flow_zone.py 11</a>, ADR-0072</td></tr>
+        <tr><td>Touchdown down range <span class="ph">placeholder</span></td><td class="num">0.05 m</td><td><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/interface.py#L25-L27">interface.py 26</a></td></tr>
+        <tr><td>Touchdown hold <span class="ph">placeholder</span></td><td class="num">0.3 s</td><td><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/touchdown.py#L13-L16">touchdown.py 14</a></td></tr>
+        <tr><td>Deadline: recent window, margin <span class="ph">placeholder</span></td><td class="num">1.0 s, 2.0 s</td><td><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/touchdown.py#L17-L23">touchdown.py 17-23</a></td></tr>
+        <tr><td>Tick rate</td><td class="num">20 Hz</td><td><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0023-tick-rate-20-hz.md">ADR-0023</a></td></tr>
+      </tbody></table>
+      <p class="caption">The code marks its placeholders with a "PLACEHOLDERS" comment above them, and ADR-0077 calls 0.15 m and 1.5 s placeholders.</p>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>How this is tested without a drone</summary>
+    <div class="body">
+      <p>The transcript test runs this whole flight on a sim clock against a fake cflib that records every call the adapter makes, then compares the list, in order, with the stored transcript. A change that reorders or alters one send fails it, which matters because the setpoint priority depends on the order. Unit tests cover the rules and each failure branch above, on a sim clock, with no radio.</p>
+      <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L1-L7">test_adapter_transcripts.py 1-7</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L172-L181">test: a level setpoint each tick</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_touchdown.py#L94-L101">test: a low reading that stays confirms</a></div>
+    </div>
+  </details>
+</section>
+
+<!-- ======================================================= 6-9 -->
+<section class="stop" id="s6">
+  <span class="label">The rest of the route · pass two</span>
+  <div class="later-grid">
+    <div class="later-card"><span class="stop-num">06</span><h3>"May be flying"</h3><p>Pass two.</p></div>
+    <div class="later-card" id="s7"><span class="stop-num">07</span><h3>Connect and disconnect: the only calls that block</h3><p>Pass two.</p></div>
+    <div class="later-card" id="s8"><span class="stop-num">08</span><h3>What if…?</h3><p>Pass two.</p></div>
+    <div class="later-card" id="s9"><span class="stop-num">09</span><h3>How it's tested without a drone</h3><p>Pass two.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="foot-inner">
+    <p>Joe sets the goals and makes every design decision, recorded in the ADRs with the options considered. Most options, and all implementation and verification, are AI-assisted (Claude Code). Each ADR says whose idea its decision was. <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/README.md?plain=1#L19-L25">README</a> · <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/README.md">ADR index</a></p>
+    <p>A first draft of the tour's first chapter. Every link opens the repository at commit <code>5050718</code>.</p>
+  </div>
+</footer>
+
+<div id="term-pop" role="tooltip" hidden></div>
+</body>
+</html>

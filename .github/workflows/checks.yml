@@ -12,7 +12,10 @@ jobs:
     # Stops a hung run (ADR-0080).
     timeout-minutes: 15
     steps:
+      # The full history: the project tour's link test reads the commit its links are pinned to.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
