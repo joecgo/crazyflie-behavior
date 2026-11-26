@@ -8,14 +8,42 @@ request merged, a step built), update this page in the same step: remove or
 move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
-- **Date:** 2026-11-25 (Pacific)
-- **Last commit:** "Records after #157's D13: mistakes M-274 to M-277,
-  backlog #164, next-up brief", this page's own commit, after
-  `bedea58`, pushed. Uncommitted: nothing. The checks pass (1080
-  passed, 1 skipped).
+- **Date:** 2026-11-26 (Pacific)
+- **Last commit:** `a03e207`, "Records after #157's D13: mistakes M-274
+  to M-277, backlog #164, next-up brief", pushed. Uncommitted: #157's last
+  two fitness functions, their project review's fixes and the records of
+  both, this page included; the work log doesn't have them yet. The checks
+  pass (1113 passed, 1 skipped).
 
 ## Done last
 
+- **The project review of #157's last fitness functions (ADR-0093),
+  uncommitted:** Joe chose the range: only the uncommitted work, since each
+  earlier stage had its own. `/project-review max`, run inline (Joe's
+  choice): no bug in the tests' logic, and 11 findings, all fixed as Joe
+  chose. ADR-0093's Built said Yes while D15's cut to two or three
+  transcripts isn't built: Built says "Partly", and backlog #165 cuts them
+  before #158. A comment scanner reading only line 1 passed all 56 tests: a
+  case with the comment on line 2 now fails it. `pyproject.toml`'s
+  `[tool.pyright]` table is pinned (Joe's choice, a rule beyond ADR-0093's
+  ask). Six docstrings reworded, a direct `import cflib` case, the importer
+  list compared sorted, glossary rows for *Import scanner*, *Import
+  follower* and *Comment scanner* (text approved), and "reaches" in the
+  test's name. Six plants, all as expected. Mistakes M-280 to M-284.
+- **#157's last two fitness functions (ADR-0093), uncommitted:** in
+  `tests/architecture/test_import_rules.py`. Inside the Crazyflie adapter,
+  only `adapter.py`, `commands.py`, `link.py` and `log_blocks.py` import
+  cflib, as an exact list; take-off and landing reaches no cflib, even
+  through another module (package `__init__.py` files, imports inside
+  functions and under `TYPE_CHECKING` included), and has no `# pyright:` or
+  `# type: ignore` comment. 16 planted bugs, all caught; P2, take-off and
+  landing importing `commands.py`, only by the reach rule. Joe kept all
+  three choices as built and approved the `ARCHITECTURE.md` and glossary
+  edits (2026-11-26); `docs/coding-style.md`'s cflib boundary follows them.
+  Built at low effort (the session ran on Opus low, not Max), so the
+  project review reads these tests closely. Joe's PyCharm check answered
+  the review queue's open item: the attribute docstrings show on hover at
+  `_link`'s assignment in `_build_parts()`. Mistakes M-278 and M-279.
 - **#157's D13 (ADR-0093), committed and pushed (`bedea58`):** Joe chose
   option A: one builder, `_build_parts()`, called by `__init__` and
   `connect()`, builds the four parts in order (the commands before take-off
@@ -43,57 +71,39 @@ move the item, renumber "Next three", and update "Last commit" and
   `log_blocks.py` and `link.py`, each checked move-only by script, each
   with a `/project-review max` and its fixes, committed and pushed.
   Mistakes M-247 to M-263.
-- **ADR-0094 (`419791c`):** connecting raises the interrupt signal that a
-  CPython 3.12 threading lock error hides. Mistake M-246.
-
 ## In progress
 
-- #157 (ADR-0093): stages 1 to 6, the blocking-call fitness function and
-  D13's builder committed, with their reviews' fixes. Left: the last two
-  fitness functions. No work order: backlog #157 and ADR-0093 hold the
-  plan.
+- The review's pull request (Next three, 1): its project review and fixes
+  are done; the commits, the push, the review branch, the packet and the
+  pull request are left. C6 (#157) is built; its backlog row stays until
+  #153.
 
 ## Next three
 
-1. Build #153, the test for citations of removed backlog rows (ADR-0091),
-   before backlog row #157 is removed (#158 to #160 cite it). It first
-   needs Joe's OK on a glossary term: *Live doc* was proposed, *Live place*
-   the alternative. Sonnet, medium.
-2. #157's last two fitness functions: the cflib importers by name, and
-   take-off and landing free of cflib and `# pyright: basic`. Opus, Max.
-3. #158, one shared cflib fake for the adapter tests, right after #157: it
-   first needs a test-layout decision (`/decide`). Opus, high.
+1. The rest of the code review's pull request, as Joe asked. Ask him
+   before committing (small chunks, with the work log's row), before
+   pushing, and before opening the pull request. Then, as `REVIEW.md`'s
+   "My reviews" says: the branch `review/<date>` at `main`'s last commit,
+   `/review-packet`, and the pull request into `reviewed`. `reviewed` isn't
+   on GitHub yet: this first review creates it at `0846826`, so the range is
+   everything after it (over 320 commits, 77 source and test files); check
+   the packet's size with Joe first. `REVIEW.md`'s "Next" row still says
+   #30 is open (it closed 2026-11-23): fix it with the log's row. Sonnet,
+   medium for the commits and the branch; Opus, high for a packet over the
+   whole range.
+2. Build #153, the test for citations of removed backlog rows (ADR-0091),
+   then remove row #157 (built; #158 to #160 cite it). It first needs Joe's
+   OK on a glossary term: *Live doc* was proposed, *Live place* the
+   alternative. Sonnet, medium.
+3. #165, then #158: cut the transcript tests to those that guard an order
+   an ADR requires (ADR-0093's D15), then #158's one shared cflib fake,
+   which first needs a test-layout decision (`/decide`). Opus, high.
 
 ## Explain-backs waiting
 
 Answer by number, such as "E1: ...", in any work session. Claude grades
 from `drafts/explain-back-notes.md`; don't open it first.
 
-- **E8.** ADR-0093 adds transcript tests (every cflib call, in order, for
-  a scripted flight) before moving any adapter code. What can a move-only
-  change break that tests checking the adapter's results might miss, what
-  would that do to a flying drone, and why keep only two or three
-  transcripts afterwards?
-- **E9.** The transcript tests record every cflib call on one root mock.
-  Why one root mock rather than checking each cflib object's calls on its
-  own, and why must the code that writes a transcript line never call
-  `str()` on a mock?
-- **E10.** Stage 3 gives `CrazyflieCommands` two functions that return the
-  drone and the telemetry buffer, called on every send, instead of the
-  objects themselves. What would go wrong if a part kept the buffer it was
-  built with, and why does putting the hand-over inside `go_to` make a
-  forgotten hand-over impossible rather than just unlikely?
-- **E11.** The blocking-call fitness function lists every function in
-  `drone/crazyflie/` that sleeps or waits, and checks who calls each. Why
-  must a tick never reach one, why build it before stage 4 rather than with
-  the other fitness functions, and why does a check by function name miss
-  `on_abandon=self.close_radio_link_only`?
-- **E12.** The blocking-call fitness function matches calls by name alone.
-  When bug planting added a join to `_HelperStep.start` (in `time_limit.py`,
-  reached only from `connect()`), `take_off` also failed the rule that only
-  `connect()` and `disconnect()` of the drone interface's methods may block.
-  Why, is that a missed bug or a false alarm, and would you fix the test or
-  the code?
 - **E13.** Stage 4's take-off and landing part keeps the commands object it
   was built with. What would go wrong if `connect()` built the part before
   its new commands, in which flight would it show, and why did the five
@@ -137,6 +147,20 @@ from `drafts/explain-back-notes.md`; don't open it first.
   commands now fail every test at once, where with two copies the same
   mistake in `connect()`'s copy failed only one test, and why does
   `connect()` set the unknown-state flag itself rather than the builder?
+- **E21.** #157's last fitness functions check that only four named modules
+  import cflib, and that take-off and landing reaches no cflib, even through
+  another module. Why does the second rule follow imports when the first
+  already fails on a cflib import in take-off and landing, which planted bug
+  showed the difference, and why does the first rule also fail when a module
+  stops importing cflib?
+- **E22.** The project review planted a comment scanner that reads only a
+  file's first line, and all 56 tests in the file still passed. Why did the
+  one-line cases and the real-file guard both miss it, and what does that
+  say about choosing a test's cases?
+- **E23.** The review pinned `pyproject.toml`'s whole `[tool.pyright]`
+  table, not just `typeCheckingMode`. Why does take-off and landing need
+  that when it has no type-check comment, why pin the whole table rather
+  than a list of risky settings, and what does the pin cost?
 
 ## Last reviewed
 
@@ -149,4 +173,4 @@ function's review comments (`drafts/2026-11-24-blocking-call-review-comments.md`
 and stage 4's (`drafts/2026-11-24-stage-4-review-comments.md`), which
 `/review-packet` posts along with the review queue.
 
-Review queue: 12 decisions, 45 findings waiting (`docs/review-queue.md`).
+Review queue: 14 decisions, 57 findings waiting (`docs/review-queue.md`).

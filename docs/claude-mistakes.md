@@ -72,27 +72,27 @@ entries go at the top of their section without an ID.
 | design | 5 | 25 |
 | safety design | 5 | 22 |
 | recommendation | 7 | 10 |
-| environment | 4 | 11 |
-| communication | 14 | 81 |
-| testing | 2 | 39 |
-| process | 7 | 45 |
-| **Total** | **44** | **233** |
+| environment | 4 | 12 |
+| communication | 14 | 84 |
+| testing | 2 | 41 |
+| process | 7 | 46 |
+| **Total** | **44** | **240** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
 | said-without-checking | 57 |
-| records-ahead-of-code | 36 |
-| weak-test | 33 |
+| records-ahead-of-code | 39 |
+| weak-test | 34 |
 | how-I-work | 32 |
-| vocabulary | 26 |
+| vocabulary | 27 |
 | safety-judgment | 18 |
 | window-between-steps | 17 |
 | recommendation | 15 |
+| message-misstates-outcome | 15 |
 | reading-field-data | 15 |
-| message-misstates-outcome | 14 |
-| environment | 10 |
+| environment | 11 |
 | leftover-state | 4 |
 <!-- end generated -->
 
@@ -112,6 +112,13 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-284 | 2026-11-26 | ADR-0093's index row said built while its D15 cut to two or three transcripts wasn't | process | records-ahead-of-code | rule 3, Q-39 and Q-49: before a Built column says Yes, each line of the ADR's Decision has its code and test found, or a backlog row, end states like D15's included |
+| M-283 | 2026-11-26 | The comment scanner's tests were all one-line files, so nothing proved it read past line 1 | testing | weak-test | Q-53: a scanner's cases include a multi-line file, and its plants include one that reads only part of the file |
+| M-282 | 2026-11-26 | The strict-mode test's name claimed more than it checked | testing | records-ahead-of-code | Q-32: a fitness function's name, and the doc line it backs, say what it reads; every other way to break the rule is checked or named as unchecked |
+| M-281 | 2026-11-26 | Six docstrings in the new fitness functions misdescribed their code | communication | records-ahead-of-code | Q-32 and Q-34: each new docstring is read against its function's body before the project review, its "only", "every" and "is" checked like a record's |
+| M-280 | 2026-11-26 | New test names coined terms with no glossary proposal | communication | vocabulary | rule 6 and Q-38: a new test name's terms are checked against the glossary like any other name |
+| M-279 | 2026-11-26 | The review queue's line for C6 before #153 read as the opposite order | communication | message-misstates-outcome | a record of the order of two steps names both with "before" or "after", in the brief's words, never "waits until" |
+| M-278 | 2026-11-25 | Test code with backslash escapes sent through a Bash heredoc, against M-256's guard | environment | environment | M-256's guard, unchanged: code that holds a backslash escape is written with the editor tools, never sent through a heredoc |
 | M-277 | 2026-11-25 | D13's records counted the flags' clearing as built with no test for it | testing | leftover-state | Q-18 and Q-39: a record that says a reset is built names the test that fails without it, and the plants cover everything the change resets |
 | M-276 | 2026-11-25 | E20 said a wrong build order shows only on a second connect, against E13 | communication | said-without-checking | rule 2: a note that cites another note reads it first, and a claim about which flight shows a bug is planted before it goes into an answer |
 | M-275 | 2026-11-25 | D13's decision left out of the review queue | process | how-I-work | a choice Joe makes while building goes into the review queue in the same step as the brief |
@@ -824,6 +831,62 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-284, 2026-11-26: ADR-0093's index row said built while its D15 cut to two or three transcripts wasn't
+
+- **What happened:** closing #157, the records changed ADR-0093's Built column to "Yes" and removed `ARCHITECTURE.md` section 7's "partly built" row. D15 also says only two or three of the five transcript tests stay afterwards, and all five were still there, with no backlog row. Caught by the project review of #157's last fitness functions, which read the ADR's Decision line by line against the code. Built now says "Partly", with backlog #165.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** rule 3, Q-39 and Q-49: before a Built column says Yes, each line of the ADR's Decision has its code and test found, or a backlog row, end states like D15's included.
+- **Takeaway:** records-ahead-of-code is past its third entry, with its mechanisms planned in the 2026-11-13 recommendations; Q-49 caught this one in review, so no new step.
+
+### M-283, 2026-11-26: The comment scanner's tests were all one-line files, so nothing proved it read past line 1
+
+- **What happened:** building #157's last fitness functions, every case for the comment scanner was a one-line file, and the real-file guard checked only `adapter.py`'s line 1. The build's 16 planted bugs were all caught, so none of them limited the scanner to the first line: the project review planted that, and all 56 tests in the file passed. The same tests compared the hand-written list of cflib importers in order, so a correct fifth importer added at the end would have failed on order alone. A case with the comment on line 2 now fails under that plant, and the compare is sorted.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** Q-53: a scanner's cases include a multi-line file, and its plants include one that reads only part of the file.
+- **Takeaway:** weak-test is past its third entry; Q-53 caught this one in review, so no new step.
+
+### M-282, 2026-11-26: The strict-mode test's name claimed more than it checked
+
+- **What happened:** `test_take_off_and_landing_keeps_pyright_strict` and `ARCHITECTURE.md`'s "keeps pyright's strict mode" rested on the file's comments alone, while a `pyproject.toml` setting (a rule turned down, an ignore or exclude entry, another mode) could relax take-off and landing with every test green. Joe chose to pin the `[tool.pyright]` table.
+- **Kind:** testing.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-32: a fitness function's name, and the doc line it backs, say what it reads; every other way to break the rule is checked or named as unchecked.
+- **Takeaway:** Q-32 already asks it; no new step.
+
+### M-281, 2026-11-26: Six docstrings in the new fitness functions misdescribed their code
+
+- **What happened:** four said more than their code does: take-off and landing "is tested without cflib" (only the adapter imports it); only the named modules "may hold a cflib object" (the test checks imports); the follower sees "every way" a file reaches cflib, "Directly" first (no direct case, and no import by string seen); `files_loaded_with` returns what importing "runs" (it follows imports that may never run). Two said less: the module docstring's "for one rule their comments" missed two rules that read calls, and the made-up tree's helper hid that it swaps `SOURCE_ROOT`. Caught by the project review; all reworded.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-32 and Q-34: each new docstring is read against its function's body before the project review, its "only", "every" and "is" checked like a record's.
+- **Takeaway:** Q-32 and Q-34 already ask it; no new step.
+
+### M-280, 2026-11-26: New test names coined terms with no glossary proposal
+
+- **What happened:** the new tests named an "import follower" and a "comment scanner", beside the older tests' "import scanner", with no glossary row for any of them, and the cflib test said "loads" where the docs say "reaches". Caught by the project review. Joe approved three glossary rows, and the test now says "reaches".
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** rule 6 and Q-38: a new test name's terms are checked against the glossary like any other name.
+- **Takeaway:** vocabulary is past its third entry; Q-38 caught this one in review, so no new step.
+
+### M-279, 2026-11-26: The review queue's line for C6 before #153 read as the opposite order
+
+- **What happened:** on 2026-11-25 Joe put C6 before #153, and the brief of the time kept #153 before backlog row #157 is removed (#158 to #160 cite it). The review queue's line said "#153 waits until row #157 is removed", which read plainly puts the removal first. Caught while closing C6's records, by reading the brief from the commit that recorded the choice (`e395f47`); the line is reworded.
+- **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** a record of the order of two steps names both with "before" or "after", in the brief's words, never "waits until".
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
+
+### M-278, 2026-11-25: Test code with backslash escapes sent through a Bash heredoc, against M-256's guard
+
+- **What happened:** building #157's last two fitness functions, I appended the made-up test cases to `tests/architecture/test_import_rules.py` with a Bash heredoc, though they hold `\n` escapes. The heredoc was quoted, so nothing was lost: all seven of the file's `\n` escapes are as written, and its line endings stayed LF. Caught while checking M-265's guard after the bug planting.
+- **Kind:** environment.
+- **Pattern:** environment.
+- **Guard:** M-256's guard, unchanged: code that holds a backslash escape is written with the editor tools, never sent through a heredoc.
+- **Takeaway:** a slip past an existing guard, with no harm; not a code-review takeaway, so no step on the escalation ladder.
 
 ### M-277, 2026-11-25: D13's records counted the flags' clearing as built with no test for it
 
