@@ -9,12 +9,31 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-25 (Pacific)
-- **Last commit:** "Records after #157 stage 5: mistakes M-251 to M-255,
-  next-up brief", on `main`, after `06a432f`. Uncommitted: nothing. The
-  checks pass (997 passed, 1 skipped). Not pushed.
+- **Last commit:** "Records after #157 stage 6: mistakes M-258 to M-263,
+  next-up brief", on `main`, after `f38578b`. Uncommitted: nothing. The
+  checks pass (1001 passed, 1 skipped). Not pushed.
 
 ## Done last
 
+- 2026-11-25: committed #157's stage 6 (ADR-0093): four tests for the
+  link's wiring (`1d51b96`), passing on the code before the move, then
+  the move to `link.py` (`f38578b`, move-only but for the two
+  differences its message names), and the records.
+- 2026-11-25: `/project-review max` of #157's stage 6, run inline without
+  the fresh-context read (Joe's choice): no correctness bugs, and the move
+  is move-only by script (70 items). 10 findings, in
+  `docs/review-queue.md`. Joe's calls: `close(*, radio_link_only)` and
+  `has_link_to_close` (the first names gave the glossary's *May be
+  flying* a second meaning and said less than the code), the three test
+  gaps from before the move tested now, and ARCHITECTURE.md section 7's
+  row. Two of those gaps are radio-only closes that the cleanup right
+  after repeats, so their tests check that each comes first. Mistakes
+  M-258 to M-263.
+- 2026-11-25: built #157's stage 6 (ADR-0093): the link moves to
+  `link.py` (`CrazyflieLink`, with the interface Joe approved), checked
+  move-only by script. Of 30 planted wiring bugs, 28 are caught; the
+  survivors are `__init__`'s take-over flag, never read, and a reworded
+  comment that only the move check sees.
 - 2026-11-25: committed #157's stage 5 (ADR-0093): the move to
   `log_blocks.py` (`6651fb6`), the clearing's drop (`c19831b`), the review
   fixes (`06a432f`) and the records.
@@ -72,16 +91,17 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
-- #157 (ADR-0093): stages 1 to 5 and the blocking-call fitness function
-  committed, with their reviews' fixes. Left: the link, rebuilding the parts
-  in `connect()`, and the last two fitness functions.
+- #157 (ADR-0093): stages 1 to 6 and the blocking-call fitness function
+  committed, with their reviews' fixes. Left: rebuilding the parts in
+  `connect()` (D13), and the last two fitness functions.
 
 ## Next three
 
-1. #157's next stage: the link to `link.py` (ADR-0093), move-only. Opus,
-   Max.
-2. #157's stage after the link: rebuilding the parts in `connect()`
-   (ADR-0093's D13). Opus, Max.
+1. `/decide` #161: a link lost while connecting ends `connect()` with
+   cflib's AttributeError, not the lost link's error. Its row puts it at
+   the link stage, now built. Opus, high.
+2. #157's next stage: rebuilding the parts in `connect()` (ADR-0093's
+   D13). Opus, Max.
 3. Build #153, the test for citations of removed backlog rows (ADR-0091),
    before backlog row #157 is removed (#158 to #160 cite it). It first needs
    Joe's OK on a glossary term: *Live doc* was proposed, *Live place* the
@@ -92,29 +112,6 @@ move the item, renumber "Next three", and update "Last commit" and
 Answer by number, such as "E1: ...", in any work session. Claude grades
 from `drafts/explain-back-notes.md`; don't open it first.
 
-- **E1.** ADR-0086 checks for a lost link only in `take_snapshot()`. Why
-  does that still stop every tick after a lost link before it does anything,
-  and which command still raises on its own after one, and why?
-- **E2.** A recording writes a NaN battery voltage as the string `"nan"`,
-  not as `null`. What would go wrong in a replay test if it wrote `null`?
-- **E3.** The tick's timing reaches the recorder through a callable the
-  tick loop calls (ADR-0088). Why can't the tick step measure a tick's
-  lateness and work time itself?
-- **E4.** A behavior raises halfway through a tick, after one command
-  request. What does that tick's line in the recording hold, and what makes
-  sure the line, and the recording's last line, still get written?
-- **E5.** Change the name a recording uses for a flight end reason, in the
-  one table both the encoder and the decoder read. Why do the round-trip
-  tests still pass, which golden file tests fail (ADR-0089), and what
-  does the golden file deliberately not catch?
-- **E6.** The bug-planting tool (ADR-0090) runs on demand, but the test for
-  citations of removed backlog rows (ADR-0091) runs in continuous
-  integration on every push. Why the difference, and what does the tool
-  need so that its report doesn't become noise people learn to ignore?
-- **E7.** ADR-0092 keeps the text log's snapshot line until the first
-  recorded session's recordings match it. What could be lost in that
-  session if the line were already gone, and why is the text log still no
-  help if the laptop's disk fails?
 - **E8.** ADR-0093 adds transcript tests (every cflib call, in order, for
   a scripted flight) before moving any adapter code. What can a move-only
   change break that tests checking the adapter's results might miss, what
@@ -133,7 +130,7 @@ from `drafts/explain-back-notes.md`; don't open it first.
   `drone/crazyflie/` that sleeps or waits, and checks who calls each. Why
   must a tick never reach one, why build it before stage 4 rather than with
   the other fitness functions, and why does a check by function name miss
-  `on_abandon=self._close_radio_link_only`?
+  `on_abandon=self.close_radio_link_only`?
 - **E12.** The blocking-call fitness function matches calls by name alone.
   When bug planting added a join to `_HelperStep.start` (in `time_limit.py`,
   reached only from `connect()`), `take_off` also failed the rule that only
@@ -155,6 +152,12 @@ from `drafts/explain-back-notes.md`; don't open it first.
   `log_blocks.telemetry` on every call instead of keeping it, which two
   places replace the buffer, and why could the clearing of the log blocks at
   the link close be dropped?
+- **E16.** Stage 6 moved the link into `link.py`. `CrazyflieLink.close()`
+  takes `radio_link_only` as a required keyword argument, which the
+  adapter's `_close_link()` works out as `is_airborne` or the
+  unknown-state flag. Which flight would end with a dropped drone if
+  `_close_link()` ignored `is_airborne`, why doesn't the link part work it
+  out itself, and what catches the mistake?
 
 ## Last reviewed
 
@@ -166,5 +169,5 @@ blocking-call fitness function's review comments, one per decision or
 finding from its build and its review
 (`drafts/2026-11-24-blocking-call-review-comments.md`), and stage 4's, in
 the same shape (`drafts/2026-11-24-stage-4-review-comments.md`). Stage 4's
-project review (2026-11-25) put its findings in `docs/review-queue.md`,
+to 6's project reviews (2026-11-25) put their findings in `docs/review-queue.md`,
 which `/review-packet` posts along with both drafts.

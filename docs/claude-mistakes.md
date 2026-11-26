@@ -72,27 +72,27 @@ entries go at the top of their section without an ID.
 | design | 5 | 23 |
 | safety design | 5 | 22 |
 | recommendation | 7 | 10 |
-| environment | 4 | 10 |
-| communication | 14 | 73 |
-| testing | 2 | 32 |
-| process | 7 | 41 |
-| **Total** | **44** | **211** |
+| environment | 4 | 11 |
+| communication | 14 | 75 |
+| testing | 2 | 34 |
+| process | 7 | 44 |
+| **Total** | **44** | **219** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
 | said-without-checking | 54 |
-| records-ahead-of-code | 31 |
-| how-I-work | 30 |
-| weak-test | 29 |
-| vocabulary | 24 |
+| records-ahead-of-code | 34 |
+| weak-test | 31 |
+| how-I-work | 31 |
+| vocabulary | 25 |
 | safety-judgment | 18 |
 | recommendation | 15 |
 | window-between-steps | 15 |
 | reading-field-data | 15 |
 | message-misstates-outcome | 13 |
-| environment | 8 |
+| environment | 9 |
 | leftover-state | 3 |
 <!-- end generated -->
 
@@ -112,6 +112,14 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-263 | 2026-11-25 | Two names in stage 6's link part meant something other than their code | communication | vocabulary | working rule 6 for every new name, keyword arguments included: a name that spells a glossary term means that term exactly, and a yes-or-no name says when it's true, in-between states included (Q-38) |
+| M-262 | 2026-11-25 | The facts register kept pointing at adapter.py after its code moved | process | records-ahead-of-code | each move searches the facts register for the old file's name and re-reads every row it finds against both files, as part of the move's records |
+| M-261 | 2026-11-25 | Stage 6's move-only report named one difference and missed two | communication | records-ahead-of-code | a move-only claim lists, beside the check's verdict, each moved call whose place in its caller changed and each callback whose owner changed, read off the caller's diff (ADR-0093's D14) |
+| M-260 | 2026-11-25 | Three cflib facts behind stage 6's move were read but not registered | process | how-I-work | working rule 1: a fact read in source to back a claim goes into the register in the same step, before the claim is written down |
+| M-259 | 2026-11-25 | The link part's rename left the old name in a waiting explain-back | process | records-ahead-of-code | a rename is searched for across the whole repository, the git-ignored `drafts/` included (ripgrep skips ignored files unless given `--no-ignore`) |
+| M-258 | 2026-11-25 | The adapter's URI, cache directory and disconnect with no link had no test | testing | weak-test | bug planting covers each argument the adapter passes on to cflib and each early return, not only the logic between them |
+| M-257 | 2026-11-25 | The move-only check's first run reported a change that wasn't there | testing | weak-test | a check script's verdict counts only once it has passed on the real change and failed on planted ones; stage 6's plants put two changes in moved code that only the check can catch |
+| M-256 | 2026-11-25 | A Python fix sent through a Bash heredoc lost half its backslashes | environment | environment | code that holds a backslash escape is written with the editor tools, never sent through a heredoc |
 | M-255 | 2026-11-25 | The take-over list change went against ADR-0093's move-only rule, unflagged | recommendation | recommendation | an option that touches code an ADR governs is checked against that ADR's Never and Always lines before it's offered (CLAUDE.md: point out a conflict with an accepted ADR and ask) |
 | M-254 | 2026-11-25 | Stage 5's comments and records said more than the code | communication | records-ahead-of-code | before marking an import test-only, search `src/` and `tools/` for its importers, not only `tests/`; a fact another module owns is pointed to, not copied (`docs/coding-style.md`); a record never says what the commit carrying it makes false (Q-46) |
 | M-253 | 2026-11-25 | "Session", "drone time" and "part" in the Crazyflie adapter's comments | communication | vocabulary | working rule 6, applied to each word of a new or rewritten comment, including words the glossary already uses in another sense (Q-38, Q-41) |
@@ -802,6 +810,70 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-263, 2026-11-25: Two names in stage 6's link part meant something other than their code
+
+- **What happened:** building #157 stage 6, Claude named the link close's keyword `may_be_flying`, the glossary's *May be flying*, for "airborne or the drone's state unknown", where `TakeOffAndLanding.may_be_flying()` is False during a connect with the state unknown; and named a property `is_open` that is also true while the link opens and after a lost link, which `disconnect()` relies on. Caught by Claude's project review of the stage (2026-11-25); Joe chose `radio_link_only` and `has_link_to_close`, in the move commit `f38578b`.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** working rule 6 for every new name, keyword arguments included: a name that spells a glossary term means that term exactly, and a yes-or-no name says when it's true, in-between states included (Q-38).
+- **Takeaway:** the pattern is past its third entry, and no cheap mechanism exists: a lint can't tell what a name means. The question stays.
+
+### M-262, 2026-11-25: The facts register kept pointing at adapter.py after its code moved
+
+- **What happened:** five rows (`send_packet`, the incoming handler's callbacks, `LogConfig`, `HighLevelCommander`, `Commander`) still named only `adapter.py` after the refactor's stages moved that code out of it. Stage 6's own update then swapped `adapter.py` for `link.py` on two rows whose adapter code stayed (`_close_link`, `disconnect()`) and missed the parameter writes row. Caught by Claude's project review of stage 6 (2026-11-25); fixed in the stage's records.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** each move searches the facts register for the old file's name and re-reads every row it finds against both files, as part of the move's records.
+- **Takeaway:** the pattern is past its third entry, and no cheap mechanism exists: a test can check that a named file exists, and `adapter.py` still does.
+
+### M-261, 2026-11-25: Stage 6's move-only report named one difference and missed two
+
+- **What happened:** Claude reported stage 6's build as move-only except for the link's creation moving inside `connect()`'s `try`. It missed two more: cflib's driver set-up now runs after the flag resets and the parts' rebuild, and a late cflib callback from an earlier link now reaches that link's part, not the adapter's own fields. The move check passed because it compares moved bodies, not when or from where they run. Caught by Claude's project review (2026-11-25); the move commit `f38578b` names all three.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** a move-only claim lists, beside the check's verdict, each moved call whose place in its caller changed and each callback whose owner changed, read off the caller's diff (ADR-0093's D14).
+- **Takeaway:** the pattern is past its third entry, and no cheap mechanism exists: the move check compares bodies, and where they run needs reading.
+
+### M-260, 2026-11-25: Three cflib facts behind stage 6's move were read but not registered
+
+- **What happened:** to show that a raise in the link's creation finds no link to close, Claude read in cflib's source that a `Crazyflie` made with no link starts no thread, that `SyncCrazyflie.__init__` only stores what it's given and that `Caller.add_callback` only appends, but didn't add them to the facts register, as CLAUDE.md asks of a fact not there. Caught by Claude's project review (Q-01, 2026-11-25); added with the stage's records.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** working rule 1: a fact read in source to back a claim goes into the register in the same step, before the claim is written down.
+- **Takeaway:** the pattern is past its third entry, and no cheap mechanism exists; Q-01 catches it at review.
+
+### M-259, 2026-11-25: The link part's rename left the old name in a waiting explain-back
+
+- **What happened:** renaming `_close_radio_link_only` to `close_radio_link_only` in stage 6, Claude updated the code, the fitness function and the glossary, but E11 in the next-up brief and its notes in `drafts/explain-back-notes.md` still quoted `on_abandon=self._close_radio_link_only`. Caught by Claude's project review (2026-11-25); fixed in the stage's records.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** a rename is searched for across the whole repository, the git-ignored `drafts/` included (ripgrep skips ignored files unless given `--no-ignore`).
+- **Takeaway:** the pattern is past its third entry, and no cheap mechanism exists: a test can't tell a stale quote from a quote of history.
+
+### M-258, 2026-11-25: The adapter's URI, cache directory and disconnect with no link had no test
+
+- **What happened:** bug planting for #157 stage 6 found three plants no test failed, on the code before the move too: `connect()` passing cflib the default URI or the default cache directory instead of the adapter's, and `disconnect()` going on with no link, which the start-up's `finally` calls after a failed `connect()`. Caught by Claude's bug planting (2026-11-25); tests in `1d51b96`.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** bug planting covers each argument the adapter passes on to cflib and each early return, not only the logic between them.
+- **Takeaway:** bug planting is the pattern's mechanism; this widens what it plants.
+
+### M-257, 2026-11-25: The move-only check's first run reported a change that wasn't there
+
+- **What happened:** for #157 stage 6, Claude's move-only check compared `CrazyflieLink.open()` with the lines it came from in `connect()`, but dropped `open()`'s first line without dedenting the rest, so its first run reported one difference, in indentation only. Caught by Claude reading the check's output (2026-11-25); after the fix it reported 70 items moved or kept unchanged.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a check script's verdict counts only once it has passed on the real change and failed on planted ones; stage 6's plants put two changes in moved code that only the check can catch.
+- **Takeaway:** the pattern is past its third entry, and bug planting is its mechanism; this extends it to the check script. Nothing new to build.
+
+### M-256, 2026-11-25: A Python fix sent through a Bash heredoc lost half its backslashes
+
+- **What happened:** building #157 stage 6's move-only check, Claude rewrote one of its functions as a Python string inside a Bash heredoc. The Bash tool passed each doubled backslash on as a single one, so two newline escapes became real line breaks and the script wouldn't parse (checked afterwards: a doubled backslash in a heredoc reaches Python as one). Caught by Python's syntax error (2026-11-25); fixed with the editor.
+- **Kind:** environment.
+- **Pattern:** environment.
+- **Guard:** code that holds a backslash escape is written with the editor tools, never sent through a heredoc.
+- **Takeaway:** no cheap mechanism: the guard is a habit, and a syntax error or the checks catch a slip.
 
 ### M-255, 2026-11-25: The take-over list change went against ADR-0093's move-only rule, unflagged
 
