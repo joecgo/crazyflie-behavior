@@ -157,6 +157,9 @@ class CrazyflieAdapter(DroneInterface):
     # --- Connection ---------------------------------------------------------
 
     def connect(self) -> None:
+        """After a lost link, a step that fails ends it with the lost link's error, raised while handling the step's
+        error so the traceback shows that error first. When the step was a wait that raised the lost link's error,
+        that error passes through (ADR-0095)."""
         self._is_ignoring_hover = False
         self._is_ignoring_estimate_reset = False
         self._is_drone_state_unknown = True
@@ -190,7 +193,11 @@ class CrazyflieAdapter(DroneInterface):
             if self._take_off_log:
                 # Last, so its run falls in the first ticks: cflib starts a block once it's created (ADR-0065).
                 self._log_blocks.create_take_off_block()
-        except BaseException:
+        except Exception:
+            self._close_link()
+            self._raise_if_lost_while_connecting()
+            raise
+        except BaseException:  # the interrupt signal among them: never replaced by the lost link's error (ADR-0095)
             self._close_link()
             raise
 
@@ -348,6 +355,12 @@ class CrazyflieAdapter(DroneInterface):
         """Only the radio link while the drone is airborne or its state is unknown: cflib's close_link() would drop a
         flying drone (ADR-0038)."""
         self._link.close(radio_link_only=self._take_off_and_landing.is_airborne or self._is_drone_state_unknown)
+
+    def _raise_if_lost_while_connecting(self) -> None:
+        """After a lost link, raise its error, unless a wait already did. Called while handling the failed step's
+        error, which Python keeps as its context, not its cause: the loss made the step fail (ADR-0095)."""
+        if not self._link.is_lost_link_raised:
+            self._link.raise_if_lost()
 
     def _log_closing_after_the_lost_link(self) -> None:
         if self._take_off_and_landing.may_be_flying():
