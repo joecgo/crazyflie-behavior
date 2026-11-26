@@ -9,11 +9,51 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-25 (Pacific)
-- **Last commit:** "Records after #157 stage 6: mistakes M-258 to M-263,
-  next-up brief", on `main`, after `f38578b`. Uncommitted: nothing. The
-  checks pass (1001 passed, 1 skipped). Not pushed.
+- **Last commit:** "Records after #162: mistakes M-264 to M-272, backlog
+  #163, next-up brief", on `main`, after `3f266eb`. Not pushed:
+  `origin/main` is at `8da634d`. Uncommitted: nothing. The checks pass
+  (1078 passed, 1 skipped).
 
 ## Done last
+
+- 2026-11-25: committed #162's build with its review fixes (`3f266eb`,
+  Implements ADR-0095), checked on its own, then the records.
+- 2026-11-25: `/project-review max` of #162's build, run inline without
+  the fresh-context read (Joe's choices): no correctness bug in the new
+  cleanup. 12 findings, in `docs/review-queue.md`. Joe's calls, all as
+  recommended: the lost link's error is raised while handling the step's
+  error, not with it as its cause, since Python printed the step's error
+  as the direct cause of the loss (ADR-0095 and ADR-0029's status
+  reworded before their first commit); each case checks where the link
+  was lost; `pytest.fail` in the fake; the fake runs the `disconnected`
+  callbacks; a spy checks that the cleanup's raise follows the link
+  close; "list" for the call list made at collection; "once the link is
+  open"; the interface's `connect()` docstring names the lost link.
+  Pre-existing: cflib's full link close can wait forever if a lost link
+  lands between its check and its wait (backlog #163, not placed yet).
+  7 planted bugs, each as expected. Joe kept the build's choices as
+  built. Mistakes M-267 to M-272.
+- 2026-11-25: built backlog #162 (ADR-0095): `connect()`'s cleanup raises
+  the lost link's error after the link close, while handling the failed
+  step's error (its cause until the review), unless a wait already raised
+  it; the interrupt signal passes through. The connect tests' fake cflib
+  loses its link the way cflib does, and one parametrized test loses it
+  before each of the 71 cflib calls of a connect with every block once
+  the link is open, its cases listed while pytest collects the file. 77
+  new tests; 7 planted bugs, all caught, and a planted new cflib call got
+  a case of its own. Joe kept every choice as built (the review queue).
+  Mistakes M-265 (a planting script wrote CRLF) and M-266 (the listing at
+  collection could stop the whole run).
+
+- 2026-11-25: `/decide` #161, ADR-0095: a link lost while connecting ends
+  `connect()` with the lost link's error, raised by its cleanup after the
+  link close, with the failed step's error as its cause (option A; #162's
+  review made it the error being handled instead).
+  Tracing every step found more than the row named (M-264): the Flow deck
+  check reads a lost link as no deck, and opening the link and reading the
+  parameters wait out their time limits. Joe's calls, all as recommended:
+  a test that loses the link before each of `connect()`'s cflib calls, the
+  time limits stay, no closing line. Backlog #162 builds it.
 
 - 2026-11-25: committed #157's stage 6 (ADR-0093): four tests for the
   link's wiring (`1d51b96`), passing on the code before the move, then
@@ -97,15 +137,14 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## Next three
 
-1. `/decide` #161: a link lost while connecting ends `connect()` with
-   cflib's AttributeError, not the lost link's error. Its row puts it at
-   the link stage, now built. Opus, high.
-2. #157's next stage: rebuilding the parts in `connect()` (ADR-0093's
+1. #157's next stage: rebuilding the parts in `connect()` (ADR-0093's
    D13). Opus, Max.
-3. Build #153, the test for citations of removed backlog rows (ADR-0091),
+2. Build #153, the test for citations of removed backlog rows (ADR-0091),
    before backlog row #157 is removed (#158 to #160 cite it). It first needs
    Joe's OK on a glossary term: *Live doc* was proposed, *Live place* the
    alternative. Sonnet, medium.
+3. #157's last two fitness functions: the cflib importers by name, and
+   take-off and landing free of cflib and `# pyright: basic`. Opus, Max.
 
 ## Explain-backs waiting
 
@@ -158,6 +197,23 @@ from `drafts/explain-back-notes.md`; don't open it first.
   unknown-state flag. Which flight would end with a dropped drone if
   `_close_link()` ignored `is_airborne`, why doesn't the link part work it
   out itself, and what catches the mistake?
+- **E17.** ADR-0095 makes `connect()`'s cleanup raise the lost link's
+  error, rather than a check in each cflib call. Why would a check in each
+  call go wrong the way ADR-0086 said a check in every command would, why
+  must the new code run after the link close and never before it, and why
+  does a step that fails just before cflib reports the loss still end with
+  its own error?
+- **E18.** #162's fake cflib runs a hook before every cflib call, and the
+  test's 71 cases are listed from a connect while pytest collects the
+  test file. Why does that cover a cflib call added to `connect()` later
+  with no new test, why must the listing catch its own error, and why do
+  two of the cases end with the first snapshot raising rather than
+  `connect()`?
+- **E19.** #162's review changed `raise lost_link_error from step_error`
+  to raising the lost link's error inside the `except` block, with no
+  `from`. What does Python print between the two errors in each case, why
+  does the first mislead an operator reading a failed rescue landing, and
+  what in the tests fails if someone puts the `from` back?
 
 ## Last reviewed
 
@@ -169,5 +225,5 @@ blocking-call fitness function's review comments, one per decision or
 finding from its build and its review
 (`drafts/2026-11-24-blocking-call-review-comments.md`), and stage 4's, in
 the same shape (`drafts/2026-11-24-stage-4-review-comments.md`). Stage 4's
-to 6's project reviews (2026-11-25) put their findings in `docs/review-queue.md`,
+to 6's and #162's project reviews (2026-11-25) put their findings in `docs/review-queue.md`,
 which `/review-packet` posts along with both drafts.

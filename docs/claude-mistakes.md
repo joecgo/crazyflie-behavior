@@ -69,30 +69,30 @@ entries go at the top of their section without an ID.
 <!-- generated: kinds -->
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 5 | 23 |
+| design | 5 | 25 |
 | safety design | 5 | 22 |
 | recommendation | 7 | 10 |
 | environment | 4 | 11 |
-| communication | 14 | 75 |
-| testing | 2 | 34 |
+| communication | 14 | 79 |
+| testing | 2 | 37 |
 | process | 7 | 44 |
-| **Total** | **44** | **219** |
+| **Total** | **44** | **228** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 54 |
-| records-ahead-of-code | 34 |
-| weak-test | 31 |
+| said-without-checking | 56 |
+| records-ahead-of-code | 35 |
+| weak-test | 32 |
 | how-I-work | 31 |
-| vocabulary | 25 |
+| vocabulary | 26 |
 | safety-judgment | 18 |
+| window-between-steps | 17 |
 | recommendation | 15 |
-| window-between-steps | 15 |
 | reading-field-data | 15 |
-| message-misstates-outcome | 13 |
-| environment | 9 |
+| message-misstates-outcome | 14 |
+| environment | 10 |
 | leftover-state | 3 |
 <!-- end generated -->
 
@@ -112,6 +112,15 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-272 | 2026-11-25 | The review's failure scenario for the fake's assert was a loss the adapter never hears of | communication | said-without-checking | a review finding's failure scenario is traced to its end, or planted, before it's reported (Q-20) |
+| M-271 | 2026-11-25 | cflib's full link close can hang on a lost link, and no review asked whether its check could change on another thread | design | window-between-steps | Q-03's question about a guard that changes on another thread is asked of a library's own check-then-wait code too, with the answer in the facts register |
+| M-270 | 2026-11-25 | ADR-0095 chained the step's error as the lost link's cause, which Python prints as the reverse of what happened | communication | message-misstates-outcome | an error raised while handling another keeps it as its context, with no `from`, unless the other really caused it; read the traceback Python prints before choosing (Q-43) |
+| M-269 | 2026-11-25 | #162's lost-link tests didn't check where each case lost the link, and three more gaps | testing | weak-test | a test whose cases come from a listed run checks in each case that it acted where its ID says, and each Never line of the ADR gets a planted bug |
+| M-268 | 2026-11-25 | #162's records and docstrings said more than its code | communication | records-ahead-of-code | before a record says what a test covers, read its parametrize and first case, and count tests with `pytest --collect-only` |
+| M-267 | 2026-11-25 | "Recording" for the call list made at collection | communication | vocabulary | working rule 6 for every noun in a new name or docstring, everyday words included: a glossary term's word means that term (Q-41) |
+| M-266 | 2026-11-25 | Test data computed at collection would have stopped the whole run when connect() raised | testing | said-without-checking | code that runs while pytest collects a test file catches its errors and fails a test with them, proved by planting a raise there |
+| M-265 | 2026-11-25 | The bug-planting script for #162 wrote CRLF into adapter.py and reported it restored | testing | environment | a planting script reads, writes and compares bytes (M-169), and `git ls-files --eol` shows `w/lf` after it |
+| M-264 | 2026-11-25 | Backlog #161 named one step of a link lost while connecting and missed the others | design | window-between-steps | Q-03 asked of every library call in the function, not only the one that showed the problem, with each answer in the facts register |
 | M-263 | 2026-11-25 | Two names in stage 6's link part meant something other than their code | communication | vocabulary | working rule 6 for every new name, keyword arguments included: a name that spells a glossary term means that term exactly, and a yes-or-no name says when it's true, in-between states included (Q-38) |
 | M-262 | 2026-11-25 | The facts register kept pointing at adapter.py after its code moved | process | records-ahead-of-code | each move searches the facts register for the old file's name and re-reads every row it finds against both files, as part of the move's records |
 | M-261 | 2026-11-25 | Stage 6's move-only report named one difference and missed two | communication | records-ahead-of-code | a move-only claim lists, beside the check's verdict, each moved call whose place in its caller changed and each callback whose owner changed, read off the caller's diff (ADR-0093's D14) |
@@ -810,6 +819,78 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-272, 2026-11-25: The review's failure scenario for the fake's assert was a loss the adapter never hears of
+
+- **What happened:** the project review of #162 reported that the fake's `assert` in `_wait_for_params` would come out behind the lost link's error, with "a test that calls `fake_cflib.lose_the_link()` before `adapter.connect()`" as its scenario. In that scenario the adapter never hears of the loss: its `connection_lost` callback isn't registered until `connect()` opens the link, so the AssertionError comes out as it is. Caught by Claude's bug planting for the fix: the planted misuse failed with the old `assert` too. The hole is real for a link lost after the callback is registered, such as while the link opens: planted that way, the misuse passes with the `assert` and fails with `pytest.fail`.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** a review finding's failure scenario is traced to its end, or planted, before it's reported (Q-20).
+- **Takeaway:** Q-20 asks it of claims about failures in the code; it holds for a review's own scenarios too.
+
+### M-271, 2026-11-25: cflib's full link close can hang on a lost link, and no review asked whether its check could change on another thread
+
+- **What happened:** the facts register said `SyncCrazyflie.close_link()` does nothing once `disconnected` has been called (2026-11-21), and `connect()`'s cleanup and `disconnect()` relied on it after a lost link. The project review of #162 asked Q-03 of cflib's own code: the close checks `is_link_open()`, then creates the event its `disconnected` callback sets, and a lost link's callback that runs on cflib's radio thread between the two removes itself without setting it, so the close waits with no end. ADR-0095's "connect() raises within its time limits" assumed the close returns. Read in the source, never seen. Backlog #163.
+- **Kind:** design.
+- **Pattern:** window-between-steps.
+- **Guard:** Q-03's question about a guard that changes on another thread is asked of a library's own check-then-wait code too, with the answer in the facts register.
+- **Takeaway:** window-between-steps is past its third entry; no cheap mechanism finds races in a library's code, so the question stays.
+
+### M-270, 2026-11-25: ADR-0095 chained the step's error as the lost link's cause, which Python prints as the reverse of what happened
+
+- **What happened:** Claude's recommendation for ADR-0095, built in #162, raised the lost link's error `from` the failed step's error. Python prints that as "The above exception was the direct cause of the following exception", so a rescue landing over a dropped link would read "Flow deck not detected" as the cause of the loss, a deck problem that never happened. Caught by Claude's project review of #162 (Q-43). Joe chose to raise it while handling the step's error, which keeps that error as its context, and to reword ADR-0095 and ADR-0029's status before their first commit.
+- **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** an error raised while handling another keeps it as its context, with no `from`, unless the other really caused it; read the traceback Python prints before choosing (Q-43).
+- **Takeaway:** the test now pins the chain (`__context__` set, no `__cause__`, the context not suppressed), so the change can't come back unseen.
+
+### M-269, 2026-11-25: #162's lost-link tests didn't check where each case lost the link, and three more gaps
+
+- **What happened:** the project review of #162 found four gaps in Claude's tests: no case checked that the link was lost just before the call its ID names, so a drift in the call count would move cases with every test still passing (a planted off-by-one in the fake now fails all 71 cases); the fake's `assert` came out behind the lost link's error, so a misused fake passed; ADR-0095's Never line "the new code runs before the link close" was guarded only against a skipped close, not one moved after the check in a `finally`; and the fake didn't run the `disconnected` callbacks. All fixed, each proven by a planted bug except the last, which no code registers yet.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a test whose cases come from a listed run checks in each case that it acted where its ID says, and each Never line of the ADR gets a planted bug.
+- **Takeaway:** weak-test is past its third entry: the bug-planting tool (backlog #152) is where planting each Never line becomes a mechanism.
+
+### M-268, 2026-11-25: #162's records and docstrings said more than its code
+
+- **What happened:** the project review of #162 found that ADR-0095 said the fake runs the `disconnected` callbacks, which it didn't; the parametrized test's name, the ADR index row and the brief said the link is lost before each of `connect()`'s cflib calls, where the cases start once the link is open; the brief counted 76 new tests for 77; `connect()`'s docstring promised the step's error as the cause, which a wait's own lost-link error lacks; `_added_block_ids`' docstring spoke of a block "added once the link is lost", which cflib doesn't add; and the drone interface's `connect()` docstring still named only a flying drone among its errors after *Lost link* widened (Q-35).
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** before a record says what a test covers, read its parametrize and first case, and count tests with `pytest --collect-only`.
+- **Takeaway:** records-ahead-of-code is past its third entry; the question stays (Q-39), as no cheap mechanism reads records against tests.
+
+### M-267, 2026-11-25: "Recording" for the call list made at collection
+
+- **What happened:** building #162, Claude named the cflib calls listed while pytest collects the test file a "recording" (`RECORDED_CALLS`, "the error the recording raised"), and the records repeated it, where the glossary's *Recording* is a run's JSON Lines file. Caught by Claude's project review of #162 (Q-41); Joe chose "list" (`LISTED_CALLS`).
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** working rule 6 for every noun in a new name or docstring, everyday words included: a glossary term's word means that term (Q-41).
+- **Takeaway:** vocabulary is past its third entry; the question stays.
+
+### M-266, 2026-11-25: Test data computed at collection would have stopped the whole run when connect() raised
+
+- **What happened:** building #162, Claude recorded the cflib calls for ADR-0095's parametrized test by running a connect when pytest collects the test file, assuming a failure there would stop only that file. pytest runs no test at all once collection has an error (facts register). Caught by Claude's bug planting: a new step in `connect()` that raised on the fake ended the run at collection. The recording now keeps its error, and `test_a_connect_with_every_block_is_recorded` raises it.
+- **Kind:** testing.
+- **Pattern:** said-without-checking.
+- **Guard:** code that runs while pytest collects a test file catches its errors and fails a test with them, proved by planting a raise there.
+- **Takeaway:** what a test tool does on an error is a fact about it too: check it in its source (working rule 1).
+
+### M-265, 2026-11-25: The bug-planting script for #162 wrote CRLF into adapter.py and reported it restored
+
+- **What happened:** Claude's bug-planting script read `adapter.py` with `read_text` and restored it with `write_text`, which writes CRLF on Windows, so the LF working copy (ADR-0079) came back CRLF. Its check compared text, which hides line endings, and printed "restored: True". Caught by Git's line-ending warning on the next diff, checked with `git ls-files --eol`; converted back to LF before any commit, which `.gitattributes` would have normalized anyway. M-169's takeaway, bytes and a checksum, wasn't followed. `docs/next-up.md` was CRLF in the working copy too, from the previous work session's edit (cause not found); converted to LF.
+- **Kind:** testing.
+- **Pattern:** environment.
+- **Guard:** a planting script reads, writes and compares bytes (M-169), and `git ls-files --eol` shows `w/lf` after it.
+- **Takeaway:** a third line-endings slip, after M-169 and M-171. ADR-0079 accepted that a script can still write CRLF, with no fitness function; the bug-planting tool (backlog #152) is where restoring bytes becomes a mechanism.
+
+### M-264, 2026-11-25: Backlog #161 named one step of a link lost while connecting and missed the others
+
+- **What happened:** the project review of #157 stage 5 found that a link lost while connecting ends `connect()` with cflib's `AttributeError` from a log block (M-252), and backlog #161 described that one step. Its guard, Q-03 for each cflib call `connect()` relies on, wasn't asked of the other calls, and stage 6's review, which moved the deck check, didn't report them either: after a lost link cflib empties its parameter values but still counts them as fetched, so the Flow deck check reads "no deck" and the run ends with "Flow deck not detected"; opening the link and reading the parameters wait out their time limits; and the Buzzer deck check logs "No Buzzer deck". Caught by Claude tracing every step of `connect()` for `/decide` #161 (2026-11-25), before the options; ADR-0095 covers them.
+- **Kind:** design.
+- **Pattern:** window-between-steps.
+- **Guard:** Q-03 asked of every library call in the function, not only the one that showed the problem, with each answer in the facts register.
+- **Takeaway:** the mechanism M-252 asked for is decided: ADR-0095's test loses the link before each of `connect()`'s cflib calls (backlog #162).
 
 ### M-263, 2026-11-25: Two names in stage 6's link part meant something other than their code
 
