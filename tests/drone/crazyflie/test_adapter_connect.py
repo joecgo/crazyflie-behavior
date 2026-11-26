@@ -101,6 +101,10 @@ class FakeCflib:
         """The SyncCrazyflie: open_link, close_link, and the Crazyflie as .cf."""
         self.radio_link = self.link.cf.link
         """The Crazyflie's radio link: closing it is what a safe link close does (ADR-0038)."""
+        self.sync_crazyflie_class = MagicMock(return_value=self.link)
+        """cflib's SyncCrazyflie class: called with the URI and the Crazyflie, it returns `link`."""
+        self.crazyflie_class = MagicMock()
+        """cflib's Crazyflie class: called with the cache directory."""
         self.parameters = {"deck.bcFlow2": "1", "deck.bcMultiranger": "0"}
         """Parameter values as cflib returns them (strings). Missing means the
         firmware doesn't know the parameter, so cflib raises KeyError."""
@@ -228,8 +232,8 @@ class StreamingSimClock(SimClock):
 def fake_cflib(monkeypatch: pytest.MonkeyPatch) -> Generator[FakeCflib]:
     fake = FakeCflib()
     monkeypatch.setattr(adapter_module, "_drivers_initialized", True)
-    monkeypatch.setattr(adapter_module, "SyncCrazyflie", MagicMock(return_value=fake.link))
-    monkeypatch.setattr(adapter_module, "Crazyflie", MagicMock())
+    monkeypatch.setattr(adapter_module, "SyncCrazyflie", fake.sync_crazyflie_class)
+    monkeypatch.setattr(adapter_module, "Crazyflie", fake.crazyflie_class)
     monkeypatch.setattr(log_blocks_module, "LogConfig", fake.make_log_block)
     yield fake
     fake.stop()  # ends the streaming threads
@@ -255,6 +259,17 @@ def test_connecting_resets_the_estimate_and_starts_telemetry(adapter: CrazyflieA
     # The controller block too (ADR-0063); the take-off block only with the take-off log.
     assert fake_cflib.log_block_names == ["state", "battery", "down", "diagnostic", "controller"]
     fake_cflib.link.close_link.assert_not_called()
+
+
+def test_connecting_opens_the_link_to_the_uri_with_the_cache_directory(fake_cflib: FakeCflib) -> None:
+    clock = StreamingSimClock(fake_cflib, start=10.0)
+
+    CrazyflieAdapter(clock, uri="radio://0/90/2M/E7E7E7E7E8", cache_directory="./test-cache").connect()
+
+    fake_cflib.crazyflie_class.assert_called_once_with(rw_cache="./test-cache")
+    fake_cflib.sync_crazyflie_class.assert_called_once_with(
+        "radio://0/90/2M/E7E7E7E7E8", cf=fake_cflib.crazyflie_class.return_value
+    )
 
 
 def test_connecting_logs_that_the_drone_arms_itself(
@@ -407,6 +422,18 @@ def test_without_a_flow_deck_it_refuses_to_fly_and_closes_only_the_radio_link(
     assert fake_cflib.reset_count == 0
 
 
+def test_a_disconnect_after_a_failed_connect_does_nothing(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
+    # The start-up calls disconnect() in a `finally`, also after connect() raised and closed the link.
+    fake_cflib.parameters["deck.bcFlow2"] = "0"
+    with pytest.raises(RuntimeError, match="Flow deck"):
+        adapter.connect()
+    calls_after_the_connect = list(fake_cflib.link.mock_calls)
+
+    adapter.disconnect()
+
+    assert fake_cflib.link.mock_calls == calls_after_the_connect
+
+
 class BlockingStep:
     """A fake cflib call that blocks like a stuck wait, until the test releases it.
 
@@ -457,6 +484,29 @@ def test_opening_the_link_has_a_time_limit_then_stops_the_connection_under_way_w
     with pytest.raises(TimeoutError, match=r"Opening the link took longer than 0\.2 s\. Check the"):
         real_time_adapter().connect()
 
+    assert_only_the_radio_link_closed(fake_cflib)
+
+
+@pytest.mark.usefixtures("short_time_limits")
+def test_the_time_limit_itself_stops_the_connection_under_way_before_connect_cleans_up(
+    fake_cflib: FakeCflib, blocking_step: BlockingStep, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # connect()'s cleanup closes only the radio link too: this checks that the time limit closed it first.
+    fake_cflib.link.open_link.side_effect = blocking_step
+    adapter = real_time_adapter()
+    radio_link_closes_at_the_cleanup: list[int] = []
+    close_link = adapter._close_link
+
+    def record_then_close_the_link() -> None:
+        radio_link_closes_at_the_cleanup.append(fake_cflib.radio_link.close.call_count)
+        close_link()
+
+    monkeypatch.setattr(adapter, "_close_link", record_then_close_the_link)
+
+    with pytest.raises(TimeoutError, match="Opening the link"):
+        adapter.connect()
+
+    assert radio_link_closes_at_the_cleanup == [1]
     assert_only_the_radio_link_closed(fake_cflib)
 
 

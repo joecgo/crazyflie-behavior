@@ -578,6 +578,28 @@ def test_a_landing_that_raises_sends_the_firmwares_land_then_the_release_then_cl
     fake_link.cf.param.set_value.assert_not_called()  # no silence after a failed landing
 
 
+def test_the_last_resort_landing_itself_closes_the_radio_link_before_disconnect_cleans_up(
+    adapter: CrazyflieAdapter, fake_link: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # disconnect()'s cleanup closes only the radio link too: this checks that the last resort closed it first
+    # (ADR-0084).
+    radio_link = fake_link.cf.link
+    fake_link.cf.high_level_commander.go_to.side_effect = OSError("made-up landing error")
+    radio_link_closes_at_the_cleanup: list[int] = []
+    close_link = adapter._close_link
+
+    def record_then_close_the_link() -> None:
+        radio_link_closes_at_the_cleanup.append(radio_link.close.call_count)
+        close_link()
+
+    monkeypatch.setattr(adapter, "_close_link", record_then_close_the_link)
+
+    with pytest.raises(OSError, match="made-up landing error"):
+        adapter.disconnect()
+
+    assert radio_link_closes_at_the_cleanup == [1]
+
+
 def test_an_error_in_the_last_resort_is_logged_not_raised_and_the_radio_link_still_closes(
     adapter: CrazyflieAdapter, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
