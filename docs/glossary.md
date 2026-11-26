@@ -93,6 +93,7 @@ only an example: "For example, about 43,300 for this drone".
 | **Emergency stop** (e-stop) | Immediately cut all motors. The drone falls. |
 | **Supervisor** | Firmware subsystem tracking safety state (armed, flying, tumbled, crashed). |
 | **Failsafe** | The safety layer's automatic response to a failure that makes flying unsafe: hover, land or stop, depending on how serious it is ([ADR-0020](decisions/0020-failures-degrade-gracefully.md)). |
+| **Failure mode** | One way something can go wrong. A safety-related ADR has a *Failure modes* section ([template](decisions/0000-template.md)) asking four things: what happens if each input is missing, stale or wrong; whether a backup fails together with what it backs up; what must never happen; and what must always happen in the end. |
 
 ## Architecture
 
