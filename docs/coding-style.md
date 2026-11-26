@@ -89,10 +89,13 @@ one tick took.
   plus diagnostic scripts in `tools/`. Those run in basic mode, type their own
   functions, and annotate raw cflib values where they enter
   (`available_drones: list[list[str]] = cflib.crtp.scan_interfaces()`).
-- It runs pyright in **basic** mode and converts every untyped cflib value
-  into a typed project type before handing it on.
+- Its modules that import cflib run pyright in **basic** mode and convert
+  every untyped cflib value into a typed project type before handing it on.
+  Take-off and landing imports no cflib and stays strict
+  ([ADR-0093](decisions/0093-the-crazyflie-adapter-splits-into-parts-with-take-off-and-landing-free-of-cflib.md)).
 - Type-check suppressions are allowed **only** in the Crazyflie adapter,
-  always scoped to one rule and with a reason:
+  never in take-off and landing (ADR-0093), always scoped to one rule and
+  with a reason:
   `# pyright: ignore[reportUnknownMemberType]  # cflib is untyped`.
 
 ## Module boundaries

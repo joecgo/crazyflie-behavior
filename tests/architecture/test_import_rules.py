@@ -1,11 +1,15 @@
 """Fitness functions: structural rules from the ADRs, enforced as tests.
 
-Each test reads the source files' import statements (without running them) and
+Each test reads the source files without running them (their imports, and for
+some rules their calls or comments), or the project's pyright settings, and
 fails if a rule is broken.
 """
 
 import ast
+import re
 import sys
+import tokenize
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -16,6 +20,22 @@ PACKAGE_ROOT = SOURCE_ROOT / "crazyflie_behavior"
 TOOLS_ROOT = REPO_ROOT / "tools"
 ANALYSIS_ROOT = REPO_ROOT / "analysis"
 CRAZYFLIE_ADAPTER_ROOT = PACKAGE_ROOT / "drone" / "crazyflie"
+CFLIB_IMPORTERS = [CRAZYFLIE_ADAPTER_ROOT / name for name in ["adapter.py", "commands.py", "link.py", "log_blocks.py"]]
+"""The Crazyflie adapter's modules that import cflib, the only ones that pass cflib objects to each other (ADR-0093)."""
+TAKE_OFF_AND_LANDING = CRAZYFLIE_ADAPTER_ROOT / "take_off_and_landing.py"
+TYPE_CHECK_COMMENT = re.compile(r"#\s*(pyright\s*:|type\s*:\s*ignore)")
+"""A comment that changes what pyright checks: a `# pyright:` setting or ignore, or a `# type: ignore`."""
+PYPROJECT = REPO_ROOT / "pyproject.toml"
+PYRIGHT_SETTINGS = {
+    "include": ["src", "tests", "tools", "analysis"],
+    "typeCheckingMode": "strict",
+    "pythonVersion": "3.12",
+    "venvPath": ".",
+    "venv": ".venv",
+}
+"""`pyproject.toml`'s whole `[tool.pyright]` table: strict everywhere, nothing ignored or excluded, no rule
+turned down. A setting there could relax take-off and landing with no comment in the file, so any change shows in
+review."""
 BEHAVIORS_ROOT = PACKAGE_ROOT / "behaviors"
 SAFETY_ROOT = PACKAGE_ROOT / "safety"
 DRONE_ROOT = PACKAGE_ROOT / "drone"
@@ -132,6 +152,56 @@ def passes_keyword(path: Path, keyword: str) -> bool:
     )
 
 
+def project_file(module: str) -> Path | None:
+    """A module's file in `src/`: `x.py`, or `x/__init__.py` for a package. None for a module from outside `src/`."""
+    base = SOURCE_ROOT.joinpath(*module.split("."))
+    return next((file for file in [base.with_suffix(".py"), base / "__init__.py"] if file.is_file()), None)
+
+
+def files_run_by_import(module: str) -> list[Path]:
+    """The files in `src/` that importing a module runs: each package on its dotted path, then the module itself."""
+    parts = module.split(".")
+    files = [project_file(".".join(parts[:end])) for end in range(1, len(parts) + 1)]
+    return [file for file in files if file is not None]
+
+
+def modules_named_by_imports(path: Path) -> set[str]:
+    """Every module a source file's imports may load. `from a import b` loads `a`, and `a.b` too when `b` is a
+    module."""
+    names: set[str] = set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import):
+            names.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            source = resolve_relative_import(path, node.level, node.module) if node.level > 0 else (node.module or "")
+            names.add(source)
+            names.update(f"{source}.{alias.name}" for alias in node.names if alias.name != "*")
+    return names
+
+
+def files_loaded_with(path: Path) -> set[Path]:
+    """Every file in `src/` that importing a source file may run: itself, its packages, and what each of those
+    imports, in turn."""
+    loaded: set[Path] = set()
+    unvisited = [*files_run_by_import(".".join(containing_package(path))), path]
+    while unvisited:
+        file = unvisited.pop()
+        if file not in loaded:
+            loaded.add(file)
+            unvisited.extend(found for name in modules_named_by_imports(file) for found in files_run_by_import(name))
+    return loaded
+
+
+def type_check_comments(path: Path) -> list[str]:
+    """Each comment in a source file that changes what pyright checks, with its line."""
+    with path.open(encoding="utf-8") as source:
+        return [
+            f"line {token.start[0]}: {token.string}"
+            for token in tokenize.generate_tokens(source.readline)
+            if token.type == tokenize.COMMENT and TYPE_CHECK_COMMENT.search(token.string)
+        ]
+
+
 def relative_paths(paths: list[Path]) -> list[str]:
     return [path.relative_to(REPO_ROOT).as_posix() for path in paths]
 
@@ -145,6 +215,31 @@ def test_only_the_crazyflie_adapter_imports_cflib() -> None:
     ]
 
     assert relative_paths(offenders) == []
+
+
+def test_inside_the_crazyflie_adapter_only_the_named_modules_import_cflib() -> None:
+    """ADR-0093: only these modules import cflib, so only they pass cflib objects to each other. One that starts or
+    stops importing cflib changes the list, so the change shows in review."""
+    importers = [path for path in python_files(CRAZYFLIE_ADAPTER_ROOT) if imports_any(path, ["cflib"])]
+
+    assert sorted(relative_paths(importers)) == sorted(relative_paths(CFLIB_IMPORTERS))
+
+
+def test_take_off_and_landing_reaches_no_cflib() -> None:
+    """ADR-0093: not even through another module in `src/`, so take-off and landing can run and be tested without
+    cflib."""
+    offenders = [path for path in sorted(files_loaded_with(TAKE_OFF_AND_LANDING)) if imports_any(path, ["cflib"])]
+
+    assert relative_paths(offenders) == []
+
+
+def test_take_off_and_landing_keeps_pyright_strict() -> None:
+    """ADR-0093: with no cflib values to type, nothing turns pyright's strict mode down for take-off and landing: no
+    `# pyright:` setting, rule turned off or line ignored in the file, and `pyproject.toml`'s settings as pinned."""
+    pyright_settings = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))["tool"]["pyright"]
+
+    assert type_check_comments(TAKE_OFF_AND_LANDING) == []
+    assert pyright_settings == PYRIGHT_SETTINGS
 
 
 def test_project_code_never_imports_tools() -> None:
@@ -307,6 +402,14 @@ def test_the_import_scanner_sees_real_imports() -> None:
     assert not imports_module_in_any_form(PROGRAMS_ROOT / "hover.py", FORGED_BATTERY_WRAPPER)
     assert passes_keyword(RESCUE_LANDING_PROGRAM, TAKE_OVER_SETTING)
     assert not passes_keyword(PROGRAMS_ROOT / "hover.py", TAKE_OVER_SETTING)
+    assert files_loaded_with(TAKE_OFF_AND_LANDING) >= {
+        PACKAGE_ROOT / "__init__.py",
+        CRAZYFLIE_ADAPTER_ROOT / "touchdown.py",
+        DRONE_ROOT / "telemetry_buffer.py",
+        PACKAGE_ROOT / "geometry.py",
+    }
+    assert CRAZYFLIE_ADAPTER_ROOT / "link.py" in files_loaded_with(CRAZYFLIE_ADAPTER_ROOT / "adapter.py")
+    assert "line 1: # pyright: basic" in type_check_comments(CRAZYFLIE_ADAPTER_ROOT / "adapter.py")
 
 
 @pytest.mark.parametrize(
@@ -355,3 +458,104 @@ def test_the_import_scanner_does_not_see_a_near_miss(
     program.write_text(import_line + "\n", encoding="utf-8")
 
     assert not imports_module_in_any_form(program, FORGED_BATTERY_WRAPPER)
+
+
+def made_up_take_off_and_landing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, files: dict[str, str]) -> Path:
+    """A made-up source tree holding `files`, by path inside a made-up Crazyflie adapter, beside a `radio.py` that
+    imports cflib. The adapter package and its two parents get an empty `__init__.py` unless `files` gives one. Points
+    `SOURCE_ROOT` at the tree for the rest of the test, and returns its take-off and landing file."""
+    monkeypatch.setattr(sys.modules[__name__], "SOURCE_ROOT", tmp_path)
+    adapter_root = tmp_path / "crazyflie_behavior" / "drone" / "crazyflie"
+    adapter_root.mkdir(parents=True)
+    for package in [adapter_root.parent.parent, adapter_root.parent, adapter_root]:
+        (package / "__init__.py").write_text("", encoding="utf-8")
+    for name, source in {"radio.py": "import cflib.crtp", **files}.items():
+        (adapter_root / name).parent.mkdir(parents=True, exist_ok=True)
+        (adapter_root / name).write_text(source + "\n", encoding="utf-8")
+    return adapter_root / "take_off_and_landing.py"
+
+
+@pytest.mark.parametrize(
+    "files",
+    [
+        {"take_off_and_landing.py": "import cflib"},
+        {"take_off_and_landing.py": "import crazyflie_behavior.drone.crazyflie.radio"},
+        {"take_off_and_landing.py": "from crazyflie_behavior.drone.crazyflie import radio"},
+        {"take_off_and_landing.py": "from crazyflie_behavior.drone.crazyflie.radio import send"},
+        {"take_off_and_landing.py": "from . import radio"},
+        {"take_off_and_landing.py": "from .radio import send"},
+        {"take_off_and_landing.py": "def land():\n    from .radio import send"},
+        {"take_off_and_landing.py": "if TYPE_CHECKING:\n    from .radio import Radio"},
+        {"take_off_and_landing.py": "from .middle import x", "middle.py": "from .radio import send"},
+        {"take_off_and_landing.py": "", "__init__.py": "from .radio import send"},
+        {
+            "take_off_and_landing.py": "from .parts.maths import y",
+            "parts/__init__.py": "import cflib",
+            "parts/maths.py": "",
+        },
+    ],
+)
+def test_the_import_follower_sees_every_import_statement_that_reaches_cflib(
+    files: dict[str, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Directly, through a module or a package in `src/`, inside a function, or for type checking only: a type-only
+    import would still hand take-off and landing a cflib type."""
+    take_off_and_landing = made_up_take_off_and_landing(tmp_path, monkeypatch, files)
+
+    assert any(imports_any(path, ["cflib"]) for path in files_loaded_with(take_off_and_landing))
+
+
+@pytest.mark.parametrize(
+    "files",
+    [
+        {"take_off_and_landing.py": "import logging"},
+        {"take_off_and_landing.py": "from . import touchdown", "touchdown.py": ""},
+        {"take_off_and_landing.py": "from .touchdown import radio", "touchdown.py": "radio = 1"},
+        {"take_off_and_landing.py": "from .radios import send"},
+        {"take_off_and_landing.py": "# from .radio import send"},
+        {"take_off_and_landing.py": 'TEXT = "from .radio import send"'},
+    ],
+)
+def test_the_import_follower_does_not_see_a_near_miss(
+    files: dict[str, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    take_off_and_landing = made_up_take_off_and_landing(tmp_path, monkeypatch, files)
+
+    assert not any(imports_any(path, ["cflib"]) for path in files_loaded_with(take_off_and_landing))
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "# pyright: basic",
+        "#pyright: standard",
+        "# pyright: strict",
+        "# pyright: reportUnknownMemberType=false",
+        "x = f()  # pyright: ignore[reportUnknownMemberType]",
+        "x = f()  # cflib is untyped # pyright: ignore",
+        "# type: ignore",
+        "x = f()  # type: ignore[attr-defined]",
+        "import math\nx = f()  # pyright: ignore[reportUnknownMemberType]",
+    ],
+)
+def test_the_comment_scanner_sees_every_type_check_comment(source: str, tmp_path: Path) -> None:
+    path = tmp_path / "made_up.py"
+    path.write_text(source + "\n", encoding="utf-8")
+
+    assert type_check_comments(path) != []
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'TEXT = "# pyright: basic"',
+        '"""Unlike adapter.py, no # pyright: basic here."""',
+        "# Strict typing: there are no cflib values to convert.",
+        "x: list[int] = []  # type: list[int]",
+    ],
+)
+def test_the_comment_scanner_does_not_see_a_near_miss(source: str, tmp_path: Path) -> None:
+    path = tmp_path / "made_up.py"
+    path.write_text(source + "\n", encoding="utf-8")
+
+    assert type_check_comments(path) == []

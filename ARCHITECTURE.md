@@ -48,7 +48,7 @@ request through the safety layer to the drone. Nothing skips a step.
 | `timing/clock.py` | `Clock`, with the real clock and the sim clock: the only source of time (ADR-0009). |
 | `drone/interface.py` | `DroneInterface`, which every adapter implements (ADR-0008), and the limits the safety layer and the adapters share. |
 | `drone/telemetry_buffer.py` | The latest telemetry: written from any thread, copied out once per tick. The only lock in the data path (ADR-0007). |
-| `drone/crazyflie/` | The Crazyflie adapter, the only code that imports cflib (ADR-0002): the link, the log blocks, unit conversion, every send, take-off, landing, touchdown, and "may be flying" (ADR-0039). Crazyflie-only concepts stop here (ADR-0006). |
+| `drone/crazyflie/` | The Crazyflie adapter, the only code that imports cflib (ADR-0002), and inside it only `adapter.py`, `link.py`, `log_blocks.py` and `commands.py` (ADR-0093): the link, the log blocks, unit conversion, every send, take-off, landing, touchdown, and "may be flying" (ADR-0039). Take-off and landing reaches no cflib and keeps pyright's strict mode (ADR-0093). Crazyflie-only concepts stop here (ADR-0006). |
 | `drone/mock_adapter.py` | A fake drone with no physics, behind the same interface and the same buffer (ADR-0010, ADR-0011, ADR-0052). |
 | `safety/requests.py` | The command request types and `Verdict`: all that a behavior may import from `safety/`. |
 | `safety/safety_layer.py` | The safety pre-check, the judging of command requests, the command slots, and the sending of commands (ADR-0025, ADR-0030). |
@@ -130,7 +130,10 @@ layer, then the drone, then the shared values.
 
 Forbidden:
 
-1. cflib anywhere but `drone/crazyflie/` and `tools/` (ADR-0002). **[fitness]**
+1. cflib anywhere but `tools/` and four modules in `drone/crazyflie/`:
+   `adapter.py`, `link.py`, `log_blocks.py` and `commands.py`; or reached by
+   take-off and landing through another module (ADR-0002, ADR-0093).
+   **[fitness]**
 2. `tools/` or `analysis/` from `src/` (ADR-0002, ADR-0092). **[fitness]**
 3. In a behavior: the drone package (ADR-0002); anything in `safety/` but
    `requests.py`; a clock, meaning `time`, `datetime` or `timing/`
@@ -239,7 +242,6 @@ the repository until they're decided. Module names are working names.
 
 | Target | Changes here | Needs |
 |---|---|---|
-| The Crazyflie adapter becomes parts inside `drone/crazyflie/`: `link.py`, `log_blocks.py` and `commands.py`, which with `adapter.py` are the only cflib importers; and `take_off_and_landing.py`, the take-off and landing logic with no cflib import and strict typing. `DroneInterface` stays as it is. | Section 2; rule 1 narrows to the named modules | ADR-0093 accepted; partly built: the transcript tests, `commands.py`, the blocking-call fitness function, `take_off_and_landing.py`, `log_blocks.py`, `link.py` and the parts' rebuild in `connect()` (backlog #157) |
 | A tick reports an outcome, up to the program. | Section 3 | ADR-0036 is accepted; how the outcome travels is open |
 | Recordings, replay tests, and program tests on the sim clock. | A recorder beside the tick step | The recorder is built (ADR-0034, ADR-0087, ADR-0088). Program tests on the sim clock are built (ADR-0076). Replay tests are open |
 | Tuning values are grouped, passed in, and logged with every run. | Where constants live | An ADR |
