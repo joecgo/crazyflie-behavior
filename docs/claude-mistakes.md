@@ -74,9 +74,9 @@ entries go at the top of their section without an ID.
 | recommendation | 7 | 10 |
 | environment | 4 | 11 |
 | communication | 14 | 79 |
-| testing | 2 | 37 |
+| testing | 2 | 38 |
 | process | 7 | 44 |
-| **Total** | **44** | **228** |
+| **Total** | **44** | **229** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
@@ -84,7 +84,7 @@ entries go at the top of their section without an ID.
 |---|---|
 | said-without-checking | 56 |
 | records-ahead-of-code | 35 |
-| weak-test | 32 |
+| weak-test | 33 |
 | how-I-work | 31 |
 | vocabulary | 26 |
 | safety-judgment | 18 |
@@ -112,6 +112,7 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-273 | 2026-11-25 | The first fix for #162's case-index finding checked something a planted off-by-one left unchanged | testing | weak-test | a check meant to pin where something happened compares the place noted at the event, and the plant that moves the event runs before the fix is called done |
 | M-272 | 2026-11-25 | The review's failure scenario for the fake's assert was a loss the adapter never hears of | communication | said-without-checking | a review finding's failure scenario is traced to its end, or planted, before it's reported (Q-20) |
 | M-271 | 2026-11-25 | cflib's full link close can hang on a lost link, and no review asked whether its check could change on another thread | design | window-between-steps | Q-03's question about a guard that changes on another thread is asked of a library's own check-then-wait code too, with the answer in the facts register |
 | M-270 | 2026-11-25 | ADR-0095 chained the step's error as the lost link's cause, which Python prints as the reverse of what happened | communication | message-misstates-outcome | an error raised while handling another keeps it as its context, with no `from`, unless the other really caused it; read the traceback Python prints before choosing (Q-43) |
@@ -819,6 +820,14 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-273, 2026-11-25: The first fix for #162's case-index finding checked something a planted off-by-one left unchanged
+
+- **What happened:** fixing the review's finding that no case checked where the link was lost, Claude first asserted only that the call at the case's index in `link.mock_calls` is the listed call, with a comment saying the link was therefore lost just before it. That compares the run's calls with the list, not where the loss came: a planted off-by-one in the fake failed only 6 tests in the whole file. Caught by Claude's bug planting before the fix was reported. The fake now notes the index at the loss and each case checks it, so the same plant fails all 71 cases.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a check meant to pin where something happened compares the place noted at the event, and the plant that moves the event runs before the fix is called done.
+- **Takeaway:** weak-test is past its third entry: the bug-planting tool (backlog #152) is where a plant for each new check becomes a mechanism.
 
 ### M-272, 2026-11-25: The review's failure scenario for the fake's assert was a loss the adapter never hears of
 

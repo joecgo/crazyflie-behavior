@@ -9,140 +9,47 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-25 (Pacific)
-- **Last commit:** "Records after #162: mistakes M-264 to M-272, backlog
-  #163, next-up brief", on `main`, after `3f266eb`. Not pushed:
-  `origin/main` is at `8da634d`. Uncommitted: nothing. The checks pass
-  (1078 passed, 1 skipped).
+- **Last commit:** "Wrap-up 2026-11-25: work log, mistake M-273, next-up
+  brief", this page's own commit, after `50888c6`. Uncommitted: nothing.
+  The checks pass (1078 passed, 1 skipped).
 
 ## Done last
 
-- 2026-11-25: committed #162's build with its review fixes (`3f266eb`,
-  Implements ADR-0095), checked on its own, then the records.
-- 2026-11-25: `/project-review max` of #162's build, run inline without
-  the fresh-context read (Joe's choices): no correctness bug in the new
-  cleanup. 12 findings, in `docs/review-queue.md`. Joe's calls, all as
-  recommended: the lost link's error is raised while handling the step's
-  error, not with it as its cause, since Python printed the step's error
-  as the direct cause of the loss (ADR-0095 and ADR-0029's status
-  reworded before their first commit); each case checks where the link
-  was lost; `pytest.fail` in the fake; the fake runs the `disconnected`
-  callbacks; a spy checks that the cleanup's raise follows the link
-  close; "list" for the call list made at collection; "once the link is
-  open"; the interface's `connect()` docstring names the lost link.
-  Pre-existing: cflib's full link close can wait forever if a lost link
-  lands between its check and its wait (backlog #163, not placed yet).
-  7 planted bugs, each as expected. Joe kept the build's choices as
-  built. Mistakes M-267 to M-272.
-- 2026-11-25: built backlog #162 (ADR-0095): `connect()`'s cleanup raises
-  the lost link's error after the link close, while handling the failed
-  step's error (its cause until the review), unless a wait already raised
-  it; the interrupt signal passes through. The connect tests' fake cflib
-  loses its link the way cflib does, and one parametrized test loses it
-  before each of the 71 cflib calls of a connect with every block once
-  the link is open, its cases listed while pytest collects the file. 77
-  new tests; 7 planted bugs, all caught, and a planted new cflib call got
-  a case of its own. Joe kept every choice as built (the review queue).
-  Mistakes M-265 (a planting script wrote CRLF) and M-266 (the listing at
-  collection could stop the whole run).
-
-- 2026-11-25: `/decide` #161, ADR-0095: a link lost while connecting ends
+- **#162's review (ADR-0095):** `/project-review max`, run inline: no
+  correctness bug in the new cleanup, 12 findings. The lost link's error
+  is now raised while handling the step's error, not with it as its cause,
+  which Python printed as the step's error causing the loss. Four test
+  gaps and four wording fixes, proven by 7 planted bugs. A race in cflib's
+  full link close went to backlog #163 (not placed yet). Committed and
+  pushed: `3f266eb` (Implements ADR-0095) and `50888c6`. Mistakes M-267
+  to M-273.
+- **ADR-0095 (#161), built as #162:** a link lost while connecting ends
   `connect()` with the lost link's error, raised by its cleanup after the
-  link close, with the failed step's error as its cause (option A; #162's
-  review made it the error being handled instead).
-  Tracing every step found more than the row named (M-264): the Flow deck
-  check reads a lost link as no deck, and opening the link and reading the
-  parameters wait out their time limits. Joe's calls, all as recommended:
-  a test that loses the link before each of `connect()`'s cflib calls, the
-  time limits stay, no closing line. Backlog #162 builds it.
-
-- 2026-11-25: committed #157's stage 6 (ADR-0093): four tests for the
-  link's wiring (`1d51b96`), passing on the code before the move, then
-  the move to `link.py` (`f38578b`, move-only but for the two
-  differences its message names), and the records.
-- 2026-11-25: `/project-review max` of #157's stage 6, run inline without
-  the fresh-context read (Joe's choice): no correctness bugs, and the move
-  is move-only by script (70 items). 10 findings, in
-  `docs/review-queue.md`. Joe's calls: `close(*, radio_link_only)` and
-  `has_link_to_close` (the first names gave the glossary's *May be
-  flying* a second meaning and said less than the code), the three test
-  gaps from before the move tested now, and ARCHITECTURE.md section 7's
-  row. Two of those gaps are radio-only closes that the cleanup right
-  after repeats, so their tests check that each comes first. Mistakes
-  M-258 to M-263.
-- 2026-11-25: built #157's stage 6 (ADR-0093): the link moves to
-  `link.py` (`CrazyflieLink`, with the interface Joe approved), checked
-  move-only by script. Of 30 planted wiring bugs, 28 are caught; the
-  survivors are `__init__`'s take-over flag, never read, and a reworded
-  comment that only the move check sees.
-- 2026-11-25: committed #157's stage 5 (ADR-0093): the move to
-  `log_blocks.py` (`6651fb6`), the clearing's drop (`c19831b`), the review
-  fixes (`06a432f`) and the records.
-- 2026-11-25: `/project-review max` of #157's stage 5, run inline without the
-  fresh-context read (Joe's choices): no correctness bugs; the move is
-  move-only, and the clearing's drop is safe (`disconnect()` returns at once
-  after a close, and cflib's `stop()` does nothing once the link is closed).
-  8 findings, in `docs/review-queue.md`, fixed in `06a432f`:
-  `start_up.py` imports the take-off block's constants from `log_blocks.py`;
-  wording in `adapter.py`, `log_blocks.py` and `take_off_and_landing.py`; a
-  glossary row for *Part* (Joe approved the text); backlog #157's clause.
-  Joe's calls: the move commit's message notes its change to the take-over
-  fitness function's body (ADR-0093's D14), and a pre-existing lost-link
-  error while connecting is backlog #161. Mistakes M-252 to M-255.
-- 2026-11-25: built #157's stage 5 (ADR-0093):
-  the log blocks move to `log_blocks.py` (`LogBlocks`, with the interface
-  Joe approved), checked move-only by script (43 moved items match). Then
-  the clearing at the link close goes (Joe's choice: a fresh part on every
-  connect made it redundant). The take-over fitness function now lists
-  `adapter.py` as a pass-through (Joe's choice; M-251). 15 wiring bugs
-  planted, 14 caught; the survivor, `__init__`'s take-over flag, is never
-  read. Joe put C6 before #153.
-
-- 2026-11-25: `/project-review` (max, run inline, without the
-  fresh-context read) of #157's stage 4 and ADR-0094's fix: no
-  correctness bugs, and the move is move-only (every moved body, constant
-  and the landing phase enum match the originals after the renames). 7
-  findings, all nits, all fixed (`419791c`, `91e1eeb`); they're in
-  `docs/review-queue.md`. Mistakes M-247 to M-250.
-- 2026-11-25: committed #157's stage 4 (ADR-0093): the two new tests
-  (`9e0338d`), the move to `take_off_and_landing.py` (`6710a79`,
-  move-only), its strict typing (`2aa215d`) and the review's docstring
-  fixes (`91e1eeb`). Each commit passed the checks on its own.
-- 2026-11-25: decided and built ADR-0094 (`419791c`): connecting raises
-  the interrupt signal that a CPython 3.12 threading lock error hides. The
-  three tests that send the interrupt signal no longer fail at random (300
-  runs, no failure; the fix caught the race twice). Mistake M-246.
-- 2026-11-24: `/project-review` (high) of the blocking-call fitness
-  function: 5 findings, all fixed in `531c638` (an import alias hid a
-  blocking call; the interface was read by one decorator spelling; two
-  scanner forms had no test; the glossary's Blocking call row and a test
-  name said more than the check). Mistakes M-240 to M-244.
-- 2026-11-24: built and committed #157's blocking-call fitness function
-  (ADR-0093, `1cc5081`): 14 blocking functions listed, 4 stored callables
-  allow-listed, 39 tests, 23 planted bugs all caught.
-- 2026-11-24: `/project-review` (xhigh, with the fresh-context read) of
-  #157's stages 1 to 3: no safety or correctness bugs, 10 findings, all
-  fixed except the blocking-call guard, which is decided. Joe's decisions,
-  in ADR-0093: only the adapter's modules that import cflib pass cflib
-  objects to each other (narrows ADR-0002, ADR-0004 and CLAUDE.md's rule),
-  and a blocking-call fitness function comes before stage 4. Glossary:
-  Hand-over widened, Level setpoint added, Transcript test reworded.
-  Mistakes M-233 to M-239. The fresh read's other items are in
-  `drafts/2026-11-24-fresh-read-c6-stage-3.md`, for the full review (W9).
+  link close. The connect tests' fake cflib loses its link the way cflib
+  does, and one test loses it before each of the 71 cflib calls of a
+  connect once the link is open. Mistakes M-264 to M-266.
+- **#157's stages 4 to 6 (ADR-0093):** `take_off_and_landing.py`,
+  `log_blocks.py` and `link.py`, each checked move-only by script, each
+  with a `/project-review max` and its fixes, committed and pushed.
+  Mistakes M-247 to M-263.
+- **ADR-0094 (`419791c`):** connecting raises the interrupt signal that a
+  CPython 3.12 threading lock error hides. Mistake M-246.
 
 ## In progress
 
 - #157 (ADR-0093): stages 1 to 6 and the blocking-call fitness function
   committed, with their reviews' fixes. Left: rebuilding the parts in
-  `connect()` (D13), and the last two fitness functions.
+  `connect()` (D13), and the last two fitness functions. No work order:
+  backlog #157 and ADR-0093 hold the plan.
 
 ## Next three
 
 1. #157's next stage: rebuilding the parts in `connect()` (ADR-0093's
    D13). Opus, Max.
 2. Build #153, the test for citations of removed backlog rows (ADR-0091),
-   before backlog row #157 is removed (#158 to #160 cite it). It first needs
-   Joe's OK on a glossary term: *Live doc* was proposed, *Live place* the
-   alternative. Sonnet, medium.
+   before backlog row #157 is removed (#158 to #160 cite it). It first
+   needs Joe's OK on a glossary term: *Live doc* was proposed, *Live place*
+   the alternative. Sonnet, medium.
 3. #157's last two fitness functions: the cflib importers by name, and
    take-off and landing free of cflib and `# pyright: basic`. Opus, Max.
 
@@ -165,7 +72,7 @@ from `drafts/explain-back-notes.md`; don't open it first.
   objects themselves. What would go wrong if a part kept the buffer it was
   built with, and why does putting the hand-over inside `go_to` make a
   forgotten hand-over impossible rather than just unlikely?
-- **E11.** The fitness function decided today lists every function in
+- **E11.** The blocking-call fitness function lists every function in
   `drone/crazyflie/` that sleeps or waits, and checks who calls each. Why
   must a tick never reach one, why build it before stage 4 rather than with
   the other fitness functions, and why does a check by function name miss
@@ -217,13 +124,13 @@ from `drafts/explain-back-notes.md`; don't open it first.
 
 ## Last reviewed
 
-`0846826`, 2026-11-04: the last full row of `REVIEW.md`'s review log. Pull
-requests #24 to #30 read single changes ahead of the full review; the last,
-#30, read up to `fdcd31c` and closed 2026-11-23. The full line-by-line walk
-comes after the refactor (W9). Drafted for its pull request: the
-blocking-call fitness function's review comments, one per decision or
-finding from its build and its review
-(`drafts/2026-11-24-blocking-call-review-comments.md`), and stage 4's, in
-the same shape (`drafts/2026-11-24-stage-4-review-comments.md`). Stage 4's
-to 6's and #162's project reviews (2026-11-25) put their findings in `docs/review-queue.md`,
-which `/review-packet` posts along with both drafts.
+`0846826`, 2026-11-04: the last full row of `REVIEW.md`'s review log. The
+next code review covers everything after it. Pull requests #24 to #30 read
+single changes ahead of the full review; the last, #30, read up to
+`fdcd31c` and closed 2026-11-23. The full line-by-line walk comes after the
+refactor (W9). Drafted for its pull request: the blocking-call fitness
+function's review comments (`drafts/2026-11-24-blocking-call-review-comments.md`)
+and stage 4's (`drafts/2026-11-24-stage-4-review-comments.md`), which
+`/review-packet` posts along with the review queue.
+
+Review queue: 10 decisions, 37 findings waiting (`docs/review-queue.md`).
