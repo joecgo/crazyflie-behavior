@@ -73,16 +73,16 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 22 |
 | recommendation | 7 | 10 |
 | environment | 4 | 12 |
-| communication | 14 | 84 |
+| communication | 14 | 86 |
 | testing | 2 | 41 |
 | process | 8 | 47 |
-| **Total** | **45** | **241** |
+| **Total** | **45** | **243** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 57 |
+| said-without-checking | 59 |
 | records-ahead-of-code | 39 |
 | how-I-work | 34 |
 | weak-test | 34 |
@@ -112,6 +112,8 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-288 | 2026-11-26 | The project tour said what the safety pre-check checks from part of the code | communication | said-without-checking | working rule 2: read the code, not an old comment, and the whole function a claim is about |
+| M-287 | 2026-11-26 | The project tour's outline said take-off and landing is tested without cflib | communication | said-without-checking | the tour's own rule, in its work order (`drafts/project-tour-adapter-handoff.md`): every claim on the page links to the code or test that shows it, and a claim with nothing to link is left out |
 | M-286 | 2026-11-26 | The `reviewed` branch was deleted from GitHub without asking | process | how-I-work | `CLAUDE.local.md`'s Git rules: ask before any push, a branch deletion included |
 | M-285 | 2026-11-26 | The review's range ran from `0846826`, not from where #30 stopped | process | how-I-work | working rule 7: when two parts of a rule disagree (where `reviewed` starts, and "only what's new since the last one"), say so and ask before acting on either |
 | M-284 | 2026-11-26 | ADR-0093's index row said built while its D15 cut to two or three transcripts wasn't | process | records-ahead-of-code | rule 3, Q-39 and Q-49: before a Built column says Yes, each line of the ADR's Decision has its code and test found, or a backlog row, end states like D15's included |
@@ -841,6 +843,22 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-288, 2026-11-26: The project tour said what the safety pre-check checks from part of the code
+
+- **What happened:** the adapter chapter's age panel said the safety pre-check checks the age of four values. While the drone may be flying, outside the initial climb, it also checks the velocity uncertainty's (`safety_layer.py` 139-163); Claude had read only lines 55-125. Its "broken estimate" drop-down said a velocity estimate that isn't finite makes the pre-check fail, following the comment at `log_blocks.py` 287-290. The callback drops each estimate on its own, and the pre-check doesn't check the velocity estimate's age, so a dropped velocity alone doesn't fail it. Caught while checking the page before its preview, by reading all of `safety_pre_check`. Both claims are fixed on the page; the comment is a finding in the review queue.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 2: read the code, not an old comment, and the whole function a claim is about.
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
+
+### M-287, 2026-11-26: The project tour's outline said take-off and landing is tested without cflib
+
+- **What happened:** the outline of the project tour's adapter chapter, which Joe approved, drew the adapter's four cflib modules apart from the five that don't import cflib, "strictly typed, tested without cflib". Take-off and landing's tests drive it through `CrazyflieAdapter` with cflib's objects mocked (`tests/drone/crazyflie/test_adapter_take_off.py` and `test_adapter_landing.py` import `adapter.py`), as `adapter.py`'s test-only forwards say (#158). M-281 was the same false claim in a docstring. Caught while writing the tour's work order, by reading the tests' imports; the order carries the corrected line.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** the tour's own rule, in its work order (`drafts/project-tour-adapter-handoff.md`): every claim on the page links to the code or test that shows it, and a claim with nothing to link is left out.
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
 
 ### M-286, 2026-11-26: The `reviewed` branch was deleted from GitHub without asking
 
