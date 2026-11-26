@@ -85,8 +85,8 @@ def _open_new_file(path: Path) -> TextIO:
 
 
 @dataclass(frozen=True, slots=True)
-class _TickStepPart:
-    """What the tick step hands over once its tick is done: the line's snapshot and events."""
+class _TickStepRecord:
+    """What the tick step hands over once its tick is done: the line's snapshot, events and flight end reason."""
 
     snapshot: Snapshot
     events: SafetyEvents
@@ -106,7 +106,7 @@ class Recorder:
         self._file: TextIO | None = None
         self._tick_number = 0
         self._requests: list[RequestAndVerdict] = []
-        self._tick_step_part: _TickStepPart | None = None
+        self._tick_step_record: _TickStepRecord | None = None
         self._is_flight_end_recorded = False
 
     @property
@@ -139,11 +139,11 @@ class Recorder:
             self._stop()
 
     def record_tick(self, snapshot: Snapshot, events: SafetyEvents, flight_end_reason: FlightEndReason | None) -> None:
-        """Keep the tick step's part of this tick's line: its snapshot, and its events once it's done."""
+        """Keep the tick step's record of this tick's line: its snapshot, and its events once it's done."""
         if self._file is None:
             return
         try:
-            self._tick_step_part = _TickStepPart(snapshot, events, flight_end_reason)
+            self._tick_step_record = _TickStepRecord(snapshot, events, flight_end_reason)
         except Exception:
             logger.exception("Couldn't record a tick. Recording stopped; the flight goes on.")
             self._stop()
@@ -152,8 +152,9 @@ class Recorder:
         """Write this tick's line, with the timing: the tick loop's `on_tick_measured` (ADR-0088).
 
         A tick with no snapshot handed over, as when taking the snapshot raised, gets a line with the timing only.
+        After `finish()` or an error it writes nothing, but still counts the tick and drops what it held.
         """
-        part, self._tick_step_part = self._tick_step_part, None
+        record, self._tick_step_record = self._tick_step_record, None
         requests, self._requests = tuple(self._requests), []
         tick_number = self._tick_number
         self._tick_number += 1
@@ -162,15 +163,15 @@ class Recorder:
         try:
             # The flight end is an event: recorded on the tick it was set, not on every tick after.
             flight_end_reason = None
-            if part is not None and part.flight_end_reason is not None and not self._is_flight_end_recorded:
-                flight_end_reason = part.flight_end_reason
+            if record is not None and record.flight_end_reason is not None and not self._is_flight_end_recorded:
+                flight_end_reason = record.flight_end_reason
                 self._is_flight_end_recorded = True
             tick = RecordedTick(
                 tick_number=tick_number,
-                snapshot=None if part is None else part.snapshot,
+                snapshot=None if record is None else record.snapshot,
                 requests=requests,
-                pre_check_failures=() if part is None else part.events.pre_check_failures,
-                replaced_requests=() if part is None else part.events.replaced_requests,
+                pre_check_failures=() if record is None else record.events.pre_check_failures,
+                replaced_requests=() if record is None else record.events.replaced_requests,
                 flight_end_reason=flight_end_reason,
                 lateness=lateness,
                 work_time=work_time,
@@ -194,6 +195,8 @@ class Recorder:
         except Exception:
             logger.exception("Couldn't finish the recording")
             self._stop()
+            return
+        logger.info("Recording finished")
 
     def _write(self, line: dict[str, Json]) -> None:
         if self._file is None:

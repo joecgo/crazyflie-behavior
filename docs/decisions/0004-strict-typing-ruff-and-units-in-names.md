@@ -1,6 +1,6 @@
 # 0004: Strict typing, ruff, and units in names
 
-- **Status:** Accepted
+- **Status:** Accepted. Narrowed by [ADR-0093](0093-the-crazyflie-adapter-splits-into-parts-with-take-off-and-landing-free-of-cflib.md): inside the Crazyflie adapter, its modules that import cflib pass cflib objects to each other.
 - **Date:** 2026-10-18
 - **Origin:** Mixed. Strict typing and ruff: AI recommendations accepted. No unit suffix for SI values: my idea. Deferring frozen dataclasses: overrode the AI's recommendation.
 

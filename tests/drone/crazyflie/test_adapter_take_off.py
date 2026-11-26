@@ -268,7 +268,7 @@ def test_the_climb_logs_the_down_range_where_it_ended(
 ) -> None:
     adapter.take_off(1.0)
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         heights = climb_until_handed_over(adapter, clock)
 
     message = f"Initial climb done at {heights[-1]:.3f} m by the down range"
@@ -276,7 +276,7 @@ def test_the_climb_logs_the_down_range_where_it_ended(
 
 
 def test_the_initial_climb_logs_its_speed(adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture) -> None:
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.take_off(1.0)
 
     assert f"Initial climb at {INITIAL_CLIMB_SPEED:g} m/s." in caplog.text
@@ -288,7 +288,7 @@ def test_a_climb_that_never_reaches_the_final_descent_height_lands_level_at_its_
     adapter.take_off(1.0)
     take_off_sent_at = clock.now()
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         climb_until_it_lands(adapter, fake_link, lambda _: climb_tick(adapter, clock, 0.08))
 
     assert clock.now() - take_off_sent_at == pytest.approx(INITIAL_CLIMB_TIME_LIMIT)
@@ -438,7 +438,7 @@ def test_land_during_a_climb_with_touchdown_already_confirmed_stops_the_motors_a
     for _ in range(round(TOUCHDOWN_HOLD / TICK) + 1):
         climb_tick(adapter, clock, 0.02)
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.land()
 
     fake_link.cf.high_level_commander.stop.assert_called_once()
@@ -488,7 +488,7 @@ def test_commands_during_the_initial_climb_are_ignored_and_logged_once(
     climb_tick(adapter, clock, CLIMB_STEP)
     fake_link.reset_mock()
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.hover()
         adapter.move_to(Vector3(1.0, 0.0, 1.0), duration=2.0)
         adapter.set_velocity(Vector3(0.2, 0.0, 0.0))
@@ -532,7 +532,7 @@ def test_a_climb_without_flow_at_the_final_descent_height_lands_there(
 ) -> None:
     adapter.take_off(1.0)
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         tick = climb_until_it_lands(
             adapter,
             fake_link,
@@ -553,7 +553,7 @@ def test_a_stale_velocity_uncertainty_at_the_final_descent_height_lands_there_an
     for _ in range(round(STALE_AFTER / TICK)):
         climb_tick(adapter, clock, 0.10, velocity_uncertainty=None)
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         climb_tick(adapter, clock, FINAL_DESCENT_HEIGHT, velocity_uncertainty=None)
 
     assert level_setpoints(fake_link)[-1] == pytest.approx(-FINAL_DESCENT_SPEED)
@@ -572,7 +572,7 @@ def test_a_velocity_uncertainty_at_its_age_limit_without_flow_logs_no_flow_not_i
     clock.advance(STALE_AFTER)
     adapter._telemetry.write_range_readings({RangeDirection.DOWN: RangeReading.at_distance(FINAL_DESCENT_HEIGHT)}, None)
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.update_take_off_and_landing(adapter.take_snapshot(TICK))
 
     assert "No flow at the end of the initial climb" in caplog.text
@@ -612,7 +612,7 @@ def test_a_take_off_warns_of_low_light_under_the_image_quality_limit(
 ) -> None:
     adapter._latest_image_quality = Stamped(quality, clock.now(), None)
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.take_off(1.0)
 
     assert adapter._is_in_initial_climb  # only a log line: it never refuses
@@ -625,7 +625,7 @@ def test_a_take_off_with_no_recent_image_quality_warns_it_is_unknown(
     # One tick past its age limit (ADR-0081).
     adapter._latest_image_quality = Stamped(100, clock.now() - STALE_AFTER - TICK, None)
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.take_off(1.0)
 
     assert any("unknown" in message for message in low_light_warnings(caplog))
@@ -639,7 +639,7 @@ def test_a_take_off_with_an_image_quality_at_its_age_limit_gives_no_warning(
     adapter._latest_image_quality = Stamped(LOW_LIGHT_IMAGE_QUALITY, clock.now(), None)
     clock.advance(STALE_AFTER)
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.take_off(1.0)
 
     assert low_light_warnings(caplog) == []
@@ -662,7 +662,7 @@ def test_an_estimate_reset_with_the_link_closed_logs_only_that_it_wasnt_sent(
 ) -> None:
     fake_link.cf.link = None
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.reset_estimate()
 
     assert reset_writes(fake_link) == 0
@@ -692,7 +692,7 @@ def test_an_estimate_reset_whose_write_fails_logs_only_that_it_wasnt_sent_and_wh
 
     fake_link.cf.param.set_value.side_effect = fail
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.reset_estimate()
 
     assert caplog.messages == [f"Estimate reset not sent: {cause}."]
@@ -704,7 +704,7 @@ def test_an_estimate_reset_while_the_drone_may_be_flying_is_ignored_and_warned_o
     adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)  # the status still says not flying
     adapter.take_off(1.0)
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.reset_estimate()
         adapter.reset_estimate()
 

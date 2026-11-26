@@ -60,7 +60,8 @@ class DroneInterface(ABC):
         When it returns, every telemetry value has arrived at least once, so
         the first snapshot has nothing missing (ADR-0031). Raises for a drone
         that is already flying, unless the adapter was built to take over its
-        flight, as only the rescue landing program does (ADR-0038).
+        flight, as only the rescue landing program does (ADR-0038). Raises
+        `ConnectionError` for a link lost while connecting (ADR-0095).
         """
 
     @abstractmethod

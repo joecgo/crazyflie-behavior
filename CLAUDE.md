@@ -59,15 +59,16 @@ the ADRs: an accepted ADR wins where the two disagree.
 
 **Never:**
 
-- Import cflib outside `drone/crazyflie/` and `tools/`, or `tools/` from
-  `src/`.
+- Import cflib outside `drone/crazyflie/` and `tools/`, or `tools/` or
+  `analysis/` from `src/`.
 - Let a behavior import the drone package, a clock, or anything in `safety/`
   but `requests.py`.
 - Send a command to the drone from outside the safety layer and the drone
   package.
 - Add a wait, a sleep or a blocking read to a tick, a command or a cflib
   callback. Only `connect()` and `disconnect()` may block.
-- Pass a cflib object or an untyped value across a module boundary.
+- Pass a cflib object or an untyped value across a module boundary, except
+  between the Crazyflie adapter's modules that import cflib (ADR-0093).
 - Stop the motors of a drone that may be flying before touchdown is confirmed
   or the final descent's time limit (except the last-resort landing,
   ADR-0084), or close its link with cflib's `close_link()`.
@@ -199,10 +200,12 @@ number, so renumbering means updating those guards.
   PyCharm, with a review packet: before a review, Claude commits and pushes
   everything, writes the packet and opens the pull request, as `REVIEW.md`
   ("My reviews") describes. Afterwards, Claude adds the review to the log.
+  Every decision and review finding goes into `docs/review-queue.md` as it
+  happens, and the next review posts them as comments.
 - Follow `docs/coding-style.md`: strict typing, units in names, the cflib
   boundary ([ADR-0004](docs/decisions/0004-strict-typing-ruff-and-units-in-names.md)).
 - **One writer for the shared records.** The mistakes log, the decision
-  backlog, `REVIEW.md`, the work log and the next-up brief are written by one
+  backlog, `REVIEW.md`, the review queue, the work log and the next-up brief are written by one
   work session at a time. A second work session leaves its edits as text in
   `drafts/` for the first to apply, so no edit is lost to two writers.
 - Commit in small steps, especially when flight parameters or behavior change,
@@ -226,6 +229,11 @@ number, so renumbering means updating those guards.
   After it, help analyze the data and turn findings into code, simulator or ADR
   changes. `docs/field-testing/README.md` opens with a short status brief and
   its last-updated date; update both with every change to the README.
+- **Analysis scripts** ([ADR-0092](docs/decisions/0092-cited-analysis-scripts-are-committed-to-analysis-and-the-snapshot-line-goes-after-the-first-recorded-session.md)):
+  explore in `drafts/<session>/`. Whenever Claude writes a new analysis
+  script, it asks at the end of the task, in one choice dialog for all of
+  them, whether to commit each to `analysis/`, marking those a committed doc
+  cites. One kept out is cited as `drafts/` (not in the repository).
 - **Continuous integration** (focus area 6). Set up GitHub Actions as soon as the repo is on GitHub
   and the first test exists, rather than later. Keep everything runnable
   headless and without hardware so it always runs in continuous integration.

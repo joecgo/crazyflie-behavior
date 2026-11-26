@@ -4,7 +4,8 @@
 - **Date:** 2026-11-22
 - **Origin:** AI recommendation accepted, for all four parts (C5 part 2 of
   the 2026-11-13 codebase review, `drafts/2026-11-13-code-recommendations.md`,
-  and backlog #145).
+  and backlog #145). The "As built" choices (2026-11-22, while coding): AI
+  recommendations accepted.
 
 ## Context
 
@@ -60,6 +61,16 @@ All four A.
   already writes and flushes every line on the thread that logs. A write
   error is logged once, recording stops, and the flight goes on. The
   recording isn't needed for safety, so carrying on is safe (ADR-0020).
+- **As built (2026-11-22):**
+  - The file is opened as new only (Python's file mode "x"): a second run
+    in the same second records nothing and logs why, so it never overwrites
+    or mixes into another run's recording.
+  - The recorder catches any `Exception`, not only a disk error, so a bug in
+    the encoding can't end a flight either. It's logged with its stack trace.
+  - The flight end reason is recorded once, on the tick it was set.
+  - A tick whose snapshot raised still gets a line, with its timing only.
+  - The reader is strict: exact keys, no format version newer than it knows,
+    no NaN tokens. Only a cut-off last line is dropped.
 
 ## Failure modes
 

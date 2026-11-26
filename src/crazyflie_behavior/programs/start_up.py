@@ -19,7 +19,8 @@ from pathlib import Path
 from types import FrameType, TracebackType
 from typing import Any, Self, TextIO
 
-from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_BLOCK_DURATION, TAKE_OFF_PERIOD_MS, CrazyflieAdapter
+from crazyflie_behavior.drone.crazyflie.adapter import CrazyflieAdapter
+from crazyflie_behavior.drone.crazyflie.log_blocks import TAKE_OFF_BLOCK_DURATION, TAKE_OFF_PERIOD_MS
 from crazyflie_behavior.drone.interface import DroneInterface
 from crazyflie_behavior.drone.mock_adapter import MockAdapter
 from crazyflie_behavior.loop.tick_loop import HangWatchdog, TickLoop, TickStep
@@ -111,7 +112,7 @@ def run_program(
 
     Returns the exit code: 0 when the tick loop ran until done, after a stop
     request too, 1 after an error, a lost link included (ADR-0084), 130 when the
-    interrupt signal stopped the program while connecting.
+    interrupt signal stopped the program before the tick loop started.
     Every error goes to the log with its stack trace (ADR-0020).
     The recording, if `recorder` is given, has its log file's name (ADR-0088).
     """
@@ -124,11 +125,11 @@ def run_program(
             if interrupt.__context__ is not None:
                 # The interrupt signal came while an error was being handled: log that error too (ADR-0020).
                 logger.error(
-                    "Interrupt signal while connecting; the exception being handled then is below",
+                    "Interrupt signal before the tick loop started; the exception being handled then is below",
                     exc_info=True,
                 )
             else:
-                logger.info("Interrupt signal while connecting: stopped before the tick loop started")
+                logger.info("Interrupt signal: stopped before the tick loop started")
             return EXIT_INTERRUPT_SIGNAL
         except Exception:
             logger.critical("The %s program stopped with an error", program_name, exc_info=True)

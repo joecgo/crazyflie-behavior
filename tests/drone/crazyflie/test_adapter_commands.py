@@ -183,7 +183,7 @@ def test_hover_right_after_the_initial_climb_still_flies_before_the_status_shows
 def test_hover_on_the_floor_is_logged_once_per_streak_at_info_level(
     adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture
 ) -> None:
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.hover()
         adapter.hover()
         adapter.hover()
@@ -203,7 +203,7 @@ def test_a_hover_that_goes_through_ends_the_streak_of_ignored_ones(
     # through is the only thing that can end a streak of ignored ones (ADR-0038, ADR-0039).
     fly_above_the_bad_flow_zone(adapter, clock, fake_link)
     clock.advance(TAKE_OFF_STATUS_GRACE + 0.5)
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)
         adapter.hover()  # ignored: the first streak
         adapter._telemetry.write_drone_status(FLYING, None)
@@ -292,7 +292,7 @@ def test_an_arm_request_logs_what_the_drone_reports(
 ) -> None:
     adapter._telemetry.write_drone_status(ON_THE_FLOOR, None)
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.__name__):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.arm()
 
     assert [(record.levelno, record.getMessage()) for record in caplog.records] == [
@@ -309,7 +309,7 @@ def test_an_arm_request_to_a_locked_drone_warns_and_is_still_sent(
     )
     adapter._telemetry.write_drone_status(locked, None)
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.__name__):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.arm()
 
     assert [record.levelno for record in caplog.records] == [logging.WARNING]
@@ -386,7 +386,7 @@ def test_buzzer_commands_on_a_closed_link_are_skipped_with_a_warning_once_per_st
     """cflib's parameter write raises once the link is lost, unlike a movement command (ADR-0053)."""
     fake_link.cf.link = None
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.chirp()
         adapter.play_tone(523.25)
         adapter.silence()
@@ -399,7 +399,7 @@ def test_a_buzzer_command_that_goes_through_ends_the_streak(
     adapter: CrazyflieAdapter, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
     radio_link = fake_link.cf.link
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         fake_link.cf.link = None
         adapter.chirp()  # a streak starts: one warning
         fake_link.cf.link = radio_link

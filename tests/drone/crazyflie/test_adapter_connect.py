@@ -19,6 +19,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
+from crazyflie_behavior.drone.crazyflie import link as link_module
+from crazyflie_behavior.drone.crazyflie import log_blocks as log_blocks_module
 from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_BLOCK_DURATION, CrazyflieAdapter
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_HEIGHT
 from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE
@@ -81,6 +83,22 @@ FIRST_SAMPLES: dict[str, dict[str, float]] = {
     },
 }
 """Each log block's first sample, as cflib delivers it."""
+PAST_EVERY_TIME_LIMIT = 3600.0
+"""Seconds: longer than any time limit of connect()."""
+LOST_LINK_ERROR = "The radio link to the drone was lost: Too many packets lost"
+"""The adapter's error for the fake's lost link."""
+
+
+def cflib_mock_class(before_each_call: Callable[[], None]) -> type[MagicMock]:
+    """A MagicMock class whose mocks, their attributes and return values included, run `before_each_call` first on
+    every call, magic methods such as `bool()` too."""
+
+    class CflibMock(MagicMock):
+        def __call__(self, *args: object, **kwargs: object) -> object:
+            before_each_call()
+            return super().__call__(*args, **kwargs)
+
+    return CflibMock
 
 
 class FakeCflib:
@@ -93,17 +111,39 @@ class FakeCflib:
     sends every started block's sample again, and with a delay the blocks keep
     streaming on a thread. A block's `started` is True from its start, as if the
     drone confirmed it at once, until its stop; silent blocks never confirm.
+
+    `lose_the_link()` loses the link the way cflib does, at any moment or just
+    before a given call (ADR-0095).
     """
 
     def __init__(self) -> None:
-        self.link = MagicMock()
-        """The SyncCrazyflie: open_link, close_link, and the Crazyflie as .cf."""
+        self.is_link_lost = False
+        self._calls_made = 0
+        self._lose_the_link_before: int | None = None
+        """The index in `link.mock_calls` of the call the link is lost just before, when set."""
+        self.lost_at: int | None = None
+        """The index in `link.mock_calls` of the call the link was lost just before, once lost that way."""
+        self._clock: SimClock | None = None
+        """The sim clock a cflib wait that never ends lets time pass on, after a lost link."""
+        self._added_block_ids: set[int] = set()
+        """The `id()` of each log block cflib added. A block passed to `add_config` after a lost link isn't here:
+        cflib leaves it without a Crazyflie."""
+        self._mock_class = cflib_mock_class(self._before_each_call)
+        self.link = self._mock_class()
+        """The SyncCrazyflie: open_link, close_link, and the Crazyflie as .cf. Its `mock_calls` holds every cflib call,
+        the log blocks' included, in order."""
         self.radio_link = self.link.cf.link
         """The Crazyflie's radio link: closing it is what a safe link close does (ADR-0038)."""
+        self.sync_crazyflie_class = MagicMock(return_value=self.link)
+        """cflib's SyncCrazyflie class: called with the URI and the Crazyflie, it returns `link`."""
+        self.crazyflie_class = MagicMock()
+        """cflib's Crazyflie class: called with the cache directory."""
         self.parameters = {"deck.bcFlow2": "1", "deck.bcMultiranger": "0"}
         """Parameter values as cflib returns them (strings). Missing means the
         firmware doesn't know the parameter, so cflib raises KeyError."""
         self.link.cf.param.get_value.side_effect = self.get_parameter
+        self.link.wait_for_params.side_effect = self._wait_for_params
+        self.link.cf.log.add_config.side_effect = self._add_config
         self.events: list[str] = []
         """What happened, in order: "start <block>", "stop <block>", "reset estimate" and "write thrust base"."""
         self.link.cf.param.set_value.side_effect = self._record_a_parameter_write
@@ -129,7 +169,45 @@ class FakeCflib:
         self._stopped = threading.Event()
 
     def get_parameter(self, name: str) -> str:
+        if self.is_link_lost:
+            raise KeyError(name)  # cflib empties the values once the link is lost (facts register)
         return self.parameters[name]
+
+    def lose_the_link(self) -> None:
+        """Lose the link the way cflib does (facts register): the link goes to None, the parameters and log blocks
+        stop working, then the disconnected callbacks run, and the connection_lost ones last."""
+        uri = "radio://0/80/2M/E7E7E7E7E7"
+        self.link.cf.link = None
+        self.is_link_lost = True
+        for call in self.link.cf.disconnected.add_callback.call_args_list:
+            call.args[0](uri)
+        for call in self.link.cf.connection_lost.add_callback.call_args_list:
+            call.args[0](uri, "Too many packets lost")
+
+    def lose_the_link_before_call(self, index: int, clock: SimClock) -> None:
+        """Lose the link just before the call at `index` in `link.mock_calls`. A cflib wait that never ends after it
+        lets time pass on `clock`, past every time limit."""
+        self._lose_the_link_before = index
+        self._clock = clock
+
+    def _before_each_call(self) -> None:
+        if self._calls_made == self._lose_the_link_before:
+            self.lost_at = len(self.link.mock_calls)  # the index of the call about to be made
+            self.lose_the_link()
+        self._calls_made += 1
+
+    def _wait_for_params(self) -> None:
+        if self.is_link_lost:
+            # cflib's wait never ends once the link is lost (facts register).
+            if self._clock is None:
+                # pytest.fail gets through connect()'s cleanup, which reports an AssertionError as the lost link.
+                pytest.fail("lose_the_link_before_call() sets the clock")
+            self._clock.advance(PAST_EVERY_TIME_LIMIT)
+            self._stopped.wait(timeout=10.0)
+
+    def _add_config(self, block: MagicMock) -> None:
+        if not self.is_link_lost:  # cflib adds no block once the link is lost (facts register)
+            self._added_block_ids.add(id(block))
 
     @property
     def reset_count(self) -> int:
@@ -144,6 +222,8 @@ class FakeCflib:
         self.parameter_callbacks.setdefault(f"{group}.{name}", []).append(cb)
 
     def _record_a_parameter_write(self, name: str, value: object) -> None:
+        if self.is_link_lost:
+            raise KeyError(name)  # cflib empties the parameter list once the link is lost (facts register)
         if name == "kalman.resetEstimation":
             if self.reset_estimate_error is not None:
                 raise self.reset_estimate_error
@@ -161,7 +241,8 @@ class FakeCflib:
     def make_log_block(self, name: str, period_in_ms: int) -> MagicMock:
         self.log_block_names.append(name)
         self.log_block_periods_ms[name] = period_in_ms
-        block = MagicMock()
+        block = self._mock_class()
+        self.link.attach_mock(block, f"log_block_{name}")  # its calls land in link.mock_calls, in order with the rest
         block.started = False
         callbacks: list[Callable[[int, dict[str, float], object], None]] = []
         block.data_received_cb.add_callback.side_effect = callbacks.append
@@ -178,11 +259,15 @@ class FakeCflib:
         self._stopped.set()
 
     def _stop_block(self, name: str, block: MagicMock) -> None:
+        if self.is_link_lost:
+            return  # cflib's stop does nothing once the link is lost (facts register)
         self.events.append(f"stop {name}")
         block.started = False
         self._started_blocks.pop(name, None)
 
     def _send(self, name: str) -> None:
+        if self.is_link_lost:
+            return  # no packet arrives once the link is lost
         block, callbacks = self._started_blocks[name]
         for callback in callbacks:
             callback(1000, self.samples[name], block)
@@ -193,6 +278,11 @@ class FakeCflib:
         block: MagicMock,
         callbacks: list[Callable[[int, dict[str, float], object], None]],
     ) -> None:
+        if id(block) not in self._added_block_ids:
+            # cflib's block has no Crazyflie until it's added (facts register).
+            raise AttributeError("'NoneType' object has no attribute 'link'")
+        if self.is_link_lost:
+            return  # cflib's start does nothing once the link is lost (facts register)
         self.events.append(f"start {name}")
         if name in self.silent_blocks:
             return
@@ -223,15 +313,21 @@ class StreamingSimClock(SimClock):
         super().sleep_until(deadline)
 
 
+def install_fake_cflib(monkeypatch: pytest.MonkeyPatch) -> FakeCflib:
+    """A fake cflib in place of the adapter's cflib classes, until `monkeypatch` puts them back."""
+    fake = FakeCflib()
+    monkeypatch.setattr(link_module, "_drivers_initialized", True)
+    monkeypatch.setattr(link_module, "SyncCrazyflie", fake.sync_crazyflie_class)
+    monkeypatch.setattr(link_module, "Crazyflie", fake.crazyflie_class)
+    monkeypatch.setattr(log_blocks_module, "LogConfig", fake.make_log_block)
+    return fake
+
+
 @pytest.fixture
 def fake_cflib(monkeypatch: pytest.MonkeyPatch) -> Generator[FakeCflib]:
-    fake = FakeCflib()
-    monkeypatch.setattr(adapter_module, "_drivers_initialized", True)
-    monkeypatch.setattr(adapter_module, "SyncCrazyflie", MagicMock(return_value=fake.link))
-    monkeypatch.setattr(adapter_module, "Crazyflie", MagicMock())
-    monkeypatch.setattr(adapter_module, "LogConfig", fake.make_log_block)
+    fake = install_fake_cflib(monkeypatch)
     yield fake
-    fake.stop()  # ends the streaming threads
+    fake.stop()  # ends the streaming threads and the waits that never end
 
 
 def assert_only_the_radio_link_closed(fake_cflib: FakeCflib) -> None:
@@ -256,6 +352,17 @@ def test_connecting_resets_the_estimate_and_starts_telemetry(adapter: CrazyflieA
     fake_cflib.link.close_link.assert_not_called()
 
 
+def test_connecting_opens_the_link_to_the_uri_with_the_cache_directory(fake_cflib: FakeCflib) -> None:
+    clock = StreamingSimClock(fake_cflib, start=10.0)
+
+    CrazyflieAdapter(clock, uri="radio://0/90/2M/E7E7E7E7E8", cache_directory="./test-cache").connect()
+
+    fake_cflib.crazyflie_class.assert_called_once_with(rw_cache="./test-cache")
+    fake_cflib.sync_crazyflie_class.assert_called_once_with(
+        "radio://0/90/2M/E7E7E7E7E8", cf=fake_cflib.crazyflie_class.return_value
+    )
+
+
 def test_connecting_logs_that_the_drone_arms_itself(
     adapter: CrazyflieAdapter,
     fake_cflib: FakeCflib,
@@ -264,7 +371,7 @@ def test_connecting_logs_that_the_drone_arms_itself(
 ) -> None:
     fake_cflib.samples["state"]["supervisor.info"] = float(1 << adapter_module.BIT_IS_AUTO_ARMED)
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.connect()
 
     assert [r.getMessage() for r in caplog.records if "arms itself" in r.getMessage()] == [
@@ -275,7 +382,7 @@ def test_connecting_logs_that_the_drone_arms_itself(
 def test_connecting_logs_that_the_drone_does_not_arm_itself(
     adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
 ) -> None:
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.connect()
 
     assert [r.getMessage() for r in caplog.records if "arm itself" in r.getMessage()] == [
@@ -292,7 +399,7 @@ def test_connecting_logs_a_buzzer_deck(
 ) -> None:
     fake_cflib.parameters["deck.bcBuzzer"] = "1"
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.connect()
 
     assert buzzer_deck_logs(caplog) == ["Buzzer deck detected."]
@@ -306,7 +413,7 @@ def test_connecting_without_a_buzzer_deck_logs_that_buzzer_commands_make_no_soun
     if deck_parameter is not None:
         fake_cflib.parameters["deck.bcBuzzer"] = deck_parameter
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.connect()
 
     assert buzzer_deck_logs(caplog) == ["No Buzzer deck: buzzer commands will make no sound."]
@@ -317,7 +424,7 @@ def test_connecting_again_warns_again_about_a_buzzer_command_on_a_closed_link(
     adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
 ) -> None:
     """The once-per-streak warning starts over with each connection."""
-    caplog.set_level(logging.WARNING, logger=adapter_module.logger.name)
+    caplog.set_level(logging.WARNING, logger=adapter_module.__package__)
     adapter.connect()
     fake_cflib.link.cf.link = None  # the link is lost
     adapter.chirp()
@@ -329,6 +436,43 @@ def test_connecting_again_warns_again_about_a_buzzer_command_on_a_closed_link(
 
     assert [r.getMessage() for r in caplog.records if "Buzzer command" in r.getMessage()] == [
         "Buzzer command not sent: the link is closed. Warned once per streak."
+    ] * 2
+
+
+def test_connecting_again_logs_an_ignored_hover_again(
+    adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The once-per-streak log line starts over with each connection."""
+    caplog.set_level(logging.INFO, logger=adapter_module.__package__)
+    adapter.connect()
+    adapter.hover()  # on the floor: ignored
+    adapter.disconnect()
+    adapter.connect()
+
+    adapter.hover()  # on the floor again, on a new link
+
+    assert [r.getMessage() for r in caplog.records if "Hover ignored" in r.getMessage()] == [
+        "Hover ignored: the drone isn't flying. Logged once per streak."
+    ] * 2
+
+
+def test_connecting_again_warns_again_about_an_ignored_estimate_reset(
+    fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The once-per-streak warning starts over with each connection."""
+    adapter = CrazyflieAdapter(StreamingSimClock(fake_cflib, start=10.0))
+    caplog.set_level(logging.WARNING, logger=adapter_module.__package__)
+    adapter.connect()
+    adapter.take_off(0.5)
+    adapter.reset_estimate()  # the drone may be flying: ignored
+    adapter._shut_down_link()  # the connection ends mid-streak
+    adapter.connect()  # a drone on the floor
+    adapter.take_off(0.5)
+
+    adapter.reset_estimate()  # may be flying again, on a new link
+
+    assert [r.getMessage() for r in caplog.records if "Estimate reset ignored" in r.getMessage()] == [
+        "Estimate reset ignored: the drone may be flying. Warned once per streak."
     ] * 2
 
 
@@ -406,6 +550,18 @@ def test_without_a_flow_deck_it_refuses_to_fly_and_closes_only_the_radio_link(
     assert fake_cflib.reset_count == 0
 
 
+def test_a_disconnect_after_a_failed_connect_does_nothing(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
+    # The start-up calls disconnect() in a `finally`, also after connect() raised and closed the link.
+    fake_cflib.parameters["deck.bcFlow2"] = "0"
+    with pytest.raises(RuntimeError, match="Flow deck"):
+        adapter.connect()
+    calls_after_the_connect = list(fake_cflib.link.mock_calls)
+
+    adapter.disconnect()
+
+    assert fake_cflib.link.mock_calls == calls_after_the_connect
+
+
 class BlockingStep:
     """A fake cflib call that blocks like a stuck wait, until the test releases it.
 
@@ -439,7 +595,7 @@ def interrupt_signal_step() -> Generator[BlockingStep]:
 @pytest.fixture
 def short_time_limits(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in ("LINK_TIME_LIMIT", "PARAMETERS_TIME_LIMIT"):
-        monkeypatch.setattr(adapter_module, name, 0.2)
+        monkeypatch.setattr(link_module, name, 0.2)
 
 
 def real_time_adapter() -> CrazyflieAdapter:
@@ -456,6 +612,29 @@ def test_opening_the_link_has_a_time_limit_then_stops_the_connection_under_way_w
     with pytest.raises(TimeoutError, match=r"Opening the link took longer than 0\.2 s\. Check the"):
         real_time_adapter().connect()
 
+    assert_only_the_radio_link_closed(fake_cflib)
+
+
+@pytest.mark.usefixtures("short_time_limits")
+def test_the_time_limit_itself_stops_the_connection_under_way_before_connect_cleans_up(
+    fake_cflib: FakeCflib, blocking_step: BlockingStep, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # connect()'s cleanup closes only the radio link too: this checks that the time limit closed it first.
+    fake_cflib.link.open_link.side_effect = blocking_step
+    adapter = real_time_adapter()
+    radio_link_closes_at_the_cleanup: list[int] = []
+    close_link = adapter._close_link
+
+    def record_then_close_the_link() -> None:
+        radio_link_closes_at_the_cleanup.append(fake_cflib.radio_link.close.call_count)
+        close_link()
+
+    monkeypatch.setattr(adapter, "_close_link", record_then_close_the_link)
+
+    with pytest.raises(TimeoutError, match="Opening the link"):
+        adapter.connect()
+
+    assert radio_link_closes_at_the_cleanup == [1]
     assert_only_the_radio_link_closed(fake_cflib)
 
 
@@ -739,7 +918,7 @@ def test_taking_over_accepts_a_flying_drone_and_never_resets_its_estimate(
 ) -> None:
     fake_cflib.samples["state"]["supervisor.info"] = FLYING
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         taking_over_adapter.connect()
 
     assert fake_cflib.reset_count == 0
@@ -795,6 +974,27 @@ def test_after_taking_over_land_runs_the_normal_landing_not_just_a_motor_stop(
         pytest.approx((0.6 - aim) / adapter_module.VERTICAL_SPEED),
     )
     commander.stop.assert_not_called()
+
+
+def test_after_connecting_a_landing_hands_over_from_the_velocity_setpoints_before_it(
+    taking_over_adapter: CrazyflieAdapter, fake_cflib: FakeCflib
+) -> None:
+    """The landing approach goes through the commands `connect()` built, which know the stream to hand over from
+    (ADR-0056, ADR-0093)."""
+    fake_cflib.samples["state"]["stateEstimate.z"] = 0.6
+    fake_cflib.samples["state"]["supervisor.info"] = FLYING
+    fake_cflib.samples["down"]["range.zrange"] = 600.0
+    taking_over_adapter.connect()
+
+    taking_over_adapter.set_velocity(Vector3(0.1, 0.0, 0.0))
+    taking_over_adapter.land()
+
+    calls = [name for name, _, _ in fake_cflib.link.mock_calls]
+    assert calls[calls.index("cf.commander.send_velocity_world_setpoint") :] == [
+        "cf.commander.send_velocity_world_setpoint",
+        "cf.high_level_commander.go_to",  # the landing approach
+        "cf.commander.send_notify_setpoint_stop",  # the release, after the move that takes over
+    ]
 
 
 def test_taking_over_a_drone_that_reports_it_is_on_the_floor_only_stops_the_motors(
@@ -965,7 +1165,7 @@ def thrust_base_logs(caplog: pytest.LogCaptureFixture) -> list[str]:
 def take_off_logs(adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture) -> list[str]:
     """Take off from the floor, and return what the adapter logged about the thrust base meanwhile."""
     caplog.clear()
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.take_off(1.0)
     return thrust_base_logs(caplog)
 
@@ -993,7 +1193,7 @@ def test_taking_over_leaves_the_thrust_base_as_it_is(
 ) -> None:
     fake_cflib.samples["state"]["supervisor.info"] = status
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         taking_over_adapter.connect()
 
     assert thrust_base_writes(fake_cflib) == []
@@ -1028,7 +1228,7 @@ def test_each_thrust_base_report_is_logged_with_whether_it_confirms_the_write(
     adapter.connect()
     caplog.clear()
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         fake_cflib.report_parameter("posCtlPid.thrustBase", value)
 
     assert [(record.levelno, record.getMessage()) for record in caplog.records] == [(level, message)]
@@ -1075,7 +1275,7 @@ def test_a_thrust_base_the_firmware_cannot_write_is_warned_and_the_drone_still_f
     """A missing write never stops a flight (ADR-0061)."""
     fake_cflib.thrust_base_error = error
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.connect()
 
     assert thrust_base_logs(caplog) == ["Thrust base not sent: the firmware can't write it."]
@@ -1086,14 +1286,12 @@ def test_a_thrust_base_the_firmware_cannot_write_is_warned_and_the_drone_still_f
 def test_a_thrust_base_write_after_the_link_is_lost_says_the_link_is_closed(
     adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
 ) -> None:
-    def lose_the_link() -> None:
-        fake_cflib.link.cf.link = None
-        # cflib forgets the parameter list once the link is lost.
-        fake_cflib.thrust_base_error = KeyError("posCtlPid.thrustBase not in param TOC")
+    fake_cflib.on_reset_estimate = fake_cflib.lose_the_link  # the write just before the thrust base's
 
-    fake_cflib.on_reset_estimate = lose_the_link  # the write just before the thrust base's
-
-    with caplog.at_level(logging.WARNING, logger=adapter_module.logger.name):
+    with (
+        caplog.at_level(logging.WARNING, logger=adapter_module.__package__),
+        pytest.raises(ConnectionError, match=LOST_LINK_ERROR),
+    ):
         adapter.connect()
 
     assert thrust_base_logs(caplog) == ["Thrust base not sent: the link is closed."]
@@ -1294,12 +1492,6 @@ def test_disconnecting_stops_the_take_off_block_before_its_landing(fake_cflib: F
 # --- A lost link (ADR-0084) -----------------------------------------------------------
 
 
-def lose_the_link(fake_cflib: FakeCflib) -> None:
-    """cflib calls every connection_lost callback with the link's URI and its message (facts register)."""
-    for call in fake_cflib.link.cf.connection_lost.add_callback.call_args_list:
-        call.args[0]("radio://0/80/2M/E7E7E7E7E7", "Too many packets lost")
-
-
 def test_connect_listens_for_a_lost_link_before_the_link_opens(
     adapter: CrazyflieAdapter, fake_cflib: FakeCflib
 ) -> None:
@@ -1314,11 +1506,150 @@ def test_a_lost_link_is_logged_once_as_an_error_and_the_next_call_raises(
 ) -> None:
     adapter.connect()
 
-    with caplog.at_level(logging.ERROR, logger=adapter_module.__name__):
-        lose_the_link(fake_cflib)
+    with caplog.at_level(logging.ERROR, logger=adapter_module.__package__):
+        fake_cflib.lose_the_link()
 
-    assert [record.getMessage() for record in caplog.records if record.levelno >= logging.ERROR] == [
-        "The radio link to the drone was lost: Too many packets lost"
-    ]
-    with pytest.raises(ConnectionError, match="The radio link to the drone was lost: Too many packets lost"):
+    assert [record.getMessage() for record in caplog.records if record.levelno >= logging.ERROR] == [LOST_LINK_ERROR]
+    with pytest.raises(ConnectionError, match=LOST_LINK_ERROR):
         adapter.take_snapshot(0.05)
+
+
+# --- A link lost while connecting (ADR-0095) ------------------------------------------
+
+
+def adapter_with_every_block(fake_cflib: FakeCflib, clock: SimClock) -> CrazyflieAdapter:
+    """An adapter whose connect makes every cflib call it can: with the Multi-ranger's block and the take-off block."""
+    fake_cflib.parameters["deck.bcMultiranger"] = "1"
+    return CrazyflieAdapter(clock, take_off_log=True)
+
+
+def described_call(name: str, args: tuple[object, ...], kwargs: dict[str, object]) -> str:
+    """A cflib call as `name(arguments)`, with `...` for arguments that are mocks or callbacks."""
+    if kwargs or not all(isinstance(arg, str | int | float | None) for arg in args):
+        return f"{name}(...)"
+    return f"{name}({', '.join(repr(arg) for arg in args)})"
+
+
+def list_the_cflib_calls_once_the_link_is_open() -> list[tuple[int, str]] | Exception:
+    """Each cflib call a connect with every block makes once the link is open, against the fake: its index in
+    `link.mock_calls`, and the call. Or the error that stopped the listing."""
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        fake = install_fake_cflib(monkeypatch)
+        try:
+            adapter_with_every_block(fake, StreamingSimClock(fake, start=10.0)).connect()
+            calls = [described_call(name, args, kwargs) for name, args, kwargs in fake.link.mock_calls]
+            after_the_link_opens = calls.index("open_link()") + 1
+        except Exception as error:  # noqa: BLE001  # raised again by test_a_connect_with_every_block_is_listed
+            return error
+        finally:
+            fake.stop()
+    return list(enumerate(calls))[after_the_link_opens:]
+
+
+LISTED_CALLS = list_the_cflib_calls_once_the_link_is_open()
+"""Listed when the tests are collected, so a new cflib call in connect() is covered with no new test. An error while
+listing fails one test, not the whole run's collection."""
+CALLS_ONCE_THE_LINK_IS_OPEN = [] if isinstance(LISTED_CALLS, Exception) else LISTED_CALLS
+
+
+def test_a_connect_with_every_block_is_listed() -> None:
+    """Without the list, the next test has no cases."""
+    if isinstance(LISTED_CALLS, Exception):
+        raise LISTED_CALLS
+
+
+def call_index(call: str) -> int:
+    """The index of the first of CALLS_ONCE_THE_LINK_IS_OPEN that is `call`."""
+    return next(index for index, listed in CALLS_ONCE_THE_LINK_IS_OPEN if listed == call)
+
+
+@pytest.mark.parametrize(
+    ("lost_before", "call"),
+    CALLS_ONCE_THE_LINK_IS_OPEN,
+    ids=[f"{index} {call}" for index, call in CALLS_ONCE_THE_LINK_IS_OPEN],
+)
+def test_a_link_lost_before_any_cflib_call_of_connect_once_the_link_is_open_ends_the_run_with_the_lost_links_error(
+    fake_cflib: FakeCflib, monkeypatch: pytest.MonkeyPatch, lost_before: int, call: str
+) -> None:
+    """connect() raises it, after the link close (ADR-0095). A loss after its last step that would notice it is raised
+    by the first snapshot instead (ADR-0086)."""
+    clock = StreamingSimClock(fake_cflib, start=10.0)
+    adapter = adapter_with_every_block(fake_cflib, clock)
+    fake_cflib.lose_the_link_before_call(lost_before, clock)
+    close_link = adapter._close_link
+    was_raised_at_each_close: list[bool] = []
+
+    def record_then_close_the_link() -> None:
+        was_raised_at_each_close.append(adapter._link.is_lost_link_raised)
+        close_link()
+
+    monkeypatch.setattr(adapter, "_close_link", record_then_close_the_link)
+    has_connected = False
+
+    def connect_then_take_the_first_snapshot() -> None:
+        nonlocal has_connected
+        adapter.connect()
+        has_connected = True
+        adapter.take_snapshot(TICK)
+
+    with pytest.raises(ConnectionError, match=LOST_LINK_ERROR) as raised:
+        connect_then_take_the_first_snapshot()
+
+    assert fake_cflib.lost_at == lost_before  # the fake's count of calls agrees with link.mock_calls
+    name, args, kwargs = fake_cflib.link.mock_calls[lost_before]
+    assert described_call(name, args, kwargs) == call  # so the link was lost just before the call its ID names
+    assert has_connected or adapter._sync_crazyflie is None  # connect() raised it only after the link close
+    # The cleanup's own raise comes while handling the step's error, and never before the link close.
+    assert raised.value.__context__ is None or was_raised_at_each_close == [False]
+
+
+@pytest.mark.parametrize(
+    ("lost_before", "step_error"),
+    [
+        ("wait_for_params()", TimeoutError),  # the wait never ends, so its time limit ends it (ADR-0029)
+        ("cf.param.get_value('deck.bcFlow2')", RuntimeError),  # the Flow deck check reads it as no deck
+        ("cf.log.add_config(...)", AttributeError),  # the state block isn't added, so its start raises
+    ],
+    ids=["reading the parameters", "the Flow deck check", "the first log block"],
+)
+def test_the_lost_links_error_from_connect_is_raised_while_handling_the_failed_steps_error(
+    fake_cflib: FakeCflib, lost_before: str, step_error: type[Exception]
+) -> None:
+    """So the traceback shows the step's error first, and not as the lost link's cause (ADR-0095)."""
+    clock = StreamingSimClock(fake_cflib, start=10.0)
+    adapter = adapter_with_every_block(fake_cflib, clock)
+    fake_cflib.lose_the_link_before_call(call_index(lost_before), clock)
+
+    with pytest.raises(ConnectionError, match=LOST_LINK_ERROR) as raised:
+        adapter.connect()
+
+    assert isinstance(raised.value.__context__, step_error)
+    assert raised.value.__cause__ is None
+    assert not raised.value.__suppress_context__
+
+
+def test_a_lost_link_that_a_wait_of_connect_raises_is_passed_on_as_it_is(fake_cflib: FakeCflib) -> None:
+    """Not raised a second time while handling the first (ADR-0095)."""
+    clock = StreamingSimClock(fake_cflib, start=10.0)
+    adapter = adapter_with_every_block(fake_cflib, clock)
+    # The state block is added, so its start does nothing, and the wait for the drone's status raises.
+    fake_cflib.lose_the_link_before_call(call_index("log_block_state.start()"), clock)
+
+    with pytest.raises(ConnectionError, match=LOST_LINK_ERROR) as raised:
+        adapter.connect()
+
+    assert raised.value.__context__ is None
+
+
+def test_the_interrupt_signal_after_a_lost_link_gets_through_and_closes_the_link(fake_cflib: FakeCflib) -> None:
+    """Never replaced by the lost link's error (ADR-0094, ADR-0095)."""
+    clock = StreamingSimClock(fake_cflib, start=10.0)
+    adapter = adapter_with_every_block(fake_cflib, clock)
+    fake_cflib.lose_the_link_before_call(call_index("cf.param.get_value('deck.bcFlow2')"), clock)
+    fake_cflib.link.cf.param.get_value.side_effect = KeyboardInterrupt  # it arrives during the Flow deck check
+
+    with pytest.raises(KeyboardInterrupt):
+        adapter.connect()
+
+    assert adapter._link.is_lost
+    assert adapter._sync_crazyflie is None

@@ -80,8 +80,10 @@ the packet: say so, as step 1 does, and let the user choose.
    6. **Explain-back questions:** one for each significant change, with a few
       words on why it counted. Use only glossary terms, and put no answers in
       the packet or the comments.
-4. **The comments.** Draft one per finding, at its line in the pull
-   request's last commit. Each starts with **"Claude:"**, since they post
+4. **The comments.** Draft one per finding in `docs/review-queue.md` (and
+   any from this range's project review not in it yet), at its line in the
+   pull request's last commit. The queue's decisions go in the review's
+   summary as a list, each with its ADR link. Each starts with **"Claude:"**, since they post
    under the user's GitHub account and the user's own comments are the
    review's record. One or two sentences: the finding, then its outcome. A
    line comment only attaches to a line inside the pull request's diff; a
@@ -96,7 +98,8 @@ the packet: say so, as step 1 does, and let the user choose.
    `COMMENT`, the summary in `body`, and each comment as `path`, `line`,
    `side: "RIGHT"`, `body`. Write the JSON to the scratchpad. Then check
    each comment's `path` and `line` in the pull request's comments. If the
-   pull request isn't open yet, post them right after it's opened.
+   pull request isn't open yet, post them right after it's opened. Once the
+   comments check out, empty both lists in `docs/review-queue.md`.
 5. **Hand it over.** Give the user the packet's path and the pull request's
    link. The pull request's description names the packet. Committing,
    pushing and opening the pull request follow `REVIEW.md` ("My reviews"),

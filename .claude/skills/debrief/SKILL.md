@@ -51,9 +51,14 @@ Logs are long, and every step re-reads the conversation.
    - The commit each flight flew. Where a flight flew uncommitted code, the
      analysis says so wherever it uses that flight.
 2. **The scripts.**
-   - In `drafts/<session>/` (such as `drafts/ff6/`) until backlog #55 decides
-     where analysis scripts live. Never the scratchpad: session 6's analysis
-     script was left in one and may be gone.
+   - In `drafts/<session>/` (such as `drafts/ff6/`) while exploring. Never
+     the scratchpad: session 6's analysis script was left in one and may be
+     gone.
+   - At the end of the task, ask in one choice dialog whether to commit each
+     new script to `analysis/`, marking those a committed doc cites. One
+     kept out is cited as `drafts/` (not in the repository) (ADR-0092).
+     A committed script reads only committed recordings: commit each one it
+     reads, compressed as `recordings/<name>.jsonl.gz`, in the same change.
    - Run with `.venv\Scripts\python`. Each script's docstring names what it
      computes, its logs and its time base (such as seconds from the take-off
      send, drone clock), as `drafts/ff5/ff5.py` does.

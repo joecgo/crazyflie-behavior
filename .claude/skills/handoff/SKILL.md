@@ -49,8 +49,9 @@ a decision.
    ADR line, a before and after), so it never has to ask again. Keep every
    line, writing "none" where one doesn't apply, so the reader knows it
    wasn't forgotten. A step marked done needs its code and its test (working
-   rule 3). The model and effort come from the guide in `CLAUDE.local.md`,
-   for the hardest step left.
+   rule 3). Name a script in an order only after running it from where it's
+   saved (M-245). The model and effort come from the guide in
+   `CLAUDE.local.md`, for the hardest step left.
 4. **Point the next-up brief at it.** In `docs/next-up.md`, the "In
    progress" line for this work names the order's path, the first of "Next
    three" is `Follow drafts/<item>-handoff.md.`, and the header's date and

@@ -478,7 +478,7 @@ def test_commands_during_the_final_descent_are_ignored_and_logged_once(
     tick(adapter, clock, RangeReading.at_distance(0.2))
     fake_link.reset_mock()
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.hover()
         adapter.move_to(Vector3(1.0, 0.0, 1.0), duration=2.0)
         adapter.set_velocity(Vector3(0.2, 0.0, 0.0))
@@ -501,7 +501,7 @@ def touchdown_logs(caplog: pytest.LogCaptureFixture) -> list[logging.LogRecord]:
 def test_touchdown_confirmed_right_after_the_landing_approach_is_logged(
     adapter: CrazyflieAdapter, clock: SimClock, fake_link: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         adapter.land()
         while not motors_stopped(fake_link):
             tick(adapter, clock, RangeReading.at_distance(0.02))
@@ -516,7 +516,7 @@ def test_touchdown_confirmed_during_the_final_descent_is_logged(
     land_and_wait_for_the_landing_approach(adapter, clock)
     tick_for(adapter, clock, 1.0, RangeReading.at_distance(0.3))
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         tick_for(adapter, clock, TOUCHDOWN_HOLD + TICK, RangeReading.at_distance(0.03))
 
     assert motors_stopped(fake_link)
@@ -528,7 +528,7 @@ def test_a_time_limit_stop_is_not_logged_as_a_confirmed_touchdown(
 ) -> None:
     land_and_wait_for_the_landing_approach(adapter, clock)
 
-    with caplog.at_level(logging.INFO, logger=adapter_module.logger.name):
+    with caplog.at_level(logging.INFO, logger=adapter_module.__package__):
         while not motors_stopped(fake_link):
             tick(adapter, clock, RangeReading.invalid())
 
@@ -576,6 +576,28 @@ def test_a_landing_that_raises_sends_the_firmwares_land_then_the_release_then_cl
     fake_link.close_link.assert_not_called()  # cflib's close sends a zero-thrust setpoint
     fake_link.cf.commander.send_setpoint.assert_not_called()
     fake_link.cf.param.set_value.assert_not_called()  # no silence after a failed landing
+
+
+def test_the_last_resort_landing_itself_closes_the_radio_link_before_disconnect_cleans_up(
+    adapter: CrazyflieAdapter, fake_link: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # disconnect()'s cleanup closes only the radio link too: this checks that the last resort closed it first
+    # (ADR-0084).
+    radio_link = fake_link.cf.link
+    fake_link.cf.high_level_commander.go_to.side_effect = OSError("made-up landing error")
+    radio_link_closes_at_the_cleanup: list[int] = []
+    close_link = adapter._close_link
+
+    def record_then_close_the_link() -> None:
+        radio_link_closes_at_the_cleanup.append(radio_link.close.call_count)
+        close_link()
+
+    monkeypatch.setattr(adapter, "_close_link", record_then_close_the_link)
+
+    with pytest.raises(OSError, match="made-up landing error"):
+        adapter.disconnect()
+
+    assert radio_link_closes_at_the_cleanup == [1]
 
 
 def test_an_error_in_the_last_resort_is_logged_not_raised_and_the_radio_link_still_closes(
@@ -743,7 +765,7 @@ def test_shutdown_waits_no_longer_than_its_time_limit_and_warns(
     stream_status_while_waiting(adapter, clock, monkeypatch, after=math.inf, status=ON_THE_FLOOR)
     closed_at = record_link_close_time(clock, fake_link)
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.__name__):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.disconnect()
 
     assert closed_at == [pytest.approx(stopped_at + NOT_FLYING_TIME_LIMIT)]
@@ -793,7 +815,7 @@ def test_shutdown_reports_a_locked_drone(
     land_until_the_motors_stop(adapter, clock, fake_link)
     stream_status_while_waiting(adapter, clock, monkeypatch, after=2.0, status=LOCKED)
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.__name__):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.disconnect()
 
     assert "locked" in caplog.text
@@ -924,7 +946,7 @@ def test_a_link_lost_after_the_ticks_snapshot_raises_at_the_next_snapshot_not_in
     snapshot = adapter.take_snapshot(TICK)
     lose_the_link(adapter, fake_link)
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.__name__):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.update_take_off_and_landing(snapshot)
         adapter.hover()  # sent to cflib, which drops it with no link
         adapter.chirp()
@@ -942,7 +964,7 @@ def test_after_a_lost_link_in_flight_disconnect_closes_without_landing_and_says_
     with pytest.raises(ConnectionError):
         adapter.take_snapshot(TICK)  # the tick's call
 
-    with caplog.at_level(logging.ERROR, logger=adapter_module.__name__):
+    with caplog.at_level(logging.ERROR, logger=adapter_module.__package__):
         adapter.disconnect()  # the tick's error is on its way: no second one
 
     assert handed_to_cflib(fake_link) == 0  # no landing, no silence
@@ -951,6 +973,18 @@ def test_after_a_lost_link_in_flight_disconnect_closes_without_landing_and_says_
         "Closing without landing: the link is lost and the drone may still be flying. "
         "Run the rescue landing, or tools/emergency_stop.py with something soft under the drone."
     )
+
+
+def test_a_landing_in_flight_after_a_lost_link_raises_at_once_and_sends_nothing(
+    adapter: CrazyflieAdapter, fake_link: MagicMock
+) -> None:
+    # ADR-0086: `land()` in flight reads a snapshot of its own for the down range, and that snapshot checks the link.
+    lose_the_link(adapter, fake_link)
+
+    with pytest.raises(ConnectionError, match="The radio link to the drone was lost: Too many packets lost"):
+        adapter.land()
+
+    assert handed_to_cflib(fake_link) == 0
 
 
 def test_a_link_lost_since_the_last_snapshot_makes_disconnect_raise_so_the_run_ends_with_an_error(
@@ -971,7 +1005,7 @@ def test_a_link_lost_on_the_floor_says_the_drone_wasnt_flying(
     adapter._sync_crazyflie = fake_link
     lose_the_link(adapter, fake_link)
 
-    with caplog.at_level(logging.ERROR, logger=adapter_module.__name__), pytest.raises(ConnectionError):
+    with caplog.at_level(logging.ERROR, logger=adapter_module.__package__), pytest.raises(ConnectionError):
         adapter.disconnect()
 
     assert caplog.messages[-1] == "Closing without landing: the link is lost. The drone wasn't flying."
@@ -1005,7 +1039,7 @@ def test_a_link_lost_while_disconnect_lands_stops_its_wait_with_no_last_resort(
 ) -> None:
     lose_the_link_while_waiting(adapter, clock, fake_link, monkeypatch)
 
-    with caplog.at_level(logging.ERROR, logger=adapter_module.__name__), pytest.raises(ConnectionError):
+    with caplog.at_level(logging.ERROR, logger=adapter_module.__package__), pytest.raises(ConnectionError):
         adapter.disconnect()
 
     assert len(landing_approach_moves(fake_link)) == 1  # the landing had started
@@ -1053,7 +1087,7 @@ def test_shutdown_keeps_the_link_open_for_the_wait_after_the_silence_with_no_war
     link.cf.param.set_value.side_effect = record_the_write
     closed_at = record_link_close_time(clock, link)
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.__name__):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.disconnect()
 
     assert len(written_at) == 1
@@ -1070,7 +1104,7 @@ def test_a_drone_without_the_buzzers_parameter_gets_a_warning_and_no_wait(
     closed_at = record_link_close_time(clock, link)
     started_at = clock.now()
 
-    with caplog.at_level(logging.WARNING, logger=adapter_module.__name__):
+    with caplog.at_level(logging.WARNING, logger=adapter_module.__package__):
         adapter.disconnect()
 
     assert closed_at == [started_at]
@@ -1094,7 +1128,7 @@ def test_a_link_lost_at_the_silence_still_ends_the_run_with_an_error(
     link.cf.param.set_value.side_effect = lose_the_link_at_the_write
 
     with (
-        caplog.at_level(logging.WARNING, logger=adapter_module.__name__),
+        caplog.at_level(logging.WARNING, logger=adapter_module.__package__),
         pytest.raises(ConnectionError, match="The radio link to the drone was lost: Too many packets lost"),
     ):
         adapter.disconnect()

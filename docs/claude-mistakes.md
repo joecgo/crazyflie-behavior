@@ -69,31 +69,31 @@ entries go at the top of their section without an ID.
 <!-- generated: kinds -->
 | Kind | I pointed it out | Claude caught it later |
 |---|---|---|
-| design | 5 | 20 |
+| design | 5 | 25 |
 | safety design | 5 | 22 |
-| recommendation | 7 | 7 |
-| environment | 4 | 10 |
-| communication | 14 | 62 |
-| testing | 1 | 26 |
-| process | 7 | 30 |
-| **Total** | **43** | **177** |
+| recommendation | 7 | 10 |
+| environment | 4 | 12 |
+| communication | 14 | 84 |
+| testing | 2 | 41 |
+| process | 7 | 46 |
+| **Total** | **44** | **240** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 51 |
-| how-I-work | 24 |
-| records-ahead-of-code | 23 |
-| weak-test | 22 |
-| vocabulary | 19 |
+| said-without-checking | 57 |
+| records-ahead-of-code | 39 |
+| weak-test | 34 |
+| how-I-work | 32 |
+| vocabulary | 27 |
 | safety-judgment | 18 |
+| window-between-steps | 17 |
+| recommendation | 15 |
+| message-misstates-outcome | 15 |
 | reading-field-data | 15 |
-| recommendation | 13 |
-| message-misstates-outcome | 13 |
-| window-between-steps | 11 |
-| environment | 8 |
-| leftover-state | 3 |
+| environment | 11 |
+| leftover-state | 4 |
 <!-- end generated -->
 
 Of the 33 I pointed out up to 2026-11-16, a later Claude review would
@@ -112,6 +112,70 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-284 | 2026-11-26 | ADR-0093's index row said built while its D15 cut to two or three transcripts wasn't | process | records-ahead-of-code | rule 3, Q-39 and Q-49: before a Built column says Yes, each line of the ADR's Decision has its code and test found, or a backlog row, end states like D15's included |
+| M-283 | 2026-11-26 | The comment scanner's tests were all one-line files, so nothing proved it read past line 1 | testing | weak-test | Q-53: a scanner's cases include a multi-line file, and its plants include one that reads only part of the file |
+| M-282 | 2026-11-26 | The strict-mode test's name claimed more than it checked | testing | records-ahead-of-code | Q-32: a fitness function's name, and the doc line it backs, say what it reads; every other way to break the rule is checked or named as unchecked |
+| M-281 | 2026-11-26 | Six docstrings in the new fitness functions misdescribed their code | communication | records-ahead-of-code | Q-32 and Q-34: each new docstring is read against its function's body before the project review, its "only", "every" and "is" checked like a record's |
+| M-280 | 2026-11-26 | New test names coined terms with no glossary proposal | communication | vocabulary | rule 6 and Q-38: a new test name's terms are checked against the glossary like any other name |
+| M-279 | 2026-11-26 | The review queue's line for C6 before #153 read as the opposite order | communication | message-misstates-outcome | a record of the order of two steps names both with "before" or "after", in the brief's words, never "waits until" |
+| M-278 | 2026-11-25 | Test code with backslash escapes sent through a Bash heredoc, against M-256's guard | environment | environment | M-256's guard, unchanged: code that holds a backslash escape is written with the editor tools, never sent through a heredoc |
+| M-277 | 2026-11-25 | D13's records counted the flags' clearing as built with no test for it | testing | leftover-state | Q-18 and Q-39: a record that says a reset is built names the test that fails without it, and the plants cover everything the change resets |
+| M-276 | 2026-11-25 | E20 said a wrong build order shows only on a second connect, against E13 | communication | said-without-checking | rule 2: a note that cites another note reads it first, and a claim about which flight shows a bug is planted before it goes into an answer |
+| M-275 | 2026-11-25 | D13's decision left out of the review queue | process | how-I-work | a choice Joe makes while building goes into the review queue in the same step as the brief |
+| M-274 | 2026-11-25 | D13's builder docstring said "everything a new link resets" | communication | records-ahead-of-code | Q-34: an "everything" or "only" in a docstring is checked against the code; a comment points to the fact's owner rather than copying it |
+| M-273 | 2026-11-25 | The first fix for #162's case-index finding checked something a planted off-by-one left unchanged | testing | weak-test | a check meant to pin where something happened compares the place noted at the event, and the plant that moves the event runs before the fix is called done |
+| M-272 | 2026-11-25 | The review's failure scenario for the fake's assert was a loss the adapter never hears of | communication | said-without-checking | a review finding's failure scenario is traced to its end, or planted, before it's reported (Q-20) |
+| M-271 | 2026-11-25 | cflib's full link close can hang on a lost link, and no review asked whether its check could change on another thread | design | window-between-steps | Q-03's question about a guard that changes on another thread is asked of a library's own check-then-wait code too, with the answer in the facts register |
+| M-270 | 2026-11-25 | ADR-0095 chained the step's error as the lost link's cause, which Python prints as the reverse of what happened | communication | message-misstates-outcome | an error raised while handling another keeps it as its context, with no `from`, unless the other really caused it; read the traceback Python prints before choosing (Q-43) |
+| M-269 | 2026-11-25 | #162's lost-link tests didn't check where each case lost the link, and three more gaps | testing | weak-test | a test whose cases come from a listed run checks in each case that it acted where its ID says, and each Never line of the ADR gets a planted bug |
+| M-268 | 2026-11-25 | #162's records and docstrings said more than its code | communication | records-ahead-of-code | before a record says what a test covers, read its parametrize and first case, and count tests with `pytest --collect-only` |
+| M-267 | 2026-11-25 | "Recording" for the call list made at collection | communication | vocabulary | working rule 6 for every noun in a new name or docstring, everyday words included: a glossary term's word means that term (Q-41) |
+| M-266 | 2026-11-25 | Test data computed at collection would have stopped the whole run when connect() raised | testing | said-without-checking | code that runs while pytest collects a test file catches its errors and fails a test with them, proved by planting a raise there |
+| M-265 | 2026-11-25 | The bug-planting script for #162 wrote CRLF into adapter.py and reported it restored | testing | environment | a planting script reads, writes and compares bytes (M-169), and `git ls-files --eol` shows `w/lf` after it |
+| M-264 | 2026-11-25 | Backlog #161 named one step of a link lost while connecting and missed the others | design | window-between-steps | Q-03 asked of every library call in the function, not only the one that showed the problem, with each answer in the facts register |
+| M-263 | 2026-11-25 | Two names in stage 6's link part meant something other than their code | communication | vocabulary | working rule 6 for every new name, keyword arguments included: a name that spells a glossary term means that term exactly, and a yes-or-no name says when it's true, in-between states included (Q-38) |
+| M-262 | 2026-11-25 | The facts register kept pointing at adapter.py after its code moved | process | records-ahead-of-code | each move searches the facts register for the old file's name and re-reads every row it finds against both files, as part of the move's records |
+| M-261 | 2026-11-25 | Stage 6's move-only report named one difference and missed two | communication | records-ahead-of-code | a move-only claim lists, beside the check's verdict, each moved call whose place in its caller changed and each callback whose owner changed, read off the caller's diff (ADR-0093's D14) |
+| M-260 | 2026-11-25 | Three cflib facts behind stage 6's move were read but not registered | process | how-I-work | working rule 1: a fact read in source to back a claim goes into the register in the same step, before the claim is written down |
+| M-259 | 2026-11-25 | The link part's rename left the old name in a waiting explain-back | process | records-ahead-of-code | a rename is searched for across the whole repository, the git-ignored `drafts/` included (ripgrep skips ignored files unless given `--no-ignore`) |
+| M-258 | 2026-11-25 | The adapter's URI, cache directory and disconnect with no link had no test | testing | weak-test | bug planting covers each argument the adapter passes on to cflib and each early return, not only the logic between them |
+| M-257 | 2026-11-25 | The move-only check's first run reported a change that wasn't there | testing | weak-test | a check script's verdict counts only once it has passed on the real change and failed on planted ones; stage 6's plants put two changes in moved code that only the check can catch |
+| M-256 | 2026-11-25 | A Python fix sent through a Bash heredoc lost half its backslashes | environment | environment | code that holds a backslash escape is written with the editor tools, never sent through a heredoc |
+| M-255 | 2026-11-25 | The take-over list change went against ADR-0093's move-only rule, unflagged | recommendation | recommendation | an option that touches code an ADR governs is checked against that ADR's Never and Always lines before it's offered (CLAUDE.md: point out a conflict with an accepted ADR and ask) |
+| M-254 | 2026-11-25 | Stage 5's comments and records said more than the code | communication | records-ahead-of-code | before marking an import test-only, search `src/` and `tools/` for its importers, not only `tests/`; a fact another module owns is pointed to, not copied (`docs/coding-style.md`); a record never says what the commit carrying it makes false (Q-46) |
+| M-253 | 2026-11-25 | "Session", "drone time" and "part" in the Crazyflie adapter's comments | communication | vocabulary | working rule 6, applied to each word of a new or rewritten comment, including words the glossary already uses in another sense (Q-38, Q-41) |
+| M-252 | 2026-11-25 | A link lost while connecting surfaces as cflib's AttributeError | design | window-between-steps | Q-03, for each cflib call `connect()` relies on: what it does once the link is already gone, read in the source, with the fact in the register |
+| M-251 | 2026-11-25 | A recommended constructor keyword broke the take-over fitness function | recommendation | recommendation | working rule 5, for a name or keyword an option adds: search `tests/architecture/` for it too, not only the backlog and the ADR index |
+| M-250 | 2026-11-25 | Two docstrings in stage 4's take-off and landing part said more than the code | communication | records-ahead-of-code | a docstring that says "as X does" is checked against both methods line by line, and a fact another module owns is pointed to, not copied (`docs/coding-style.md`) |
+| M-249 | 2026-11-25 | A comment that read backwards and a docstring that said "turned into", in ADR-0094's fix | communication | vocabulary | read each new comment as someone who knows only the code and the glossary, before the review does (`/project-review` step 4) |
+| M-248 | 2026-11-25 | "Lock error" in ADR-0094's code, where the glossary's "lock" is the drone lock | communication | vocabulary | working rule 6, for words the glossary already uses in another sense, not only for missing terms (Q-41) |
+| M-247 | 2026-11-25 | ADR-0094's fix logged the threading lock error before the cleanup | design | window-between-steps | in an `except` block that cleans up, the cleanup comes first and any logging after it (`time_limit.py`, its order pinned by a test; and Q-19, which names log lines) |
+| M-246 | 2026-11-25 | The interrupt signal landing inside a threading wait came out as CPython's lock error | design | window-between-steps | ADR-0094: `run_with_time_limit` raises the interrupt signal that CPython hides in a lock error, with a test that sends no real signal; and Q-19 (an interruption landing between two lines) |
+| M-245 | 2026-11-24 | A work order's bug-planting script was copied from a scratch file a failed edit had broken | process | how-I-work | the handoff skill's step 3: name a script in an order only after running it from where it's saved (added with Joe's OK, 2026-11-24); and M-233's: after a script writes or copies a file, read or run what it wrote |
+| M-244 | 2026-11-24 | The blocking-call fitness function missed a blocking call imported under another name | testing | weak-test | a scanner that matches by name lists every way a name can change (an import alias, an assignment, a stored callable) and has a test for each (`REVIEW.md` Q-32) |
+| M-243 | 2026-11-24 | The fitness function read the drone interface's methods by one decorator spelling | testing | weak-test | a fitness function's reader of real code doesn't depend on how the code is spelled, or has a test for each spelling (Q-32) |
+| M-242 | 2026-11-24 | Two forms the blocking-call scanner handles had no test | testing | weak-test | before calling a scanner's tests complete, list each `case` of its `match` and name the test that reaches it (Q-32) |
+| M-241 | 2026-11-24 | The Blocking call glossary row read as covering locks the check skips | communication | records-ahead-of-code | a definition with "only" is checked against a search for its exceptions in the code, as M-235's guard asks of docstrings (Q-32) |
+| M-240 | 2026-11-24 | A fitness function's test name said "only" where it checked reachability | communication | records-ahead-of-code | M-235's guard, for test names too: an "only" in a name is checked against what its assert does (Q-32) |
+| M-239 | 2026-11-24 | ADR-0093 narrowed two older rules without marking either | process | how-I-work | before an ADR is accepted, check its design against CLAUDE.md's Never and Always lists, and mark the status line of every ADR it narrows (Q-33) |
+| M-238 | 2026-11-24 | ADR-0093 and `commands.py` used Hand-over for more than the glossary's meaning | communication | vocabulary | working rule 6: read a glossary term's row, not only its name, before using it in a new sense; `REVIEW.md` Q-41 |
+| M-237 | 2026-11-24 | The glossary's Transcript test row repeated the overclaim M-232 fixed in ADR-0093 | testing | weak-test | a fix for an overclaim searches the records written with it (the glossary, the index, the backlog) for the same claim; `REVIEW.md` Q-40 |
+| M-236 | 2026-11-24 | `ARCHITECTURE.md` kept a module name and a Built status that ADR-0093 had changed | process | records-ahead-of-code | working rule 3, for `ARCHITECTURE.md` too: when a decision names a module or a stage is built, search `ARCHITECTURE.md` for the old name and update its row's Needs cell |
+| M-235 | 2026-11-24 | `commands.py`'s docstrings said more than its code does | communication | records-ahead-of-code | an "every" or "only" in a docstring is checked against a search for its exceptions (`REVIEW.md` Q-32), and a "because" names the step that makes it true |
+| M-234 | 2026-11-24 | The transcript fake relied on two cflib facts with no facts-register rows | process | how-I-work | CLAUDE.md's facts-register rule applies to a test fake's docstrings too; `REVIEW.md` Q-01 |
+| M-233 | 2026-11-24 | A script copied E9's heading into the explain-back notes for E10 | process | how-I-work | after a script writes to a file, read the lines it wrote |
+| M-232 | 2026-11-24 | ADR-0093 said the transcripts catch a reorder of three orders, but none of its flights reaches the third | testing | weak-test | a claim that tests catch a list of cases names the test or flight that reaches each one, and bug planting a swap of each order proves it |
+| M-231 | 2026-11-24 | ADR-0093 counted 45 test lines that set the adapter's log level, but there are 49 | process | said-without-checking | working rule 1 applied to counts: search every form the code uses (a name, a string, a constant), and say which forms a count covers |
+| M-230 | 2026-11-24 | `.gz` reading broke `read_recording`'s promise of a ValueError | testing | weak-test | a new way to read input gets a test for each way it can fail, checked against the errors its function's docstring names |
+| M-229 | 2026-11-24 | `/debrief`'s new step for committing scripts left out their recordings | process | records-ahead-of-code | working rule 3: before an ADR says a step is in a skill, read the step against each bullet of the Decision |
+| M-228 | 2026-11-24 | The glossary called an unbuilt tool real, and ADR-0092 called built work unbuilt | process | records-ahead-of-code | working rule 3; for a tool decided but not built, the glossary says "once it's built" and names the backlog row |
+| M-227 | 2026-11-24 | Searches that skipped `drafts/` reported C6 missing and missed Joe's no to a mutation-testing dependency | process | said-without-checking | working rule 1: when a search for a term Joe uses finds nothing, search `drafts/` too (ripgrep's `--no-ignore`) before saying it doesn't exist |
+| M-226 | 2026-11-23 | The closing comment on pull request #30 wrote backlog rows as GitHub links | communication | vocabulary | in text GitHub renders (comments, pull request bodies), write "backlog row 149", never a bare `#149` |
+| M-225 | 2026-11-23 | Two docstrings rewritten after Joe's reply said they read fine | process | how-I-work | working rule 7: before fixing a review finding, read every reply in its thread; a reply that says it's fine closes it |
+| M-224 | 2026-11-23 | A backlog row offered a fix that doesn't fix it | recommendation | window-between-steps | working rule 2: read the code an option touches (here `finish`) before listing it as a fix |
+| M-223 | 2026-11-23 | ADR-0034 left an open question with no backlog row | process | how-I-work | backlog #150; `/decide`'s step 8, a row for each follow-up |
+| M-222 | 2026-11-23 | The format version's bump left with nothing to catch a missed one | testing | weak-test | the golden file's tests in `tests/recording/test_encoding.py` (ADR-0089) and `REVIEW.md` Q-57 |
+| M-221 | 2026-11-22 | The next-up brief said 84 planted bugs for the recorder; it was 87 | communication | said-without-checking | working rule 4: a count in a record comes from the whole run, recounted when the record is written |
 | M-220 | 2026-11-22 | New mock test names used terms not in the glossary | communication | vocabulary | working rule 6: check a new name's words against the glossary before using them |
 | M-219 | 2026-11-22 | `TICK_PERIOD`'s docstring promised exactness that depends on `STALE_AFTER` | communication | said-without-checking | a docstring for a value computed from another module's constant states what its claim depends on |
 | M-218 | 2026-11-22 | Backlog #133 removed while #142 still waited on it | process | said-without-checking | before removing a backlog row, search the docs for its number (M-213), and update each row that waits on it |
@@ -337,6 +401,14 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-222, 2026-11-23: The format version's bump left with nothing to catch a missed one
+
+- **What happened:** ADR-0034 named the pitfall: "every format change must bump the version." Building the recorder (ADR-0087, ADR-0088), Claude wrote `FORMAT_VERSION = 1` and round-trip tests. Those pass when a change reaches the encoder and the decoder together, as a renamed field does, so a format change could ship without a bump and recordings made before it would stop reading back. Q-32 asks what enforces a rule about the code; neither the build nor its project review asked it for this rule. Joe caught it reading #30: "Is there a note in Review.md to maintain this encode.py file as anything changes that it references?", then "an oversight that we didn't even have a reminder to increase the FORMAT_VERSION".
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** the golden file's tests in `tests/recording/test_encoding.py` (ADR-0089) and `REVIEW.md` Q-57.
+- **Takeaway:** a repeat of M-209: Q-32 wasn't asked, at the build or in the review. A rule an ADR states as a pitfall ("every format change must") is a rule about the code, and the change that builds it needs the guard that enforces it. The ladder's second step, a "Guards" line in the ADR template's Consequences, was proposed; Joe kept Q-32 alone (2026-11-23).
 
 ### M-209, 2026-11-22: A lost-link check copied into every adapter method, with nothing to catch a method without it
 
@@ -759,6 +831,509 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-284, 2026-11-26: ADR-0093's index row said built while its D15 cut to two or three transcripts wasn't
+
+- **What happened:** closing #157, the records changed ADR-0093's Built column to "Yes" and removed `ARCHITECTURE.md` section 7's "partly built" row. D15 also says only two or three of the five transcript tests stay afterwards, and all five were still there, with no backlog row. Caught by the project review of #157's last fitness functions, which read the ADR's Decision line by line against the code. Built now says "Partly", with backlog #165.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** rule 3, Q-39 and Q-49: before a Built column says Yes, each line of the ADR's Decision has its code and test found, or a backlog row, end states like D15's included.
+- **Takeaway:** records-ahead-of-code is past its third entry, with its mechanisms planned in the 2026-11-13 recommendations; Q-49 caught this one in review, so no new step.
+
+### M-283, 2026-11-26: The comment scanner's tests were all one-line files, so nothing proved it read past line 1
+
+- **What happened:** building #157's last fitness functions, every case for the comment scanner was a one-line file, and the real-file guard checked only `adapter.py`'s line 1. The build's 16 planted bugs were all caught, so none of them limited the scanner to the first line: the project review planted that, and all 56 tests in the file passed. The same tests compared the hand-written list of cflib importers in order, so a correct fifth importer added at the end would have failed on order alone. A case with the comment on line 2 now fails under that plant, and the compare is sorted.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** Q-53: a scanner's cases include a multi-line file, and its plants include one that reads only part of the file.
+- **Takeaway:** weak-test is past its third entry; Q-53 caught this one in review, so no new step.
+
+### M-282, 2026-11-26: The strict-mode test's name claimed more than it checked
+
+- **What happened:** `test_take_off_and_landing_keeps_pyright_strict` and `ARCHITECTURE.md`'s "keeps pyright's strict mode" rested on the file's comments alone, while a `pyproject.toml` setting (a rule turned down, an ignore or exclude entry, another mode) could relax take-off and landing with every test green. Joe chose to pin the `[tool.pyright]` table.
+- **Kind:** testing.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-32: a fitness function's name, and the doc line it backs, say what it reads; every other way to break the rule is checked or named as unchecked.
+- **Takeaway:** Q-32 already asks it; no new step.
+
+### M-281, 2026-11-26: Six docstrings in the new fitness functions misdescribed their code
+
+- **What happened:** four said more than their code does: take-off and landing "is tested without cflib" (only the adapter imports it); only the named modules "may hold a cflib object" (the test checks imports); the follower sees "every way" a file reaches cflib, "Directly" first (no direct case, and no import by string seen); `files_loaded_with` returns what importing "runs" (it follows imports that may never run). Two said less: the module docstring's "for one rule their comments" missed two rules that read calls, and the made-up tree's helper hid that it swaps `SOURCE_ROOT`. Caught by the project review; all reworded.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-32 and Q-34: each new docstring is read against its function's body before the project review, its "only", "every" and "is" checked like a record's.
+- **Takeaway:** Q-32 and Q-34 already ask it; no new step.
+
+### M-280, 2026-11-26: New test names coined terms with no glossary proposal
+
+- **What happened:** the new tests named an "import follower" and a "comment scanner", beside the older tests' "import scanner", with no glossary row for any of them, and the cflib test said "loads" where the docs say "reaches". Caught by the project review. Joe approved three glossary rows, and the test now says "reaches".
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** rule 6 and Q-38: a new test name's terms are checked against the glossary like any other name.
+- **Takeaway:** vocabulary is past its third entry; Q-38 caught this one in review, so no new step.
+
+### M-279, 2026-11-26: The review queue's line for C6 before #153 read as the opposite order
+
+- **What happened:** on 2026-11-25 Joe put C6 before #153, and the brief of the time kept #153 before backlog row #157 is removed (#158 to #160 cite it). The review queue's line said "#153 waits until row #157 is removed", which read plainly puts the removal first. Caught while closing C6's records, by reading the brief from the commit that recorded the choice (`e395f47`); the line is reworded.
+- **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** a record of the order of two steps names both with "before" or "after", in the brief's words, never "waits until".
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
+
+### M-278, 2026-11-25: Test code with backslash escapes sent through a Bash heredoc, against M-256's guard
+
+- **What happened:** building #157's last two fitness functions, I appended the made-up test cases to `tests/architecture/test_import_rules.py` with a Bash heredoc, though they hold `\n` escapes. The heredoc was quoted, so nothing was lost: all seven of the file's `\n` escapes are as written, and its line endings stayed LF. Caught while checking M-265's guard after the bug planting.
+- **Kind:** environment.
+- **Pattern:** environment.
+- **Guard:** M-256's guard, unchanged: code that holds a backslash escape is written with the editor tools, never sent through a heredoc.
+- **Takeaway:** a slip past an existing guard, with no harm; not a code-review takeaway, so no step on the escalation ladder.
+
+### M-277, 2026-11-25: D13's records counted the flags' clearing as built with no test for it
+
+- **What happened:** D13's builder clears the adapter's two once-per-streak flags on every connect, and the backlog and the brief counted that as built, with "6 planted bugs, all caught". None of the six kept a flag across a connect. The project review planted each, and all 1078 tests passed both times. The hand-written clearing before D13 was untested too. Two tests that connect again now fail under those plants.
+- **Kind:** testing.
+- **Pattern:** leftover-state.
+- **Guard:** Q-18 and Q-39: a record that says a reset is built names the test that fails without it, and the plants cover everything the change resets.
+- **Takeaway:** leftover-state is past its third entry, and D13 is its design change: fresh parts on every connect. The adapter's own per-link flags each have a test that connects again.
+
+### M-276, 2026-11-25: E20 said a wrong build order shows only on a second connect, against E13
+
+- **What happened:** E20's question and its notes said that with two copies of the build, take-off and landing built before its commands in `connect()`'s copy would show only on a second connect, since the transcripts connect once, and cited E13. E13's notes say the opposite: the part sends through a second commands object from the first connect on, so velocity setpoints then a landing skip the release. The project review planted it, and 1 test failed after the first connect. Joe would have been graded against a wrong answer about his own adapter.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** rule 2: a note that cites another note reads it first, and a claim about which flight shows a bug is planted before it goes into an answer.
+- **Takeaway:** about an explanation, so it stays in this log.
+
+### M-275, 2026-11-25: D13's decision left out of the review queue
+
+- **What happened:** Joe chose option A for D13, one builder for `__init__` and `connect()`. The work session that built it put the choice in the brief but not in the review queue's Decisions, which CLAUDE.md asks for as it happens, and its edit to `ARCHITECTURE.md` section 7's row had no "text approved" there either. The project review found both; Joe kept the row.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** a choice Joe makes while building goes into the review queue in the same step as the brief.
+- **Takeaway:** no cheap mechanism; the project review's check of the records caught it.
+
+### M-274, 2026-11-25: D13's builder docstring said "everything a new link resets"
+
+- **What happened:** `_build_parts()`'s docstring said it does everything a new link resets, but `connect()` sets `_is_drone_state_unknown` itself. `connect()`'s comment also listed what each fresh part starts without, a copy of the builder's attribute docstrings that already differed from them. Both reworded after the project review.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-34: an "everything" or "only" in a docstring is checked against the code; a comment points to the fact's owner rather than copying it.
+- **Takeaway:** records-ahead-of-code is past its third entry with no cheap mechanism for prose, so the review question stays.
+
+### M-273, 2026-11-25: The first fix for #162's case-index finding checked something a planted off-by-one left unchanged
+
+- **What happened:** fixing the review's finding that no case checked where the link was lost, Claude first asserted only that the call at the case's index in `link.mock_calls` is the listed call, with a comment saying the link was therefore lost just before it. That compares the run's calls with the list, not where the loss came: a planted off-by-one in the fake failed only 6 tests in the whole file. Caught by Claude's bug planting before the fix was reported. The fake now notes the index at the loss and each case checks it, so the same plant fails all 71 cases.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a check meant to pin where something happened compares the place noted at the event, and the plant that moves the event runs before the fix is called done.
+- **Takeaway:** weak-test is past its third entry: the bug-planting tool (backlog #152) is where a plant for each new check becomes a mechanism.
+
+### M-272, 2026-11-25: The review's failure scenario for the fake's assert was a loss the adapter never hears of
+
+- **What happened:** the project review of #162 reported that the fake's `assert` in `_wait_for_params` would come out behind the lost link's error, with "a test that calls `fake_cflib.lose_the_link()` before `adapter.connect()`" as its scenario. In that scenario the adapter never hears of the loss: its `connection_lost` callback isn't registered until `connect()` opens the link, so the AssertionError comes out as it is. Caught by Claude's bug planting for the fix: the planted misuse failed with the old `assert` too. The hole is real for a link lost after the callback is registered, such as while the link opens: planted that way, the misuse passes with the `assert` and fails with `pytest.fail`.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** a review finding's failure scenario is traced to its end, or planted, before it's reported (Q-20).
+- **Takeaway:** Q-20 asks it of claims about failures in the code; it holds for a review's own scenarios too.
+
+### M-271, 2026-11-25: cflib's full link close can hang on a lost link, and no review asked whether its check could change on another thread
+
+- **What happened:** the facts register said `SyncCrazyflie.close_link()` does nothing once `disconnected` has been called (2026-11-21), and `connect()`'s cleanup and `disconnect()` relied on it after a lost link. The project review of #162 asked Q-03 of cflib's own code: the close checks `is_link_open()`, then creates the event its `disconnected` callback sets, and a lost link's callback that runs on cflib's radio thread between the two removes itself without setting it, so the close waits with no end. ADR-0095's "connect() raises within its time limits" assumed the close returns. Read in the source, never seen. Backlog #163.
+- **Kind:** design.
+- **Pattern:** window-between-steps.
+- **Guard:** Q-03's question about a guard that changes on another thread is asked of a library's own check-then-wait code too, with the answer in the facts register.
+- **Takeaway:** window-between-steps is past its third entry; no cheap mechanism finds races in a library's code, so the question stays.
+
+### M-270, 2026-11-25: ADR-0095 chained the step's error as the lost link's cause, which Python prints as the reverse of what happened
+
+- **What happened:** Claude's recommendation for ADR-0095, built in #162, raised the lost link's error `from` the failed step's error. Python prints that as "The above exception was the direct cause of the following exception", so a rescue landing over a dropped link would read "Flow deck not detected" as the cause of the loss, a deck problem that never happened. Caught by Claude's project review of #162 (Q-43). Joe chose to raise it while handling the step's error, which keeps that error as its context, and to reword ADR-0095 and ADR-0029's status before their first commit.
+- **Kind:** communication.
+- **Pattern:** message-misstates-outcome.
+- **Guard:** an error raised while handling another keeps it as its context, with no `from`, unless the other really caused it; read the traceback Python prints before choosing (Q-43).
+- **Takeaway:** the test now pins the chain (`__context__` set, no `__cause__`, the context not suppressed), so the change can't come back unseen.
+
+### M-269, 2026-11-25: #162's lost-link tests didn't check where each case lost the link, and three more gaps
+
+- **What happened:** the project review of #162 found four gaps in Claude's tests: no case checked that the link was lost just before the call its ID names, so a drift in the call count would move cases with every test still passing (a planted off-by-one in the fake now fails all 71 cases); the fake's `assert` came out behind the lost link's error, so a misused fake passed; ADR-0095's Never line "the new code runs before the link close" was guarded only against a skipped close, not one moved after the check in a `finally`; and the fake didn't run the `disconnected` callbacks. All fixed, each proven by a planted bug except the last, which no code registers yet.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a test whose cases come from a listed run checks in each case that it acted where its ID says, and each Never line of the ADR gets a planted bug.
+- **Takeaway:** weak-test is past its third entry: the bug-planting tool (backlog #152) is where planting each Never line becomes a mechanism.
+
+### M-268, 2026-11-25: #162's records and docstrings said more than its code
+
+- **What happened:** the project review of #162 found that ADR-0095 said the fake runs the `disconnected` callbacks, which it didn't; the parametrized test's name, the ADR index row and the brief said the link is lost before each of `connect()`'s cflib calls, where the cases start once the link is open; the brief counted 76 new tests for 77; `connect()`'s docstring promised the step's error as the cause, which a wait's own lost-link error lacks; `_added_block_ids`' docstring spoke of a block "added once the link is lost", which cflib doesn't add; and the drone interface's `connect()` docstring still named only a flying drone among its errors after *Lost link* widened (Q-35).
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** before a record says what a test covers, read its parametrize and first case, and count tests with `pytest --collect-only`.
+- **Takeaway:** records-ahead-of-code is past its third entry; the question stays (Q-39), as no cheap mechanism reads records against tests.
+
+### M-267, 2026-11-25: "Recording" for the call list made at collection
+
+- **What happened:** building #162, Claude named the cflib calls listed while pytest collects the test file a "recording" (`RECORDED_CALLS`, "the error the recording raised"), and the records repeated it, where the glossary's *Recording* is a run's JSON Lines file. Caught by Claude's project review of #162 (Q-41); Joe chose "list" (`LISTED_CALLS`).
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** working rule 6 for every noun in a new name or docstring, everyday words included: a glossary term's word means that term (Q-41).
+- **Takeaway:** vocabulary is past its third entry; the question stays.
+
+### M-266, 2026-11-25: Test data computed at collection would have stopped the whole run when connect() raised
+
+- **What happened:** building #162, Claude recorded the cflib calls for ADR-0095's parametrized test by running a connect when pytest collects the test file, assuming a failure there would stop only that file. pytest runs no test at all once collection has an error (facts register). Caught by Claude's bug planting: a new step in `connect()` that raised on the fake ended the run at collection. The recording now keeps its error, and `test_a_connect_with_every_block_is_recorded` raises it.
+- **Kind:** testing.
+- **Pattern:** said-without-checking.
+- **Guard:** code that runs while pytest collects a test file catches its errors and fails a test with them, proved by planting a raise there.
+- **Takeaway:** what a test tool does on an error is a fact about it too: check it in its source (working rule 1).
+
+### M-265, 2026-11-25: The bug-planting script for #162 wrote CRLF into adapter.py and reported it restored
+
+- **What happened:** Claude's bug-planting script read `adapter.py` with `read_text` and restored it with `write_text`, which writes CRLF on Windows, so the LF working copy (ADR-0079) came back CRLF. Its check compared text, which hides line endings, and printed "restored: True". Caught by Git's line-ending warning on the next diff, checked with `git ls-files --eol`; converted back to LF before any commit, which `.gitattributes` would have normalized anyway. M-169's takeaway, bytes and a checksum, wasn't followed. `docs/next-up.md` was CRLF in the working copy too, from the previous work session's edit (cause not found); converted to LF.
+- **Kind:** testing.
+- **Pattern:** environment.
+- **Guard:** a planting script reads, writes and compares bytes (M-169), and `git ls-files --eol` shows `w/lf` after it.
+- **Takeaway:** a third line-endings slip, after M-169 and M-171. ADR-0079 accepted that a script can still write CRLF, with no fitness function; the bug-planting tool (backlog #152) is where restoring bytes becomes a mechanism.
+
+### M-264, 2026-11-25: Backlog #161 named one step of a link lost while connecting and missed the others
+
+- **What happened:** the project review of #157 stage 5 found that a link lost while connecting ends `connect()` with cflib's `AttributeError` from a log block (M-252), and backlog #161 described that one step. Its guard, Q-03 for each cflib call `connect()` relies on, wasn't asked of the other calls, and stage 6's review, which moved the deck check, didn't report them either: after a lost link cflib empties its parameter values but still counts them as fetched, so the Flow deck check reads "no deck" and the run ends with "Flow deck not detected"; opening the link and reading the parameters wait out their time limits; and the Buzzer deck check logs "No Buzzer deck". Caught by Claude tracing every step of `connect()` for `/decide` #161 (2026-11-25), before the options; ADR-0095 covers them.
+- **Kind:** design.
+- **Pattern:** window-between-steps.
+- **Guard:** Q-03 asked of every library call in the function, not only the one that showed the problem, with each answer in the facts register.
+- **Takeaway:** the mechanism M-252 asked for is decided: ADR-0095's test loses the link before each of `connect()`'s cflib calls (backlog #162).
+
+### M-263, 2026-11-25: Two names in stage 6's link part meant something other than their code
+
+- **What happened:** building #157 stage 6, Claude named the link close's keyword `may_be_flying`, the glossary's *May be flying*, for "airborne or the drone's state unknown", where `TakeOffAndLanding.may_be_flying()` is False during a connect with the state unknown; and named a property `is_open` that is also true while the link opens and after a lost link, which `disconnect()` relies on. Caught by Claude's project review of the stage (2026-11-25); Joe chose `radio_link_only` and `has_link_to_close`, in the move commit `f38578b`.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** working rule 6 for every new name, keyword arguments included: a name that spells a glossary term means that term exactly, and a yes-or-no name says when it's true, in-between states included (Q-38).
+- **Takeaway:** the pattern is past its third entry, and no cheap mechanism exists: a lint can't tell what a name means. The question stays.
+
+### M-262, 2026-11-25: The facts register kept pointing at adapter.py after its code moved
+
+- **What happened:** five rows (`send_packet`, the incoming handler's callbacks, `LogConfig`, `HighLevelCommander`, `Commander`) still named only `adapter.py` after the refactor's stages moved that code out of it. Stage 6's own update then swapped `adapter.py` for `link.py` on two rows whose adapter code stayed (`_close_link`, `disconnect()`) and missed the parameter writes row. Caught by Claude's project review of stage 6 (2026-11-25); fixed in the stage's records.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** each move searches the facts register for the old file's name and re-reads every row it finds against both files, as part of the move's records.
+- **Takeaway:** the pattern is past its third entry, and no cheap mechanism exists: a test can check that a named file exists, and `adapter.py` still does.
+
+### M-261, 2026-11-25: Stage 6's move-only report named one difference and missed two
+
+- **What happened:** Claude reported stage 6's build as move-only except for the link's creation moving inside `connect()`'s `try`. It missed two more: cflib's driver set-up now runs after the flag resets and the parts' rebuild, and a late cflib callback from an earlier link now reaches that link's part, not the adapter's own fields. The move check passed because it compares moved bodies, not when or from where they run. Caught by Claude's project review (2026-11-25); the move commit `f38578b` names all three.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** a move-only claim lists, beside the check's verdict, each moved call whose place in its caller changed and each callback whose owner changed, read off the caller's diff (ADR-0093's D14).
+- **Takeaway:** the pattern is past its third entry, and no cheap mechanism exists: the move check compares bodies, and where they run needs reading.
+
+### M-260, 2026-11-25: Three cflib facts behind stage 6's move were read but not registered
+
+- **What happened:** to show that a raise in the link's creation finds no link to close, Claude read in cflib's source that a `Crazyflie` made with no link starts no thread, that `SyncCrazyflie.__init__` only stores what it's given and that `Caller.add_callback` only appends, but didn't add them to the facts register, as CLAUDE.md asks of a fact not there. Caught by Claude's project review (Q-01, 2026-11-25); added with the stage's records.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** working rule 1: a fact read in source to back a claim goes into the register in the same step, before the claim is written down.
+- **Takeaway:** the pattern is past its third entry, and no cheap mechanism exists; Q-01 catches it at review.
+
+### M-259, 2026-11-25: The link part's rename left the old name in a waiting explain-back
+
+- **What happened:** renaming `_close_radio_link_only` to `close_radio_link_only` in stage 6, Claude updated the code, the fitness function and the glossary, but E11 in the next-up brief and its notes in `drafts/explain-back-notes.md` still quoted `on_abandon=self._close_radio_link_only`. Caught by Claude's project review (2026-11-25); fixed in the stage's records.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** a rename is searched for across the whole repository, the git-ignored `drafts/` included (ripgrep skips ignored files unless given `--no-ignore`).
+- **Takeaway:** the pattern is past its third entry, and no cheap mechanism exists: a test can't tell a stale quote from a quote of history.
+
+### M-258, 2026-11-25: The adapter's URI, cache directory and disconnect with no link had no test
+
+- **What happened:** bug planting for #157 stage 6 found three plants no test failed, on the code before the move too: `connect()` passing cflib the default URI or the default cache directory instead of the adapter's, and `disconnect()` going on with no link, which the start-up's `finally` calls after a failed `connect()`. Caught by Claude's bug planting (2026-11-25); tests in `1d51b96`.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** bug planting covers each argument the adapter passes on to cflib and each early return, not only the logic between them.
+- **Takeaway:** bug planting is the pattern's mechanism; this widens what it plants.
+
+### M-257, 2026-11-25: The move-only check's first run reported a change that wasn't there
+
+- **What happened:** for #157 stage 6, Claude's move-only check compared `CrazyflieLink.open()` with the lines it came from in `connect()`, but dropped `open()`'s first line without dedenting the rest, so its first run reported one difference, in indentation only. Caught by Claude reading the check's output (2026-11-25); after the fix it reported 70 items moved or kept unchanged.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a check script's verdict counts only once it has passed on the real change and failed on planted ones; stage 6's plants put two changes in moved code that only the check can catch.
+- **Takeaway:** the pattern is past its third entry, and bug planting is its mechanism; this extends it to the check script. Nothing new to build.
+
+### M-256, 2026-11-25: A Python fix sent through a Bash heredoc lost half its backslashes
+
+- **What happened:** building #157 stage 6's move-only check, Claude rewrote one of its functions as a Python string inside a Bash heredoc. The Bash tool passed each doubled backslash on as a single one, so two newline escapes became real line breaks and the script wouldn't parse (checked afterwards: a doubled backslash in a heredoc reaches Python as one). Caught by Python's syntax error (2026-11-25); fixed with the editor.
+- **Kind:** environment.
+- **Pattern:** environment.
+- **Guard:** code that holds a backslash escape is written with the editor tools, never sent through a heredoc.
+- **Takeaway:** no cheap mechanism: the guard is a habit, and a syntax error or the checks catch a slip.
+
+### M-255, 2026-11-25: The take-over list change went against ADR-0093's move-only rule, unflagged
+
+- **What happened:** for #157 stage 5, Claude offered listing `adapter.py` in the take-over fitness function as a pass-through (M-251) without saying that it changes a test body in the move commit, which ADR-0093's D14 and Never line rule out. Stage 4's move commit (`6710a79`) had done the same to `BLOCKING_FUNCTIONS`, also unflagged. Caught by Claude's project review of stage 5 (2026-11-25), in the architecture audit's move-only question; Joe chose to note it in the move commit's message and leave ADR-0093 as it is.
+- **Kind:** recommendation.
+- **Pattern:** recommendation.
+- **Guard:** an option that touches code an ADR governs is checked against that ADR's Never and Always lines before it's offered (CLAUDE.md: point out a conflict with an accepted ADR and ask).
+- **Takeaway:** the pattern is past its third entry; here the mechanism was the architecture audit's move-only question, which caught it before any commit. Nothing new to build.
+
+### M-254, 2026-11-25: Stage 5's comments and records said more than the code
+
+- **What happened:** building #157 stage 5 (2026-11-25), Claude marked the adapter's log-block re-exports test-only, though `programs/start_up.py` imports two of them, `TAKE_OFF_BLOCK_DURATION` and `TAKE_OFF_PERIOD_MS`; gave `LogBlocks` a docstring that copied `connect()`'s order ("`connect()` opens the link after building this"), M-250's pattern a day later; and wrote "not yet reviewed or committed" into backlog row #157, which the records commit would carry. Caught by Claude's project review of stage 5 (2026-11-25): `start_up.py` now imports them from `log_blocks.py`, the docstring points to ADR-0093, and the clause is gone.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** before marking an import test-only, search `src/` and `tools/` for its importers, not only `tests/`; a fact another module owns is pointed to, not copied (`docs/coding-style.md`); a record never says what the commit carrying it makes false (Q-46).
+- **Takeaway:** the docstring repeats M-250 within a day, and `/project-review`'s step 4 read is what catches it; no cheap mechanism. The test-only labels go with #158's forwards, so a check for them isn't worth building.
+
+### M-253, 2026-11-25: "Session", "drone time" and "part" in the Crazyflie adapter's comments
+
+- **What happened:** Claude's comments in `connect()` called a new connection "a new session" (stage 5 rewrote one of them), and `take_off_and_landing.py` said "sent this session", where the glossary's *Session* is a trip of field tests; stage 5's rewrite added "no drone time", which the glossary calls the drone's timestamp; and since stage 3 the code has used *part* as a term with no glossary row, against CLAUDE.md's rule to propose a term first. Caught by Claude's project review of #157 stage 5 (2026-11-25): reworded to "link" and "no earlier drone timestamp", and Joe approved a glossary row for *Part*.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** working rule 6, applied to each word of a new or rewritten comment, including words the glossary already uses in another sense (Q-38, Q-41).
+- **Takeaway:** the pattern is past its third entry, with no cheap mechanism: a lint can't tell a glossary word used in another sense. The questions stay.
+
+### M-252, 2026-11-25: A link lost while connecting surfaces as cflib's AttributeError
+
+- **What happened:** the Crazyflie adapter's `_add_log_block` (now in `log_blocks.py`) relies on cflib's `Log.add_config` raising for a block it can't add, but without a link it only logs and returns, so the block's `start()` raises AttributeError (cflib 0.1.34, `log.py` 461-464). A link lost just after `connect()`'s status wait succeeds ends the run with that error instead of the lost link's; it still fails safe, since `connect()` closes the link. Caught by Claude's project review of #157 stage 5 (2026-11-25), in code older than the split; Joe put it in the backlog (#161) for the link stage.
+- **Kind:** design.
+- **Pattern:** window-between-steps.
+- **Guard:** Q-03, for each cflib call `connect()` relies on: what it does once the link is already gone, read in the source, with the fact in the register.
+- **Takeaway:** the pattern is past its third entry; the cheap mechanism is a test whose fake cflib drops the link between two steps of `connect()`, which backlog #161 asks for.
+
+### M-251, 2026-11-25: A recommended constructor keyword broke the take-over fitness function
+
+- **What happened:** for #157 stage 5, Claude recommended passing the take-over setting to the new log-block part as a constructor keyword, `LogBlocks(..., take_over_flight=...)`, so the moved body stays unchanged. It didn't search for rules already written about that name: `test_only_the_rescue_landing_program_asks_to_take_over_a_flight` (ADR-0038) pins which files pass `take_over_flight=` in a call, and the adapter became a third. Caught by the first test run after the move (2026-11-25); Joe chose to list the adapter in the test as a pass-through, like `start_up.py`.
+- **Kind:** recommendation.
+- **Pattern:** recommendation.
+- **Guard:** working rule 5, for a name or keyword an option adds: search `tests/architecture/` for it too, not only the backlog and the ADR index.
+- **Takeaway:** the pattern is past its third entry, and here the mechanism worked: the fitness function caught the option at its first test run, before any commit. Nothing new to build.
+
+### M-250, 2026-11-25: Two docstrings in stage 4's take-off and landing part said more than the code
+
+- **What happened:** writing #157 stage 4 (2026-11-24), Claude gave `TakeOffAndLanding.emergency_stop` the docstring "clear the flight state together, as `stop_motors` does", though unlike `stop_motors` it records no motor stop, on purpose (ADR-0058). The class docstring also copied a count that `connect()` owns, "replaces it twice", which later stages change. Caught by Claude's project review of stage 4 (2026-11-25); both reworded, in commit E.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** a docstring that says "as X does" is checked against both methods line by line, and a fact another module owns is pointed to, not copied (`docs/coding-style.md`).
+- **Takeaway:** records-ahead-of-code is past its third entry, and no cheap mechanism checks a docstring's comparison, so it stays a review check (`/project-review` step 4).
+
+### M-249, 2026-11-25: A comment that read backwards and a docstring that said "turned into", in ADR-0094's fix
+
+- **What happened:** the comment on `run_with_time_limit`'s late raise said "so the lock error doesn't become its context, as if the interrupt signal had come while an error was being handled", which reads as if the raise were meant to look that way. `_interrupt_hidden_in`'s docstring said CPython "turned" the interrupt into the error, when the error only carries it as its context, and left out the None it returns otherwise. The new debug line also put the capitalized step name mid-sentence ("during Opening the link"). Caught by Claude's project review (2026-11-25); all three reworded before the commit.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** read each new comment as someone who knows only the code and the glossary, before the review does (`/project-review` step 4).
+- **Takeaway:** the comment that explains why code is shaped oddly is the one whose misreading undoes the code. M-173's mechanism, the fresh-context read, didn't run on this change (Joe chose to skip it, to save usage), so the review's own read caught it.
+
+### M-248, 2026-11-25: "Lock error" in ADR-0094's code, where the glossary's "lock" is the drone lock
+
+- **What happened:** ADR-0094's code called CPython's `RuntimeError: release unlocked lock` a "lock error" in a test name, a debug line and two docstrings, with no glossary row, though in the glossary "lock" means the drone lock (*Drone lock*, and "locked" in the drone status). Caught by Claude's project review (Q-38, Q-41); Joe chose "threading lock error", with no glossary row (2026-11-25).
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** working rule 6, for words the glossary already uses in another sense, not only for missing terms (Q-41).
+- **Takeaway:** in this codebase a word the glossary owns (lock, flying, stop) reads in its glossary sense, whatever the code means by it. Vocabulary is past its third entry, and no cheap mechanism can tell which sense a word is used in, so Q-41 stays.
+
+### M-247, 2026-11-25: ADR-0094's fix logged the threading lock error before the cleanup
+
+- **What happened:** the fix's first version logged the hidden threading lock error, with its traceback, at the top of `run_with_time_limit`'s `except` block, before `step.abandon()` and `on_abandon`. A second interrupt signal landing in that log call would have left the block without the cleanup. Caught by Claude's project review (Q-19); the log now comes after the cleanup, with a comment saying why.
+- **Kind:** design.
+- **Pattern:** window-between-steps.
+- **Guard:** in an `except` block that cleans up, the cleanup comes first and any logging after it (`time_limit.py`, its order pinned by a test; and Q-19, which names log lines).
+- **Takeaway:** Q-19 already asks about log lines; the build didn't ask it, the same day as M-246 and about the same window. No cheap mechanism knows which calls clean up, so the question stays.
+
+### M-246, 2026-11-25: The interrupt signal landing inside a threading wait came out as CPython's lock error
+
+- **What happened:** three tests written 2026-11-02 (`878c16f`) send the interrupt signal from the helper thread as a step starts. CPython 3.12 can raise the KeyboardInterrupt while `Thread.start()`'s wait has its lock released, and `Event.wait`'s `with` block then raises `RuntimeError: release unlocked lock` instead. The tests failed at random (once in 117 runs on its own on `479f64f`), and a Ctrl+C while connecting could end the program as an error, with exit code 1 instead of 130. `run_with_time_limit` caught every exception, so its cleanup was right; only the exception's type was wrong. Caught by Claude when the check run before #157 stage 4's review failed. Fixed by ADR-0094.
+- **Kind:** design.
+- **Pattern:** window-between-steps.
+- **Guard:** ADR-0094: `run_with_time_limit` raises the interrupt signal that CPython hides in a lock error, with a test that sends no real signal; and Q-19 (an interruption landing between two lines).
+- **Takeaway:** the pattern is past its third entry, and here the mechanism is ADR-0094's code. The interruption landed between the standard library's lines, not the project's.
+
+### M-245, 2026-11-24: A work order's bug-planting script was copied from a scratch file a failed edit had broken
+
+- **What happened:** writing #157 stage 4's hand-off, Claude copied its first bug-planting script from the scratchpad to `drafts/157-stage-4/` without checking it, though a failed edit had broken that scratch copy earlier in the work session (a syntax error). Caught when Claude re-ran the script for the order's expected results; rewritten and re-run before the order named it.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** the handoff skill's step 3: name a script in an order only after running it from where it's saved (added with Joe's OK, 2026-11-24); and M-233's: after a script writes or copies a file, read or run what it wrote.
+- **Takeaway:** the second time a script's output went unchecked (M-233), so it climbed the ladder's second step: a template line, in the handoff skill.
+
+### M-244, 2026-11-24: The blocking-call fitness function missed a blocking call imported under another name
+
+- **What happened:** the scanner matched a call by the name written where it's called and recorded no import alias, so `from time import sleep as pause`, then `pause(0.1)` in a tick method, passed all six rules. Found by `/project-review` of `1cc5081`. Fixed in `531c638`: an alias counts as its original name, with three tests, proven by planting.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a scanner that matches by name lists every way a name can change (an import alias, an assignment, a stored callable) and has a test for each (`REVIEW.md` Q-32).
+- **Takeaway:** matching by name needs every renaming closed, not only the stored callable ADR-0093 named.
+
+### M-243, 2026-11-24: The fitness function read the drone interface's methods by one decorator spelling
+
+- **What happened:** `drone_interface_methods` counted a method only under a bare `@abstractmethod`, and its guard test named 5 of the 15 methods, so one written with `@abc.abstractmethod` would have dropped out of rule 1 unnoticed. Found by `/project-review` of `1cc5081`. Fixed in `531c638`: it reads every method but the double-underscore ones, with a test on made-up code.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a fitness function's reader of real code doesn't depend on how the code is spelled, or has a test for each spelling (Q-32).
+- **Takeaway:** a guard that checks a few names can't catch the ones it leaves out.
+
+### M-242, 2026-11-24: Two forms the blocking-call scanner handles had no test
+
+- **What happened:** code outside any function (filed as the file's `<module>`) and a class defined inside a function had no test, though `REVIEW.md` Q-32 asks for one per form. Found by `/project-review` of `1cc5081`. Fixed in `531c638`: three tests, proven by planting.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** before calling a scanner's tests complete, list each `case` of its `match` and name the test that reaches it (Q-32).
+- **Takeaway:** list the scanner's branches, not the forms that come to mind.
+
+### M-241, 2026-11-24: The Blocking call glossary row read as covering locks the check skips
+
+- **What happened:** the row defined a blocking call as one that waits until "something happens" and said only `connect()` and `disconnect()` may reach one, but every tick's `take_snapshot` takes the telemetry buffer's lock, and the fitness function counts no lock. Found by `/project-review` of `1cc5081`. Fixed in `531c638`, with Joe's OK: the row and the test's "Not counted" list name the locks.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** a definition with "only" is checked against a search for its exceptions in the code, as M-235's guard asks of docstrings (Q-32).
+- **Takeaway:** a general definition ("until something happens") reaches further than the list after it.
+
+### M-240, 2026-11-24: A fitness function's test name said "only" where it checked reachability
+
+- **What happened:** `test_every_blocking_function_runs_only_inside_connect_or_disconnect` checked only that `connect()` or `disconnect()` reaches each blocking function; the "only" comes from rules 1 and 3 together. Found by `/project-review` of `1cc5081`. Fixed in `531c638`: renamed `..._is_reached_from_connect_or_disconnect`, with a docstring that says how the three rules combine.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** M-235's guard, for test names too: an "only" in a name is checked against what its assert does (Q-32).
+- **Takeaway:** the pattern's second entry today. No cheap mechanism checks what a name claims, so the question stays.
+
+### M-239, 2026-11-24: ADR-0093 narrowed two older rules without marking either
+
+- **What happened:** ADR-0093's status line said it narrows ADR-0002, but ADR-0002's own status line wasn't marked (`REVIEW.md` Q-33). Its design also has the parts pass a cflib object between modules, against ADR-0004's rule and CLAUDE.md's "Never: Pass a cflib object or an untyped value across a module boundary", which the ADR didn't name. Found by `/project-review` of #157's stage 3. Joe chose to scope the rule to the modules that import cflib, now in ADR-0093, both older ADRs' status lines, CLAUDE.md and `ARCHITECTURE.md` section 3.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** before an ADR is accepted, check its design against CLAUDE.md's Never and Always lists, and mark the status line of every ADR it narrows (Q-33).
+- **Takeaway:** a design that needs an exception to a standing rule says so in its own ADR, not in a later review.
+
+### M-238, 2026-11-24: ADR-0093 and `commands.py` used Hand-over for more than the glossary's meaning
+
+- **What happened:** The glossary's Hand-over was only the switch at the end of the initial climb. ADR-0093 ("three orders matter: the hand-over"), `commands.py`'s heading and the brief's E10 used it for any high-level move after a setpoint stream. Found by the fresh-context read and `/project-review` (Q-41). Joe widened the glossary's row.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** working rule 6: read a glossary term's row, not only its name, before using it in a new sense; `REVIEW.md` Q-41.
+- **Takeaway:** a code name older than the glossary row can carry a wider meaning than the row gives it.
+
+### M-237, 2026-11-24: The glossary's Transcript test row repeated the overclaim M-232 fixed in ADR-0093
+
+- **What happened:** The new row said a transcript test "fails when a change reorders or alters a send". It was written in the same change that fixed M-232 in ADR-0093: no flight reaches the last-resort landing, so its order isn't caught. Found by `/project-review` (Q-40). Fixed with Joe's OK: the row now says a send no flight reaches needs its own test.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a fix for an overclaim searches the records written with it (the glossary, the index, the backlog) for the same claim; `REVIEW.md` Q-40.
+- **Takeaway:** one claim is often written in several records at once, and a fix in one leaves the rest.
+
+### M-236, 2026-11-24: `ARCHITECTURE.md` kept a module name and a Built status that ADR-0093 had changed
+
+- **What happened:** ADR-0093 named the take-off and landing module `take_off_and_landing.py`, but `ARCHITECTURE.md` section 7 kept `flight_phases.py`. Its Needs cell, set to "not built" with the decision, stayed that way after stages 1 to 3 were built. Found by `/project-review`. Fixed with Joe's OK.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** working rule 3, for `ARCHITECTURE.md` too: when a decision names a module or a stage is built, search `ARCHITECTURE.md` for the old name and update its row's Needs cell.
+- **Takeaway:** the architecture map's target table is a record like the index, and goes stale the same way.
+
+### M-235, 2026-11-24: `commands.py`'s docstrings said more than its code does
+
+- **What happened:** #157's stage 3 wrote "every send" in `commands.py`'s module and class docstrings and in the adapter's `_commands` field. But the thrust base write, the log blocks and both link closes stay in `adapter.py`, as ADR-0093's table plans. `go_to_relative`'s docstring said `linear` is passed on, when it goes only when True. The class docstring's reason for the lookups ("connect() replaces both") hid the real one: `connect()` replaces them after building the part. Found by `/project-review`. Fixed before the first commit.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** an "every" or "only" in a docstring is checked against a search for its exceptions (`REVIEW.md` Q-32), and a "because" names the step that makes it true.
+- **Takeaway:** a moved module's "every" needs checking against what stayed behind.
+
+### M-234, 2026-11-24: The transcript fake relied on two cflib facts with no facts-register rows
+
+- **What happened:** The transcript tests' fake says cflib's `param.get_value` returns text and raises `KeyError`, and that `SyncCrazyflie` keeps its `Crazyflie` as `.cf`. Neither was in the facts register, which CLAUDE.md asks for ("one not there is checked, then added"). Found by `/project-review` (Q-01). Checked in source the same day and added.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** CLAUDE.md's facts-register rule applies to a test fake's docstrings too; `REVIEW.md` Q-01.
+- **Takeaway:** a fake states facts about the library it stands in for.
+
+### M-233, 2026-11-24: A script copied E9's heading into the explain-back notes for E10
+
+- **What happened:** A script that added E10 to `drafts/explain-back-notes.md` copied E9's heading for it, text and all ("#157 stage 1"). Caught and fixed at once.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** after a script writes to a file, read the lines it wrote.
+- **Takeaway:** a copy-and-edit script carries over whatever it doesn't replace.
+
+### M-232, 2026-11-24: ADR-0093 said the transcripts catch a reorder of three orders, but none of its flights reaches the third
+
+- **What happened:** ADR-0093's Failure modes name three send orders that matter (the hand-over, the motor stop then the release, the land then the release) and say "The transcripts catch a reorder". None of D15's five scripted flights reaches the last-resort landing, so no transcript covers its land, then release (ADR-0084): only the unit test `test_a_landing_that_raises_sends_the_firmwares_land_then_the_release_then_closes_only_the_radio_link` guards it. Found while designing #157's transcript tests, before any was built. Joe kept five flights, with the unit test as that order's guard, and ADR-0093 now says so (edited before its first commit).
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a claim that tests catch a list of cases names the test or flight that reaches each one, and bug planting a swap of each order proves it.
+- **Takeaway:** a list of cases in a Failure mode gets checked one case at a time against the tests meant to reach it.
+
+### M-231, 2026-11-24: ADR-0093 counted 45 test lines that set the adapter's log level, but there are 49
+
+- **What happened:** ADR-0093's D14 says a prep commit moves "the 45 test lines that set the log level on the adapter's logger". 45 counts two forms, `logger=adapter_module.logger.name` (33 lines) and `logger=adapter_module.__name__` (12), and misses a third: `test_adapter_telemetry.py` sets it four times through its constant `ADAPTER_LOGGER`. Found by counting every form for #157's logger prep. Fixed: ADR-0093 now says 49 (edited before its first commit).
+- **Kind:** process.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 1 applied to counts: search every form the code uses (a name, a string, a constant), and say which forms a count covers.
+- **Takeaway:** one search pattern rarely finds every form of the same thing.
+
+### M-230, 2026-11-24: `.gz` reading broke `read_recording`'s promise of a ValueError
+
+- **What happened:** the #55 work session added `.gz` reading to `read_recording` with a test for a whole file only. `/project-review high` found that a cut-off `.gz` raises `EOFError` and a file that isn't gzip raises `BadGzipFile`, an `OSError`, where the docstring promises `ValueError`, and that a cut-off compressed file can't be read at all while a cut-off plain one drops its last line. Fixed: `_read_text` raises `ValueError` for each, with a test per case, proven by bug planting.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** a new way to read input gets a test for each way it can fail, checked against the errors its function's docstring names. `REVIEW.md`'s map now sends `recording/` to Failures (Q-11, Q-13), which caught this.
+- **Takeaway:** a second format behind the same reader brings the second format's errors with it.
+
+### M-229, 2026-11-24: `/debrief`'s new step for committing scripts left out their recordings
+
+- **What happened:** ADR-0092 says a committed analysis script reads only committed recordings and a debrief commits them, and its Consequences said "the ask is in `CLAUDE.md` and `/debrief`". The step added to `/debrief` asked about the scripts only and never mentioned recordings. `/project-review high` found it.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** working rule 3: before an ADR says a step is in a skill, read the step against each bullet of the Decision.
+- **Takeaway:** a rule copied into a skill gets checked against the whole Decision, not only the line it came from.
+
+### M-228, 2026-11-24: The glossary called an unbuilt tool real, and ADR-0092 called built work unbuilt
+
+- **What happened:** the glossary's Bug planting said it's "done by hand, or by the bug-planting tool (`tools/plant_bugs.py`)", which isn't built (#152). ADR-0092's Consequences still said the `analysis/` folder and `.gz` reading weren't built (#154) after the same change built them. `/project-review high` found both.
+- **Kind:** process.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** working rule 3; for a tool decided but not built, the glossary says "once it's built" and names the backlog row. After building part of an ADR, reread its Consequences as well as the index's Built column.
+- **Takeaway:** ADR-0091's test (#153) and #143 are the mechanisms this pattern is waiting on.
+
+### M-227, 2026-11-24: Searches that skipped `drafts/` reported C6 missing and missed Joe's no to a mutation-testing dependency
+
+- **What happened:** Joe named C6 as his priority. Claude searched with ripgrep, which skips git-ignored files, and said "c6" wasn't anywhere in the repo's markdown. C6 (split the Crazyflie adapter) is defined in `drafts/2026-11-13-code-recommendations.md`. The same blind spot let `/decide #142` offer an off-the-shelf mutation-testing tool without saying that Joe had declined one on 2026-11-21 (D19 in that file). Claude found both later in the session, reading `drafts/` for another reason; ADR-0090 now cites D19.
+- **Kind:** process.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 1: when a search for a term Joe uses finds nothing, search `drafts/` too (ripgrep's `--no-ignore`) before saying it doesn't exist.
+- **Takeaway:** decisions still waiting to become ADRs live in `drafts/` (the 2026-11-13 code and workflow recommendations), so a search of the records alone can miss Joe's earlier answers.
+
+### M-226, 2026-11-23: The closing comment on pull request #30 wrote backlog rows as GitHub links
+
+- **What happened:** closing review pull request #30, Claude's comment said the findings moved to the backlog as "#149-#151". On GitHub, `#149` links to issue or pull request 149, not to backlog row 149. Claude noticed it right after posting.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** in text GitHub renders (comments, pull request bodies), write "backlog row 149", never a bare `#149`.
+- **Takeaway:** a number's meaning depends on where it's read; the backlog's `#` and GitHub's `#` collide.
+
+### M-225, 2026-11-23: Two docstrings rewritten after Joe's reply said they read fine
+
+- **What happened:** Joe answered the review finding on `start_up.py:36` (the `RECORDING_DIRECTORY` and `command_line_arguments` docstrings) with "this reads fine to me", but an earlier work session's fixes rewrote both anyway. Claude found it comparing the working tree with the pull request's replies; Joe chose to revert them.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** working rule 7: before fixing a review finding, read every reply in its thread; a reply that says it's fine closes it.
+- **Takeaway:** a review finding is Joe's to confirm; the fix list comes from his replies, not from the findings as posted.
+
+### M-224, 2026-11-23: A backlog row offered a fix that doesn't fix it
+
+- **What happened:** backlog #149 (from the review of pull request #30) listed "move `start` inside the `try`" as a fix for a recording left without a header. With `start` inside the `try`, the interrupt signal between opening the file and writing the header reaches `finish`, which adds a last line to the file with no header, so `read_recording` still refuses it. Claude found it when Joe asked whether moving it was enough; the row is corrected.
+- **Kind:** recommendation.
+- **Pattern:** window-between-steps.
+- **Guard:** working rule 2: read the code an option touches (here `finish`) before listing it as a fix.
+- **Takeaway:** a fix for a cleanup gap is traced through every step after the gap, not only the step that opens it.
+
+### M-223, 2026-11-23: ADR-0034 left an open question with no backlog row
+
+- **What happened:** ADR-0034 says "What a reader does with an old version is decided with the first replay test", but no backlog row ever tracked it (the backlog and its git history searched on 2026-11-23). `CLAUDE.md` has asked for a row for each deferral since 2026-10-18. Claude found it while weighing ADR-0089's options.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** backlog #150; `/decide`'s step 8, a row for each follow-up.
+- **Takeaway:** an ADR's "decided later" is a follow-up, and gets its backlog row when the ADR is written.
+
+### M-221, 2026-11-22: The next-up brief said 84 planted bugs for the recorder; it was 87
+
+- **What happened:** the brief's "Done last" line for the recorder gave 84 planted bugs, a count taken before the last few were planted. The project review of the recorder caught it before the commit; fixed to 87.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 4: a count in a record comes from the whole run, recounted when the record is written.
 
 ### M-220, 2026-11-22: New mock test names used terms not in the glossary
 

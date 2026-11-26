@@ -25,7 +25,7 @@ from crazyflie_behavior.loop.tick_loop import (
     TickLoop,
     TickStep,
 )
-from crazyflie_behavior.timing.clock import SimClock
+from crazyflie_behavior.timing.clock import Clock, SimClock
 
 TEST_TICK_RATE = 4.0
 LOGGER_NAME = "crazyflie_behavior.loop.tick_loop"
@@ -76,19 +76,25 @@ class FakeHangWatchdog(HangWatchdog):
         self.events.append("disarm")
 
 
-class LateWakingClock(SimClock):
-    """A sim clock whose every wait wakes a little late, as a real operating system does."""
+class LateWakingClock(Clock):
+    """A sim clock whose every wait wakes a little late, as a real operating system does.
 
-    def __init__(self, wake_lateness: float) -> None:
-        super().__init__()
+    It wraps the `sim_clock` fixture, so it keeps that clock's sim time limit (ADR-0082).
+    """
+
+    def __init__(self, sim_clock: SimClock, wake_lateness: float) -> None:
+        self._sim_clock = sim_clock
         self._wake_lateness = wake_lateness
+
+    def now(self) -> float:
+        return self._sim_clock.now()
 
     def sleep_until(self, deadline: float) -> None:
         if deadline > self.now():
-            super().sleep_until(deadline + self._wake_lateness)
+            self._sim_clock.sleep_until(deadline + self._wake_lateness)
 
 
-def make_loop(clock: SimClock, tick_step: TickStep, hang_watchdog: HangWatchdog | None = None) -> TickLoop:
+def make_loop(clock: Clock, tick_step: TickStep, hang_watchdog: HangWatchdog | None = None) -> TickLoop:
     return TickLoop(clock, tick_step, hang_watchdog or FakeHangWatchdog(), TEST_TICK_RATE)
 
 
@@ -108,9 +114,9 @@ def test_ticks_start_one_tick_period_apart(sim_clock: SimClock) -> None:
     assert tick_step.start_times == [0.0, 0.25, 0.5]
 
 
-def test_a_late_start_shortens_the_next_wait_so_lateness_never_adds_up() -> None:
-    clock = LateWakingClock(wake_lateness=1 / 64)
-    tick_step = ScriptedTickStep(clock, [0.125, 0.125, 0.125, 0.125])
+def test_a_late_start_shortens_the_next_wait_so_lateness_never_adds_up(sim_clock: SimClock) -> None:
+    clock = LateWakingClock(sim_clock, wake_lateness=1 / 64)
+    tick_step = ScriptedTickStep(sim_clock, [0.125, 0.125, 0.125, 0.125])
 
     make_loop(clock, tick_step).run()
 
@@ -640,7 +646,7 @@ def test_the_loop_stops_measuring_the_garbage_collector_after_a_run(sim_clock: S
 
 
 def measuring_loop(
-    clock: SimClock,
+    clock: Clock,
     tick_step: TickStep,
     on_tick_measured: Callable[[float, float], None],
     hang_watchdog: HangWatchdog | None = None,
@@ -650,14 +656,14 @@ def measuring_loop(
     )
 
 
-def test_on_tick_measured_gets_each_ticks_lateness_and_work_time() -> None:
-    clock = LateWakingClock(wake_lateness=0.0625)
+def test_on_tick_measured_gets_each_ticks_lateness_and_work_time(sim_clock: SimClock) -> None:
+    clock = LateWakingClock(sim_clock, wake_lateness=0.0625)
     measured: list[tuple[float, float]] = []
 
     def keep(lateness: float, work_time: float) -> None:
         measured.append((lateness, work_time))
 
-    measuring_loop(clock, ScriptedTickStep(clock, [0.125, 0.0625]), keep).run()
+    measuring_loop(clock, ScriptedTickStep(sim_clock, [0.125, 0.0625]), keep).run()
 
     assert measured == [(0.0, 0.125), (0.0625, 0.0625)]
 

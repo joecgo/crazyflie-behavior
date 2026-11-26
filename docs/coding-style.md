@@ -89,10 +89,13 @@ one tick took.
   plus diagnostic scripts in `tools/`. Those run in basic mode, type their own
   functions, and annotate raw cflib values where they enter
   (`available_drones: list[list[str]] = cflib.crtp.scan_interfaces()`).
-- It runs pyright in **basic** mode and converts every untyped cflib value
-  into a typed project type before handing it on.
+- Its modules that import cflib run pyright in **basic** mode and convert
+  every untyped cflib value into a typed project type before handing it on.
+  Take-off and landing imports no cflib and stays strict
+  ([ADR-0093](decisions/0093-the-crazyflie-adapter-splits-into-parts-with-take-off-and-landing-free-of-cflib.md)).
 - Type-check suppressions are allowed **only** in the Crazyflie adapter,
-  always scoped to one rule and with a reason:
+  never in take-off and landing (ADR-0093), always scoped to one rule and
+  with a reason:
   `# pyright: ignore[reportUnknownMemberType]  # cflib is untyped`.
 
 ## Module boundaries
@@ -174,6 +177,11 @@ each.
   test fails, fails on its own (an escaped KeyboardInterrupt or crash stops
   the whole run) and doesn't hang. Then restore the code. A test that no
   planted bug can fail is a gap.
+- **For a limit, plant the other comparison** and, for a time limit, the
+  limit plus 0.8 of a tick period (`0.8 / TICK_RATE`, 0.04 s at 20 Hz). A
+  test one whole tick past the limit lets that pass. This covers what the
+  bug-planting tool, once built, can't see, such as a typed number
+  ([ADR-0090](decisions/0090-a-bug-planting-tool-generates-plants-for-every-named-limit-and-runs-on-demand.md)).
 - **Compare computed floats with `pytest.approx`**, never `==`: most decimals
   (0.1, 0.3) aren't exact in binary, so `0.1 + 0.2 == 0.3` is false. `==` is
   fine for a value passed through unchanged, or for exact values (whole

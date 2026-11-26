@@ -29,7 +29,8 @@ Each rule is marked with where it comes from:
    3  update_take_off_and_landing(snapshot)   → every tick, after a failed pre-check too
    4  Behavior.tick(snapshot, ask)            → ask(CommandRequest) returns a Verdict at once
    5  SafetyLayer.send()                      → one command per command slot
-      with a recorder: the tick's line, with its snapshot, requests and verdicts, events and timing
+      with a recorder: steps 1–5 hand it the snapshot, requests and verdicts, and events
+ after the tick step: the TickLoop measures the tick, then the recorder writes the tick's line with its timing
                                    │ DroneInterface: commands that don't block
                                    ▼
  drone ◄══ radio ══ the adapter: setpoints, high-level moves, parameters
@@ -47,7 +48,7 @@ request through the safety layer to the drone. Nothing skips a step.
 | `timing/clock.py` | `Clock`, with the real clock and the sim clock: the only source of time (ADR-0009). |
 | `drone/interface.py` | `DroneInterface`, which every adapter implements (ADR-0008), and the limits the safety layer and the adapters share. |
 | `drone/telemetry_buffer.py` | The latest telemetry: written from any thread, copied out once per tick. The only lock in the data path (ADR-0007). |
-| `drone/crazyflie/` | The Crazyflie adapter, the only code that imports cflib (ADR-0002): the link, the log blocks, unit conversion, every send, take-off, landing, touchdown, and "may be flying" (ADR-0039). Crazyflie-only concepts stop here (ADR-0006). |
+| `drone/crazyflie/` | The Crazyflie adapter, the only code that imports cflib (ADR-0002), and inside it only `adapter.py`, `link.py`, `log_blocks.py` and `commands.py` (ADR-0093): the link, the log blocks, unit conversion, every send, take-off, landing, touchdown, and "may be flying" (ADR-0039). Take-off and landing reaches no cflib and keeps pyright's strict mode (ADR-0093). Crazyflie-only concepts stop here (ADR-0006). |
 | `drone/mock_adapter.py` | A fake drone with no physics, behind the same interface and the same buffer (ADR-0010, ADR-0011, ADR-0052). |
 | `safety/requests.py` | The command request types and `Verdict`: all that a behavior may import from `safety/`. |
 | `safety/safety_layer.py` | The safety pre-check, the judging of command requests, the command slots, and the sending of commands (ADR-0025, ADR-0030). |
@@ -57,6 +58,7 @@ request through the safety layer to the drone. Nothing skips a step.
 | `recording/` | A recording's format and reading it back (`encoding.py`), and the recorder (`recorder.py`): one JSON Lines file per run, written on the tick's thread. An error stops the recording, never the flight (ADR-0034, ADR-0087, ADR-0088). |
 | `programs/` | Putting it together: the clock, the drone, the safety layer, the behavior and the loop; logging; the interrupt signal; exit codes (ADR-0028). `failsafe_fault.py` holds fault injection, for test programs only (ADR-0041). |
 | `tools/` (repository root) | Standalone scripts that may use cflib. `src/` never imports them (ADR-0002). |
+| `analysis/` (repository root) | Scripts whose numbers or charts a committed doc cites. They read committed recordings only. `src/` never imports them, and they never import cflib (ADR-0092). |
 
 ### When to split a module
 
@@ -67,12 +69,12 @@ the properties below (ADR-0074). Split a part out when any of these is true
 of it:
 
 1. **It needs fewer dependencies than the file.** The take-off and landing
-   logic needs no cflib, but it sits in a file that imports cflib, so it can
-   only run with cflib present. This one is checkable by the import fitness
-   tests.
+   logic needs no cflib, but it sat in a file that imports cflib, so it could
+   only run with cflib present, until ADR-0093 moved it out. This one is
+   checkable by the import fitness tests.
 2. **Another module needs it.** The section 7 target has the mock adapter
-   running the Crazyflie adapter's take-off and landing code. It cannot do
-   that while the code sits inside `CrazyflieAdapter`.
+   running the Crazyflie adapter's take-off and landing code, which it could
+   not do while the code sat inside `CrazyflieAdapter`.
 3. **It runs on a different thread.** Code called from cflib callbacks and
    code called from the tick should not share a file's worth of private state.
    Putting the cross-thread part in one small module makes what crosses the
@@ -97,13 +99,14 @@ mostly create wide interfaces. By review: no fitness function.
 | Drone to every layer | `Snapshot`. | Read-only. Each telemetry value is `Stamped` with its arrival time and the drone's, and is `None` until it first arrives. It also carries the adapter's `is_in_initial_climb` and `may_be_flying` (ADR-0054, ADR-0060) and the previous battery reading (ADR-0069). Its `time` is read after the copy (ADR-0046). |
 | cflib's thread to the tick's | `TelemetryBuffer`: its writers and `snapshot()`. | Values that arrive together are written together, so no snapshot mixes two samples (ADR-0007, ADR-0021). |
 | Tick loop to tick step | `TickStep.run(time, dt) -> bool` (done). `TickStep.request_stop()`, abstract. | The loop knows nothing else about a tick (ADR-0026). It calls `request_stop()` once, on the tick's thread, when it first sees a stop request, then ticks until `run()` reports done (ADR-0083). |
-| Tick step to recorder | `record_request(request, verdict)`, `record_tick(snapshot, events, flight_end_reason)`. The events are `SafetyLayer.events_this_tick`. | Each request as it's asked; the rest once the send is done, or after an error part way. The recorder never raises (ADR-0088). |
+| Tick step to recorder | `record_request(request, verdict)`, `record_tick(snapshot, events, flight_end_reason)`. The events are `SafetyLayer.events_this_tick`. | Each request as it's asked; the tick step record once the send is done, or after an error part way. The recorder never raises (ADR-0088). |
 | Tick loop to recorder | `on_tick_measured(lateness, work_time)`, optional. | On the tick's thread, after the work time is measured, so the write's own time shows as the next tick's lateness (ADR-0088). |
 | Any thread to tick loop | `TickLoop.request_stop()`. | Safe from any thread. In a program with a safety layer it sets the flight end, so a flying drone lands inside the loop before the program's `disconnect()`; later interrupt signals are ignored (ADR-0026, ADR-0083). |
 | Everything to time | `Clock.now()`, `Clock.sleep_until()`. | Injected, never read from the system directly (ADR-0009). |
 
 Only project types cross a boundary. No cflib object, `dict` of raw values or
-untyped value does (ADR-0004).
+untyped value does (ADR-0004). Inside the Crazyflie adapter, only its modules
+that import cflib pass cflib objects to each other (ADR-0093).
 
 ## 4. Dependency rules
 
@@ -127,8 +130,11 @@ layer, then the drone, then the shared values.
 
 Forbidden:
 
-1. cflib anywhere but `drone/crazyflie/` and `tools/` (ADR-0002). **[fitness]**
-2. `tools/` from `src/` (ADR-0002). **[fitness]**
+1. cflib anywhere but `tools/` and four modules in `drone/crazyflie/`:
+   `adapter.py`, `link.py`, `log_blocks.py` and `commands.py`; or reached by
+   take-off and landing through another module (ADR-0002, ADR-0093).
+   **[fitness]**
+2. `tools/` or `analysis/` from `src/` (ADR-0002, ADR-0092). **[fitness]**
 3. In a behavior: the drone package (ADR-0002); anything in `safety/` but
    `requests.py`; a clock, meaning `time`, `datetime` or `timing/`
    (ADR-0009). **[fitness]**, all three.
@@ -164,8 +170,10 @@ Forbidden:
   (ADR-0011). So whatever streams setpoints is fed on every tick, and nothing
   in a tick may wait.
 - **No waiting:** no sleep, wait or blocking read in a tick, a command or a
-  cflib callback (ADR-0003). Known exception: a cflib send can wait up to 2 s
-  during radio trouble (ADR-0027).
+  cflib callback (ADR-0003). **[fitness]** for the Crazyflie adapter: its
+  sleeps, waits and joins are reached only from `connect()` and
+  `disconnect()` (ADR-0093). Known exception: a cflib send can wait up to
+  2 s during radio trouble (ADR-0027).
 - **Threads:** the tick's thread, which is the main thread and runs the
   signal handler; cflib's receive thread, where a callback converts, writes
   to the telemetry buffer and returns; cflib's own radio and parameter
@@ -234,7 +242,6 @@ the repository until they're decided. Module names are working names.
 
 | Target | Changes here | Needs |
 |---|---|---|
-| The Crazyflie adapter becomes parts inside `drone/crazyflie/`: `link.py`, `log_blocks.py` and `commands.py`, which with `adapter.py` are the only cflib importers; and `flight_phases.py`, the take-off and landing logic with no cflib import and strict typing. `DroneInterface` stays as it is. | Section 2; rule 1 narrows to the named modules | An ADR; the glossary's *Crazyflie adapter* |
 | A tick reports an outcome, up to the program. | Section 3 | ADR-0036 is accepted; how the outcome travels is open |
 | Recordings, replay tests, and program tests on the sim clock. | A recorder beside the tick step | The recorder is built (ADR-0034, ADR-0087, ADR-0088). Program tests on the sim clock are built (ADR-0076). Replay tests are open |
 | Tuning values are grouped, passed in, and logged with every run. | Where constants live | An ADR |
