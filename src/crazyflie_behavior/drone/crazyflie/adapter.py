@@ -21,8 +21,6 @@ How the interface maps onto cflib:
 import logging
 from collections.abc import Callable
 
-import cflib.crtp
-from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.log import LogConfig
 
 # TODO: test-only, until the tests take the bit positions from cflib themselves (#158).
@@ -40,6 +38,12 @@ from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_HEIGH
 # TODO: test-only, until the tests import it from commands.py (#158).
 from crazyflie_behavior.drone.crazyflie.commands import DEFAULT_YAW_RAD as DEFAULT_YAW_RAD
 from crazyflie_behavior.drone.crazyflie.commands import CrazyflieCommands, land_as_a_last_resort
+
+# TODO: test-only, until the tests import it from link.py (#158).
+from crazyflie_behavior.drone.crazyflie.link import THRUST_BASE as THRUST_BASE
+
+# The adapter's own.
+from crazyflie_behavior.drone.crazyflie.link import CrazyflieLink
 
 # TODO: test-only, until the tests import them from log_blocks.py (#158).
 from crazyflie_behavior.drone.crazyflie.log_blocks import _CONTROLLER_VARIABLES as _CONTROLLER_VARIABLES
@@ -65,7 +69,7 @@ from crazyflie_behavior.drone.crazyflie.take_off_and_landing import (
 from crazyflie_behavior.drone.crazyflie.take_off_and_landing import LANDING_APPROACH_BACKUP as LANDING_APPROACH_BACKUP
 from crazyflie_behavior.drone.crazyflie.take_off_and_landing import TAKE_OFF_STATUS_GRACE as TAKE_OFF_STATUS_GRACE
 from crazyflie_behavior.drone.crazyflie.take_off_and_landing import TOUCHDOWN_POLL_PERIOD as TOUCHDOWN_POLL_PERIOD
-from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE, run_with_time_limit
+from crazyflie_behavior.drone.crazyflie.time_limit import WAIT_SLICE
 from crazyflie_behavior.drone.crazyflie.touchdown import HEIGHT_IF_UNKNOWN
 from crazyflie_behavior.drone.interface import STALE_AFTER, DroneInterface
 from crazyflie_behavior.drone.telemetry_buffer import TelemetryBuffer
@@ -81,11 +85,6 @@ DEFAULT_URI = "radio://0/80/2M/E7E7E7E7E7"
 # Flight parameters wait on speed envelopes (ADR-0005) and the safety layer.
 # These values just let the adapter run.
 # Time limits for connecting (ADR-0029). VERIFY at the bench, and measure (backlog #25).
-LINK_TIME_LIMIT = 15.0
-"""Seconds to open the link and get the drone's variable lists. A first connect,
-with nothing cached, downloads more."""
-PARAMETERS_TIME_LIMIT = 10.0
-"""Seconds to read the parameter values."""
 FIRST_TELEMETRY_TIME_LIMIT = 3.0
 """Seconds for every telemetry value to arrive once (ADR-0031). The battery,
 streamed once a second, is the slowest."""
@@ -98,26 +97,10 @@ WAIT_AFTER_SILENCE = 1.0
 LOW_LIGHT_IMAGE_QUALITY = 60
 """The Flow deck's image quality (`motion.squal`) under which a take-off logs a low-light warning
 (ADR-0054)."""
-THRUST_BASE = 43_000
-"""Written to the drone at connect, near this drone's hover thrust (ADR-0061). VERIFY from each hover's
-motor outputs."""
 # ------------------------------------------------------------------------------
 
 LAST_RESORT_LANDING_DURATION = HEIGHT_IF_UNKNOWN / VERTICAL_SPEED
 """Seconds: the last-resort landing's fixed time, down from the highest height assumed (ADR-0084)."""
-
-_THRUST_BASE_PARAMETER = "posCtlPid.thrustBase"
-
-_drivers_initialized = False
-
-
-def _init_drivers_once() -> None:
-    # cflib.crtp.init_drivers() appends to a global driver list on every call,
-    # so a second call would register every driver twice.
-    global _drivers_initialized
-    if not _drivers_initialized:
-        cflib.crtp.init_drivers()
-        _drivers_initialized = True
 
 
 def _yes_no(flag: bool) -> str:
@@ -147,11 +130,12 @@ class CrazyflieAdapter(DroneInterface):
         self._uri = uri
         self._cache_directory = cache_directory
         self._take_over_flight = take_over_flight
-        self._log_blocks = LogBlocks(clock, lambda: self._crazyflie, take_over_flight=take_over_flight)
+        self._log_blocks = LogBlocks(clock, lambda: self._link.crazyflie, take_over_flight=take_over_flight)
         """The log blocks, which own the telemetry buffer (ADR-0093). `connect()` builds a new one, with no
         values."""
-        self._sync_crazyflie: SyncCrazyflie | None = None
-        self._commands = CrazyflieCommands(lambda: self._crazyflie, lambda: self._log_blocks.telemetry)
+        self._link = CrazyflieLink(clock, uri, cache_directory, take_over_flight=take_over_flight)
+        """The radio link (ADR-0093). `connect()` builds a new one, with no lost link and no thrust base report."""
+        self._commands = CrazyflieCommands(lambda: self._link.crazyflie, lambda: self._log_blocks.telemetry)
         """The commands sent to the drone (ADR-0093). `connect()` builds a new one, with no setpoint stream."""
         self._take_off_and_landing = TakeOffAndLanding(
             clock, self._commands, lambda: self._log_blocks.telemetry, self.take_snapshot
@@ -168,68 +152,38 @@ class CrazyflieAdapter(DroneInterface):
         self._is_ignoring_estimate_reset = False
         """The latest estimate reset was ignored because the drone may be flying: the warning for it
         comes once per streak."""
-        self._is_thrust_base_confirmed = False
-        """The drone's latest report of its thrust base was THRUST_BASE (ADR-0061). Written on cflib's
-        receive thread."""
         self._take_off_log = take_off_log
-        self._lost_link_message: str | None = None
-        """cflib's message for a lost link (ADR-0084). Written on whichever thread cflib reports it from."""
-        self._is_lost_link_raised = False
-        """A snapshot or a wait has raised for the lost link, so `disconnect()` doesn't raise for it again."""
 
     # --- Connection ---------------------------------------------------------
 
     def connect(self) -> None:
-        _init_drivers_once()
         self._is_ignoring_hover = False
         self._is_ignoring_estimate_reset = False
-        self._is_thrust_base_confirmed = False
-        self._lost_link_message = None
-        self._is_lost_link_raised = False
         self._is_drone_state_unknown = True
         # A new link learns what the drone is doing from the drone, and carries on no take-off, landing or
         # setpoint stream from an earlier one.
-        self._commands = CrazyflieCommands(lambda: self._crazyflie, lambda: self._log_blocks.telemetry)
+        self._commands = CrazyflieCommands(lambda: self._link.crazyflie, lambda: self._log_blocks.telemetry)
         self._take_off_and_landing = TakeOffAndLanding(
             self._clock, self._commands, lambda: self._log_blocks.telemetry, self.take_snapshot
         )
         # A new link starts with no values, so the wait for the first telemetry
         # can't pass on values left from an earlier one (ADR-0031), and with no earlier
         # drone timestamp: the drone may have rebooted.
-        self._log_blocks = LogBlocks(self._clock, lambda: self._crazyflie, take_over_flight=self._take_over_flight)
-        sync_crazyflie = SyncCrazyflie(self._uri, cf=Crazyflie(rw_cache=self._cache_directory))
-        self._sync_crazyflie = sync_crazyflie  # tracked from the start, so cleanup always finds it
-        # Before the link opens, so no lost link goes unheard (ADR-0084).
-        sync_crazyflie.cf.connection_lost.add_callback(self._on_connection_lost)
+        self._log_blocks = LogBlocks(self._clock, lambda: self._link.crazyflie, take_over_flight=self._take_over_flight)
+        # A new link part too, so no lost link or thrust base report carries over.
+        self._link = CrazyflieLink(
+            self._clock, self._uri, self._cache_directory, take_over_flight=self._take_over_flight
+        )
         try:
-            # cflib's blocking steps each get a time limit, waited for in short
-            # slices so the interrupt signal gets through, even on Windows (ADR-0029).
-            run_with_time_limit(
-                "Opening the link",
-                sync_crazyflie.open_link,  # raises if it can't connect
-                LINK_TIME_LIMIT,
-                what_to_check="Check the Crazyflie is switched on, charged and in range.",
-                clock=self._clock,
-                # Stop a connection still under way, without cflib's zero-thrust
-                # setpoint: the drone may be flying (ADR-0038). When connecting
-                # fails on its own, cflib closes the link itself.
-                on_abandon=self._close_radio_link_only,
-            )
-            run_with_time_limit(
-                "Reading the parameters",
-                sync_crazyflie.wait_for_params,
-                PARAMETERS_TIME_LIMIT,
-                what_to_check="The link may have dropped: check the Crazyflie is still switched on.",
-                clock=self._clock,
-            )
-            if not self._deck_attached("deck.bcFlow2", "deck.bcFlow"):  # Flow deck v2 or v1
+            self._link.open()
+            if not self._link.is_deck_attached("deck.bcFlow2", "deck.bcFlow"):  # Flow deck v2 or v1
                 raise RuntimeError("Flow deck not detected: autonomous flight needs it.")
             # Find out whether the drone is flying before anything else touches it: the
             # estimate reset below expects a drone sitting still (ADR-0038).
             self._log_blocks.start_state_logging()
             self._settle_whether_the_drone_is_flying(self._wait_for_drone_status())
-            self._write_thrust_base()
-            self._log_blocks.start_remaining_logging(has_multiranger=self._deck_attached("deck.bcMultiranger"))
+            self._link.write_thrust_base()
+            self._log_blocks.start_remaining_logging(has_multiranger=self._link.is_deck_attached("deck.bcMultiranger"))
             self._wait_for_first_telemetry()
             self._log_whether_the_drone_arms_itself()
             self._log_whether_the_buzzer_deck_is_attached()
@@ -241,17 +195,17 @@ class CrazyflieAdapter(DroneInterface):
             raise
 
     def disconnect(self) -> None:
-        if self._sync_crazyflie is None:
+        if not self._link.has_link_to_close:
             return
         try:
-            if self._lost_link_message is None:
+            if not self._link.is_lost:
                 self._land_silence_and_wait()
-            if not self._is_lost_link_raised:
+            if not self._link.is_lost_link_raised:
                 # Lost since the last snapshot, or while disconnecting: the run must still end with an error.
-                self._raise_if_the_link_is_lost()
+                self._link.raise_if_lost()
         finally:
             # After a lost link, also one found while landing or waiting here.
-            if self._lost_link_message is not None:
+            if self._link.is_lost:
                 self._log_closing_after_the_lost_link()
             # Clean up even if landing failed.
             self._shut_down_link()
@@ -269,9 +223,12 @@ class CrazyflieAdapter(DroneInterface):
             if self._take_off_and_landing.is_airborne:
                 self._take_off_and_landing.land_and_wait_for_touchdown()
         except Exception:
-            if was_airborne and self._lost_link_message is None:
+            if was_airborne and not self._link.is_lost:
                 land_as_a_last_resort(
-                    lambda: self._crazyflie, LAST_RESORT_LANDING_DURATION, self._clock, self._close_radio_link_only
+                    lambda: self._link.crazyflie,
+                    LAST_RESORT_LANDING_DURATION,
+                    self._clock,
+                    self._link.close_radio_link_only,
                 )
             raise
         self._silence_and_keep_the_link_open()
@@ -373,7 +330,7 @@ class CrazyflieAdapter(DroneInterface):
     def take_snapshot(self, dt: float) -> Snapshot:
         """Raises after a lost link (ADR-0084). Every tick starts with a snapshot, so nothing else a tick calls
         needs its own check (ADR-0086)."""
-        self._raise_if_the_link_is_lost()
+        self._link.raise_if_lost()
         return self._log_blocks.telemetry.snapshot(
             dt,
             is_in_initial_climb=self._take_off_and_landing.is_in_initial_climb,
@@ -387,59 +344,10 @@ class CrazyflieAdapter(DroneInterface):
 
     # --- Internals ----------------------------------------------------------
 
-    @property
-    def _crazyflie(self) -> Crazyflie:
-        if self._sync_crazyflie is None:
-            raise RuntimeError("Not connected: call connect() first.")
-        return self._sync_crazyflie.cf
-
     def _close_link(self) -> None:
-        if self._sync_crazyflie is not None:
-            if self._take_off_and_landing.is_airborne or self._is_drone_state_unknown:
-                # The drone may be flying: cflib's close_link() would drop it (ADR-0038).
-                self._close_radio_link_only()
-            else:
-                self._sync_crazyflie.close_link()
-            self._sync_crazyflie = None
-
-    def _close_radio_link_only(self) -> None:
-        """Turn off the radio link and nothing else, so a flying drone keeps flying (ADR-0038).
-
-        cflib's `Crazyflie.close_link()` first sends a zero-thrust setpoint, which
-        would drop a flying drone. This does three of its other steps, in the same
-        order: close the link, stop the incoming packet handler, and call the
-        disconnected callbacks. It skips the rest (re-creating the incoming packet
-        handler, clearing the expected answers, setting the state to disconnected),
-        which matters only to a Crazyflie object that is used again: `connect()`
-        always makes a new one. It uses cflib internals (`link`, `incoming`):
-        re-check it against `close_link()` whenever cflib is upgraded. Safe to call
-        twice, and when the link isn't open.
-        """
-        if self._sync_crazyflie is None:
-            return
-        crazyflie = self._sync_crazyflie.cf
-        if crazyflie.link is not None:
-            logger.info("Closing the radio link only, with no zero-thrust setpoint: the drone may be flying")
-            crazyflie.link.close()
-            crazyflie.link = None
-        if crazyflie.incoming and crazyflie.incoming.is_alive():
-            crazyflie.incoming.stop()
-            crazyflie.incoming.join(timeout=1)
-        # cflib's own close_link() calls this too: it tells SyncCrazyflie the link is closed.
-        crazyflie.disconnected.call(crazyflie.link_uri)
-
-    def _on_connection_lost(self, link_uri: str, message: str) -> None:
-        # cflib calls this on whichever thread found the link error, the tick's included: store and log only.
-        self._lost_link_message = str(message)
-        logger.error("The radio link to the drone was lost: %s", message)
-
-    def _raise_if_the_link_is_lost(self) -> None:
-        """Raise after a lost link, so the run ends with an error (ADR-0084)."""
-        message = self._lost_link_message
-        if message is None:
-            return
-        self._is_lost_link_raised = True
-        raise ConnectionError(f"The radio link to the drone was lost: {message}")
+        """Only the radio link while the drone is airborne or its state is unknown: cflib's close_link() would drop a
+        flying drone (ADR-0038)."""
+        self._link.close(radio_link_only=self._take_off_and_landing.is_airborne or self._is_drone_state_unknown)
 
     def _log_closing_after_the_lost_link(self) -> None:
         if self._take_off_and_landing.may_be_flying():
@@ -450,47 +358,11 @@ class CrazyflieAdapter(DroneInterface):
         else:
             logger.error("Closing without landing: the link is lost. The drone wasn't flying.")
 
-    def _deck_attached(self, *parameters: str) -> bool:
-        """True if any of the deck parameters says the deck is attached."""
-        for parameter in parameters:
-            try:
-                if int(self._crazyflie.param.get_value(parameter)) == 1:
-                    return True
-            except KeyError:
-                pass  # this firmware doesn't know the parameter: not attached
-        return False
-
     def _silence_and_keep_the_link_open(self) -> None:
         """Silence the buzzer, then keep the link open for WAIT_AFTER_SILENCE (ADR-0085). A write that fails gets
         a warning instead, and no wait."""
         if self._commands.silence_at_disconnect():
             self._clock.sleep_until(self._clock.now() + WAIT_AFTER_SILENCE)
-
-    def _write_thrust_base(self) -> None:
-        """Write THRUST_BASE and log what the drone reports back, unless taking over a flight (ADR-0061)."""
-        if self._take_over_flight:
-            # The drone may be flying: a new base would change its thrust at once.
-            logger.info("Thrust base left as it is: the drone may be flying.")
-            return
-        param = self._crazyflie.param
-        group, name = _THRUST_BASE_PARAMETER.split(".")
-        param.add_update_callback(group=group, name=name, cb=self._on_thrust_base_reported)
-        try:
-            param.set_value(_THRUST_BASE_PARAMETER, THRUST_BASE)
-        except (KeyError, AttributeError):
-            # cflib raises these for a parameter the firmware lacks or can't write, and once the link is
-            # lost. The take-off warns and flies on without it.
-            cause = "the link is closed" if self._crazyflie.link is None else "the firmware can't write it"
-            logger.warning("Thrust base not sent: %s.", cause)
-
-    def _on_thrust_base_reported(self, name: str, value: str) -> None:
-        # cflib calls this on its receive thread, inside its parameter writer: an exception here would block
-        # every later parameter write. So the value is compared as text, never parsed.
-        self._is_thrust_base_confirmed = value == str(THRUST_BASE)
-        if self._is_thrust_base_confirmed:
-            logger.info("Thrust base confirmed: the drone reports %s.", value)
-        else:
-            logger.warning("Thrust base not confirmed: the drone reports %s, not %d.", value, THRUST_BASE)
 
     def _log_low_light_warning(self) -> None:
         """At take-off, warn of sideways drift when the Flow deck sees little (ADR-0054). Never refuses."""
@@ -507,7 +379,7 @@ class CrazyflieAdapter(DroneInterface):
 
     def _log_thrust_base_warning(self) -> None:
         """At take-off, warn of a slow climb unless the drone confirmed the thrust base (ADR-0061). Never refuses."""
-        if not self._is_thrust_base_confirmed:
+        if not self._link.is_thrust_base_confirmed:
             logger.warning("Taking off without a confirmed thrust base: the climb may be slow.")
 
     def _log_take_off_warnings(self) -> None:
@@ -611,6 +483,28 @@ class CrazyflieAdapter(DroneInterface):
     @property
     def _on_multiranger(self) -> Callable[[int, dict[str, float], LogConfig], None]:
         return self._log_blocks._on_multiranger
+
+    # TODO: test-only, until the tests reach the link part themselves (#158).
+
+    @property
+    def _sync_crazyflie(self) -> SyncCrazyflie | None:
+        return self._link._sync_crazyflie
+
+    @_sync_crazyflie.setter
+    def _sync_crazyflie(self, sync_crazyflie: SyncCrazyflie | None) -> None:
+        self._link._sync_crazyflie = sync_crazyflie
+
+    @property
+    def _on_connection_lost(self) -> Callable[[str, str], None]:
+        return self._link._on_connection_lost
+
+    @property
+    def _on_thrust_base_reported(self) -> Callable[[str, str], None]:
+        return self._link._on_thrust_base_reported
+
+    @property
+    def _is_thrust_base_confirmed(self) -> bool:
+        return self._link.is_thrust_base_confirmed
 
     # --- Telemetry ----------------------------------------------------------
 
@@ -731,7 +625,7 @@ class CrazyflieAdapter(DroneInterface):
         """
         deadline = self._clock.now() + time_limit
         while not is_done():
-            self._raise_if_the_link_is_lost()
+            self._link.raise_if_lost()
             now = self._clock.now()
             if now >= deadline:
                 raise TimeoutError(time_limit_message())
@@ -749,7 +643,7 @@ class CrazyflieAdapter(DroneInterface):
 
     def _log_whether_the_buzzer_deck_is_attached(self) -> None:
         """Log once whether the Buzzer deck is attached (ADR-0053). Flying doesn't need it."""
-        if self._deck_attached("deck.bcBuzzer"):
+        if self._link.is_deck_attached("deck.bcBuzzer"):
             logger.info("Buzzer deck detected.")
         else:
             logger.info("No Buzzer deck: buzzer commands will make no sound.")

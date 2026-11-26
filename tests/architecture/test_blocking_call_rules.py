@@ -39,7 +39,6 @@ BLOCKING_FUNCTIONS = {
     "adapter.py::CrazyflieAdapter.connect",
     "adapter.py::CrazyflieAdapter.disconnect",
     "adapter.py::CrazyflieAdapter._close_link",
-    "adapter.py::CrazyflieAdapter._close_radio_link_only",
     "adapter.py::CrazyflieAdapter._land_silence_and_wait",
     "adapter.py::CrazyflieAdapter._shut_down_link",
     "adapter.py::CrazyflieAdapter._silence_and_keep_the_link_open",
@@ -48,6 +47,9 @@ BLOCKING_FUNCTIONS = {
     "adapter.py::CrazyflieAdapter._wait_for_not_flying",
     "adapter.py::CrazyflieAdapter._wait_until",
     "commands.py::land_as_a_last_resort",
+    "link.py::CrazyflieLink.close",
+    "link.py::CrazyflieLink.close_radio_link_only",
+    "link.py::CrazyflieLink.open",
     "take_off_and_landing.py::TakeOffAndLanding.land_and_wait_for_touchdown",
     "time_limit.py::run_with_time_limit",
 }
@@ -55,10 +57,10 @@ BLOCKING_FUNCTIONS = {
 blocking goes on this list, so the change shows in review."""
 
 ALLOWED_STORED_CALLABLES: dict[tuple[str, str], str] = {
-    ("adapter.py::CrazyflieAdapter.connect", "open_link"): "run_with_time_limit's helper thread runs it",
-    ("adapter.py::CrazyflieAdapter.connect", "wait_for_params"): "run_with_time_limit's helper thread runs it",
-    ("adapter.py::CrazyflieAdapter.connect", "_close_radio_link_only"): "run_with_time_limit runs it as on_abandon",
-    ("adapter.py::CrazyflieAdapter._land_silence_and_wait", "_close_radio_link_only"): "land_as_a_last_resort runs it",
+    ("adapter.py::CrazyflieAdapter._land_silence_and_wait", "close_radio_link_only"): "land_as_a_last_resort runs it",
+    ("link.py::CrazyflieLink.open", "open_link"): "run_with_time_limit's helper thread runs it",
+    ("link.py::CrazyflieLink.open", "wait_for_params"): "run_with_time_limit's helper thread runs it",
+    ("link.py::CrazyflieLink.open", "close_radio_link_only"): "run_with_time_limit runs it as on_abandon",
 }
 """Blocking functions and calls used as a value: (the function that uses it, its name) to what runs it. Allowed only
 when what it's passed to runs it, or waits for it, before returning: the function that passes it then blocks too."""

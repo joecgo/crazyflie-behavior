@@ -19,6 +19,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from crazyflie_behavior.drone.crazyflie import adapter as adapter_module
+from crazyflie_behavior.drone.crazyflie import link as link_module
 from crazyflie_behavior.drone.crazyflie import log_blocks as log_blocks_module
 from crazyflie_behavior.drone.crazyflie.adapter import TAKE_OFF_BLOCK_DURATION, CrazyflieAdapter
 from crazyflie_behavior.drone.crazyflie.bad_flow_zone import FINAL_DESCENT_HEIGHT
@@ -231,9 +232,9 @@ class StreamingSimClock(SimClock):
 @pytest.fixture
 def fake_cflib(monkeypatch: pytest.MonkeyPatch) -> Generator[FakeCflib]:
     fake = FakeCflib()
-    monkeypatch.setattr(adapter_module, "_drivers_initialized", True)
-    monkeypatch.setattr(adapter_module, "SyncCrazyflie", fake.sync_crazyflie_class)
-    monkeypatch.setattr(adapter_module, "Crazyflie", fake.crazyflie_class)
+    monkeypatch.setattr(link_module, "_drivers_initialized", True)
+    monkeypatch.setattr(link_module, "SyncCrazyflie", fake.sync_crazyflie_class)
+    monkeypatch.setattr(link_module, "Crazyflie", fake.crazyflie_class)
     monkeypatch.setattr(log_blocks_module, "LogConfig", fake.make_log_block)
     yield fake
     fake.stop()  # ends the streaming threads
@@ -467,7 +468,7 @@ def interrupt_signal_step() -> Generator[BlockingStep]:
 @pytest.fixture
 def short_time_limits(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in ("LINK_TIME_LIMIT", "PARAMETERS_TIME_LIMIT"):
-        monkeypatch.setattr(adapter_module, name, 0.2)
+        monkeypatch.setattr(link_module, name, 0.2)
 
 
 def real_time_adapter() -> CrazyflieAdapter:
