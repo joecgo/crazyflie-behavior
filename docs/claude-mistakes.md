@@ -73,19 +73,19 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 22 |
 | recommendation | 7 | 10 |
 | environment | 4 | 11 |
-| communication | 14 | 79 |
-| testing | 2 | 38 |
-| process | 7 | 44 |
-| **Total** | **44** | **229** |
+| communication | 14 | 81 |
+| testing | 2 | 39 |
+| process | 7 | 45 |
+| **Total** | **44** | **233** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 56 |
-| records-ahead-of-code | 35 |
+| said-without-checking | 57 |
+| records-ahead-of-code | 36 |
 | weak-test | 33 |
-| how-I-work | 31 |
+| how-I-work | 32 |
 | vocabulary | 26 |
 | safety-judgment | 18 |
 | window-between-steps | 17 |
@@ -93,7 +93,7 @@ entries go at the top of their section without an ID.
 | reading-field-data | 15 |
 | message-misstates-outcome | 14 |
 | environment | 10 |
-| leftover-state | 3 |
+| leftover-state | 4 |
 <!-- end generated -->
 
 Of the 33 I pointed out up to 2026-11-16, a later Claude review would
@@ -112,6 +112,10 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-277 | 2026-11-25 | D13's records counted the flags' clearing as built with no test for it | testing | leftover-state | Q-18 and Q-39: a record that says a reset is built names the test that fails without it, and the plants cover everything the change resets |
+| M-276 | 2026-11-25 | E20 said a wrong build order shows only on a second connect, against E13 | communication | said-without-checking | rule 2: a note that cites another note reads it first, and a claim about which flight shows a bug is planted before it goes into an answer |
+| M-275 | 2026-11-25 | D13's decision left out of the review queue | process | how-I-work | a choice Joe makes while building goes into the review queue in the same step as the brief |
+| M-274 | 2026-11-25 | D13's builder docstring said "everything a new link resets" | communication | records-ahead-of-code | Q-34: an "everything" or "only" in a docstring is checked against the code; a comment points to the fact's owner rather than copying it |
 | M-273 | 2026-11-25 | The first fix for #162's case-index finding checked something a planted off-by-one left unchanged | testing | weak-test | a check meant to pin where something happened compares the place noted at the event, and the plant that moves the event runs before the fix is called done |
 | M-272 | 2026-11-25 | The review's failure scenario for the fake's assert was a loss the adapter never hears of | communication | said-without-checking | a review finding's failure scenario is traced to its end, or planted, before it's reported (Q-20) |
 | M-271 | 2026-11-25 | cflib's full link close can hang on a lost link, and no review asked whether its check could change on another thread | design | window-between-steps | Q-03's question about a guard that changes on another thread is asked of a library's own check-then-wait code too, with the answer in the facts register |
@@ -820,6 +824,38 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-277, 2026-11-25: D13's records counted the flags' clearing as built with no test for it
+
+- **What happened:** D13's builder clears the adapter's two once-per-streak flags on every connect, and the backlog and the brief counted that as built, with "6 planted bugs, all caught". None of the six kept a flag across a connect. The project review planted each, and all 1078 tests passed both times. The hand-written clearing before D13 was untested too. Two tests that connect again now fail under those plants.
+- **Kind:** testing.
+- **Pattern:** leftover-state.
+- **Guard:** Q-18 and Q-39: a record that says a reset is built names the test that fails without it, and the plants cover everything the change resets.
+- **Takeaway:** leftover-state is past its third entry, and D13 is its design change: fresh parts on every connect. The adapter's own per-link flags each have a test that connects again.
+
+### M-276, 2026-11-25: E20 said a wrong build order shows only on a second connect, against E13
+
+- **What happened:** E20's question and its notes said that with two copies of the build, take-off and landing built before its commands in `connect()`'s copy would show only on a second connect, since the transcripts connect once, and cited E13. E13's notes say the opposite: the part sends through a second commands object from the first connect on, so velocity setpoints then a landing skip the release. The project review planted it, and 1 test failed after the first connect. Joe would have been graded against a wrong answer about his own adapter.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** rule 2: a note that cites another note reads it first, and a claim about which flight shows a bug is planted before it goes into an answer.
+- **Takeaway:** about an explanation, so it stays in this log.
+
+### M-275, 2026-11-25: D13's decision left out of the review queue
+
+- **What happened:** Joe chose option A for D13, one builder for `__init__` and `connect()`. The work session that built it put the choice in the brief but not in the review queue's Decisions, which CLAUDE.md asks for as it happens, and its edit to `ARCHITECTURE.md` section 7's row had no "text approved" there either. The project review found both; Joe kept the row.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** a choice Joe makes while building goes into the review queue in the same step as the brief.
+- **Takeaway:** no cheap mechanism; the project review's check of the records caught it.
+
+### M-274, 2026-11-25: D13's builder docstring said "everything a new link resets"
+
+- **What happened:** `_build_parts()`'s docstring said it does everything a new link resets, but `connect()` sets `_is_drone_state_unknown` itself. `connect()`'s comment also listed what each fresh part starts without, a copy of the builder's attribute docstrings that already differed from them. Both reworded after the project review.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** Q-34: an "everything" or "only" in a docstring is checked against the code; a comment points to the fact's owner rather than copying it.
+- **Takeaway:** records-ahead-of-code is past its third entry with no cheap mechanism for prose, so the review question stays.
 
 ### M-273, 2026-11-25: The first fix for #162's case-index finding checked something a planted off-by-one left unchanged
 

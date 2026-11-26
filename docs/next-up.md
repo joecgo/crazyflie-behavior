@@ -9,12 +9,23 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-25 (Pacific)
-- **Last commit:** "Wrap-up 2026-11-25: work log, mistake M-273, next-up
-  brief", this page's own commit, after `50888c6`. Uncommitted: nothing.
-  The checks pass (1078 passed, 1 skipped).
+- **Last commit:** "Records after #157's D13: mistakes M-274 to M-277,
+  backlog #164, next-up brief", this page's own commit, after
+  `bedea58`, pushed. Uncommitted: nothing. The checks pass (1080
+  passed, 1 skipped).
 
 ## Done last
 
+- **#157's D13 (ADR-0093), committed and pushed (`bedea58`):** Joe chose
+  option A: one builder, `_build_parts()`, called by `__init__` and
+  `connect()`, builds the four parts in order (the commands before take-off
+  and landing) and clears the two once-per-streak flags. `connect()` still
+  sets the unknown-state flag itself, since `__init__` wants it False.
+  `/project-review max`, run inline: no correctness bug, 8 findings. No
+  test guarded the flags' clearing (both plants passed every test), so two
+  tests that connect again now do; the builder's docstring and `connect()`'s
+  comment reworded; backlog #164 for `connect()` while a link is still
+  open; E20 corrected. Mistakes M-274 to M-277.
 - **#162's review (ADR-0095):** `/project-review max`, run inline: no
   correctness bug in the new cleanup, 12 findings. The lost link's error
   is now raised while handling the step's error, not with it as its cause,
@@ -37,21 +48,21 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
-- #157 (ADR-0093): stages 1 to 6 and the blocking-call fitness function
-  committed, with their reviews' fixes. Left: rebuilding the parts in
-  `connect()` (D13), and the last two fitness functions. No work order:
-  backlog #157 and ADR-0093 hold the plan.
+- #157 (ADR-0093): stages 1 to 6, the blocking-call fitness function and
+  D13's builder committed, with their reviews' fixes. Left: the last two
+  fitness functions. No work order: backlog #157 and ADR-0093 hold the
+  plan.
 
 ## Next three
 
-1. #157's next stage: rebuilding the parts in `connect()` (ADR-0093's
-   D13). Opus, Max.
-2. Build #153, the test for citations of removed backlog rows (ADR-0091),
+1. Build #153, the test for citations of removed backlog rows (ADR-0091),
    before backlog row #157 is removed (#158 to #160 cite it). It first
    needs Joe's OK on a glossary term: *Live doc* was proposed, *Live place*
    the alternative. Sonnet, medium.
-3. #157's last two fitness functions: the cflib importers by name, and
+2. #157's last two fitness functions: the cflib importers by name, and
    take-off and landing free of cflib and `# pyright: basic`. Opus, Max.
+3. #158, one shared cflib fake for the adapter tests, right after #157: it
+   first needs a test-layout decision (`/decide`). Opus, high.
 
 ## Explain-backs waiting
 
@@ -121,6 +132,11 @@ from `drafts/explain-back-notes.md`; don't open it first.
   `from`. What does Python print between the two errors in each case, why
   does the first mislead an operator reading a failed rescue landing, and
   what in the tests fails if someone puts the `from` back?
+- **E20.** D13 gives `__init__` and `connect()` one builder,
+  `_build_parts()`. Why does building take-off and landing before the
+  commands now fail every test at once, where with two copies the same
+  mistake in `connect()`'s copy failed only one test, and why does
+  `connect()` set the unknown-state flag itself rather than the builder?
 
 ## Last reviewed
 
@@ -133,4 +149,4 @@ function's review comments (`drafts/2026-11-24-blocking-call-review-comments.md`
 and stage 4's (`drafts/2026-11-24-stage-4-review-comments.md`), which
 `/review-packet` posts along with the review queue.
 
-Review queue: 10 decisions, 37 findings waiting (`docs/review-queue.md`).
+Review queue: 12 decisions, 45 findings waiting (`docs/review-queue.md`).
