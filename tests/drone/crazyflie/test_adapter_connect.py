@@ -439,6 +439,43 @@ def test_connecting_again_warns_again_about_a_buzzer_command_on_a_closed_link(
     ] * 2
 
 
+def test_connecting_again_logs_an_ignored_hover_again(
+    adapter: CrazyflieAdapter, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The once-per-streak log line starts over with each connection."""
+    caplog.set_level(logging.INFO, logger=adapter_module.__package__)
+    adapter.connect()
+    adapter.hover()  # on the floor: ignored
+    adapter.disconnect()
+    adapter.connect()
+
+    adapter.hover()  # on the floor again, on a new link
+
+    assert [r.getMessage() for r in caplog.records if "Hover ignored" in r.getMessage()] == [
+        "Hover ignored: the drone isn't flying. Logged once per streak."
+    ] * 2
+
+
+def test_connecting_again_warns_again_about_an_ignored_estimate_reset(
+    fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The once-per-streak warning starts over with each connection."""
+    adapter = CrazyflieAdapter(StreamingSimClock(fake_cflib, start=10.0))
+    caplog.set_level(logging.WARNING, logger=adapter_module.__package__)
+    adapter.connect()
+    adapter.take_off(0.5)
+    adapter.reset_estimate()  # the drone may be flying: ignored
+    adapter._shut_down_link()  # the connection ends mid-streak
+    adapter.connect()  # a drone on the floor
+    adapter.take_off(0.5)
+
+    adapter.reset_estimate()  # may be flying again, on a new link
+
+    assert [r.getMessage() for r in caplog.records if "Estimate reset ignored" in r.getMessage()] == [
+        "Estimate reset ignored: the drone may be flying. Warned once per streak."
+    ] * 2
+
+
 def test_a_multi_ranger_adds_its_own_log_block(adapter: CrazyflieAdapter, fake_cflib: FakeCflib) -> None:
     fake_cflib.parameters["deck.bcMultiranger"] = "1"
 

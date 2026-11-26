@@ -130,29 +130,37 @@ class CrazyflieAdapter(DroneInterface):
         self._uri = uri
         self._cache_directory = cache_directory
         self._take_over_flight = take_over_flight
-        self._log_blocks = LogBlocks(clock, lambda: self._link.crazyflie, take_over_flight=take_over_flight)
-        """The log blocks, which own the telemetry buffer (ADR-0093). `connect()` builds a new one, with no
-        values."""
-        self._link = CrazyflieLink(clock, uri, cache_directory, take_over_flight=take_over_flight)
-        """The radio link (ADR-0093). `connect()` builds a new one, with no lost link and no thrust base report."""
-        self._commands = CrazyflieCommands(lambda: self._link.crazyflie, lambda: self._log_blocks.telemetry)
-        """The commands sent to the drone (ADR-0093). `connect()` builds a new one, with no setpoint stream."""
-        self._take_off_and_landing = TakeOffAndLanding(
-            clock, self._commands, lambda: self._log_blocks.telemetry, self.take_snapshot
-        )
-        """Take-off and landing (ADR-0093). It sends through `_commands`, so `connect()` builds a new one right after
-        them, with no flight under way."""
-        self._is_ignoring_hover = False
-        """The latest hover was ignored because the drone isn't one that may be flying: the log line for
-        it comes once per streak."""
+        self._take_off_log = take_off_log
         self._is_drone_state_unknown = False
         """True from the start of `connect()` until the drone is known to be on the floor or its
         flight is taken over (ADR-0038). It stays True when the drone is found flying and refused:
         while True, the drone may be flying, so the link is closed without a zero-thrust setpoint."""
+        self._build_parts()
+
+    def _build_parts(self) -> None:
+        """Build fresh parts and clear the adapter's once-per-streak flags (ADR-0093). `_is_drone_state_unknown`
+        isn't here: `connect()` sets it True, and `__init__` False."""
+        self._commands = CrazyflieCommands(lambda: self._link.crazyflie, lambda: self._log_blocks.telemetry)
+        """The commands sent to the drone (ADR-0093), with no setpoint stream."""
+        self._take_off_and_landing = TakeOffAndLanding(
+            self._clock, self._commands, lambda: self._log_blocks.telemetry, self.take_snapshot
+        )
+        """Take-off and landing (ADR-0093), with no flight under way. It keeps the commands it's built with, so it's
+        built right after them."""
+        self._log_blocks = LogBlocks(self._clock, lambda: self._link.crazyflie, take_over_flight=self._take_over_flight)
+        """The log blocks, which own the telemetry buffer (ADR-0093), with no values: the wait for the first telemetry
+        can't pass on values from an earlier link (ADR-0031), and there's no earlier drone timestamp, since the drone
+        may have rebooted."""
+        self._link = CrazyflieLink(
+            self._clock, self._uri, self._cache_directory, take_over_flight=self._take_over_flight
+        )
+        """The radio link (ADR-0093), with no lost link and no thrust base report."""
+        self._is_ignoring_hover = False
+        """The latest hover was ignored because the drone isn't one that may be flying: the log line for
+        it comes once per streak."""
         self._is_ignoring_estimate_reset = False
         """The latest estimate reset was ignored because the drone may be flying: the warning for it
         comes once per streak."""
-        self._take_off_log = take_off_log
 
     # --- Connection ---------------------------------------------------------
 
@@ -160,23 +168,9 @@ class CrazyflieAdapter(DroneInterface):
         """After a lost link, a step that fails ends it with the lost link's error, raised while handling the step's
         error so the traceback shows that error first. When the step was a wait that raised the lost link's error,
         that error passes through (ADR-0095)."""
-        self._is_ignoring_hover = False
-        self._is_ignoring_estimate_reset = False
         self._is_drone_state_unknown = True
-        # A new link learns what the drone is doing from the drone, and carries on no take-off, landing or
-        # setpoint stream from an earlier one.
-        self._commands = CrazyflieCommands(lambda: self._link.crazyflie, lambda: self._log_blocks.telemetry)
-        self._take_off_and_landing = TakeOffAndLanding(
-            self._clock, self._commands, lambda: self._log_blocks.telemetry, self.take_snapshot
-        )
-        # A new link starts with no values, so the wait for the first telemetry
-        # can't pass on values left from an earlier one (ADR-0031), and with no earlier
-        # drone timestamp: the drone may have rebooted.
-        self._log_blocks = LogBlocks(self._clock, lambda: self._link.crazyflie, take_over_flight=self._take_over_flight)
-        # A new link part too, so no lost link or thrust base report carries over.
-        self._link = CrazyflieLink(
-            self._clock, self._uri, self._cache_directory, take_over_flight=self._take_over_flight
-        )
+        # A new link learns what the drone is doing from the drone: nothing carries over from an earlier one.
+        self._build_parts()
         try:
             self._link.open()
             if not self._link.is_deck_attached("deck.bcFlow2", "deck.bcFlow"):  # Flow deck v2 or v1
