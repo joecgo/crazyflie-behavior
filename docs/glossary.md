@@ -181,6 +181,7 @@ only an example: "For example, about 43,300 for this drone".
 | **Take over (a flight)** | Connect to a drone that may be flying, without resetting its position estimate, and treat it as flying until it lands. Only the rescue landing program does it. | [0038](decisions/0038-connecting-to-a-flying-drone.md) |
 | **Streak** | An unbroken run of the same condition, counted in whatever repeats (ticks, command requests, state packets). It ends the first time the condition doesn't hold. A warning comes once per streak, so a long fault logs once, not every tick. | [0020](decisions/0020-failures-degrade-gracefully.md), [0042](decisions/0042-negative-ages-count-as-fresh.md) |
 | **Project tour** | An interactive guide that walks a reader through the project: what's interesting and unique about it, and how it's designed to be easy to understand and change. Each claim links to its evidence in the repository (an ADR, a test, a flight log or a doc). | — |
+| **Chapter** | One page of the project tour, on one part of the project, such as the Crazyflie adapter. | — |
 
 ## Buzzer deck
 
