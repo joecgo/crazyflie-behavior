@@ -9,50 +9,50 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-26 (Pacific)
-- **Last commit:** the records after the tour's round 2 of feedback (the dots
-  joke, no depth buttons, the 2 s drop-down). Uncommitted: nothing.
+- **Last commit:** the records after the tour's pass two (mistakes M-290 and
+  M-291, work log, backlog, this brief), after `67b24e5` (pass two).
+  Uncommitted: nothing.
 
 ## Done last
 
-- **The tour is live** at https://joecgo.com/crazyflie-project-tour/
-  (`joecgo/portfolio` `d166951`, copied from `58b726f` with `adapter.html` as
-  `index.html`, no visitor counter). The home page links it and says 95
-  records. Live files matched the copy.
-- **Tour chapter 1:** round 1 of the feedback and item 7 (numbers written by
-  `tools/tour_numbers.py`, checked by `tests/docs/test_tour_numbers.py`), the
-  project-tour skill, mistake M-289, backlog #166 to #168. Pushed; continuous
-  integration passed on `58b726f`.
+- **Tour chapter 1, pass two** (`67b24e5`): sections 4 and 6 to 9 in
+  `docs/tour/` (the setpoint priority step by step and the firmware's
+  watchdog, a may-be-flying calculator, connect and disconnect steps, five
+  failures, five planted bugs with every test that failed).
+  `tools/tour_numbers.py` reads seven more constants and rounds a worked-out
+  number to set `digits`, with a test. Preview version 6 published.
+- **Tour round 2 of feedback** (the dots joke, no depth buttons, the 2 s
+  drop-down): committed and pushed.
 - **#157's D13 and last fitness functions (ADR-0093)**; review pull request
   #31 opened.
 
 ## In progress
 
-- Joe judges the tour's look and feel (preview version 5,
-  https://claude.ai/artifact/XWPWS3fCf52696zXq6ZkJp, and the live page).
-  Feedback edits go in `docs/tour/`, by the project-tour skill. Round 2 is in
-  neither: the preview needs republishing (its tool wants the whole live page
-  read first) and the live copy needs copying again (#168).
-- Joe's call: whether the partial chapter counts as "the tour is published"
-  for Airworthy.
+- Joe judges the whole chapter: preview version 6,
+  https://claude.ai/artifact/XWPWS3fCf52696zXq6ZkJp. Feedback edits go in
+  `docs/tour/`, by the project-tour skill. The live copy at
+  joecgo.com/crazyflie-project-tour is still the launch copy of `58b726f`
+  (#168). Republishing the preview needs a full read of the live page, its
+  `tour.css` and `tour.js` first (about 45k tokens).
+- Joe's call: whether the chapter counts as "the tour is published" for
+  Airworthy.
 - Joe's review of #31. When he's done: fix what he asks on `main`, close
   #31 unmerged like #24 to #30, and give `REVIEW.md`'s log its row.
 
 ## Next three
 
-1. Once Joe accepts pass one: the ADR for the tour's form (the work order
+1. Joe's feedback on pass two, then #166 and #167 (the module sizes and
+   the glossary pop-ups written from the pinned commit). Opus, high.
+2. Once Joe accepts the chapter: the ADR for the tour's form (the work order
    `drafts/project-tour-adapter-handoff.md`, decided items 1-4 and 10, and
-   item 7's four answers of 2026-11-26: a test fails when a page is out of
-   date, numbers are read at the pinned commit, the script is in `tools/` and
-   the test imports it, and it writes text, tables, the animations' numbers,
-   other forms and constant links), with #168, its index row and Built
-   column. Sonnet, medium.
-2. Joe's review of #31, then its fixes. Opus, high.
-3. Build #153, the test for citations of removed backlog rows (ADR-0091),
-   then remove row #157. It first needs Joe's OK on a glossary term: *Live
-   doc* proposed, *Live place* the alternative. Sonnet, medium.
+   item 7's four answers), with #168, its index row and Built column.
+   Sonnet, medium.
+3. Joe's review of #31, then its fixes. Opus, high.
 
-After those: tour pass two, with #166 and #167; #165, then #158 (needs a
-test-layout decision, `/decide`). Opus, high.
+After those: #153, the test for citations of removed backlog rows
+(ADR-0091), which first needs Joe's OK on a glossary term (*Live doc*, or
+*Live place*); then #165, then #158 (needs a test-layout decision,
+`/decide`).
 
 ## Explain-backs waiting
 
@@ -122,6 +122,10 @@ from `drafts/explain-back-notes.md`; don't open it first.
   leave a link showing a different number than the page, why can no change
   to a constant in today's code fail the page test, and what does the test
   of each unit against its docstring catch that the page test can't?
+- **E25.** Section 9 of the tour plants "trust a stale status" in may be
+  flying, and only one test fails. Why does rule 2 count a stale
+  on-the-floor status as flying, what would `land()` do without it, and is
+  one test enough?
 
 ## Last reviewed
 

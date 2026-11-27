@@ -74,9 +74,9 @@ entries go at the top of their section without an ID.
 | recommendation | 7 | 10 |
 | environment | 4 | 12 |
 | communication | 14 | 87 |
-| testing | 2 | 41 |
-| process | 8 | 47 |
-| **Total** | **45** | **244** |
+| testing | 2 | 42 |
+| process | 8 | 48 |
+| **Total** | **45** | **246** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
@@ -84,8 +84,8 @@ entries go at the top of their section without an ID.
 |---|---|
 | said-without-checking | 60 |
 | records-ahead-of-code | 39 |
-| how-I-work | 34 |
-| weak-test | 34 |
+| how-I-work | 35 |
+| weak-test | 35 |
 | vocabulary | 27 |
 | safety-judgment | 18 |
 | window-between-steps | 17 |
@@ -112,6 +112,8 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-291 | 2026-11-26 | The tour's link rows ignored `hidden` because a CSS rule set their display | testing | weak-test | the harness check counted visible rows by the attribute, not by what renders |
+| M-290 | 2026-11-26 | The tour's pass two broke two of the project-tour skill's rules | process | how-I-work | working rule 2: reread the project-tour skill's "Cut clutter" and "Numbers from the code" before writing a section, and search the page for numbers and placeholder words before the check |
 | M-289 | 2026-11-26 | Two counts in the project tour's first chapter weren't counted from the code | communication | said-without-checking | working rule 2, applied to "every" and to counts: count them from the code |
 | M-288 | 2026-11-26 | The project tour said what the safety pre-check checks from part of the code | communication | said-without-checking | working rule 2: read the code, not an old comment, and the whole function a claim is about |
 | M-287 | 2026-11-26 | The project tour's outline said take-off and landing is tested without cflib | communication | said-without-checking | the tour's own rule, in its work order (`drafts/project-tour-adapter-handoff.md`): every claim on the page links to the code or test that shows it, and a claim with nothing to link is left out |
@@ -844,6 +846,22 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-291, 2026-11-26: The tour's link rows ignored `hidden` because a CSS rule set their display
+
+- **What happened:** section 4's baton keeps one row of evidence links per send sequence and hides the others with the `hidden` attribute. `tour.css` gives `.links` `display: flex`, which beats the browser's own `[hidden]` rule, so all four rows showed at once. Caught on the first desktop screenshot; `.links[hidden]` now sets `display: none`.
+- **Kind:** testing.
+- **Pattern:** weak-test.
+- **Guard:** the harness check counted visible rows by the attribute, not by what renders. Look at a screenshot of each new toggled element, and give any class that sets `display` a `[hidden]` rule when it's hidden by the attribute.
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
+
+### M-290, 2026-11-26: The tour's pass two broke two of the project-tour skill's rules
+
+- **What happened:** section 7's caption said the time limits "are first guesses, to be measured at the bench", a note of which values are placeholders, and section 9 had a link labeled "the five tests", a count typed by hand. The skill forbids both. Caught on the screenshot review before publishing; both are gone.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** working rule 2: reread the project-tour skill's "Cut clutter" and "Numbers from the code" before writing a section, and search the page for numbers and placeholder words before the check.
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
 
 ### M-289, 2026-11-26: Two counts in the project tour's first chapter weren't counted from the code
 
