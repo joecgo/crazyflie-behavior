@@ -26,6 +26,8 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["--import-mode=importlib"]
+# The repository root, so tests/docs can import tools/tour_numbers.py.
+pythonpath = ["."]
 
 # --- ruff: formatting and linting (ADR-0004) ---
 [tool.ruff]

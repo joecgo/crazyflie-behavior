@@ -142,29 +142,6 @@ main, .foot-inner {
 .stop .lede, .prose { max-width: var(--measure); }
 .stop .lede { font-size: 1.12rem; margin: 1rem 0 0.6rem; }
 .prose p, .stop > p { max-width: var(--measure); }
-.focus-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.8rem 0 0; }
-.focus {
-  font: 600 0.72rem/1 var(--font-display);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-2);
-  border: 1px solid var(--line-2);
-  border-radius: 4px;
-  padding: 0.35rem 0.5rem;
-}
-.focus::before { content: "Focus area · "; color: var(--ink-3); }
-.ph {
-  display: inline-block;
-  font: 600 0.68rem/1 var(--font-display);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--caution);
-  border: 1px solid rgba(250, 178, 25, 0.55);
-  border-radius: 3px;
-  padding: 0.18rem 0.32rem;
-  vertical-align: 0.15em;
-  white-space: nowrap;
-}
 
 /* --- Figures ----------------------------------------------------------- */
 .fig { margin: 1.6rem 0; }
@@ -241,8 +218,7 @@ a.src::after { content: " ↗"; font-size: 0.85em; }
 .mod .lines { font: 0.8rem var(--font-mono); color: var(--ink-3); text-align: right; }
 .mod .job { grid-column: 1 / -1; font-size: 0.86rem; color: var(--ink-2); line-height: 1.4; }
 .mod .size { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
-.mod .size i { display: block; height: 100%; background: var(--ink-3); }
-.mgroup.cflib .mod .size i { background: var(--caution); opacity: 0.75; }
+.mod .size i { display: block; height: 100%; background: var(--caution); opacity: 0.75; }
 
 /* Timeline and flight charts */
 .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; margin: 0 0 0.8rem; }
@@ -351,9 +327,9 @@ figure.code .c { color: #7f8a96; }
 figure.code .k { color: #c7a6ff; }
 figure.code figcaption { font-size: 0.85rem; color: var(--ink-3); margin-top: 0.35rem; }
 
-/* Glossary pop-over */
-.term { border-bottom: 1px dotted var(--ink-3); cursor: help; }
-.term:hover, .term:focus-visible { border-bottom-color: var(--accent); color: var(--ink); outline: none; }
+/* Pop-overs: glossary terms, and numbers from the code */
+.term, .from-code { border-bottom: 1px dotted var(--ink-3); cursor: help; }
+.term:hover, .term:focus-visible, .from-code:hover, .from-code:focus-visible { border-bottom-color: var(--accent); color: var(--ink); outline: none; }
 #term-pop {
   position: absolute;
   z-index: 40;
@@ -369,8 +345,10 @@ figure.code figcaption { font-size: 0.85rem; color: var(--ink-3); margin-top: 0.
 }
 #term-pop b { font-family: var(--font-display); letter-spacing: 0.02em; display: block; margin-bottom: 0.2rem; }
 #term-pop .from { display: block; margin-top: 0.45rem; color: var(--ink-3); font-size: 0.8rem; }
+#term-pop b code { font-weight: 600; overflow-wrap: anywhere; }
+#term-pop .worked { display: block; margin-top: 0.35rem; font-family: var(--font-mono); font-size: 0.85rem; }
 
-/* Pass two */
+/* Sections not written yet */
 .later-grid { display: grid; gap: 0.8rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); margin-top: 1.2rem; }
 .later-card { border: 1px dashed var(--line-2); border-radius: 10px; padding: 1rem; color: var(--ink-3); }
 .later-card h3 { color: var(--ink-2); margin-top: 0.4rem; }
