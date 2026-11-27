@@ -1,5 +1,7 @@
 # crazyflie-behavior
 
+**[Take the project tour](https://joecgo.com/crazyflie-project-tour/):** an interactive walk through the code, starting with the Crazyflie adapter.
+
 [![checks](https://github.com/joecgo/crazyflie-behavior/actions/workflows/checks.yml/badge.svg)](https://github.com/joecgo/crazyflie-behavior/actions/workflows/checks.yml)
 
 Autonomous behavior experiments for the [Bitcraze Crazyflie 2.1+](https://www.bitcraze.io/products/crazyflie-2-1-plus/) nano drone, written in Python with [cflib](https://github.com/bitcraze/crazyflie-lib-python).

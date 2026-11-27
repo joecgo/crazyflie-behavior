@@ -9,11 +9,15 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-27 (Pacific)
-- **Last commit:** the wrap-up's records (work log, M-298, this brief), after
-  `bd956cc`. Uncommitted: nothing.
+- **Last commit:** the README's tour link, with the work-log row and this
+  brief, after the wrap-up's records. Uncommitted: nothing.
 
 ## Done last
 
+- **The tour linked** (2026-11-27): one line under the README's title, and on
+  the joecgo.com project card as the first link (repository second), with a
+  screenshot of section 5's flight animation (`media/tour-flight.png` in
+  `joecgo/portfolio`). The screenshot is a hand copy, like the tour (#168).
 - **Tour feedback pass, #166 and #167** (`0251d46`, `8625016`, `bd956cc`),
   pushed, with continuous integration passing. The pin is `0251d46`. The
   pop-ups and module sizes come from the pinned commit, and
