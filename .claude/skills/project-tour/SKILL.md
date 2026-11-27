@@ -134,7 +134,11 @@ never explained, with no consequence shown (section 4, removed).
 ## Form
 
 - One HTML page per chapter in `docs/tour/`, sharing `tour.css` and `tour.js`.
-  No build step, libraries or web fonts. Inline SVG, dark theme only.
+  No build step, libraries or web fonts. Inline SVG, dark theme only
+  ([ADR-0096](../../../docs/decisions/0096-the-project-tour-is-one-html-page-per-chapter-pinned-to-one-commit.md)).
+- The one outside script is the GoatCounter visit count, the last line before
+  `</body>`, the same as the portfolio home page's. Keep it on every chapter.
+  It skips local files, `localhost` and framed pages (facts register).
 
 ## Numbers from the code
 
@@ -189,3 +193,19 @@ never explained, with no consequence shown (section 4, removed).
    tour's work order has it), from a copy without the document-skeleton lines
    (doctype, `html`, `head`, the two `meta` lines for charset and viewport,
    `body` and their closing tags), with `tour.css` and `tour.js`.
+
+## Copy to the portfolio
+
+The live tour, `https://joecgo.com/crazyflie-project-tour`, is a copy in
+`joecgo/portfolio`. No test notices a stale copy, so run these steps after
+any tour change Joe accepts, once it's committed.
+
+1. Clone `joecgo/portfolio` into the scratchpad.
+2. Write the three files into its `crazyflie-project-tour/` from the commit,
+   not the working tree, whose line endings differ:
+   `git show <commit>:docs/tour/adapter.html` as `index.html`, then
+   `tour.css` and `tour.js`.
+3. Show Joe what changed, and commit and push only after Joe's OK.
+4. Download the three live files and compare each one's SHA-256 with
+   `git show`'s. If they differ, the site may not have updated yet: compare
+   again later, and don't report it live until they match.

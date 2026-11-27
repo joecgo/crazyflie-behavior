@@ -1,7 +1,7 @@
 """The project tour's links into this repository open what they name.
 
 Each link is pinned to one commit, and git reads that commit, so continuous integration checks out the full
-history. Decided 2026-11-26 with the tour's first chapter; its ADR follows pass one.
+history (ADR-0096).
 """
 
 import re
