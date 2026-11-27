@@ -10,9 +10,10 @@ One writer at a time (`CLAUDE.md`, "One writer").
 
 One line each: date, ADR link, the choice in a few words.
 
-- 2026-11-27, the tour's ADR (to come; backlog #167): a glossary word in its everyday sense is marked `<span class="plain">`, which the dot check (`tests/docs/test_tour_dots.py`) skips.
-- 2026-11-27, the tour's ADR (to come; backlog #167): a part's name before "part" ("the link part") is a use of *Part*, not of *Link* or *Command*.
-- 2026-11-27, the tour's ADR (to come; backlog #167): a part's name alone, as in the list of the four, is dotted when the glossary has the term (*Link*, *Log block*, *Command*).
+- 2026-11-27, [ADR-0096](decisions/0096-the-project-tour-is-one-html-page-per-chapter-pinned-to-one-commit.md): a glossary word in its everyday sense is marked `<span class="plain">`, which the dot check (`tests/docs/test_tour_dots.py`) skips.
+- 2026-11-27, [ADR-0096](decisions/0096-the-project-tour-is-one-html-page-per-chapter-pinned-to-one-commit.md): a part's name before "part" ("the link part") is a use of *Part*, not of *Link* or *Command*.
+- 2026-11-27, [ADR-0096](decisions/0096-the-project-tour-is-one-html-page-per-chapter-pinned-to-one-commit.md): a part's name alone, as in the list of the four, is dotted when the glossary has the term (*Link*, *Log block*, *Command*).
+- 2026-11-27, [ADR-0096](decisions/0096-the-project-tour-is-one-html-page-per-chapter-pinned-to-one-commit.md): the tour's form, checks and publishing: a skill step copies it to the portfolio, with a visit-count line in the page.
 
 ## Findings
 

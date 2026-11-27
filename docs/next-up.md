@@ -9,11 +9,17 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-27 (Pacific)
-- **Last commit:** the README's tour link, with the work-log row and this
-  brief, after the wrap-up's records. Uncommitted: nothing.
+- **Last commit:** the records after ADR-0096 and its build, pushed.
+  Uncommitted: nothing.
 
 ## Done last
 
+- **The tour's publishing built** (2026-11-27, ADR-0096): the visit-count
+  line and the skill's copy step. The live copy doesn't have the line yet:
+  copy it with the skill's steps, which ask first.
+- **The tour's first chapter accepted** (2026-11-27) and
+  [ADR-0096](decisions/0096-the-project-tour-is-one-html-page-per-chapter-pinned-to-one-commit.md)
+  written: the tour's form, checks and publishing.
 - **The tour linked** (2026-11-27): one line under the README's title, and on
   the joecgo.com project card as the first link (repository second), with a
   screenshot of section 5's flight animation (`media/tour-flight.png` in
@@ -27,37 +33,22 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
-- Joe judges the chapter, now on https://joecgo.com/crazyflie-project-tour.
-  The private preview (version 8,
+- The private preview (version 8,
   https://claude.ai/artifact/XWPWS3fCf52696zXq6ZkJp) is behind: its links name
   the old pin, `5050718`. Republishing it needs a Read of every line of its
   saved copy first (about 55k tokens), so only do it if Joe wants a preview.
-- Joe's choices for the tour's ADR (2026-11-27): definitions in each page; the
-  script keeps its name; the dot check covers the terms the page dots, its
-  code in the test file; a glossary word in its everyday sense gets
-  `<span class="plain">`; a part's name before "part" is a use of *Part*; a
-  part's name alone is dotted when the glossary has it; table label cells keep
-  their dots.
-- Joe decided (2026-11-27): for Airworthy, the tour is published when all
-  its chapters are done. Rewording the *Airworthy* glossary row to say so
-  waits for Joe's OK.
 - Joe's review of #31. When he's done: fix what he asks on `main`, close
   #31 unmerged like #24 to #30, and give `REVIEW.md`'s log its row.
 
 ## Next three
 
-1. Joe reads the live chapter and judges the feedback pass and the dots; then
-   the fixes he asks for, and the live copy updated. Sonnet, medium.
-2. Once Joe accepts the chapter: the ADR for the tour's form (the work order
-   `drafts/project-tour-adapter-handoff.md`, decided items 1-4 and 10,
-   item 7's four answers, and the choices above), with #168, its index row and
-   Built column, and the review queue's three decisions. Sonnet, medium.
-3. Joe's review of #31, then its fixes. Opus, high.
+1. Joe's review of #31, then its fixes. Opus, high.
+2. #153, the test for citations of removed backlog rows (ADR-0091), which
+   first needs Joe's OK on a glossary term (*Live doc*, or *Live place*).
+   Sonnet, medium.
+3. #165, cutting the transcript tests to two or three. Sonnet, medium.
 
-After those: #153, the test for citations of removed backlog rows
-(ADR-0091), which first needs Joe's OK on a glossary term (*Live doc*, or
-*Live place*); then #165, then #158 (needs a test-layout decision,
-`/decide`).
+After those: #158 (needs a test-layout decision, `/decide`).
 
 ## Explain-backs waiting
 
@@ -141,11 +132,14 @@ from `drafts/explain-back-notes.md`; don't open it first.
   its own rather than the page top to bottom, why does a table need a break
   between its cells (what did "Final descent height" beside "0.15 m" turn
   into), and what would checking every glossary term have cost?
+- **E28.** The tour's link test reads the pinned commit with git. Why does
+  continuous integration need the full git history for that, and after the
+  pin moves, what kind of wrong link can the test still miss?
 
 ## Last reviewed
 
 `fdcd31c`, #30, closed 2026-11-23. #31 reads everything after it.
 
-Review queue: 3 decisions (the dot check's, for the tour's ADR), 6 findings
+Review queue: 4 decisions (ADR-0096 and its dot check), 6 findings
 waiting (`docs/review-queue.md`: the comment at `log_blocks.py:287`, M-288,
 and Joe's five #31 questions from the tour feedback, 2026-11-27).
