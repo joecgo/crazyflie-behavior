@@ -8,13 +8,24 @@ request merged, a step built), update this page in the same step: remove or
 move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
-- **Date:** 2026-11-26 (Pacific)
-- **Last commit:** the records after the tour's pass two (mistakes M-290 and
-  M-291, work log, backlog, this brief), after `67b24e5` (pass two).
+- **Date:** 2026-11-27 (Pacific)
+- **Last commit:** the records after the tour's feedback pass (work log,
+  M-292 to M-297, backlog, review queue, this brief), after the tour's commit
+  and `0251d46` (the glossary). All pushed.
   Uncommitted: nothing.
 
 ## Done last
 
+- **Feedback pass, #166 and #167, committed and pushed 2026-11-27**, with the
+  pin moved to `0251d46`. Joe's feedback is applied ("How to interact" lines,
+  Markdown links opened rendered, section 4's send stepper removed).
+  `tools/tour_numbers.py` writes the module sizes and the pop-ups' definitions
+  from the pinned commit, and `tests/docs/test_tour_dots.py` fails on a missing
+  dot. Joe's choices: definitions in each page; the script keeps its name; the
+  dot check covers the terms the page dots, its code in the test file; a
+  glossary word in its everyday sense gets `<span class="plain">`; a part's
+  name before "part" is a use of *Part*; a part's name alone is dotted when the
+  glossary has it; table label cells keep their dots.
 - **Tour chapter 1, pass two** (`67b24e5`): sections 4 and 6 to 9 in
   `docs/tour/` (the setpoint priority step by step and the firmware's
   watchdog, a may-be-flying calculator, connect and disconnect steps, five
@@ -28,24 +39,31 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
-- Joe judges the whole chapter: preview version 6,
-  https://claude.ai/artifact/XWPWS3fCf52696zXq6ZkJp. Feedback edits go in
-  `docs/tour/`, by the project-tour skill. The live copy at
-  joecgo.com/crazyflie-project-tour is still the launch copy of `58b726f`
-  (#168). Republishing the preview needs a full read of the live page, its
-  `tour.css` and `tour.js` first (about 45k tokens).
-- Joe's call: whether the chapter counts as "the tour is published" for
-  Airworthy.
+- **Preview version 8** of the tour, for Joe to judge:
+  https://claude.ai/artifact/XWPWS3fCf52696zXq6ZkJp. It was published before
+  the commit, so its links still name the old pin, `5050718`. Republishing
+  needs a Read of every line of the live page's saved copy first (about 55k
+  tokens): the Artifact tool refuses the publish otherwise, and reading the
+  files by path doesn't count. Comparing the live files with the last commit
+  first means only the diff needs reading on top. The live copy at
+  joecgo.com/crazyflie-project-tour still has pass two: `67b24e5`'s files,
+  pushed to `joecgo/portfolio` as `5ab215b` (#168).
+- Joe decided (2026-11-27): for Airworthy, the tour is published when all
+  its chapters are done. Rewording the *Airworthy* glossary row to say so
+  waits for Joe's OK.
 - Joe's review of #31. When he's done: fix what he asks on `main`, close
   #31 unmerged like #24 to #30, and give `REVIEW.md`'s log its row.
 
 ## Next three
 
-1. Joe's feedback on pass two, then #166 and #167 (the module sizes and
-   the glossary pop-ups written from the pinned commit). Opus, high.
+1. Joe reads preview version 8 and judges the feedback pass and the dots;
+   then the fixes he asks for, and a republish (the 55k-token read above).
+   Sonnet, medium.
 2. Once Joe accepts the chapter: the ADR for the tour's form (the work order
-   `drafts/project-tour-adapter-handoff.md`, decided items 1-4 and 10, and
-   item 7's four answers), with #168, its index row and Built column.
+   `drafts/project-tour-adapter-handoff.md`, decided items 1-4 and 10,
+   item 7's four answers, #166 and #167's answers of 2026-11-27, and the
+   dot-check choices under "Done last"), with #168, its index row and
+   Built column, and the review queue's three decisions.
    Sonnet, medium.
 3. Joe's review of #31, then its fixes. Opus, high.
 
@@ -126,10 +144,22 @@ from `drafts/explain-back-notes.md`; don't open it first.
   flying, and only one test fails. Why does rule 2 count a stale
   on-the-floor status as flying, what would `land()` do without it, and is
   one test enough?
+- **E26.** The tour's pop-ups now come from the glossary at the pinned
+  commit, so the commit plan is two commits: the glossary alone, then the
+  tour with its pin moved to that first commit. Why can't one commit hold
+  both, with the pin naming itself, and why does the first commit still
+  pass its tests when the second would fail without it?
+- **E27.** The tour's dot check reads each lede, card and drop-down on its
+  own, and checks only the terms the page dots somewhere. Why read each on
+  its own rather than the page top to bottom, why does a table need a break
+  between its cells (what did "Final descent height" beside "0.15 m" turn
+  into), and what would checking every glossary term have cost?
 
 ## Last reviewed
 
 `fdcd31c`, #30, closed 2026-11-23. #31 reads everything after it.
 
-Review queue: 0 decisions, 1 finding waiting (`docs/review-queue.md`:
-the comment at `log_blocks.py:287`, M-288).
+Review queue: 3 decisions (the dot check's, for the tour's ADR), 6 findings
+waiting (`docs/review-queue.md`:
+the comment at `log_blocks.py:287`, M-288, and Joe's five #31 questions
+from the tour feedback, 2026-11-27).

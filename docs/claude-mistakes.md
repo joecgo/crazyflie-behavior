@@ -73,20 +73,20 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 22 |
 | recommendation | 7 | 10 |
 | environment | 4 | 12 |
-| communication | 14 | 87 |
+| communication | 16 | 91 |
 | testing | 2 | 42 |
 | process | 8 | 48 |
-| **Total** | **45** | **246** |
+| **Total** | **47** | **250** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 60 |
-| records-ahead-of-code | 39 |
+| said-without-checking | 64 |
+| records-ahead-of-code | 40 |
 | how-I-work | 35 |
 | weak-test | 35 |
-| vocabulary | 27 |
+| vocabulary | 28 |
 | safety-judgment | 18 |
 | window-between-steps | 17 |
 | recommendation | 15 |
@@ -112,6 +112,12 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-297 | 2026-11-27 | The brief said only the tests and the tour's script had changed since the tour's pin | communication | said-without-checking | the project-tour skill: when the pin moves, run `git diff --name-only` from the old pin to the new one, and check every line link into a changed file |
+| M-296 | 2026-11-27 | Joe's choice on "the link part" stretched to part names on their own, and called his rule | communication | said-without-checking | working rule 7: quote what a choice covered before applying it to a new case, and ask about the new case as its own question |
+| M-295 | 2026-11-27 | "The PC's clock" called an everyday use without reading the code | communication | said-without-checking | working rule 1 |
+| M-294 | 2026-11-27 | The tour said the drone lands after an estimate that isn't a number | communication | said-without-checking | working rule 2: read the whole comment block beside the lines a claim cites, and search the backlog for the topic (working rule 5) before writing what happens next |
+| M-293 | 2026-11-27 | Tour text written from the code's side: a "why" with no reason, and words only the code defines | communication | vocabulary | the project-tour skill's "Write for the reader" rules: a "why" gives the reason and a case that goes wrong without it, and a code word gets a plain description at its first use, a drop-down, or is left to the docstrings |
+| M-292 | 2026-11-27 | The tour's *Chapter* pop-up cites a glossary copy that lacks the term | communication | records-ahead-of-code | `tools/tour_numbers.py` writes the pop-ups from the glossary at the pinned commit, and stops on a dotted term the glossary doesn't define there (`test_a_page_dotting_a_term_the_glossary_doesnt_define_raises`, and the page test in `tests/docs/test_tour_numbers.py`) |
 | M-291 | 2026-11-26 | The tour's link rows ignored `hidden` because a CSS rule set their display | testing | weak-test | the harness check counted visible rows by the attribute, not by what renders |
 | M-290 | 2026-11-26 | The tour's pass two broke two of the project-tour skill's rules | process | how-I-work | working rule 2: reread the project-tour skill's "Cut clutter" and "Numbers from the code" before writing a section, and search the page for numbers and placeholder words before the check |
 | M-289 | 2026-11-26 | Two counts in the project tour's first chapter weren't counted from the code | communication | said-without-checking | working rule 2, applied to "every" and to counts: count them from the code |
@@ -408,6 +414,22 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-296, 2026-11-27: Joe's choice on "the link part" stretched to part names on their own, and called his rule
+
+- **What happened:** Joe chose that the tour's dot check reads "<name> part" ("the link part") as a use of *Part*. Sorting the misses, I also marked the bare names in the adapter card's list of the four parts ("the link, the log blocks, the commands") plain, a case his choice didn't cover, then asked him to keep it as "consistent with your rule that part names aren't uses of Link or Command". Joe said he made no such rule. He chose dots on the names the glossary has.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 7: quote what a choice covered before applying it to a new case, and ask about the new case as its own question.
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
+
+### M-293, 2026-11-27: Tour text written from the code's side: a "why" with no reason, and words only the code defines
+
+- **What happened:** in the project tour's chapter 1, the drop-down "Why `connect()` builds every part afresh" said what `connect()` does, not why. Other lines used the code's own words with no meaning for a reader who hasn't read it: "the builder", "docstring left out · the builder", "It also lets the builder make the commands before the link exists", "Section 5 flies it", "the callback drops it", "Past it, the connection still under way is stopped without a setpoint". Joe pointed them out in his feedback on the chapter.
+- **Kind:** communication.
+- **Pattern:** vocabulary.
+- **Guard:** the project-tour skill's "Write for the reader" rules: a "why" gives the reason and a case that goes wrong without it, and a code word gets a plain description at its first use, a drop-down, or is left to the docstrings.
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
 
 ### M-285, 2026-11-26: The review's range ran from `0846826`, not from where #30 stopped
 
@@ -846,6 +868,38 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-297, 2026-11-27: The brief said only the tests and the tour's script had changed since the tour's pin
+
+- **What happened:** the next-up brief said that since `5050718` only `tests/docs` and `tools/tour_numbers.py` changed, not `src/`. `.github/workflows/checks.yml` had also gained three lines, so moving the pin would have left the tour's `checks.yml` link on the wrong lines, with the link test still passing. Caught while committing, before the tour was committed; the link now cites lines 31-41.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** the project-tour skill: when the pin moves, run `git diff --name-only` from the old pin to the new one, and check every line link into a changed file.
+- **Takeaway:** when a pinned commit moves, compare each line link into a changed file; no step on the escalation ladder, as it isn't a code-review takeaway.
+
+### M-295, 2026-11-27: "The PC's clock" called an everyday use without reading the code
+
+- **What happened:** asking Joe how the tour's dot check should tell a glossary word in its everyday sense from a missing dot, I gave "on the PC's clock" (section 3) as the everyday example, in the message and in both choice dialogs. The arrival time is stamped with the adapter's own clock (`log_blocks.py:322`, `self._clock.now()`), which is the glossary's *Clock*, so that use gets a dot. Caught while sorting the 223 undotted uses, before any mark was written; Joe's choice didn't depend on the example.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 1. The project-tour skill's "Glossary dots" now says to read the code before calling a use plain, with this case.
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
+
+### M-294, 2026-11-27: The tour said the drone lands after an estimate that isn't a number
+
+- **What happened:** the tour's section 3 drop-down on a broken estimate, and section 8's "The estimate isn't a number", said the failsafe lands the drone, aimed at the last finite position. The comment beside the code it cites (`log_blocks.py` 287-290) says the drone's own estimate is then NaN, so it can't follow that landing either (ADR-0045, backlog #45). Caught while answering Joe's question on whether a case is known. Both now say the drone can't follow it and link backlog #45.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 2: read the whole comment block beside the lines a claim cites, and search the backlog for the topic (working rule 5) before writing what happens next.
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
+
+### M-292, 2026-11-27: The tour's *Chapter* pop-up cites a glossary copy that lacks the term
+
+- **What happened:** the *Chapter* row was added to the glossary (`1f02894`) after the tour's pinned commit, `5050718`. `tour.js` says its definitions are copied from the glossary at the pinned commit, and the page's glossary link goes there, where *Chapter* is missing. Published that way. Caught when I asked whether the term still needed approval.
+- **Kind:** communication.
+- **Pattern:** records-ahead-of-code.
+- **Guard:** `tools/tour_numbers.py` writes the pop-ups from the glossary at the pinned commit, and stops on a dotted term the glossary doesn't define there (`test_a_page_dotting_a_term_the_glossary_doesnt_define_raises`, and the page test in `tests/docs/test_tour_numbers.py`).
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
 
 ### M-291, 2026-11-26: The tour's link rows ignored `hidden` because a CSS rule set their display
 
