@@ -9,52 +9,49 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-26 (Pacific)
-- **Last commit:** the records after the tour's feedback and item 7, on
-  `8bafc83` (tour `3aa6c4d`). Pushed 2026-11-26. Uncommitted: nothing.
+- **Last commit:** the wrap-up records after the tour's launch, on `58b726f`
+  (tour `3aa6c4d`). Uncommitted: nothing.
 
 ## Done last
 
-- **Project tour, chapter 1 (the Crazyflie adapter), pass one:**
-  `docs/tour/adapter.html`, `tour.css` and `tour.js`: sections 1, 2, 3 and
-  5, with pass-two cards for 4 and 6-9. Every repository link is pinned to
-  `5050718` and checked by `tests/docs/test_tour_links.py` (4 tests, proven
-  by four plants); continuous integration now fetches the full history.
-  Glossary row *Chapter*; two facts-register rows (cflib's 24-bit log
-  timestamp, the 26-byte log block). Checked in headless Edge at 1280 and
-  390 px (the built-in browser wasn't available). Private preview:
-  https://claude.ai/artifact/XWPWS3fCf52696zXq6ZkJp. Joe kept all four
-  build choices as built (new-tab links, remembered depth, ½× and 0.2×
-  speeds, phone figures scroll sideways). Mistakes M-287 and M-288.
-- **#157's D13 and last fitness functions (ADR-0093)**, committed and
-  pushed; review pull request #31 opened.
+- **The tour is live** at https://joecgo.com/crazyflie-project-tour/
+  (`joecgo/portfolio` `d166951`, copied from `58b726f` with `adapter.html` as
+  `index.html`, no visitor counter). The home page links it and says 95
+  records. Live files matched the copy.
+- **Tour chapter 1:** round 1 of the feedback and item 7 (numbers written by
+  `tools/tour_numbers.py`, checked by `tests/docs/test_tour_numbers.py`), the
+  project-tour skill, mistake M-289, backlog #166 to #168. Pushed; continuous
+  integration passed on `58b726f`.
+- **#157's D13 and last fitness functions (ADR-0093)**; review pull request
+  #31 opened.
 
 ## In progress
 
-- Joe judges the tour preview's look and feel; round 1 and the work order's
-  item 7 are in preview version 5 (with yellow size bars and the dotted "dots"). Item 7: every number the page takes from
-  the code is written by `tools/tour_numbers.py`, read at the pinned commit,
-  with a pop-up of its name and docstring; `tests/docs/test_tour_numbers.py`
-  fails while the page is out of date (19 test functions, 34 cases, proven
-  by eight plants).
-  Feedback edits go in `docs/tour/`, by the project-tour skill.
+- Joe judges the tour's look and feel (preview version 5,
+  https://claude.ai/artifact/XWPWS3fCf52696zXq6ZkJp, and the live page).
+  Feedback edits go in `docs/tour/`, by the project-tour skill; the live copy
+  needs copying again (#168).
+- Joe's call: whether the partial chapter counts as "the tour is published"
+  for Airworthy.
 - Joe's review of #31. When he's done: fix what he asks on `main`, close
   #31 unmerged like #24 to #30, and give `REVIEW.md`'s log its row.
 
 ## Next three
 
-1. Once Joe accepts pass one: the ADR for the tour's form (the work
-   order's decided items 1-4 and 10, and item 7's four answers of
-   2026-11-26: a test fails when a page is out of date, numbers are read at
-   the pinned commit, the script is in `tools/` and the test imports it, and
-   it writes text, tables, the animations' numbers, other forms and constant
-   links), its index row and Built column. Sonnet, medium.
+1. Once Joe accepts pass one: the ADR for the tour's form (the work order
+   `drafts/project-tour-adapter-handoff.md`, decided items 1-4 and 10, and
+   item 7's four answers of 2026-11-26: a test fails when a page is out of
+   date, numbers are read at the pinned commit, the script is in `tools/` and
+   the test imports it, and it writes text, tables, the animations' numbers,
+   other forms and constant links), with #168, its index row and Built
+   column. Sonnet, medium.
 2. Joe's review of #31, then its fixes. Opus, high.
 3. Build #153, the test for citations of removed backlog rows (ADR-0091),
    then remove row #157. It first needs Joe's OK on a glossary term: *Live
    doc* proposed, *Live place* the alternative. Sonnet, medium.
 
-After those: tour pass two, with #166 and #167; #165, then #158 (needs a test-layout decision,
-`/decide`). Opus, high.
+After those: tour pass two, with #166 and #167; #165, then #158 (needs a
+test-layout decision, `/decide`). Opus, high.
 
 ## Explain-backs waiting
 
