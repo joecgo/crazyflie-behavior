@@ -141,6 +141,17 @@ def test_a_formula_is_worked_out_from_the_constants() -> None:
     assert (halved.value, halved.worked, halved.uses) == (0.2, "0.4 m/s / 2", ("SPEED",))
 
 
+def test_a_formula_with_digits_shows_its_value_rounded_and_keeps_it_exact() -> None:
+    constants = fake_numbers().constants
+    thirds = work_out(FormulaSpec("thirds", "SPEED / 3", "m/s", "A third of the speed.", digits=2), constants)
+    numbers = TourNumbers(FAKE_COMMIT, constants, {"thirds": thirds}, fake_numbers().adr_files)
+
+    written = render_page(fake_page('<span data-formula="thirds">?</span>'), numbers)
+
+    assert '<span data-formula="thirds">0.13&nbsp;m/s</span>' in written
+    assert thirds.value == pytest.approx(0.4 / 3)
+
+
 def test_a_formula_with_a_constant_the_tour_doesnt_read_raises() -> None:
     with pytest.raises(TourNumbersError, match="OTHER"):
         work_out(FormulaSpec("x", "SPEED + OTHER", "m/s", ""), fake_numbers().constants)

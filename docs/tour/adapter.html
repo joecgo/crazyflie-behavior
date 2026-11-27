@@ -18,12 +18,12 @@
       <a href="#s1">1 Adapter</a>
       <a href="#s2">2 Parts</a>
       <a href="#s3">3 Threads</a>
-      <a href="#s4" class="later">4 Commands</a>
+      <a href="#s4">4 Commands</a>
       <a href="#s5">5 Bad-Flow Zone</a>
-      <a href="#s6" class="later">6 May Be Flying</a>
-      <a href="#s7" class="later">7 Connect</a>
-      <a href="#s8" class="later">8 Failures</a>
-      <a href="#s9" class="later">9 Testing</a>
+      <a href="#s6">6 May Be Flying</a>
+      <a href="#s7">7 Connect</a>
+      <a href="#s8">8 Failures</a>
+      <a href="#s9">9 Testing</a>
     </nav>
   </div>
 </header>
@@ -37,7 +37,6 @@
   <div class="meta">
     <span>A nano drone, the Crazyflie 2.1+, flown by a PC over a USB radio</span>
     <span>Every link opens the code at commit <code>5050718</code></span>
-    <span>Sections 1, 2, 3 and 5 are ready; the rest are coming</span>
   </div>
   <div class="howto">
     <div><b>Start simple</b>Each section opens with a short summary.</div>
@@ -431,11 +430,90 @@ self._telemetry.write_drone_status(status, drone_time)</code></pre>
 
 <!-- ======================================================= 4 -->
 <section class="stop" id="s4">
-  <div class="later-card">
-    <span class="stop-num">04</span>
-    <h3>Commands</h3>
-    <p>Not written yet.</p>
-  </div>
+  <div class="stop-head"><span class="stop-num">04</span><h2>Commands</h2></div>
+  <p class="lede">Every command starts an action and returns at once. None of them waits, so the tick, <span class="from-code" tabindex="0" data-const="TICK_RATE" data-form="number">20</span> times a second, is never held up, and what a command did shows in later snapshots. The drone takes commands two ways: a <span class="term" tabindex="0" data-term="Setpoint stream">setpoint stream</span>, one low-level <span class="term" tabindex="0" data-term="Setpoint">setpoint</span> every tick, or the <span class="term" tabindex="0" data-term="High-level commander">high-level commander</span>, one move that the drone flies by itself. The drone follows one of them at a time, and the adapter hands it from one to the other like a baton: the <span class="term" tabindex="0" data-term="Setpoint priority">setpoint priority</span>.</p>
+
+  <figure class="fig">
+    <div class="fig-frame">
+      <div class="controls" role="group" aria-label="Send sequences">
+        <button type="button" class="btn tab" data-seq="handover" aria-pressed="true">A hand-over</button>
+        <button type="button" class="btn tab" data-seq="release-first" aria-pressed="false">Its bug: released first</button>
+        <button type="button" class="btn tab" data-seq="motor-stop" aria-pressed="false">A motor stop</button>
+        <button type="button" class="btn tab" data-seq="no-release" aria-pressed="false">Its bug: no release</button>
+      </div>
+      <div class="baton" id="baton">
+        <div class="lane" data-lane="stream"><span class="label">Setpoint stream · priority 2</span><span class="followed">followed</span><p class="lane-state"></p></div>
+        <div class="lane" data-lane="high"><span class="label">High-level commander · priority 1</span><span class="followed">followed</span><p class="lane-state"></p></div>
+      </div>
+      <div class="baton-bar">
+        <span class="motors" id="baton-motors"></span>
+        <span class="controls" style="margin:0"><button type="button" class="btn" id="baton-back">Back</button><button type="button" class="btn" id="baton-next">Next send</button><span class="caption" id="baton-count" style="margin:0"></span></span>
+      </div>
+      <div class="sends" id="baton-sends" aria-label="The sends so far"></div>
+      <p class="readout" id="baton-text" aria-live="polite"></p>
+      <div class="links" data-seq-links="handover"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L110-L125">commands.py 110-125</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L197-L214">test: the order</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0056-adr-0048-as-built.md">ADR-0056</a></div>
+      <div class="links" data-seq-links="release-first" hidden>Caught by: <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L197-L214">the hand-over's order</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L280-L287">a transcript</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0084-a-lost-link-is-an-error-and-the-firmware-land-is-a-last-resort.md">ADR-0084, released first</a></div>
+      <div class="links" data-seq-links="motor-stop" hidden><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L129-L144">commands.py 129-144</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_commands.py#L266-L277">test: the order</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0058-release-setpoint-priority-after-motor-stop.md">ADR-0058</a></div>
+      <div class="links" data-seq-links="no-release" hidden>Caught by: <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_commands.py#L266-L277">the motor stop's order</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L731-L740">the release at touchdown</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0058-release-setpoint-priority-after-motor-stop.md">ADR-0058, the lock</a></div>
+    </div>
+    <figcaption>Step through each send. The two bugs are orders the code never sends; a planted copy of each fails the tests linked under it (section 9). The firmware's rules: a streamed setpoint takes priority 2 and stops the high-level commander, the release lowers the priority to 1, and an idle high-level commander offers motors-off setpoints (<a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L44">facts register: the priorities</a>, <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L48">the idle planner</a>).</figcaption>
+  </figure>
+
+  <figure class="fig">
+    <div class="fig-frame">
+      <div class="controls">
+        <button type="button" class="btn" id="wd-play">Play</button>
+        <span role="group" aria-label="How the drone is commanded" class="controls" style="margin:0">
+          <button type="button" class="btn tab" data-wd="stream" aria-pressed="true">Streamed setpoints</button>
+          <button type="button" class="btn tab" data-wd="high" aria-pressed="false">A high-level move</button>
+        </span>
+      </div>
+      <svg id="watchdog" viewBox="0 0 760 250" role="img" aria-label="The age of the drone's latest setpoint over time. The ticks stop at 1 second. A setpoint stream's age then grows past 0.5 seconds, where the drone levels out, and past 2 seconds, where its motors go off. A high-level move's setpoint never ages." style="min-width:560px"></svg>
+      <p class="readout" id="wd-readout" aria-live="polite"></p>
+    </div>
+    <figcaption>What happens when the ticks stop, here at 1 s: the program hangs, or the link goes. The drone's <span class="term" tabindex="0" data-term="Firmware">firmware</span> watches the age of its latest setpoint while it counts itself as flying: past 500&nbsp;ms it warns and levels out, past 2000&nbsp;ms it moves to free fall with the motors off (<a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L37">facts register: 500 and 2000 ms</a>, <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L42">free fall</a>, <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L48">level out</a>). A high-level move renews its own setpoint on the drone, so it never ages (<a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L38">facts register</a>).</figcaption>
+  </figure>
+
+  <details class="more why">
+    <summary><span class="kind">Why it's built this way</span>Why no command waits</summary>
+    <div class="body">
+      <p>Whatever streams setpoints must send one every tick, or the firmware stops following it. A command that waited would delay the tick, and the next setpoint with it. So nothing a tick calls may sleep, wait or read with a block: only <code>connect()</code> and <code>disconnect()</code> may, and a program calls those, never a tick.</p>
+      <p>A <span class="term" tabindex="0" data-term="Fitness function">fitness function</span> checks it, reading the code: no drone interface method makes a <span class="term" tabindex="0" data-term="Blocking call">blocking call</span> but those two, and every blocking function in the adapter is reached from one of them. The known exception: a cflib send can wait up to 2&nbsp;s during radio trouble.</p>
+      <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/ARCHITECTURE.md?plain=1#L168-L176">ARCHITECTURE.md, no waiting</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/architecture/test_blocking_call_rules.py#L254-L266">test: only connect and disconnect</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/architecture/test_blocking_call_rules.py#L269-L279">test: reached from them</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0027-operator-controls.md">ADR-0027, the send</a></div>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>What each command sends</summary>
+    <div class="body">
+      <div style="overflow-x:auto">
+      <table class="ages cmds"><thead><tr><th>Command</th><th>Sends</th><th>Ignored when</th></tr></thead><tbody>
+        <tr><td><code>take_off(height)</code></td><td>The initial climb's level setpoints (section 5). If the drone <span class="term" tabindex="0" data-term="May be flying">may be flying</span>, a high-level climb instead.</td><td>crossing the bad-flow zone</td></tr>
+        <tr><td><code>land()</code></td><td>The landing approach, then the final descent. On the floor, only the motor stop.</td><td>already landing</td></tr>
+        <tr><td><code>move_to(position, duration)</code></td><td>One high-level move, at least <span class="from-code" tabindex="0" data-const="MIN_MOVE_DURATION">0.5&nbsp;s</span> long, handed over from any stream.</td><td>crossing the bad-flow zone</td></tr>
+        <tr><td><code>hover()</code></td><td>A high-level move to the latest position estimate, over <span class="from-code" tabindex="0" data-const="HOVER_SETTLE_DURATION">1&nbsp;s</span>.</td><td>crossing the zone; on the floor</td></tr>
+        <tr><td><code>set_velocity(velocity, yaw_rate)</code></td><td>One velocity setpoint, a stream from then on. cflib takes the yaw rate in degrees.</td><td>crossing the bad-flow zone</td></tr>
+        <tr><td><code>emergency_stop()</code></td><td>The <span class="term" tabindex="0" data-term="Emergency stop">emergency stop</span>: the motors cut at once.</td><td>never</td></tr>
+        <tr><td><code>arm()</code>, <code>disarm()</code></td><td>An arming request. A disarm stops the motors first.</td><td>never</td></tr>
+        <tr><td><code>reset_estimate()</code></td><td>The <span class="term" tabindex="0" data-term="Estimate reset">estimate reset</span>, a parameter write.</td><td>the drone may be flying; the link is closed</td></tr>
+        <tr><td><code>chirp()</code>, <code>play_tone()</code>, <code>silence()</code></td><td>Buzzer parameter writes.</td><td>the link is closed</td></tr>
+      </tbody></table>
+      </div>
+      <p class="caption">An ignored command is logged once per <span class="term" tabindex="0" data-term="Streak">streak</span>.</p>
+      <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L242-L329">adapter.py 242-329</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L71-L158">commands.py 71-158</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_commands.py">tests: commands</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0039-the-adapter-decides-may-be-flying.md">ADR-0039, hover on the floor</a></div>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>A high-level command with no stream before it releases nothing</summary>
+    <div class="body">
+      <p>The commands part remembers whether a stream is running. A high-level move only hands over when one is: with no stream, there's no last setpoint and no release. A motor stop always releases, stream or not.</p>
+      <figure class="code"><pre><code><span class="k">def</span> send_level_setpoint(self, vertical_speed: float) -&gt; None:
+    ...
+    self._current_crazyflie().send_packet(packet)
+    self._is_streaming = True
+    self._level_vertical_speed = vertical_speed</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L71-L79">commands.py 71-79</a>, shortened · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_commands.py#L248-L255">test: no stream, no release</a> · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_commands.py#L280-L287">test: the motor stop releases anyway</a></figcaption></figure>
+    </div>
+  </details>
 </section>
 
 <!-- ======================================================= 5 -->
@@ -645,16 +723,490 @@ self._telemetry.write_drone_status(status, drone_time)</code></pre>
   </details>
 </section>
 
-<!-- ======================================================= 6-9 -->
+<!-- ======================================================= 6 -->
 <section class="stop" id="s6">
-  <span class="label">Coming next</span>
-  <p class="caption">These sections are planned and not written yet.</p>
-  <div class="later-grid">
-    <div class="later-card"><span class="stop-num">06</span><h3>May Be Flying</h3><p>Not written yet.</p></div>
-    <div class="later-card" id="s7"><span class="stop-num">07</span><h3>Connect and Disconnect</h3><p>Not written yet.</p></div>
-    <div class="later-card" id="s8"><span class="stop-num">08</span><h3>Failures</h3><p>Not written yet.</p></div>
-    <div class="later-card" id="s9"><span class="stop-num">09</span><h3>Testing</h3><p>Not written yet.</p></div>
+  <div class="stop-head"><span class="stop-num">06</span><h2>May Be Flying</h2></div>
+  <p class="lede">Stopping a flying drone takes a landing, but a landing sent to an armed drone on the floor would spin its motors up. So some commands must know whether the drone could be in the air, and the drone's own <span class="term" tabindex="0" data-term="Drone status">drone status</span> can't settle it alone: it shows a take-off late, and keeps saying flying for 2&nbsp;s after the motors stop. The adapter judges <span class="term" tabindex="0" data-term="May be flying">may be flying</span> from what it sent and what the drone says, and when unsure, it says flying.</p>
+
+  <figure class="fig">
+    <div class="split">
+      <div class="panel calc" id="mbf">
+        <span class="label">Set the inputs, or pick an example</span>
+        <div class="controls" role="group" aria-label="Examples">
+          <button type="button" class="btn tab" data-preset="hovering" aria-pressed="false">Hovering</button>
+          <button type="button" class="btn tab" data-preset="took-off" aria-pressed="false">Just took off</button>
+          <button type="button" class="btn tab" data-preset="landed" aria-pressed="false">Just landed</button>
+          <button type="button" class="btn tab" data-preset="stale" aria-pressed="false">Status gone stale</button>
+          <button type="button" class="btn tab" data-preset="taken-over" aria-pressed="false">Taken over, on the floor</button>
+        </div>
+        <fieldset>
+          <legend>Since our last motor stop, our code has</legend>
+          <label><input type="radio" name="mbf-sent" value="none"> sent no take-off</label>
+          <label><input type="radio" name="mbf-sent" value="take-off"> sent a take-off</label>
+          <label><input type="radio" name="mbf-sent" value="take-over"> <span class="term" tabindex="0" data-term="Take over (a flight)">taken over</span> a flight</label>
+        </fieldset>
+        <fieldset>
+          <legend>The latest drone status</legend>
+          <label><input type="radio" name="mbf-status" value="none"> none yet</label>
+          <label><input type="radio" name="mbf-status" value="flying"> says flying</label>
+          <label><input type="radio" name="mbf-status" value="floor"> says not flying</label>
+        </fieldset>
+        <div class="scrub"><label for="mbf-age" class="label">Status age</label><input type="range" id="mbf-age" min="0" max="0.5" step="0.01" value="0.05"><output id="mbf-age-out" for="mbf-age"></output></div>
+        <div class="scrub"><label for="mbf-since" class="label">Since the take-off</label><input type="range" id="mbf-since" min="0" max="3" step="0.05" value="0.3"><output id="mbf-since-out" for="mbf-since"></output></div>
+      </div>
+      <div class="panel" aria-live="polite">
+        <span class="label">The adapter's answer</span>
+        <p class="answer" id="mbf-answer"></p>
+        <ol class="rules" id="mbf-rules">
+          <li data-rule="1">No take-off sent and no flight taken over since our last motor stop: <b>not flying</b>. The status can't be trusted here.</li>
+          <li data-rule="2">Otherwise, a status that's missing, older than <code>STALE_AFTER</code> (<span class="from-code" tabindex="0" data-const="STALE_AFTER">0.25&nbsp;s</span>), or says flying: <b>flying</b>.</li>
+          <li data-rule="3">Otherwise a fresh status says not flying, but the <span class="term" tabindex="0" data-term="Take-off grace">take-off grace</span>, <span class="from-code" tabindex="0" data-const="TAKE_OFF_STATUS_GRACE">1&nbsp;s</span>, isn't over: <b>flying</b>.</li>
+          <li data-rule="4">Otherwise: <b>not flying</b>.</li>
+        </ol>
+        <span class="label">What the answer changes</span>
+        <dl class="kv" id="mbf-effects"></dl>
+      </div>
+    </div>
+    <figcaption>The same four rules as the code, in the same order (<a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L140-L160">take_off_and_landing.py 140-160</a>). A status exactly <code>STALE_AFTER</code> old still counts as fresh. Taking over a flight sets the take-off's time to minus infinity, so its grace is always over.</figcaption>
+  </figure>
+
+  <figure class="fig">
+    <div class="mistakes">
+      <div class="panel"><span class="label">Says flying, but it's on the floor</span><h3>A landing it didn't need</h3><p>It only runs the motors until the down range confirms <span class="term" tabindex="0" data-term="Touchdown">touchdown</span>, then stops them.</p></div>
+      <div class="panel bad"><span class="label">Says not flying, but it's in the air</span><h3>A dropped drone</h3><p><code>land()</code> only stops the motors, and the drone falls.</p></div>
+    </div>
+    <figcaption>Why "when unsure, say flying": one mistake costs a few seconds of motor time, the other a fall (<a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L141-L153">take_off_and_landing.py 141-153</a>, <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0032-landing-with-a-go-to.md">ADR-0032</a>).</figcaption>
+  </figure>
+
+  <details class="more">
+    <summary><span class="kind">More</span>Each rule, with its test</summary>
+    <div class="body">
+      <ul>
+        <li><b>Rule 1.</b> After our own motor stop, the snapshot says not flying while the status still says flying, and a hover then does nothing. <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L869-L878">test</a> <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_commands.py#L145-L155">test: hover</a></li>
+        <li><b>Rule 2.</b> An old on-the-floor status counts as unknown, so <code>land()</code> lands. One exactly at its age limit still counts, so <code>land()</code> only stops the motors. <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L881-L893">test</a> <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L896-L908">test: at the limit</a></li>
+        <li><b>Rule 3.</b> A land right after a take-off lands, before the status shows flying. One tick before the grace ends it lands, and at exactly its end it only stops the motors. <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L379-L389">test</a> <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L419-L430">test: one tick before</a> <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L405-L416">test: at the end</a></li>
+      </ul>
+    </div>
+  </details>
+  <details class="more why">
+    <summary><span class="kind">Why it's built this way</span>Why the adapter judges it, not the safety layer</summary>
+    <div class="body">
+      <p>Just after a take-off, the drone status still says not flying and the down range still reads the floor, so nothing in the telemetry can tell. Only the adapter knows what it sent. So the safety layer approves a hover and a land without checking the status, and the adapter decides what they do. Every snapshot carries the answer, and the safety pre-check checks the velocity uncertainty only while it's true (section 3).</p>
+      <div class="links"><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0039-the-adapter-decides-may-be-flying.md">ADR-0039</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0032-landing-with-a-go-to.md">ADR-0032</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L311-L320">adapter.py 311-320</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L331-L339">the snapshot carries it</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L701-L712">test: no estimate reset</a></div>
+    </div>
+  </details>
+  <details class="more py">
+    <summary><span class="kind">Python note</span><code>@property</code>: a method read like a field</summary>
+    <div class="body">
+      <p><code>@property</code> turns a method into something read without parentheses, like a getter with field syntax. The adapter reads <code>self._take_off_and_landing.is_airborne</code>, but assigning it raises an error, since it has no setter. The real field is <code>_is_airborne</code>. The leading underscore marks it private by convention: Python doesn't enforce it, but pyright's strict mode reports a private name used from outside its class.</p>
+      <figure class="code"><pre><code>@property
+<span class="k">def</span> is_airborne(self) -&gt; bool:
+    <span class="c">"""A take-off was sent (or the flight was taken over) and the motors haven't been stopped since."""</span>
+    <span class="k">return</span> self._is_airborne</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L125-L128">take_off_and_landing.py 125-128</a></figcaption></figure>
+    </div>
+  </details>
+</section>
+
+<!-- ======================================================= 7 -->
+<section class="stop" id="s7">
+  <div class="stop-head"><span class="stop-num">07</span><h2>Connect and Disconnect</h2></div>
+  <p class="lede"><code>connect()</code> and <code>disconnect()</code> are the only calls that may block, and a program calls them, never a tick. Each wait for the drone has a time limit, so a drone that never answers ends in an error that says what to check, not a hang. Both end with the same careful link close: cflib's own close sends a zero-thrust setpoint first, which would drop a flying drone.</p>
+
+  <figure class="fig">
+    <div class="split">
+      <div class="modules" id="steps">
+        <div class="mgroup">
+          <span class="label">connect()</span>
+          <div class="mlist">
+            <button type="button" class="mod step" data-step="c-parts" aria-pressed="true"><span class="name">1 Fresh parts</span><span class="lines">no wait</span><span class="job">Unknown whether it's flying</span></button>
+            <button type="button" class="mod step" data-step="c-open" aria-pressed="false"><span class="name">2 Open the link</span><span class="lines"><span data-const="LINK_TIME_LIMIT">15&nbsp;s</span></span><span class="job">On a helper thread</span><span class="size"><i data-bar="LINK_TIME_LIMIT"></i></span></button>
+            <button type="button" class="mod step" data-step="c-params" aria-pressed="false"><span class="name">3 Read the parameters</span><span class="lines"><span data-const="PARAMETERS_TIME_LIMIT">10&nbsp;s</span></span><span class="job">On a helper thread</span><span class="size"><i data-bar="PARAMETERS_TIME_LIMIT"></i></span></button>
+            <button type="button" class="mod step" data-step="c-flow" aria-pressed="false"><span class="name">4 Check the Flow deck</span><span class="lines">no wait</span><span class="job">No deck, no flight</span></button>
+            <button type="button" class="mod step" data-step="c-status" aria-pressed="false"><span class="name">5 Is it flying?</span><span class="lines"><span data-const="FIRST_TELEMETRY_TIME_LIMIT">3&nbsp;s</span></span><span class="job">Refuse, take over, or reset the estimate</span><span class="size"><i data-bar="FIRST_TELEMETRY_TIME_LIMIT"></i></span></button>
+            <button type="button" class="mod step" data-step="c-thrust" aria-pressed="false"><span class="name">6 Thrust base</span><span class="lines">no wait</span><span class="job">Written, confirmed later</span></button>
+            <button type="button" class="mod step" data-step="c-telemetry" aria-pressed="false"><span class="name">7 First telemetry</span><span class="lines"><span data-const="FIRST_TELEMETRY_TIME_LIMIT">3&nbsp;s</span></span><span class="job">Every value, once</span><span class="size"><i data-bar="FIRST_TELEMETRY_TIME_LIMIT"></i></span></button>
+            <button type="button" class="mod step" data-step="c-fail" aria-pressed="false"><span class="name">If a step fails</span><span class="lines">close</span><span class="job">Close the link, raise the error</span></button>
+          </div>
+        </div>
+        <div class="mgroup">
+          <span class="label">disconnect()</span>
+          <div class="mlist">
+            <button type="button" class="mod step" data-step="d-land" aria-pressed="false"><span class="name">1 Land</span><span class="lines">until touchdown</span><span class="job">If it's airborne and the link is up</span></button>
+            <button type="button" class="mod step" data-step="d-silence" aria-pressed="false"><span class="name">2 Silence the buzzer</span><span class="lines"><span data-const="WAIT_AFTER_SILENCE">1&nbsp;s</span></span><span class="job">Then keep the link open</span><span class="size"><i data-bar="WAIT_AFTER_SILENCE"></i></span></button>
+            <button type="button" class="mod step" data-step="d-not-flying" aria-pressed="false"><span class="name">3 Wait for not flying</span><span class="lines"><span data-const="NOT_FLYING_TIME_LIMIT">3&nbsp;s</span></span><span class="job">After a motor stop</span><span class="size"><i data-bar="NOT_FLYING_TIME_LIMIT"></i></span></button>
+            <button type="button" class="mod step" data-step="d-close" aria-pressed="false"><span class="name">4 Close</span><span class="lines">always</span><span class="job">Even after an error</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="step-info" aria-live="polite">
+        <div class="step-card" data-for="c-parts">
+          <span class="label">connect() · step 1</span><h3>Fresh parts, and an unknown drone</h3>
+          <p>The adapter builds every part anew (section 2) and marks the drone's state unknown. Until a fresh status says the drone is on the floor, it may be flying, so any failure from here closes only the radio link.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L167-L173">adapter.py 167-173</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L134-L137">the flag</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0038-connecting-to-a-flying-drone.md">ADR-0038</a></div>
+        </div>
+        <div class="step-card" data-for="c-open" hidden>
+          <span class="label">connect() · step 2 · limit <span data-const="LINK_TIME_LIMIT">15&nbsp;s</span></span><h3>Open the link</h3>
+          <p>The link part listens for a <span class="term" tabindex="0" data-term="Lost link">lost link</span> first, so none goes unheard, then opens the link to the radio address. cflib's open waits with no time limit, so it runs on a helper thread with one. Past it, the connection still under way is stopped without a setpoint.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/link.py#L95-L114">link.py 95-114</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L606-L615">test: the time limit</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L1495-L1501">test: listening first</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0029-connecting-has-time-limits.md">ADR-0029</a></div>
+        </div>
+        <div class="step-card" data-for="c-params" hidden>
+          <span class="label">connect() · step 3 · limit <span data-const="PARAMETERS_TIME_LIMIT">10&nbsp;s</span></span><h3>Read the parameters</h3>
+          <p>The drone's parameter values, which say among other things which <span class="term" tabindex="0" data-term="Deck">decks</span> are attached. Another cflib wait with no limit of its own, so another helper thread.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/link.py#L115-L121">link.py 115-121</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L641-L650">test: the time limit</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0029-connecting-has-time-limits.md">ADR-0029</a></div>
+        </div>
+        <div class="step-card" data-for="c-flow" hidden>
+          <span class="label">connect() · step 4</span><h3>Check the Flow deck</h3>
+          <p>Without the <span class="term" tabindex="0" data-term="Flow deck">Flow deck</span>, version 2 or 1, the drone can't hold a position, so <code>connect()</code> raises: "Flow deck not detected: autonomous flight needs it."</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L176-L177">adapter.py 176-177</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L541-L550">test</a></div>
+        </div>
+        <div class="step-card" data-for="c-status" hidden>
+          <span class="label">connect() · step 5 · limit <span data-const="FIRST_TELEMETRY_TIME_LIMIT">3&nbsp;s</span></span><h3>Is it flying?</h3>
+          <p>The state block starts first, and the adapter waits for its first drone status, before anything else touches the drone. Then one of three:</p>
+          <ul>
+            <li><b>Taking over</b> (only the <span class="term" tabindex="0" data-term="Rescue landing">rescue landing</span> program): treat the drone as airborne, with no estimate reset.</li>
+            <li><b>Flying:</b> refuse. "The drone is still flying: run the rescue landing, or wait a few seconds if it just landed."</li>
+            <li><b>On the floor:</b> the state is known now. Send the <span class="term" tabindex="0" data-term="Estimate reset">estimate reset</span>, and replace the telemetry buffer, dropping what the state block wrote before the reset.</li>
+          </ul>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L518-L557">adapter.py 518-557</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L853-L856">test: the state block first</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L859-L868">test: refused</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L871-L881">test: no status</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0038-connecting-to-a-flying-drone.md">ADR-0038</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0054-a-fresh-estimate-for-every-take-off.md">ADR-0054</a></div>
+        </div>
+        <div class="step-card" data-for="c-thrust" hidden>
+          <span class="label">connect() · step 6</span><h3>Thrust base</h3>
+          <p>Writes the <span class="term" tabindex="0" data-term="Thrust base">thrust base</span> near this drone's hover thrust, without waiting. The drone's report comes back on cflib's thread, and a take-off warns if it never confirmed the value. Left alone when taking over: the drone may be flying.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/link.py#L169-L193">link.py 169-193</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L1173-L1176">test</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0061-thrust-base-set-at-connect.md">ADR-0061</a></div>
+        </div>
+        <div class="step-card" data-for="c-telemetry" hidden>
+          <span class="label">connect() · step 7 · limit <span data-const="FIRST_TELEMETRY_TIME_LIMIT">3&nbsp;s</span></span><h3>First telemetry</h3>
+          <p>The other log blocks start, and <code>connect()</code> returns only once every telemetry value has arrived once, so the first snapshot has every value. A time limit names what's still missing. Then it logs whether the drone arms itself and whether a buzzer deck is attached.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L183-L189">adapter.py 183-189</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L559-L574">559-574</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L751-L756">test</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L787-L796">test: the time limit</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0031-connect-waits-for-first-telemetry.md">ADR-0031</a></div>
+        </div>
+        <div class="step-card" data-for="c-fail" hidden>
+          <span class="label">connect() · any failure</span><h3>If a step fails</h3>
+          <p>The link closes, only its radio link while the drone may be airborne or its state is unknown. If the link was lost, <code>connect()</code> ends with the lost link's error, raised while handling the step's own error, so the traceback shows both. The <span class="term" tabindex="0" data-term="Interrupt signal">interrupt signal</span> closes the link too, and is never replaced.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L190-L196">adapter.py 190-196</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L348-L357">348-357</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L884-L893">test: on the floor, a normal close</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0095-a-link-lost-while-connecting-ends-connect-with-the-lost-links-error.md">ADR-0095</a></div>
+        </div>
+        <div class="step-card" data-for="d-land" hidden>
+          <span class="label">disconnect() · step 1</span><h3>Land</h3>
+          <p>A drone that's airborne is landed the normal way, and <code>disconnect()</code> waits for touchdown, ticking the landing itself. If that landing raises, the <span class="term" tabindex="0" data-term="Last-resort landing">last-resort landing</span> runs (section 8), then the error rises. With the link lost, nothing can reach the drone, so steps 1 to 3 are skipped.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L214-L238">adapter.py 214-238</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L324-L330">test: its transcript</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0084-a-lost-link-is-an-error-and-the-firmware-land-is-a-last-resort.md">ADR-0084</a></div>
+        </div>
+        <div class="step-card" data-for="d-silence" hidden>
+          <span class="label">disconnect() · step 2 · <span data-const="WAIT_AFTER_SILENCE">1&nbsp;s</span></span><h3>Silence the buzzer</h3>
+          <p>A silence write, then the link stays open a fixed time: closing it throws away writes not yet sent. There's no confirmation to wait for. A write that fails gets a warning, and no wait.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L368-L372">adapter.py 368-372</a><a class="src" data-const-link="WAIT_AFTER_SILENCE" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L94-L96">adapter.py 94</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L1077-L1095">test</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0085-the-silence-waits-a-fixed-1-s-with-no-confirmation.md">ADR-0085</a></div>
+        </div>
+        <div class="step-card" data-for="d-not-flying" hidden>
+          <span class="label">disconnect() · step 3 · limit <span data-const="NOT_FLYING_TIME_LIMIT">3&nbsp;s</span></span><h3>Wait for not flying</h3>
+          <p>After a motor stop on this link, the drone still counts as flying for 2&nbsp;s. Closing the link sends a zero-thrust setpoint, which would lock a drone that still counts as flying. So <code>disconnect()</code> waits for a fresh status that says not flying. At the limit it warns and closes anyway.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L592-L622">adapter.py 592-622</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L743-L753">test</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0058-release-setpoint-priority-after-motor-stop.md">ADR-0058</a></div>
+        </div>
+        <div class="step-card" data-for="d-close" hidden>
+          <span class="label">disconnect() · step 4</span><h3>Close</h3>
+          <p>A lost link that no call has raised yet raises now, so the run still ends with an error. Then, in a <code>finally</code> that runs even after an error, the log blocks stop and the link closes: cflib's close for a drone on the floor, only the radio link for one that may be airborne. The transcript's last lines show a whole disconnect after a landing:</p>
+          <div class="sends" style="max-height:none"><div><span class="n">88</span>commander.send_stop_setpoint()</div><div><span class="n">89</span>high_level_commander.stop()</div><div><span class="n">90</span>commander.send_notify_setpoint_stop()  <span class="c">the release</span></div><div><span class="n">91</span>param.set_value('sound.effect', 0)  <span class="c">the silence</span></div><div><span class="n">92</span>log_block_state.stop()  <span class="c">… and four more blocks</span></div><div><span class="n">97</span>SyncCrazyflie().close_link()  <span class="c">on the floor: cflib's close</span></div></div>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L198-L212">adapter.py 198-212</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/transcripts/disconnect_while_flying.txt#L88-L97">transcript 88-97</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0086-a-lost-link-raises-at-the-next-snapshot.md">ADR-0086</a></div>
+        </div>
+      </div>
+    </div>
+    <figcaption>Click a step. The bar is its time limit; a step with none doesn't wait.</figcaption>
+  </figure>
+
+  <details class="more">
+    <summary><span class="kind">More</span>Why cflib's waits run on helper threads</summary>
+    <div class="body">
+      <p>cflib's connect waits with no time limit, and on Windows, Python 3.12 can't interrupt such a wait: Ctrl+C wouldn't get through. So each of cflib's blocking steps runs on a helper thread, and the calling thread waits for it in slices of <span class="from-code" tabindex="0" data-const="WAIT_SLICE">0.1&nbsp;s</span>. Between slices, Python handles the interrupt signal and the time limit is checked.</p>
+      <figure class="code"><pre><code>step.start()
+<span class="k">while not</span> step.finished.wait(WAIT_SLICE):
+    <span class="c"># A step that finished just after the wait gave up still counts as in time.</span>
+    <span class="k">if</span> clock.now() &gt;= deadline <span class="k">and not</span> step.finished.is_set():
+        <span class="k">raise</span> TimeoutError(f"{name} took longer than {time_limit:g} s. {what_to_check}")</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/time_limit.py#L96-L100">time_limit.py 96-100</a> · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_time_limit.py#L93-L110">test: the interrupt signal gets through</a> · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_time_limit.py#L65-L72">test: past the limit</a> · <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0029-connecting-has-time-limits.md">ADR-0029</a></figcaption></figure>
+      <p>Python can't end a thread from outside, so a stuck step is never stopped, only abandoned: no longer waited for. Its thread is a daemon, so it doesn't keep the program alive. The adapter's own waits, for telemetry and for not flying, need no helper thread: a plain sleep ends at once on the interrupt signal.</p>
+      <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/time_limit.py#L21-L37">time_limit.py 21-37</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L624-L639">adapter.py 624-639</a></div>
+    </div>
+  </details>
+  <details class="more">
+    <summary><span class="kind">More</span>The lock error that hid the interrupt signal</summary>
+    <div class="body">
+      <p><code>Thread.start()</code> waits for the new thread to start. A Ctrl+C that lands at one moment inside that wait leaves a lock released, and Python then raises <code>RuntimeError: release unlocked lock</code>, with the KeyboardInterrupt only as its context. The program would report a lock bug, not the operator's Ctrl+C.</p>
+      <p>So <code>run_with_time_limit</code> looks for exactly that shape and raises the KeyboardInterrupt itself, after its <code>except</code> block: raised inside it, the lock error would become its context, and the Ctrl+C would read as one that came while handling another error.</p>
+      <figure class="code"><pre><code><span class="k">def</span> _interrupt_hidden_in(error: BaseException) -&gt; KeyboardInterrupt | None:
+    exception_being_handled = error.__context__
+    <span class="k">if</span> isinstance(error, RuntimeError) <span class="k">and</span> isinstance(exception_being_handled, KeyboardInterrupt):
+        <span class="k">return</span> exception_being_handled
+    <span class="k">return</span> None</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/time_limit.py#L121-L126">time_limit.py 121-126</a>, docstring left out · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/time_limit.py#L114-L117">where it's raised</a> · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_time_limit.py#L138-L169">test</a> · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L57">facts register</a> · <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0094-connecting-raises-the-interrupt-signal-that-a-cpython-lock-error-hides.md">ADR-0094</a></figcaption></figure>
+    </div>
+  </details>
+  <details class="more why">
+    <summary><span class="kind">Why it's built this way</span>Why cflib's <code>close_link()</code> is never called on a drone that may be flying</summary>
+    <div class="body">
+      <p>cflib's <code>close_link()</code> sends a zero-thrust setpoint first, then closes the link. On a flying drone that setpoint cuts the motors. So while the drone may be airborne, or its state is unknown, the link part closes only the radio link: three of <code>close_link()</code>'s other steps, in the same order, and no setpoint reaches the drone.</p>
+      <figure class="code"><pre><code><span class="k">def</span> _close_link(self) -&gt; None:
+    self._link.close(radio_link_only=self._take_off_and_landing.is_airborne <span class="k">or</span> self._is_drone_state_unknown)</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L348-L351">adapter.py 348-351</a>, docstring left out · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/link.py#L133-L157">link.py 133-157</a> · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L16">facts register: the zero-thrust setpoint</a> · <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0038-connecting-to-a-flying-drone.md">ADR-0038</a></figcaption></figure>
+      <p>A planted bug that always calls cflib's close fails tests in both <code>connect()</code> and <code>disconnect()</code> (section 9).</p>
+    </div>
+  </details>
+  <details class="more py">
+    <summary><span class="kind">Python note</span><code>except Exception</code> and <code>except BaseException</code></summary>
+    <div class="body">
+      <p>Ctrl+C arrives as <code>KeyboardInterrupt</code>, which derives from <code>BaseException</code> but not from <code>Exception</code>. So <code>except Exception</code> catches ordinary errors and lets Ctrl+C through, and <code>connect()</code> uses that split: an ordinary error may be replaced by the lost link's error, which explains it, but the operator's Ctrl+C never is. A bare <code>raise</code> re-raises the error being handled, like <code>throw;</code> in C++.</p>
+      <figure class="code"><pre><code><span class="k">except</span> Exception:
+    self._close_link()
+    self._raise_if_lost_while_connecting()
+    <span class="k">raise</span>
+<span class="k">except</span> BaseException:  <span class="c"># the interrupt signal among them: never replaced by the lost link's error</span>
+    self._close_link()
+    <span class="k">raise</span></code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L190-L196">adapter.py 190-196</a>, comment shortened · <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0095-a-link-lost-while-connecting-ends-connect-with-the-lost-links-error.md">ADR-0095</a></figcaption></figure>
+    </div>
+  </details>
+  <details class="more py">
+    <summary><span class="kind">Python note</span><code>nonlocal</code>: a closure that writes its outer variable</summary>
+    <div class="body">
+      <p>An inner function can read its enclosing function's variables, but assigning one would make a new local. <code>nonlocal</code> says the name belongs to the enclosing function, like a C++ lambda capturing by reference. Here the check keeps the list of missing values from its latest run, so the time-limit message names what was missing when the wait ran out.</p>
+      <figure class="code"><pre><code>missing_values: list[str] = []
+
+<span class="k">def</span> has_every_value() -&gt; bool:
+    <span class="k">nonlocal</span> missing_values
+    missing_values = self._log_blocks.telemetry.missing_values()
+    <span class="k">return not</span> missing_values</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L561-L566">adapter.py 561-566</a> · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L1106-L1117">test: the message</a></figcaption></figure>
+    </div>
+  </details>
+</section>
+
+<!-- ======================================================= 8 -->
+<section class="stop" id="s8">
+  <div class="stop-head"><span class="stop-num">08</span><h2>Failures</h2></div>
+  <p class="lede">While the link is up, every flying path ends in a landing or a motor stop, even after an error, and the log says what happened. Pick a failure to see what the adapter does, what it logs, and what it leaves to the operator.</p>
+
+  <figure class="fig">
+    <div class="split">
+      <div class="mlist" id="whatifs">
+        <button type="button" class="mod wi" data-wi="lost" aria-pressed="true"><span class="name">The link is lost</span><span class="job">In flight or while connecting</span></button>
+        <button type="button" class="mod wi" data-wi="landing" aria-pressed="false"><span class="name">Our landing raises</span><span class="job">While disconnecting</span></button>
+        <button type="button" class="mod wi" data-wi="flying" aria-pressed="false"><span class="name">It's already flying</span><span class="job">At connect</span></button>
+        <button type="button" class="mod wi" data-wi="nan" aria-pressed="false"><span class="name">The estimate isn't a number</span><span class="job">NaN or infinity</span></button>
+        <button type="button" class="mod wi" data-wi="flow" aria-pressed="false"><span class="name">No Flow deck</span><span class="job">At connect</span></button>
+      </div>
+      <div class="panel" id="wi-info" aria-live="polite">
+        <div class="wi-card" data-for="lost">
+          <span class="label">What if</span><h3>The link is lost</h3>
+          <ol class="chain">
+            <li>cflib reports it, on whichever thread found the error, the tick's included. The link part only stores cflib's message and logs one error.</li>
+            <li>The tick's next snapshot raises. Every tick starts with one, so no command needs a check of its own, and the error ends the run.</li>
+            <li><code>disconnect()</code> can't land: nothing reaches the drone. It closes only the radio link, and says what to do: "Closing without landing: the link is lost and the drone may still be flying. Run the rescue landing, or tools/emergency_stop.py with something soft under the drone."</li>
+            <li>What the drone does next is the firmware's: a setpoint stream that stops ages into its watchdog, and a high-level move doesn't (section 4).</li>
+          </ol>
+          <p>While connecting, a step that fails after the loss ends <code>connect()</code> with the lost link's error. One test loses the link before each cflib call a connect makes once the link is open.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/link.py#L195-L206">link.py 195-206</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L359-L366">adapter.py 359-366</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L942-L957">test: the next snapshot</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L960-L975">test: no landing</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L1566-L1603">test: every call of connect</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0084-a-lost-link-is-an-error-and-the-firmware-land-is-a-last-resort.md">ADR-0084</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0086-a-lost-link-raises-at-the-next-snapshot.md">ADR-0086</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0095-a-link-lost-while-connecting-ends-connect-with-the-lost-links-error.md">ADR-0095</a></div>
+        </div>
+        <div class="wi-card" data-for="landing" hidden>
+          <span class="label">What if</span><h3>Our landing raises</h3>
+          <p>With the link up and the drone airborne, <code>disconnect()</code> falls back to the <span class="term" tabindex="0" data-term="Last-resort landing">last-resort landing</span>, which reads no telemetry and no landing state:</p>
+          <ol class="chain">
+            <li>The firmware's own land, to height 0 over a fixed <span class="from-code" tabindex="0" data-formula="last-resort-landing-duration">6.7&nbsp;s</span>.</li>
+            <li>The release of the setpoint priority. Released before the land, the idle high-level commander's motors-off setpoint would get through first.</li>
+            <li>A wait with the link open: closing it throws away packets not yet sent.</li>
+            <li>Only the radio link closes. Then our landing's error rises, so the run ends with it.</li>
+          </ol>
+          <p>The firmware stops the motors when its land ends, even above the floor, so this is only for when our own landing has failed. It logs its own errors instead of raising them, and the radio link closes whatever happens. On the floor there's nothing to land, so no last resort.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L250-L285">commands.py 250-285</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L220-L234">adapter.py 220-234</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L552-L578">test</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L603-L617">test: its own error</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L649-L661">test: on the floor</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0084-a-lost-link-is-an-error-and-the-firmware-land-is-a-last-resort.md">ADR-0084</a></div>
+        </div>
+        <div class="wi-card" data-for="flying" hidden>
+          <span class="label">What if</span><h3>It's already flying</h3>
+          <p>Another program lost it, or it just landed and its status still says flying. <code>connect()</code> reads the first drone status before touching anything else:</p>
+          <ol class="chain">
+            <li>The status says flying: <code>connect()</code> refuses, before the estimate reset and the thrust base write. "The drone is still flying: run the rescue landing, or wait a few seconds if it just landed."</li>
+            <li>The state is still unknown, so only the radio link closes, and nothing is sent to the drone.</li>
+            <li>The <span class="term" tabindex="0" data-term="Rescue landing">rescue landing</span> program connects again with <code>take_over_flight</code>: no estimate reset, the drone counted as airborne, and the normal landing.</li>
+          </ol>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L537-L557">adapter.py 537-557</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L859-L868">test: refused</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L916-L926">test: taken over</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L313-L321">test: its transcript</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0038-connecting-to-a-flying-drone.md">ADR-0038</a></div>
+        </div>
+        <div class="wi-card" data-for="nan" hidden>
+          <span class="label">What if</span><h3>The estimate isn't a number</h3>
+          <ol class="chain">
+            <li>In flight: the callback drops it and warns once per streak. The last finite estimate goes stale, the safety pre-check fails, and the drone lands, aimed at that last finite position (section 3).</li>
+            <li>While taking over a flight: the wait for the first telemetry runs out, and the message points to the emergency stop, since a drone in the air can't land under control without its estimate. "Use tools/emergency_stop.py, with something soft under the drone first."</li>
+          </ol>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/log_blocks.py#L281-L302">log_blocks.py 281-302</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L581-L589">adapter.py 581-589</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_telemetry.py#L115-L135">test: in flight</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L1041-L1055">test: taking over</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0045-rescue-without-an-estimate-points-to-the-emergency-stop.md">ADR-0045</a></div>
+        </div>
+        <div class="wi-card" data-for="flow" hidden>
+          <span class="label">What if</span><h3>No Flow deck</h3>
+          <p>Right after the parameters are read, <code>connect()</code> checks for the Flow deck, version 2 or 1, and raises without it: "Flow deck not detected: autonomous flight needs it." Nothing is known yet about whether the drone is flying, so only the radio link closes.</p>
+          <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L176-L177">adapter.py 176-177</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L541-L550">test</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L532-L538">test: version 1 counts</a></div>
+        </div>
+      </div>
+    </div>
+    <figcaption>Click a failure. Quoted messages are the adapter's log lines and errors, as written in the code.</figcaption>
+  </figure>
+
+  <details class="more why">
+    <summary><span class="kind">Why it's built this way</span>Why a lost link raises at the next snapshot</summary>
+    <div class="body">
+      <p>cflib reports a lost link on whatever thread found it, even the tick's own, in the middle of a command. So the callback only records it. The error rises at a known place instead: the next snapshot, the first thing every tick does. One check there covers every command a tick sends, and <code>connect()</code>'s waits keep a check of their own so they end at once.</p>
+      <div class="links"><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0086-a-lost-link-raises-at-the-next-snapshot.md">ADR-0086</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0084-a-lost-link-is-an-error-and-the-firmware-land-is-a-last-resort.md">ADR-0084</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L22">facts register: the thread</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L331-L339">adapter.py 331-339</a></div>
+    </div>
+  </details>
+</section>
+
+<!-- ======================================================= 9 -->
+<section class="stop" id="s9">
+  <div class="stop-head"><span class="stop-num">09</span><h2>Testing</h2></div>
+  <p class="lede">No test here needs a drone or a radio. cflib's objects are replaced by mocks and fakes, a sim <span class="term" tabindex="0" data-term="Clock">clock</span> moves only when a test says so, and the whole suite runs headless in continuous integration on every push. <span class="term" tabindex="0" data-term="Bug planting">Bug planting</span> proves that each new test can fail.</p>
+
+  <figure class="fig">
+    <div class="split">
+      <div class="mlist" id="plants">
+        <span class="label">Plant a bug</span>
+        <button type="button" class="mod plant" data-plant="release-first" aria-pressed="true"><span class="name">Release before the move</span><span class="job">commands.py, the hand-over</span></button>
+        <button type="button" class="mod plant" data-plant="no-release" aria-pressed="false"><span class="name">No release after the motor stop</span><span class="job">commands.py, the motor stop</span></button>
+        <button type="button" class="mod plant" data-plant="no-grace" aria-pressed="false"><span class="name">No take-off grace</span><span class="job">take_off_and_landing.py, may be flying</span></button>
+        <button type="button" class="mod plant" data-plant="stale-status" aria-pressed="false"><span class="name">Trust a stale status</span><span class="job">take_off_and_landing.py, may be flying</span></button>
+        <button type="button" class="mod plant" data-plant="close-link" aria-pressed="false"><span class="name">Always cflib's close</span><span class="job">adapter.py, the link close</span></button>
+      </div>
+      <div class="panel" id="plant-info" aria-live="polite">
+        <div class="plant-card" data-for="release-first">
+          <span class="label">The bug</span>
+          <figure class="code"><pre><code><span class="del">-    yield</span>
+     if self._is_streaming:
+         self._current_crazyflie().commander.send_notify_setpoint_stop()
+         ...
+<span class="add">+    yield</span></code></pre><figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L119-L125">commands.py 119-125</a></figcaption></figure>
+          <span class="label">The tests that failed</span>
+          <ul class="failed">
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L197-L214">the climb hands over at the final descent height: last setpoint, then go_to, then release</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L361-L376">land during the initial climb without a usable down range hands over to the slow descent</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_commands.py#L225-L234">after steering mode, a hover goes out before the stream is released</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_commands.py#L237-L245">after steering mode, a move-to goes out before the stream is released</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L979-L997">after connecting, a landing hands over from the velocity setpoints before it</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L280-L287">transcript: take-off to touchdown</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L302-L310">transcript: a landing with no usable down range</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L324-L330">transcript: a disconnect while flying</a></li>
+          </ul>
+        </div>
+        <div class="plant-card" data-for="no-release" hidden>
+          <span class="label">The bug</span>
+          <figure class="code"><pre><code>     crazyflie.high_level_commander.stop()  # stops the trajectory and the motors
+<span class="del">-    # The release hands the motors to the high-level commander, so it comes after its stop.</span>
+<span class="del">-    commander.send_notify_setpoint_stop()</span></code></pre><figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L142-L144">commands.py 142-144</a></figcaption></figure>
+          <span class="label">The tests that failed</span>
+          <ul class="failed">
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_commands.py#L266-L277">a motor stop releases the setpoint priority after both stops</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_commands.py#L280-L287">a motor stop without a stream still releases the setpoint priority</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L731-L740">the motor stop at touchdown releases the setpoint priority last</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L280-L287">transcript: take-off to touchdown</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L290-L299">transcript: a landing during the initial climb</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L302-L310">transcript: a landing with no usable down range</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L313-L321">transcript: a take-over, then a landing</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L324-L330">transcript: a disconnect while flying</a></li>
+          </ul>
+          <p class="caption">Every transcript fails: each flight ends in a motor stop.</p>
+        </div>
+        <div class="plant-card" data-for="no-grace" hidden>
+          <span class="label">The bug</span>
+          <figure class="code"><pre><code><span class="del">-    return now - self._take_off_sent_at &lt; TAKE_OFF_STATUS_GRACE</span>
+<span class="add">+    return False</span></code></pre><figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L160">take_off_and_landing.py 160</a></figcaption></figure>
+          <span class="label">The tests that failed</span>
+          <ul class="failed">
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L379-L389">land right after a take-off lands before the status shows flying</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L419-L430">land one tick before the end of the take-off grace lands</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L701-L712">an estimate reset while the drone may be flying is ignored and warned once per streak</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_commands.py#L171-L180">a hover right after the initial climb still flies before the status shows flying</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L459-L476">connecting again warns again about an ignored estimate reset</a></li>
+          </ul>
+        </div>
+        <div class="plant-card" data-for="stale-status" hidden>
+          <span class="label">The bug</span>
+          <figure class="code"><pre><code><span class="del">-    if status is None or status.age(now) &gt; STALE_AFTER or status.value.is_flying:</span>
+<span class="add">+    if status is None or status.value.is_flying:</span></code></pre><figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L158">take_off_and_landing.py 158</a></figcaption></figure>
+          <span class="label">The tests that failed</span>
+          <ul class="failed">
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L881-L893">an old on-the-floor status counts as unknown, so it lands</a></li>
+          </ul>
+          <p class="caption">One test caught this one. Bug planting shows how many tests stand behind a rule, not only whether one does.</p>
+        </div>
+        <div class="plant-card" data-for="close-link" hidden>
+          <span class="label">The bug</span>
+          <figure class="code"><pre><code><span class="del">-    self._link.close(radio_link_only=self._take_off_and_landing.is_airborne or self._is_drone_state_unknown)</span>
+<span class="add">+    self._link.close(radio_link_only=False)</span></code></pre><figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L351">adapter.py 351</a></figcaption></figure>
+          <span class="label">The tests that failed</span>
+          <ul class="failed">
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L541-L550">without a Flow deck it refuses to fly and closes only the radio link</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L606-L615">opening the link has a time limit, then stops the connection under way without a setpoint</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L618-L638">the time limit itself stops the connection under way before connect cleans up</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L641-L650">reading the parameters has a time limit, then closes only the radio link</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L699-L707">the interrupt signal while the link opens gets through and stops the connection under way</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L710-L718">the interrupt signal while reading the parameters gets through and closes only the radio link</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L742-L748">a missing log variable says to update the firmware</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L859-L868">a flying drone is refused before the estimate reset and without a zero-thrust setpoint</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L871-L881">a status that never arrives is a time-limit error that closes only the radio link</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L1030-L1038">a failure while connecting to take over closes only the radio link</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L1041-L1055">taking over a drone with no finite estimate points to the emergency stop (two cases)</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L1120-L1136">an estimate arriving after a take-over times out still points to the emergency stop</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L552-L578">a landing that raises sends the firmware's land, then the release, then closes only the radio link</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L603-L617">an error in the last resort is logged, not raised, and the radio link still closes</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L620-L646">a release that raises in the last resort is logged and the link stays open for the land</a></li>
+            <li><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L960-L975">after a lost link in flight, disconnect closes without landing and says the drone may still be flying</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <figcaption>Each bug was planted alone in a copy of the code at the pinned commit, and the tests in <code>tests/drone/crazyflie/</code> were run once; the list is every test that failed. A planted bug is never committed. The project's rule: break the behavior a test guards, one small change at a time, and check that the test fails (<a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/coding-style.md?plain=1#L175-L179">coding-style.md 175-179</a>).</figcaption>
+  </figure>
+
+  <div class="kinds">
+    <div class="panel">
+      <span class="label">Unit tests</span><h3>Rules, one at a time</h3>
+      <p>Four of the parts with no cflib are tested alone. The rest are tested through the adapter, with cflib's objects mocked and a sim clock, so a test of a <span class="from-code" tabindex="0" data-formula="deadline-without-down-range">22&nbsp;s</span> deadline doesn't wait for it.</p>
+      <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_time_limit.py">time limit</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_touchdown.py">touchdown</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_bad_flow_zone.py">bad-flow zone</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_conversions.py">conversions</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py">through the adapter</a></div>
+    </div>
+    <div class="panel">
+      <span class="label">Transcript tests</span><h3>Every send, in order</h3>
+      <p>Scripted flights against a fake cflib that records each call. A change that reorders or alters one send fails its flight, which the setpoint priority depends on.</p>
+      <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L118-L178">the fake cflib</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/transcripts/take_off_to_touchdown.txt">a transcript</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_transcripts.py#L280-L330">the tests</a></div>
+    </div>
+    <div class="panel">
+      <span class="label">Connecting</span><h3>A fake cflib that can fail anywhere</h3>
+      <p>The connect tests' fake cflib sends each log block's first sample, delays it or never sends it, and can lose the link just before any call. One test loses the link before every cflib call of a real connect, so a call added later gets its case with no new test.</p>
+      <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L104-L301">the fake cflib</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L1555-L1558">test: the calls are listed</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L1566-L1603">test: each call</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0095-a-link-lost-while-connecting-ends-connect-with-the-lost-links-error.md">ADR-0095</a></div>
+    </div>
+    <div class="panel">
+      <span class="label">Fitness functions</span><h3>The rules of the structure</h3>
+      <p>Tests that read the code instead of running it: who may import cflib (section 2), and that only <code>connect()</code> and <code>disconnect()</code> block (section 4).</p>
+      <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/architecture/test_import_rules.py#L209-L242">imports</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/architecture/test_blocking_call_rules.py#L254-L279">blocking calls</a></div>
+    </div>
+    <div class="panel">
+      <span class="label">Continuous integration</span><h3>On every push</h3>
+      <p>Formatting, lint, pyright in strict mode, then every test and fitness function, on a fresh machine with no drone.</p>
+      <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/.github/workflows/checks.yml#L28-L38">checks.yml 28-38</a></div>
+    </div>
   </div>
+
+  <details class="more why">
+    <summary><span class="kind">Why it's built this way</span>Why a sim clock</summary>
+    <div class="body">
+      <p>The adapter reads time only from the <code>Clock</code> it's given, never from the computer directly. A test gives it a sim clock, where sleeping jumps straight to the deadline: simulated time runs as fast as the code does, and every run gives exactly the same times. So a test can check a limit to the tick, at exactly its end and one tick before, with no flaky timing.</p>
+      <figure class="code"><pre><code><span class="k">def</span> sleep_until(self, deadline: float) -&gt; None:
+    self._time = max(self._time, deadline)</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/timing/clock.py#L45-L66">clock.py 45-66</a> · <a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_take_off.py#L405-L430">tests: at the end, and one tick before</a> · <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0009-clock-abstraction.md">ADR-0009</a></figcaption></figure>
+    </div>
+  </details>
+  <details class="more py">
+    <summary><span class="kind">Python note</span>pytest's fixtures and <code>parametrize</code></summary>
+    <div class="body">
+      <p>pytest finds every function named <code>test_…</code> and runs it. Its arguments are <em>fixtures</em>: pytest builds each one by name before the test, such as a connected adapter or a fake cflib, much like a test fixture class's setup. <code>@pytest.mark.parametrize</code> runs one test once per value, with an id for each case in the report.</p>
+      <figure class="code"><pre><code>@pytest.mark.parametrize(<span class="c">"deck_parameter"</span>, [<span class="c">"0"</span>, None], ids=[<span class="c">"not attached"</span>, <span class="c">"unknown to the firmware"</span>])
+<span class="k">def</span> test_connecting_without_a_buzzer_deck_logs_that_buzzer_commands_make_no_sound(
+    deck_parameter: str | None, adapter: CrazyflieAdapter, fake_cflib: FakeCflib, caplog: pytest.LogCaptureFixture
+) -&gt; None:
+    ...
+    <span class="k">assert</span> buzzer_deck_logs(caplog) == [<span class="c">"No Buzzer deck: buzzer commands will make no sound."</span>]</code></pre>
+      <figcaption><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_connect.py#L408-L420">test_adapter_connect.py 408-420</a>, shortened</figcaption></figure>
+    </div>
+  </details>
 </section>
 
 </main>
@@ -767,6 +1319,14 @@ self._telemetry.write_drone_status(status, drone_time)</code></pre>
    "url": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L49-L50",
    "label": "take_off_and_landing.py 49"
   },
+  "TAKE_OFF_STATUS_GRACE": {
+   "value": 1.0,
+   "text": "1 s",
+   "code": "TAKE_OFF_STATUS_GRACE = 1.0",
+   "description": "Seconds after a take-off is sent during which the drone may be flying before its status shows it (ADR-0032).",
+   "url": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/take_off_and_landing.py#L53-L55",
+   "label": "take_off_and_landing.py 53"
+  },
   "TOUCHDOWN_HOLD": {
    "value": 0.3,
    "text": "0.3 s",
@@ -847,6 +1407,54 @@ self._telemetry.write_drone_status(status, drone_time)</code></pre>
    "url": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/conversions.py#L38-L40",
    "label": "conversions.py 38"
   },
+  "LINK_TIME_LIMIT": {
+   "value": 15.0,
+   "text": "15 s",
+   "code": "LINK_TIME_LIMIT = 15.0",
+   "description": "Seconds to open the link and get the drone's variable lists. A first connect, with nothing cached, downloads more.",
+   "url": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/link.py#L26-L28",
+   "label": "link.py 26"
+  },
+  "PARAMETERS_TIME_LIMIT": {
+   "value": 10.0,
+   "text": "10 s",
+   "code": "PARAMETERS_TIME_LIMIT = 10.0",
+   "description": "Seconds to read the parameter values.",
+   "url": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/link.py#L29-L30",
+   "label": "link.py 29"
+  },
+  "FIRST_TELEMETRY_TIME_LIMIT": {
+   "value": 3.0,
+   "text": "3 s",
+   "code": "FIRST_TELEMETRY_TIME_LIMIT = 3.0",
+   "description": "Seconds for every telemetry value to arrive once (ADR-0031). The battery, streamed once a second, is the slowest.",
+   "url": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L88-L90",
+   "label": "adapter.py 88"
+  },
+  "NOT_FLYING_TIME_LIMIT": {
+   "value": 3.0,
+   "text": "3 s",
+   "code": "NOT_FLYING_TIME_LIMIT = 3.0",
+   "description": "Seconds that closing the link waits, after a motor stop, for the drone to report not flying (ADR-0058). Its status keeps saying flying for 2 s after the motors stop.",
+   "url": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L91-L93",
+   "label": "adapter.py 91"
+  },
+  "WAIT_AFTER_SILENCE": {
+   "value": 1.0,
+   "text": "1 s",
+   "code": "WAIT_AFTER_SILENCE = 1.0",
+   "description": "Seconds the link stays open after the silence at disconnect: closing it throws away writes not yet sent (ADR-0085).",
+   "url": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/adapter.py#L94-L96",
+   "label": "adapter.py 94"
+  },
+  "WAIT_SLICE": {
+   "value": 0.1,
+   "text": "0.1 s",
+   "code": "WAIT_SLICE = 0.1",
+   "description": "Seconds per wait, so the interrupt signal gets through within this long, even on Windows.",
+   "url": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/time_limit.py#L17-L18",
+   "label": "time_limit.py 17"
+  },
   "TICK_RATE": {
    "value": 20.0,
    "text": "20 Hz",
@@ -899,20 +1507,36 @@ self._telemetry.write_drone_status(status, drone_time)</code></pre>
     "LANDING_APPROACH_AIM_BELOW"
    ],
    "description": "The height the landing approach aims at."
+  },
+  "last-resort-landing-duration": {
+   "value": 6.666666666666667,
+   "text": "6.7 s",
+   "formula": "HEIGHT_IF_UNKNOWN / VERTICAL_SPEED",
+   "worked": "2 m / 0.3 m/s",
+   "uses": [
+    "HEIGHT_IF_UNKNOWN",
+    "VERTICAL_SPEED"
+   ],
+   "description": "The last-resort landing's fixed time: down from the most the drone could be above the floor, at the high-level vertical speed (ADR-0084)."
   }
  },
  "adrs": {
   "ADR-0019": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0019-final-descent-when-touchdown-unconfirmed.md",
   "ADR-0022": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0022-multi-ranger-keeps-stock-firmware-rate.md",
   "ADR-0023": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0023-tick-rate-20-hz.md",
+  "ADR-0031": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0031-connect-waits-for-first-telemetry.md",
+  "ADR-0032": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0032-landing-with-a-go-to.md",
   "ADR-0048": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0048-level-through-the-bad-flow-zone.md",
   "ADR-0054": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0054-a-fresh-estimate-for-every-take-off.md",
+  "ADR-0058": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0058-release-setpoint-priority-after-motor-stop.md",
   "ADR-0064": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0064-in-flight-flow-limit-grows-with-height.md",
   "ADR-0068": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0068-landing-approach-aims-below-the-final-descent-height.md",
   "ADR-0070": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0070-initial-climb-default-0-4-m-per-s.md",
   "ADR-0072": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0072-final-descent-0-3-m-per-s.md",
   "ADR-0077": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0077-initial-climb-ends-at-a-fixed-0-15-m.md",
-  "ADR-0081": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0081-one-age-limit-for-every-reading.md"
+  "ADR-0081": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0081-one-age-limit-for-every-reading.md",
+  "ADR-0084": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0084-a-lost-link-is-an-error-and-the-firmware-land-is-a-last-resort.md",
+  "ADR-0085": "https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0085-the-silence-waits-a-fixed-1-s-with-no-confirmation.md"
  }
 }
 </script>

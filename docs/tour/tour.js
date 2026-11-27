@@ -1,5 +1,5 @@
 // The project tour's shared script: glossary pop-overs, clickable figures,
-// and the adapter chapter's two animations. No libraries, no build step.
+// and the adapter chapter's animations and calculator. No libraries, no build step.
 (function () {
   "use strict";
 
@@ -49,6 +49,20 @@
     "Final descent": "The last part of every landing, after the landing approach (none for a landing during the initial climb): a level descent through the bad-flow zone from the final descent height, until the down range confirms touchdown or a time limit says the drone must be on the floor. Then the motors stop. With no usable down range, a slow high-level descent instead. Land, the motor stop, arm and buzzer commands go through; the rest are ignored.",
     "Touchdown hold": "How long the down range must stay at or below the touchdown threshold before touchdown is confirmed, so one noisy reading can't confirm it. A higher, missing or stale reading starts it over.",
     "Drift": "Slow, growing error in the state estimate over a flight (flow deck has no absolute reference).",
+    "Setpoint": "A target the firmware's controller tries to reach: a position, a velocity or a hover height.",
+    "Blocking call": "A call that doesn't return until time passes or something happens: a sleep, a wait or a join. A lock held only for a quick read or write doesn't count. A blocking function makes one, or calls a function that does. In the Crazyflie adapter, only connect() and disconnect() may reach one; a fitness function checks it.",
+    "Clock": "The source of time for the tick loop and adapters. A real clock reads the computer's monotonic time; a sim clock only advances when told to, so tests and simulations run faster than real time and repeat exactly. Behaviors and the safety layer don't read the clock: they use the snapshot's time.",
+    "Interrupt signal": "The operating system's request for the program to stop (SIGINT). Ctrl+C in the console sends it, and other tools can too. Python raises it as KeyboardInterrupt on the main thread unless the program handles it. While connecting it stops the program; once connected it makes a stop request.",
+    "Take-off grace": "The short time after a take-off is sent when the Crazyflie adapter counts the drone as flying, because the drone status shows a take-off only after a delay.",
+    "Take over (a flight)": "Connect to a drone that may be flying, without resetting its position estimate, and treat it as flying until it lands. Only the rescue landing program does it.",
+    "Rescue landing": "Landing a drone a program lost. A new program connects, takes over the flight without resetting the position estimate, and lands it with the normal landing.",
+    "Last-resort landing": "The firmware's own land, sent by disconnect() only when our landing code raises with the link up: down to height 0 over a fixed time, then the setpoint priority's release, then only the radio link closes. It reads no telemetry, and the firmware stops the motors when it ends, even above the floor.",
+    "Lost link": "cflib's report that the radio link failed (connection_lost): connect() raises while connecting, and the tick's next snapshot once connected; the run ends with an error and no landing.",
+    "Emergency stop": "Immediately cut all motors. The drone falls.",
+    "Estimate reset": "Restarting the estimator with the drone on the floor: position (0, 0, 0) where it sits, velocity zero, level, and the velocity uncertainty back at its starting value, which looks healthy until flow proves otherwise. Never in flight. The firmware also resets by itself when the estimate passes 100 m or 10 m/s.",
+    "Deck": "Plug-in expansion board on the Crazyflie.",
+    "Thrust base": "The thrust command the firmware's vertical speed controller starts from (posCtlPid.thrustBase); its integral adds the rest, and restarts at zero at every setpoint mode change and on the floor. The Crazyflie adapter sets it near the hover thrust at connect (ADR-0061).",
+    "Bug planting": "Deliberately breaking the code a test guards, to check that the test fails. One small change at a time, always removed afterwards and never committed. A test that still passes has a gap. Done by hand, or, once it's built (backlog #152), by the bug-planting tool (tools/plant_bugs.py), which generates plants from the code's named limits. A form of mutation testing (ADR-0090).",
     "Setpoint priority": "The firmware follows one source of setpoints at a time, and a setpoint stream outranks the high-level commander. After a stream, the adapter releases the priority so the high-level commander is followed again; until then the drone refuses its setpoints (ADR-0058).",
   };
 
@@ -144,10 +158,10 @@
     if (formula) {
       return [
         popTitle(formula.formula, true),
-        document.createTextNode(formula.description),
+      ].concat(cited(formula.description), [
         popNote("worked", [formula.worked + " = " + formula.text]),
         popNote("from", ["Worked out from the code's numbers"]),
-      ];
+      ]);
     }
     return null;
   }
@@ -641,6 +655,278 @@
     render();
   }
 
+  // --- Section 4: the setpoint priority, one send at a time --------------------------------
+  // Each step: the send, what each source is doing, which one the drone follows, and the motors.
+  function batonSequences() {
+    const up = "send_packet(…)  level, +" + text("INITIAL_CLIMB_SPEED");
+    const down = "send_packet(…)  level, −" + text("FINAL_DESCENT_SPEED");
+    const release = "commander.send_notify_setpoint_stop()";
+    const climbing = { send: up, stream: "A level setpoint each tick.", high: "Stopped: a streamed setpoint stops it.", follows: "stream", motors: "running", text: "The initial climb streams one level setpoint each tick, at priority 2." };
+    const lastUp = { send: up + "  the last setpoint", stream: "Its last setpoint.", high: "Stopped.", follows: "stream", motors: "running", text: "The hand-over starts with one more level setpoint." };
+    const descending = { send: down, stream: "A level setpoint each tick.", high: "Stopped.", follows: "stream", motors: "running", text: "The final descent streams one level setpoint each tick." };
+    const stopSetpoint = { send: "commander.send_stop_setpoint()", stream: "The stop setpoint: motors off.", high: "Stopped.", follows: "stream", motors: "off", text: "Touchdown is confirmed. The stop setpoint ends the stream." };
+    const highStop = { send: "high_level_commander.stop()", stream: "Nothing new.", high: "Idle: offers motors-off setpoints, refused at priority 1.", follows: "stream", motors: "off", text: "The high-level stop stops any move, and the motors." };
+    return {
+      handover: [climbing, lastUp,
+        { send: "high_level_commander.go_to(…)", stream: "Still holds priority 2.", high: "Has the move, but its setpoints are refused at priority 1.", follows: "stream", motors: "running", text: "The move is sent while the stream still holds the priority." },
+        { send: release + "  the release", stream: "Released.", high: "Flying the move.", follows: "high", motors: "running", text: "The release lowers the priority to 1, so the drone takes the high-level commander's setpoints: the move." }],
+      "release-first": [climbing, lastUp,
+        { send: release + "  the release, too early", stream: "Released.", high: "Stopped and idle: offers motors-off setpoints, now accepted.", follows: "high", motors: "off, in mid-air", bad: true, text: "Released before the move, the idle high-level commander's motors-off setpoints are accepted. The motors go off in mid-air." },
+        { send: "high_level_commander.go_to(…)", stream: "Released.", high: "Flying the move, too late.", follows: "high", motors: "running again", bad: true, text: "The move ends the motors-off setpoints, but between the two sends the motors were off." }],
+      "motor-stop": [descending, stopSetpoint, highStop,
+        { send: release + "  the release, last", stream: "Released.", high: "Idle: its motors-off setpoints are accepted.", follows: "high", motors: "off", text: "The release lets the idle high-level commander's motors-off setpoints through, so the drone's setpoint never grows old. The drone stops counting as flying 2 s after the motors stop, with no lock." }],
+      "no-release": [descending, stopSetpoint, highStop,
+        { send: "(no release)", stream: "Holds priority 2, and sends nothing.", high: "Idle: its motors-off setpoints are refused.", follows: "stream", motors: "off", bad: true, text: "Nothing renews the setpoint, so it ages. The drone still counts as flying for 2 s after the motors stop, and once its setpoint is 2 s old it locks: it refuses to arm until it's power cycled." }],
+    };
+  }
+
+  function setupBaton() {
+    const root = document.getElementById("baton");
+    if (!root) return;
+    const SEQUENCES = batonSequences();
+    const lanes = {};
+    root.querySelectorAll(".lane").forEach(function (lane) { lanes[lane.getAttribute("data-lane")] = lane; });
+    const motors = document.getElementById("baton-motors");
+    const sends = document.getElementById("baton-sends");
+    const readout = document.getElementById("baton-text");
+    const count = document.getElementById("baton-count");
+    const back = document.getElementById("baton-back");
+    const next = document.getElementById("baton-next");
+    const tabs = document.querySelectorAll("[data-seq]");
+    let key = "handover";
+    let index = 0;
+    function render() {
+      const steps = SEQUENCES[key];
+      const step = steps[index];
+      ["stream", "high"].forEach(function (name) {
+        lanes[name].classList.toggle("on", step.follows === name);
+        lanes[name].querySelector(".lane-state").textContent = step[name];
+      });
+      motors.textContent = "Motors: " + step.motors;
+      motors.className = "motors" + (step.bad ? " bad" : step.motors === "off" ? " off" : "");
+      sends.textContent = "";
+      steps.slice(0, index + 1).forEach(function (s, i) {
+        const line = document.createElement("div");
+        line.textContent = s.send;
+        if (i === index) line.className = s.bad ? "on bad" : "on";
+        sends.appendChild(line);
+      });
+      readout.className = "readout" + (step.bad ? " bad" : "");
+      readout.textContent = "";
+      const lead = document.createElement("b");
+      lead.textContent = step.bad ? "The bug. " : "";
+      readout.append(lead, step.text);
+      count.textContent = "Send " + (index + 1) + " of " + steps.length;
+      back.disabled = index === 0;
+      next.textContent = index === steps.length - 1 ? "Start again" : "Next send";
+      document.querySelectorAll("[data-seq-links]").forEach(function (links) {
+        links.hidden = links.getAttribute("data-seq-links") !== key;
+      });
+    }
+    tabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        key = tab.getAttribute("data-seq");
+        index = 0;
+        tabs.forEach(function (other) { other.setAttribute("aria-pressed", String(other === tab)); });
+        render();
+      });
+    });
+    back.addEventListener("click", function () { if (index > 0) { index--; render(); } });
+    next.addEventListener("click", function () { index = (index + 1) % SEQUENCES[key].length; render(); });
+    render();
+  }
+
+  // --- Section 4: the firmware's setpoint watchdog ------------------------------------------
+  // The 500 ms and 2000 ms are the firmware's, from the facts register. When the ticks stop and the
+  // chart's length are the model's.
+  const WATCHDOG_WARNING = 0.5;
+  const WATCHDOG_TIMEOUT = 2.0;
+  const TICKS_STOP = 1.0;
+  const WATCHDOG_END = 3.2;
+  function setupWatchdog() {
+    const svg = document.getElementById("watchdog");
+    if (!svg) return;
+    const TICK = 1 / value("TICK_RATE");
+    const x0 = 64, x1 = 744, yTop = 18, yBottom = 206, ageMax = 2.4;
+    const X = function (t) { return x0 + (t / WATCHDOG_END) * (x1 - x0); };
+    const Y = function (age) { return yBottom - (Math.min(age, ageMax) / ageMax) * (yBottom - yTop); };
+    let mode = "stream";
+    let now = 0;
+    let playing = false;
+    let last = null;
+
+    function age(t) {
+      if (mode === "high") return 0;
+      const lastSend = Math.floor(Math.min(t, TICKS_STOP - 1e-9) / TICK + 1e-9) * TICK;
+      return t - lastSend;
+    }
+    for (let a = 0; a <= 2 + 1e-9; a += 0.5) {
+      el("line", { x1: x0, y1: Y(a), x2: x1, y2: Y(a), class: "grid-line" }, svg);
+      el("text", { x: x0 - 8, y: Y(a) + 4, "text-anchor": "end", class: "axis-text" }, svg, fmt(a, 1) + " s");
+    }
+    for (let t = 0; t <= WATCHDOG_END + 1e-9; t += 0.5) {
+      el("text", { x: X(t), y: yBottom + 18, "text-anchor": "middle", class: "axis-text" }, svg, fmt(t, 1) + " s");
+    }
+    el("text", { x: 4, y: yTop - 4, class: "axis-text" }, svg, "setpoint age");
+    el("line", { x1: x0, y1: Y(WATCHDOG_WARNING), x2: x1, y2: Y(WATCHDOG_WARNING), style: "stroke:var(--caution);stroke-dasharray:6 4" }, svg);
+    el("text", { x: x1 - 4, y: Y(WATCHDOG_WARNING) - 6, "text-anchor": "end", class: "axis-text", style: "fill:var(--caution)" }, svg, "500 ms: warning, levels out");
+    el("line", { x1: x0, y1: Y(WATCHDOG_TIMEOUT), x2: x1, y2: Y(WATCHDOG_TIMEOUT), style: "stroke:var(--critical);stroke-dasharray:6 4" }, svg);
+    el("text", { x: x1 - 4, y: Y(WATCHDOG_TIMEOUT) - 6, "text-anchor": "end", class: "axis-text", style: "fill:#ff8a8a" }, svg, "2000 ms: free fall, motors off");
+    el("line", { x1: X(TICKS_STOP), y1: yTop, x2: X(TICKS_STOP), y2: yBottom, style: "stroke:var(--ink-3);stroke-dasharray:2 3" }, svg);
+    el("text", { x: X(TICKS_STOP) + 6, y: yTop + 10, class: "axis-text" }, svg, "the ticks stop");
+    el("line", { x1: x0, y1: yBottom, x2: x1, y2: yBottom, style: "stroke:var(--ink-2)" }, svg);
+    const line = el("polyline", { style: "fill:none;stroke:var(--stream);stroke-width:2.5;stroke-linejoin:round" }, svg);
+    const head = el("circle", { r: 4.5, style: "fill:var(--ink)" }, svg);
+    // Labels paint last, so their dark outline masks the lines behind them.
+    svg.querySelectorAll("text").forEach(function (t) { svg.appendChild(t); });
+
+    const readout = document.getElementById("wd-readout");
+    const playButton = document.getElementById("wd-play");
+    function describe(t, a) {
+      const at = "t = " + fmt(t) + " s · setpoint age " + fmt(a) + " s<br>";
+      if (mode === "high") return at + "<b>A high-level move renews its own setpoint on the drone,</b> so the age stays at zero and the move goes on, ticks or not.";
+      if (t < TICKS_STOP) return at + "<b>A setpoint every tick:</b> the age never passes one tick, " + fmt(TICK) + " s.";
+      if (a < WATCHDOG_WARNING) return at + "<b>No new setpoints.</b> The drone still follows the last one.";
+      if (a < WATCHDOG_TIMEOUT) return at + "<b>Past 500 ms:</b> the drone warns and levels out.";
+      return at + "<b>Past 2000 ms: free fall.</b> The motors go off, and from there the drone locks until it's power cycled.";
+    }
+    function render() {
+      const points = [];
+      for (let t = 0; t <= now + 1e-9; t += 0.005) points.push(fmt(X(t), 1) + "," + fmt(Y(age(t)), 1));
+      points.push(fmt(X(now), 1) + "," + fmt(Y(age(now)), 1));
+      line.setAttribute("points", points.join(" "));
+      line.style.stroke = mode === "high" ? "var(--planner)" : "var(--stream)";
+      head.setAttribute("cx", X(now));
+      head.setAttribute("cy", Y(age(now)));
+      readout.innerHTML = describe(now, age(now));
+    }
+    function frame(stamp) {
+      if (!playing) { last = null; return; }
+      if (last !== null) now += (stamp - last) / 1000;
+      last = stamp;
+      if (now >= WATCHDOG_END) { now = WATCHDOG_END; setPlaying(false); }
+      render();
+      if (playing) requestAnimationFrame(frame);
+    }
+    function setPlaying(on) {
+      playing = on;
+      playButton.textContent = on ? "Pause" : now >= WATCHDOG_END ? "Replay" : "Play";
+      if (on) {
+        last = null; // time spent stopped doesn't count
+        requestAnimationFrame(frame);
+      }
+    }
+    playButton.addEventListener("click", function () {
+      if (!playing && now >= WATCHDOG_END) now = 0;
+      setPlaying(!playing);
+    });
+    const tabs = document.querySelectorAll("[data-wd]");
+    tabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        mode = tab.getAttribute("data-wd");
+        tabs.forEach(function (other) { other.setAttribute("aria-pressed", String(other === tab)); });
+        now = reduceMotion ? WATCHDOG_END : 0;
+        render();
+        setPlaying(!reduceMotion);
+      });
+    });
+    now = reduceMotion ? WATCHDOG_END : 0;
+    render();
+    setPlaying(false);
+  }
+
+  // --- Section 6: may be flying, the adapter's four rules --------------------------------------
+  // The same rules as TakeOffAndLanding.may_be_flying, in the same order. The examples' inputs are the model's.
+  const MBF_EXAMPLES = {
+    hovering: { sent: "take-off", status: "flying", age: 0.02, since: 2.5 },
+    "took-off": { sent: "take-off", status: "floor", age: 0.02, since: 0.3 },
+    landed: { sent: "none", status: "flying", age: 0.02, since: 2.5 },
+    stale: { sent: "take-off", status: "floor", age: 0.4, since: 2.5 },
+    "taken-over": { sent: "take-over", status: "floor", age: 0.02, since: 0 },
+  };
+  function mayBeFlying(input) {
+    if (input.sent === "none") return { flying: false, rule: 1 };
+    if (input.status === "none" || input.age > value("STALE_AFTER") || input.status === "flying") return { flying: true, rule: 2 };
+    // Taking over sets the take-off's time to minus infinity, so the grace is always over.
+    const since = input.sent === "take-over" ? Infinity : input.since;
+    return since < value("TAKE_OFF_STATUS_GRACE") ? { flying: true, rule: 3 } : { flying: false, rule: 4 };
+  }
+  function setupMayBeFlying() {
+    const root = document.getElementById("mbf");
+    if (!root) return;
+    const age = document.getElementById("mbf-age");
+    const since = document.getElementById("mbf-since");
+    const ageOut = document.getElementById("mbf-age-out");
+    const sinceOut = document.getElementById("mbf-since-out");
+    const answer = document.getElementById("mbf-answer");
+    const effects = document.getElementById("mbf-effects");
+    const presets = root.querySelectorAll("[data-preset]");
+    function checked(name) { return root.querySelector('input[name="' + name + '"]:checked').value; }
+    function read() {
+      return { sent: checked("mbf-sent"), status: checked("mbf-status"), age: parseFloat(age.value), since: parseFloat(since.value) };
+    }
+    function render() {
+      const input = read();
+      const result = mayBeFlying(input);
+      age.disabled = input.status === "none";
+      since.disabled = input.sent !== "take-off";
+      ageOut.textContent = input.status === "none" ? "—" : fmt(input.age) + " s";
+      sinceOut.textContent = input.sent === "take-off" ? fmt(input.since) + " s" : input.sent === "take-over" ? "taken over" : "—";
+      answer.textContent = "May be flying: " + (result.flying ? "yes" : "no") + ", by rule " + result.rule;
+      document.querySelectorAll("#mbf-rules li").forEach(function (li) {
+        li.classList.toggle("on", li.getAttribute("data-rule") === String(result.rule));
+      });
+      const rows = result.flying
+        ? [["land()", "a landing: the approach, then the final descent"], ["take_off()", "a high-level climb, no initial climb"], ["hover()", "a hover"], ["reset_estimate()", "ignored, with a warning"], ["Safety pre-check", "checks the velocity uncertainty, outside the initial climb"]]
+        : [["land()", "only the motor stop"], ["take_off()", "the initial climb"], ["hover()", "ignored"], ["reset_estimate()", "sent"], ["Safety pre-check", "doesn't check the velocity uncertainty"]];
+      effects.textContent = "";
+      rows.forEach(function (row) {
+        const dt = document.createElement("dt");
+        if (row[0].indexOf("(") >= 0) {
+          const code = document.createElement("code");
+          code.textContent = row[0];
+          dt.appendChild(code);
+        } else {
+          dt.textContent = row[0];
+        }
+        const dd = document.createElement("dd");
+        dd.textContent = row[1];
+        effects.append(dt, dd);
+      });
+    }
+    function apply(example) {
+      root.querySelector('input[name="mbf-sent"][value="' + example.sent + '"]').checked = true;
+      root.querySelector('input[name="mbf-status"][value="' + example.status + '"]').checked = true;
+      age.value = String(example.age);
+      since.value = String(example.since);
+    }
+    function press(key) {
+      presets.forEach(function (other) { other.setAttribute("aria-pressed", String(other.getAttribute("data-preset") === key)); });
+    }
+    presets.forEach(function (button) {
+      button.addEventListener("click", function () {
+        const key = button.getAttribute("data-preset");
+        apply(MBF_EXAMPLES[key]);
+        press(key);
+        render();
+      });
+    });
+    root.addEventListener("input", function (event) {
+      if (event.target.matches("input")) { press(null); render(); }
+    });
+    apply(MBF_EXAMPLES["took-off"]);
+    press("took-off");
+    render();
+  }
+
+  // --- Section 7: each step's time limit as a bar, scaled to the longest -------------------
+  function setupStepBars() {
+    const bars = document.querySelectorAll("[data-bar]");
+    let longest = 0;
+    bars.forEach(function (bar) { longest = Math.max(longest, value(bar.getAttribute("data-bar"))); });
+    bars.forEach(function (bar) { bar.style.width = (100 * value(bar.getAttribute("data-bar"))) / longest + "%"; });
+  }
+
   // --- Evidence links open in a new tab, so the reader keeps their place in the tour ------
   function setupLinks() {
     document.querySelectorAll('a[href^="https://"]').forEach(function (a) {
@@ -655,7 +941,14 @@
     setupSelect("#layers .layer", "data-layer", ".layer-card");
     setupSelect("#modules .mod", "data-mod", ".mod-card");
     setupSelect("#sm .branch", "data-branch", ".branch-card");
+    setupSelect("#steps .step", "data-step", ".step-card");
+    setupSelect("#whatifs .wi", "data-wi", ".wi-card");
+    setupSelect("#plants .plant", "data-plant", ".plant-card");
     setupTimeline();
     setupFlight();
+    setupBaton();
+    setupWatchdog();
+    setupMayBeFlying();
+    setupStepBars();
   });
 })();

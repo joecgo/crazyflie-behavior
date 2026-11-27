@@ -49,6 +49,7 @@ CONSTANTS = (
     ConstantSpec("VERTICAL_SPEED", ADAPTER + "take_off_and_landing.py", "m/s"),
     ConstantSpec("HOVER_SETTLE_DURATION", ADAPTER + "take_off_and_landing.py", "s"),
     ConstantSpec("MIN_MOVE_DURATION", ADAPTER + "take_off_and_landing.py", "s"),
+    ConstantSpec("TAKE_OFF_STATUS_GRACE", ADAPTER + "take_off_and_landing.py", "s"),
     ConstantSpec("TOUCHDOWN_HOLD", ADAPTER + "touchdown.py", "s"),
     ConstantSpec("RECENT_WINDOW", ADAPTER + "touchdown.py", "s"),
     ConstantSpec("SLOW_DESCENT_SPEED", ADAPTER + "touchdown.py", "m/s"),
@@ -59,6 +60,12 @@ CONSTANTS = (
     ConstantSpec("MULTIRANGER_PERIOD_MS", ADAPTER + "log_blocks.py", "ms"),
     ConstantSpec("BATTERY_PERIOD_MS", ADAPTER + "log_blocks.py", "ms"),
     ConstantSpec("LOG_TIMESTAMP_RANGE_MS", ADAPTER + "conversions.py", "ms"),
+    ConstantSpec("LINK_TIME_LIMIT", ADAPTER + "link.py", "s"),
+    ConstantSpec("PARAMETERS_TIME_LIMIT", ADAPTER + "link.py", "s"),
+    ConstantSpec("FIRST_TELEMETRY_TIME_LIMIT", ADAPTER + "adapter.py", "s"),
+    ConstantSpec("NOT_FLYING_TIME_LIMIT", ADAPTER + "adapter.py", "s"),
+    ConstantSpec("WAIT_AFTER_SILENCE", ADAPTER + "adapter.py", "s"),
+    ConstantSpec("WAIT_SLICE", ADAPTER + "time_limit.py", "s"),
     ConstantSpec("TICK_RATE", "src/crazyflie_behavior/loop/tick_loop.py", "Hz"),
     ConstantSpec("BATTERY_STALE_AFTER", "src/crazyflie_behavior/safety/safety_layer.py", "s"),
 )
@@ -72,6 +79,8 @@ class FormulaSpec:
     formula: str
     unit: str
     description: str
+    digits: int | None = None
+    """Decimal places its text rounds to, for a value that doesn't end, such as 2 / 0.3; None for the shortest form."""
 
 
 FORMULAS = (
@@ -94,6 +103,14 @@ FORMULAS = (
         "FINAL_DESCENT_HEIGHT - LANDING_APPROACH_AIM_BELOW",
         "m",
         "The height the landing approach aims at.",
+    ),
+    FormulaSpec(
+        "last-resort-landing-duration",
+        "HEIGHT_IF_UNKNOWN / VERTICAL_SPEED",
+        "s",
+        "The last-resort landing's fixed time: down from the most the drone could be above the floor, at the "
+        "high-level vertical speed (ADR-0084).",
+        digits=1,
     ),
 )
 
@@ -125,6 +142,7 @@ class FormulaValue:
     """The formula with each constant's value in place of its name."""
     uses: tuple[str, ...]
     description: str
+    digits: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -225,7 +243,8 @@ def work_out(spec: FormulaSpec, constants: Mapping[str, CodeConstant]) -> Formul
         raise TourNumbersError(f"the formula {spec.key} uses constants the tour doesn't read: {', '.join(missing)}")
     value = evaluate(tree.body, {name: constants[name].value for name in uses})
     worked = re.sub(r"\b[A-Z][A-Z0-9_]*\b", lambda match: constant_text(constants[match.group(0)]), spec.formula)
-    return FormulaValue(spec.key, spec.formula, spec.unit, value, worked, uses, " ".join(spec.description.split()))
+    description = " ".join(spec.description.split())
+    return FormulaValue(spec.key, spec.formula, spec.unit, value, worked, uses, description, spec.digits)
 
 
 # --- Writing numbers ------------------------------------------------------------------------------------------
@@ -241,6 +260,11 @@ def number_text(value: float) -> str:
 
 def constant_text(constant: CodeConstant) -> str:
     return f"{number_text(constant.value)} {constant.unit}"
+
+
+def formula_text(formula: FormulaValue) -> str:
+    value = formula.value if formula.digits is None else round(formula.value, formula.digits)
+    return f"{number_text(value)} {formula.unit}"
 
 
 FORMS: Mapping[str, tuple[str | None, Callable[[float], str]]] = {
@@ -288,7 +312,10 @@ def adr_url(numbers: TourNumbers, adr: str) -> str:
 
 def numbers_json(numbers: TourNumbers) -> str:
     """What tour.js reads: every constant and formula, with its text, code, link and description."""
-    cited = {adr for constant in numbers.constants.values() for adr in re.findall(r"ADR-(\d{4})", constant.description)}
+    descriptions = [c.description for c in numbers.constants.values()] + [
+        f.description for f in numbers.formulas.values()
+    ]
+    cited = {adr for description in descriptions for adr in re.findall(r"ADR-(\d{4})", description)}
     data = {
         "commit": numbers.commit,
         "constants": {
@@ -305,7 +332,7 @@ def numbers_json(numbers: TourNumbers) -> str:
         "formulas": {
             formula.key: {
                 "value": formula.value,
-                "text": f"{number_text(formula.value)} {formula.unit}",
+                "text": formula_text(formula),
                 "formula": formula.formula,
                 "worked": formula.worked,
                 "uses": list(formula.uses),
@@ -345,7 +372,7 @@ def _number_element(match: re.Match[str], numbers: TourNumbers) -> str:
         if key not in numbers.formulas or "data-form" in attributes:
             raise TourNumbersError(f'no formula "{key}" in tools/tour_numbers.py, or it has a data-form it can\'t take')
         formula = numbers.formulas[key]
-        text = f"{number_text(formula.value)} {formula.unit}"
+        text = formula_text(formula)
     else:
         name = attributes["data-const"]
         if name not in numbers.constants:
