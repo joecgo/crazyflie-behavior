@@ -9,8 +9,8 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-26 (Pacific)
-- **Last commit:** the records after the tour's pass one, on `4632d1f`
-  (tour `b7192e4`). Not pushed yet. Uncommitted: nothing.
+- **Last commit:** the records after the tour's feedback and item 7, on
+  `8bafc83` (tour `3aa6c4d`). Pushed 2026-11-26. Uncommitted: nothing.
 
 ## Done last
 
@@ -30,23 +30,30 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## In progress
 
-- Joe judges the tour preview's look and feel. Feedback edits go in
-  `docs/tour/`; the preview is republished from a copy without the nine
-  document-skeleton lines (the work order, `drafts/project-tour-adapter-handoff.md`).
+- Joe judges the tour preview's look and feel; round 1 and the work order's
+  item 7 are in preview version 5 (with yellow size bars and the dotted "dots"). Item 7: every number the page takes from
+  the code is written by `tools/tour_numbers.py`, read at the pinned commit,
+  with a pop-up of its name and docstring; `tests/docs/test_tour_numbers.py`
+  fails while the page is out of date (19 test functions, 34 cases, proven
+  by eight plants).
+  Feedback edits go in `docs/tour/`, by the project-tour skill.
 - Joe's review of #31. When he's done: fix what he asks on `main`, close
   #31 unmerged like #24 to #30, and give `REVIEW.md`'s log its row.
 
 ## Next three
 
 1. Once Joe accepts pass one: the ADR for the tour's form (the work
-   order's decided items 1-4 and 10), its index row and Built column.
-   Sonnet, medium.
+   order's decided items 1-4 and 10, and item 7's four answers of
+   2026-11-26: a test fails when a page is out of date, numbers are read at
+   the pinned commit, the script is in `tools/` and the test imports it, and
+   it writes text, tables, the animations' numbers, other forms and constant
+   links), its index row and Built column. Sonnet, medium.
 2. Joe's review of #31, then its fixes. Opus, high.
 3. Build #153, the test for citations of removed backlog rows (ADR-0091),
    then remove row #157. It first needs Joe's OK on a glossary term: *Live
    doc* proposed, *Live place* the alternative. Sonnet, medium.
 
-After those: tour pass two; #165, then #158 (needs a test-layout decision,
+After those: tour pass two, with #166 and #167; #165, then #158 (needs a test-layout decision,
 `/decide`). Opus, high.
 
 ## Explain-backs waiting
@@ -111,6 +118,12 @@ from `drafts/explain-back-notes.md`; don't open it first.
   table, not just `typeCheckingMode`. Why does take-off and landing need
   that when it has no type-check comment, why pin the whole table rather
   than a list of risky settings, and what does the pin cost?
+- **E24.** The project tour's numbers are read at the pinned commit, and
+  `tests/docs/test_tour_numbers.py` fails while a page differs from what
+  `tools/tour_numbers.py` writes. Why would reading today's code instead
+  leave a link showing a different number than the page, why can no change
+  to a constant in today's code fail the page test, and what does the test
+  of each unit against its docstring catch that the page test can't?
 
 ## Last reviewed
 

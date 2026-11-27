@@ -73,16 +73,16 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 22 |
 | recommendation | 7 | 10 |
 | environment | 4 | 12 |
-| communication | 14 | 86 |
+| communication | 14 | 87 |
 | testing | 2 | 41 |
 | process | 8 | 47 |
-| **Total** | **45** | **243** |
+| **Total** | **45** | **244** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 59 |
+| said-without-checking | 60 |
 | records-ahead-of-code | 39 |
 | how-I-work | 34 |
 | weak-test | 34 |
@@ -112,6 +112,7 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-289 | 2026-11-26 | Two counts in the project tour's first chapter weren't counted from the code | communication | said-without-checking | working rule 2, applied to "every" and to counts: count them from the code |
 | M-288 | 2026-11-26 | The project tour said what the safety pre-check checks from part of the code | communication | said-without-checking | working rule 2: read the code, not an old comment, and the whole function a claim is about |
 | M-287 | 2026-11-26 | The project tour's outline said take-off and landing is tested without cflib | communication | said-without-checking | the tour's own rule, in its work order (`drafts/project-tour-adapter-handoff.md`): every claim on the page links to the code or test that shows it, and a claim with nothing to link is left out |
 | M-286 | 2026-11-26 | The `reviewed` branch was deleted from GitHub without asking | process | how-I-work | `CLAUDE.local.md`'s Git rules: ask before any push, a branch deletion included |
@@ -843,6 +844,14 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-289, 2026-11-26: Two counts in the project tour's first chapter weren't counted from the code
+
+- **What happened:** the timeline's description for screen readers said twenty-four ticks take a snapshot; the drawing has 25, from 0 to 1.2 s. The flight animation's drop-down, "Every number in the animation", left out two of the code's numbers its model uses: the shortest high-level move (`MIN_MOVE_DURATION`) and the down range's log period (`DOWN_RANGE_PERIOD_MS`). Caught while marking the page's numbers for `tools/tour_numbers.py`, by reading the model in `tour.js`. The description no longer gives numbers, and the table has both rows, written by the script.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 2, applied to "every" and to counts: count them from the code. The script now writes each number, but nothing checks that the table lists every one the model reads.
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
 
 ### M-288, 2026-11-26: The project tour said what the safety pre-check checks from part of the code
 
