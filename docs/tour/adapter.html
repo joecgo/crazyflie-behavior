@@ -14,10 +14,6 @@
 <header class="bar">
   <div class="bar-inner">
     <div class="bar-title">The Crazyflie adapter <span>· project tour, chapter 1</span></div>
-    <div class="depth" role="group" aria-label="How much to show">
-      <button type="button" id="depth-tour" aria-pressed="true">15-minute tour</button>
-      <button type="button" id="depth-all" aria-pressed="false">Everything</button>
-    </div>
     <nav class="route" aria-label="Sections">
       <a href="#s1">1 Adapter</a>
       <a href="#s2">2 Parts</a>
@@ -44,9 +40,9 @@
     <span>Sections 1, 2, 3 and 5 are ready; the rest are coming</span>
   </div>
   <div class="howto">
-    <div><b>Start simple</b>Each section opens with a short summary. That's the 15-minute tour.</div>
-    <div><b>Go deeper</b>Open any drop-down, or press <em>Everything</em> at the top to open them all.</div>
-    <div><b>Words and numbers with <span class="term" tabindex="0" data-pop-title="Dots" data-pop-text="A dotted line under a word that has a definition. This word is &quot;dots&quot;, so its definition is the dotted line under it, which is defined by the dotted line under it. It's dots all the way down." data-pop-from="Not from the project's glossary">dots</span></b>Hover or tap one. A word shows its definition from the project's <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/glossary.md">glossary</a>, and a number shows where it comes from in the code.</div>
+    <div><b>Start simple</b>Each section opens with a short summary.</div>
+    <div><b>Go deeper</b>Open any drop-down.</div>
+    <div><b>Words and numbers with <span class="term" tabindex="0" data-pop-title="Dots" data-pop-see-itself data-pop-from="Not from the project's glossary">dots</span></b>Hover or tap one. A word shows its definition from the project's <a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/glossary.md">glossary</a>, and a number shows where it comes from in the code.</div>
   </div>
 </section>
 
@@ -606,7 +602,15 @@ self._telemetry.write_drone_status(status, drone_time)</code></pre>
   <details class="more">
     <summary><span class="kind">More</span>The motor stop, and the release after it</summary>
     <div class="body">
-      <p>Every motor stop sends three things in order: the stop setpoint while a stream runs, the high-level stop, then the release of the <span class="term" tabindex="0" data-term="Setpoint priority">setpoint priority</span>. Without the release, the drone refuses the stopped high-level commander's motors-off setpoints, and a drone that still counts as flying locks once its setpoint is 2 s old.</p>
+      <p>Every motor stop sends three things in order: the stop setpoint while a stream runs, the high-level stop, then the release of the <span class="term" tabindex="0" data-term="Setpoint priority">setpoint priority</span>. Without the release, the drone refuses the stopped high-level commander's motors-off setpoints, and a drone that still counts as flying locks once its setpoint is 2&nbsp;s old.</p>
+      <details class="more">
+        <summary><span class="kind">More</span>Where the 2 s comes from</summary>
+        <div class="body">
+          <p>It's the <span class="term" tabindex="0" data-term="Firmware">firmware</span>'s limit, not this project's. The drone watches the age of its latest setpoint. While it counts itself as flying, a setpoint older than 500&nbsp;ms raises a warning, and it levels out. Past 2000&nbsp;ms it goes to a free-fall state, with the motors off, and from there it locks: it refuses to arm until it's power cycled.</p>
+          <p>A motor stop doesn't end this at once, because the drone still counts as flying for 2&nbsp;s after the motors stop. The release lets new setpoints in, so the age stops growing.</p>
+          <div class="links"><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L37">facts register: 500 ms and 2000 ms</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L42">facts register: the free-fall state</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/verified-facts.md?plain=1#L48">facts register: level out, motors off</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0058-release-setpoint-priority-after-motor-stop.md">ADR-0058: the lock</a></div>
+        </div>
+      </details>
       <div class="links"><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/src/crazyflie_behavior/drone/crazyflie/commands.py#L129-L144">commands.py 129-144</a><a class="src" href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/tests/drone/crazyflie/test_adapter_landing.py#L731-L740">test</a><a href="https://github.com/joecgo/crazyflie-behavior/blob/50507182186beba353159f26e12afc736b2950da/docs/decisions/0058-release-setpoint-priority-after-motor-stop.md">ADR-0058</a></div>
     </div>
   </details>

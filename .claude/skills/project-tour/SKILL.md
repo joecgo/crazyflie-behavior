@@ -35,11 +35,14 @@ or chapter too, apply it and add it here in the same task.
 
 - Headings are short and plain: "The Parts", not "Meet the parts". Nothing
   cute.
-- A reading time is honest about how much there is to take in. Chapter 1's
-  summaries are the "15-minute tour".
+- A reading time is honest about how much there is to take in.
 
 ## Interactive parts
 
+- No switch that opens every drop-down at once, and no reading-time button:
+  the page looks bad fully open, and the buttons weren't clear.
+- A number a reader would wonder about, such as a firmware limit, gets a
+  drop-down saying where it comes from.
 - Replaying an animation starts at time 0. Time spent paused or finished
   doesn't count.
 
@@ -87,8 +90,9 @@ or chapter too, apply it and add it here in the same task.
 ## The how-to box
 
 - The word "dots" in "Words and numbers with dots" is itself dotted, as the
-  example, and its pop-up is a joke definition of dots (`data-pop-title`,
-  `data-pop-text`, `data-pop-from` on the span). Keep it on every chapter.
+  example, and its pop-up is a joke definition of dots: "See dots", where "dots" opens
+  the same pop-up (`data-pop-title`, `data-pop-see-itself`, `data-pop-from`
+  on the span). Keep it on every chapter.
 
 ## Check and publish
 

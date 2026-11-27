@@ -87,18 +87,6 @@ h3 { font-size: 1.15rem; }
 }
 .bar-title { font-family: var(--font-display); font-weight: 600; letter-spacing: 0.02em; margin-right: auto; white-space: nowrap; }
 .bar-title span { color: var(--ink-3); font-weight: 400; }
-.depth { display: inline-flex; border: 1px solid var(--line-2); border-radius: 999px; padding: 2px; }
-.depth button {
-  font: 600 0.82rem/1 var(--font-display);
-  letter-spacing: 0.04em;
-  color: var(--ink-2);
-  background: transparent;
-  border: 0;
-  border-radius: 999px;
-  padding: 0.5rem 0.85rem;
-  cursor: pointer;
-}
-.depth button[aria-pressed="true"] { background: var(--accent); color: #00131f; }
 .route { flex-basis: 100%; display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; }
 .route::-webkit-scrollbar { display: none; }
 .route a {

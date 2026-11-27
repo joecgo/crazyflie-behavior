@@ -1,4 +1,4 @@
-// The project tour's shared script: the depth switch, glossary pop-overs, clickable figures,
+// The project tour's shared script: glossary pop-overs, clickable figures,
 // and the adapter chapter's two animations. No libraries, no build step.
 (function () {
   "use strict";
@@ -77,30 +77,11 @@
     return node;
   }
   function fmt(x, digits) { return x.toFixed(digits === undefined ? 2 : digits); }
-  function store(key, value) { try { localStorage.setItem(key, value); } catch (e) { /* storage may be blocked */ } }
-  function recall(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function onActivate(node, handler) {
     node.addEventListener("click", handler);
     node.addEventListener("keydown", function (event) {
       if (event.key === "Enter" || event.key === " ") { event.preventDefault(); handler(event); }
     });
-  }
-
-  // --- The depth switch: summaries only, or every drop-down open -----------------------
-  function setupDepth() {
-    const tour = document.getElementById("depth-tour");
-    const all = document.getElementById("depth-all");
-    if (!tour || !all) return;
-    function apply(mode, save) {
-      const open = mode === "all";
-      document.querySelectorAll("main details").forEach(function (d) { d.open = open; });
-      tour.setAttribute("aria-pressed", String(!open));
-      all.setAttribute("aria-pressed", String(open));
-      if (save) store("tour-depth", mode);
-    }
-    tour.addEventListener("click", function () { apply("tour", true); });
-    all.addEventListener("click", function () { apply("all", true); });
-    if (recall("tour-depth") === "all") apply("all", false);
   }
 
   // --- Pop-overs: glossary terms, and numbers from the code ------------------------------
@@ -152,8 +133,11 @@
     // A pop-up written on the page itself, for a word that isn't a glossary term.
     const title = node.getAttribute("data-pop-title");
     if (title !== null) {
-      return [popTitle(title, false), document.createTextNode(node.getAttribute("data-pop-text") || ""),
-        popNote("from", [node.getAttribute("data-pop-from") || ""])];
+      // The "dots" joke: its definition is "See dots", with a dotted word that opens it again.
+      const body = node.hasAttribute("data-pop-see-itself")
+        ? popNote("see", ["See ", node.cloneNode(true), "."])
+        : document.createTextNode(node.getAttribute("data-pop-text") || "");
+      return [popTitle(title, false), body, popNote("from", [node.getAttribute("data-pop-from") || ""])];
     }
     const key = node.getAttribute("data-formula");
     const formula = key !== null ? NUMBERS.formulas[key] : null;
@@ -174,10 +158,10 @@
     function show(node) {
       const content = popContent(node);
       if (!content) return;
+      const rect = node.getBoundingClientRect(); // read first: the node may be inside the pop-up
       pop.textContent = "";
       pop.append.apply(pop, content);
       pop.hidden = false;
-      const rect = node.getBoundingClientRect();
       const width = pop.offsetWidth;
       const left = Math.max(16, Math.min(rect.left + window.scrollX, window.scrollX + document.documentElement.clientWidth - width - 16));
       pop.style.left = left + "px";
@@ -193,7 +177,8 @@
       if (node && !pinned) hide();
     });
     document.addEventListener("focusin", function (event) {
-      if (event.target.matches && event.target.matches(POPS)) show(event.target);
+      // A word inside the pop-up waits for its click: moving the pop-up on focus would lose the click.
+      if (event.target.matches && event.target.matches(POPS) && !pop.contains(event.target)) show(event.target);
     });
     document.addEventListener("focusout", function (event) {
       if (event.target.matches && event.target.matches(POPS) && !pinned) hide();
@@ -666,7 +651,6 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     setupLinks();
-    setupDepth();
     setupTerms();
     setupSelect("#layers .layer", "data-layer", ".layer-card");
     setupSelect("#modules .mod", "data-mod", ".mod-card");
