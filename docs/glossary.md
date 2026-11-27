@@ -227,7 +227,7 @@ only an example: "For example, about 43,300 for this drone".
 | Term | Definition |
 |---|---|
 | **First flight** | The project's first milestone: everything up to the drone's first hover through the project's own code (the Hover field test). Code "minimal for First flight" does only what that hover needs. |
-| **Airworthy** | The project's second milestone: the refactor toward ARCHITECTURE.md's target, simulated flights and replay tests, the review and docs process, and a project tour. Reached when the First flight suite passes on the refactored code and the tour is published. |
+| **Airworthy** | The project's second milestone: the refactor toward ARCHITECTURE.md's target, simulated flights and replay tests, the review and docs process, and a project tour. Reached when the First flight suite passes on the refactored code and the tour, with all its chapters done, is published. |
 
 ## Review and records
 
