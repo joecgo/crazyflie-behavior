@@ -73,16 +73,16 @@ entries go at the top of their section without an ID.
 | safety design | 5 | 22 |
 | recommendation | 7 | 10 |
 | environment | 4 | 12 |
-| communication | 16 | 91 |
+| communication | 16 | 92 |
 | testing | 2 | 42 |
 | process | 8 | 48 |
-| **Total** | **47** | **250** |
+| **Total** | **47** | **251** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
 | Pattern | Entries |
 |---|---|
-| said-without-checking | 64 |
+| said-without-checking | 65 |
 | records-ahead-of-code | 40 |
 | how-I-work | 35 |
 | weak-test | 35 |
@@ -112,6 +112,7 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-298 | 2026-11-27 | The brief counted two decisions in a review queue that held three | communication | said-without-checking | working rule 4's habit for the brief: count the queue's lines in the file when writing its totals |
 | M-297 | 2026-11-27 | The brief said only the tests and the tour's script had changed since the tour's pin | communication | said-without-checking | the project-tour skill: when the pin moves, run `git diff --name-only` from the old pin to the new one, and check every line link into a changed file |
 | M-296 | 2026-11-27 | Joe's choice on "the link part" stretched to part names on their own, and called his rule | communication | said-without-checking | working rule 7: quote what a choice covered before applying it to a new case, and ask about the new case as its own question |
 | M-295 | 2026-11-27 | "The PC's clock" called an everyday use without reading the code | communication | said-without-checking | working rule 1 |
@@ -868,6 +869,14 @@ times so far).
 ---
 
 ## Mistakes Claude caught itself
+
+### M-298, 2026-11-27: The brief counted two decisions in a review queue that held three
+
+- **What happened:** the next-up brief said the review queue held 2 decisions, the dot check's, and its second step repeated the number. The queue listed three, one for each of the dot check's choices. Caught while updating the brief after the push's checks; both lines now say three.
+- **Kind:** communication.
+- **Pattern:** said-without-checking.
+- **Guard:** working rule 4's habit for the brief: count the queue's lines in the file when writing its totals.
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
 
 ### M-297, 2026-11-27: The brief said only the tests and the tour's script had changed since the tour's pin
 

@@ -9,45 +9,31 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-27 (Pacific)
-- **Last commit:** the records after the tour's feedback pass (work log,
-  M-292 to M-297, backlog, review queue, this brief), after the tour's commit
-  and `0251d46` (the glossary). All pushed.
-  Uncommitted: nothing.
+- **Last commit:** the wrap-up's records (work log, M-298, this brief), after
+  `bd956cc`. Uncommitted: nothing.
 
 ## Done last
 
-- **Feedback pass, #166 and #167, committed and pushed 2026-11-27**, with the
-  pin moved to `0251d46`. Joe's feedback is applied ("How to interact" lines,
-  Markdown links opened rendered, section 4's send stepper removed).
-  `tools/tour_numbers.py` writes the module sizes and the pop-ups' definitions
-  from the pinned commit, and `tests/docs/test_tour_dots.py` fails on a missing
-  dot. Joe's choices: definitions in each page; the script keeps its name; the
-  dot check covers the terms the page dots, its code in the test file; a
-  glossary word in its everyday sense gets `<span class="plain">`; a part's
-  name before "part" is a use of *Part*; a part's name alone is dotted when the
-  glossary has it; table label cells keep their dots.
-- **Tour chapter 1, pass two** (`67b24e5`): sections 4 and 6 to 9 in
-  `docs/tour/` (the setpoint priority step by step and the firmware's
-  watchdog, a may-be-flying calculator, connect and disconnect steps, five
-  failures, five planted bugs with every test that failed).
-  `tools/tour_numbers.py` reads seven more constants and rounds a worked-out
-  number to set `digits`, with a test. Preview version 6 published.
-- **Tour round 2 of feedback** (the dots joke, no depth buttons, the 2 s
-  drop-down): committed and pushed.
-- **#157's D13 and last fitness functions (ADR-0093)**; review pull request
-  #31 opened.
+- **Tour feedback pass, #166 and #167** (`0251d46`, `8625016`, `bd956cc`),
+  pushed, with continuous integration passing. The pin is `0251d46`. The
+  pop-ups and module sizes come from the pinned commit, and
+  `tests/docs/test_tour_dots.py` fails on a missing dot.
+- **Published to joecgo.com/crazyflie-project-tour:** `bd956cc`'s three files,
+  pushed to `joecgo/portfolio` as `1be1e1c`; the live files matched.
 
 ## In progress
 
-- **Preview version 8** of the tour, for Joe to judge:
-  https://claude.ai/artifact/XWPWS3fCf52696zXq6ZkJp. It was published before
-  the commit, so its links still name the old pin, `5050718`. Republishing
-  needs a Read of every line of the live page's saved copy first (about 55k
-  tokens): the Artifact tool refuses the publish otherwise, and reading the
-  files by path doesn't count. Comparing the live files with the last commit
-  first means only the diff needs reading on top. The live copy at
-  joecgo.com/crazyflie-project-tour still has pass two: `67b24e5`'s files,
-  pushed to `joecgo/portfolio` as `5ab215b` (#168).
+- Joe judges the chapter, now on https://joecgo.com/crazyflie-project-tour.
+  The private preview (version 8,
+  https://claude.ai/artifact/XWPWS3fCf52696zXq6ZkJp) is behind: its links name
+  the old pin, `5050718`. Republishing it needs a Read of every line of its
+  saved copy first (about 55k tokens), so only do it if Joe wants a preview.
+- Joe's choices for the tour's ADR (2026-11-27): definitions in each page; the
+  script keeps its name; the dot check covers the terms the page dots, its
+  code in the test file; a glossary word in its everyday sense gets
+  `<span class="plain">`; a part's name before "part" is a use of *Part*; a
+  part's name alone is dotted when the glossary has it; table label cells keep
+  their dots.
 - Joe decided (2026-11-27): for Airworthy, the tour is published when all
   its chapters are done. Rewording the *Airworthy* glossary row to say so
   waits for Joe's OK.
@@ -56,15 +42,12 @@ move the item, renumber "Next three", and update "Last commit" and
 
 ## Next three
 
-1. Joe reads preview version 8 and judges the feedback pass and the dots;
-   then the fixes he asks for, and a republish (the 55k-token read above).
-   Sonnet, medium.
+1. Joe reads the live chapter and judges the feedback pass and the dots; then
+   the fixes he asks for, and the live copy updated. Sonnet, medium.
 2. Once Joe accepts the chapter: the ADR for the tour's form (the work order
    `drafts/project-tour-adapter-handoff.md`, decided items 1-4 and 10,
-   item 7's four answers, #166 and #167's answers of 2026-11-27, and the
-   dot-check choices under "Done last"), with #168, its index row and
-   Built column, and the review queue's three decisions.
-   Sonnet, medium.
+   item 7's four answers, and the choices above), with #168, its index row and
+   Built column, and the review queue's three decisions. Sonnet, medium.
 3. Joe's review of #31, then its fixes. Opus, high.
 
 After those: #153, the test for citations of removed backlog rows
@@ -160,6 +143,5 @@ from `drafts/explain-back-notes.md`; don't open it first.
 `fdcd31c`, #30, closed 2026-11-23. #31 reads everything after it.
 
 Review queue: 3 decisions (the dot check's, for the tour's ADR), 6 findings
-waiting (`docs/review-queue.md`:
-the comment at `log_blocks.py:287`, M-288, and Joe's five #31 questions
-from the tour feedback, 2026-11-27).
+waiting (`docs/review-queue.md`: the comment at `log_blocks.py:287`, M-288,
+and Joe's five #31 questions from the tour feedback, 2026-11-27).
