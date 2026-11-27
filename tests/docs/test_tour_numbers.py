@@ -1,4 +1,5 @@
-"""The project tour shows the code's numbers as they are at the commit its links are pinned to.
+"""The project tour shows the code's numbers, its modules' lengths and the glossary's definitions as they are at
+the commit its links are pinned to.
 
 tools/tour_numbers.py writes them into each page; these tests fail while a page differs from what it writes.
 Decided 2026-11-26 with the tour's first chapter; its ADR follows pass one.
@@ -16,9 +17,11 @@ from tools.tour_numbers import (
     FormulaSpec,
     TourNumbers,
     TourNumbersError,
+    count_lines,
     load_numbers,
     pinned_commit,
     read_constant,
+    read_glossary,
     render_page,
     shown,
     tour_pages,
@@ -38,6 +41,29 @@ PERIOD_MS = 20
 RANGE_MS = 1 << 24
 """Counts (ADR-0023)."""
 '''
+MODULE = "src/module.py"
+OTHER_MODULE = "src/other.py"
+GLOSSARY = """# Glossary
+
+## Architecture
+
+| Term | Definition | ADR |
+|---|---|---|
+| **Tick** | One iteration of the loop, at `TICK_RATE` ([ADR-0023](decisions/0023-tick-rate-20-hz.md)). | [0023](x.md) |
+| **Emergency stop** (e-stop) | Cut **all** motors: *the drone falls*. | — |
+
+## Space and motion
+
+| Term | Definition |
+|---|---|
+| **Setpoint** | A target the controller tries to reach. |
+
+## Deprecated terms
+
+| Term | Replaced by | Why |
+|---|---|---|
+| **Planned landing** | Landing approach | Renamed. |
+"""
 
 
 def constant(name: str, unit: str) -> CodeConstant:
@@ -47,7 +73,14 @@ def constant(name: str, unit: str) -> CodeConstant:
 def fake_numbers() -> TourNumbers:
     constants = {c.name: c for c in (constant("SPEED", "m/s"), constant("PERIOD_MS", "ms"), constant("RANGE_MS", "ms"))}
     halved = work_out(FormulaSpec("halved", "SPEED / 2", "m/s", "Half the speed."), constants)
-    return TourNumbers(FAKE_COMMIT, constants, {"halved": halved}, {"0023": "0023-tick-rate-20-hz.md"})
+    return TourNumbers(
+        FAKE_COMMIT,
+        constants,
+        {"halved": halved},
+        {"0023": "0023-tick-rate-20-hz.md"},
+        {MODULE: 1200, OTHER_MODULE: 300},
+        read_glossary(GLOSSARY),
+    )
 
 
 def fake_page(body: str) -> str:
@@ -66,11 +99,26 @@ def test_every_tour_page_matches_what_tools_tour_numbers_writes() -> None:
         assert stale == [], f"{path.name} is out of date: run .venv\\Scripts\\python tools/tour_numbers.py"
 
 
-def test_the_tour_shows_numbers_from_the_code() -> None:
-    """Guards the page test: a page with no marked numbers would match whatever the script reads."""
+def test_the_tour_shows_numbers_lengths_and_terms_from_the_pinned_commit() -> None:
+    """Guards the page test: a page with nothing marked would match whatever the script reads."""
     page = (TOUR_ROOT / "adapter.html").read_text(encoding="utf-8")
     assert len(re.findall(r'\bdata-(?:const|formula)="', page)) >= 50
     assert len(re.findall(r'\bdata-const-link="', page)) >= 15
+    assert len(re.findall(r'\bdata-module-lines="', page)) >= 18
+    assert len(re.findall(r'\bdata-module-bar="', page)) >= 9
+    assert len(set(re.findall(r'\bdata-term="([^"]*)"', page))) >= 50
+
+
+def test_tour_js_keeps_no_copy_of_a_definition() -> None:
+    """A copy would go stale when the glossary changes; the page's tour-numbers script holds them instead."""
+    page = (TOUR_ROOT / "adapter.html").read_text(encoding="utf-8")
+    script = (TOUR_ROOT / "tour.js").read_text(encoding="utf-8")
+    terms = load_numbers(pinned_commit(page)).terms
+
+    dotted = set(re.findall(r'\bdata-term="([^"]*)"', page))
+    copied = [term for term in dotted if term in terms and terms[term] in script]
+
+    assert copied == []
 
 
 def test_every_number_tour_js_reads_is_one_the_page_holds() -> None:
@@ -144,7 +192,7 @@ def test_a_formula_is_worked_out_from_the_constants() -> None:
 def test_a_formula_with_digits_shows_its_value_rounded_and_keeps_it_exact() -> None:
     constants = fake_numbers().constants
     thirds = work_out(FormulaSpec("thirds", "SPEED / 3", "m/s", "A third of the speed.", digits=2), constants)
-    numbers = TourNumbers(FAKE_COMMIT, constants, {"thirds": thirds}, fake_numbers().adr_files)
+    numbers = TourNumbers(FAKE_COMMIT, constants, {"thirds": thirds}, fake_numbers().adr_files, {}, {})
 
     written = render_page(fake_page('<span data-formula="thirds">?</span>'), numbers)
 
@@ -155,6 +203,28 @@ def test_a_formula_with_digits_shows_its_value_rounded_and_keeps_it_exact() -> N
 def test_a_formula_with_a_constant_the_tour_doesnt_read_raises() -> None:
     with pytest.raises(TourNumbersError, match="OTHER"):
         work_out(FormulaSpec("x", "SPEED + OTHER", "m/s", ""), fake_numbers().constants)
+
+
+@pytest.mark.parametrize(
+    ("source", "lines"),
+    [("", 0), ("one\n", 1), ("one\ntwo\n", 2), ("one\ntwo", 2), ("one\n\n", 2)],
+    ids=["empty", "one line", "two lines", "no newline at the end", "a blank last line"],
+)
+def test_a_module_has_as_many_lines_as_github_numbers(source: str, lines: int) -> None:
+    assert count_lines(source) == lines
+
+
+def test_each_glossary_term_is_read_with_its_definition_as_plain_text() -> None:
+    assert read_glossary(GLOSSARY) == {
+        "Tick": "One iteration of the loop, at TICK_RATE (ADR-0023).",
+        "Emergency stop": "Cut all motors: the drone falls.",
+        "Setpoint": "A target the controller tries to reach.",
+    }
+
+
+def test_a_term_defined_twice_raises() -> None:
+    with pytest.raises(TourNumbersError, match="Setpoint twice"):
+        read_glossary(GLOSSARY + "\n## More\n\n| **Setpoint** | Again. |\n")
 
 
 # --- Writing numbers -------------------------------------------------------------------------------------------
@@ -212,6 +282,35 @@ def test_the_page_gets_each_number_its_constant_link_and_the_numbers_script() ->
     assert render_page(written, fake_numbers()) == written
 
 
+def test_the_page_gets_each_modules_length_and_a_bar_beside_the_longest() -> None:
+    page = fake_page(
+        f'<span class="lines" data-module-lines="{MODULE}">?</span><i data-module-bar="{MODULE}"></i>'
+        f'<span data-module-lines="{OTHER_MODULE}">?</span><i data-module-bar="{OTHER_MODULE}" style="width:3%"></i>'
+    )
+
+    written = render_page(page, fake_numbers())
+
+    assert f'<span class="lines" data-module-lines="{MODULE}">1,200</span>' in written
+    assert f'<span data-module-lines="{OTHER_MODULE}">300</span>' in written
+    assert f'<i data-module-bar="{MODULE}" style="width:100%"></i>' in written
+    assert f'<i data-module-bar="{OTHER_MODULE}" style="width:25%"></i>' in written
+    assert render_page(written, fake_numbers()) == written
+
+
+def test_the_page_gets_the_definition_of_each_term_it_dots_and_no_other() -> None:
+    page = fake_page('<span class="term" data-term="Tick">ticks</span> and <span data-term="Tick">a tick</span>')
+
+    written = render_page(page, fake_numbers())
+
+    assert '"terms": {\n  "Tick": "One iteration of the loop, at TICK_RATE (ADR-0023)."\n }' in written
+
+
+@pytest.mark.parametrize("term", ["Planned landing", "Drift"], ids=["deprecated", "not in the glossary"])
+def test_a_page_dotting_a_term_the_glossary_doesnt_define_raises(term: str) -> None:
+    with pytest.raises(TourNumbersError, match=term):
+        render_page(fake_page(f'<span class="term" data-term="{term}">x</span>'), fake_numbers())
+
+
 @pytest.mark.parametrize(
     "body",
     [
@@ -220,8 +319,18 @@ def test_the_page_gets_each_number_its_constant_link_and_the_numbers_script() ->
         '<span data-formula="halved" data-form="s">?</span>',
         '<a data-const-link="FAST" href="">?</a>',
         '<a data-const-link="SPEED">?</a>',
+        '<span data-module-lines="src/uncounted.py">?</span>',
+        '<i data-module-bar="src/uncounted.py"></i>',
     ],
-    ids=["unknown constant", "unknown formula", "a formula with a form", "unknown link", "a link with no href"],
+    ids=[
+        "unknown constant",
+        "unknown formula",
+        "a formula with a form",
+        "unknown link",
+        "a link with no href",
+        "uncounted length",
+        "uncounted bar",
+    ],
 )
 def test_a_page_naming_what_the_script_cant_write_raises(body: str) -> None:
     with pytest.raises(TourNumbersError):
@@ -231,7 +340,14 @@ def test_a_page_naming_what_the_script_cant_write_raises(body: str) -> None:
 def test_a_link_to_constants_in_two_files_raises() -> None:
     numbers = fake_numbers()
     other = read_constant("OTHER = 1\n", ConstantSpec("OTHER", "src/other.py", "s"))
-    numbers = TourNumbers(numbers.commit, {**numbers.constants, "OTHER": other}, numbers.formulas, numbers.adr_files)
+    numbers = TourNumbers(
+        numbers.commit,
+        {**numbers.constants, "OTHER": other},
+        numbers.formulas,
+        numbers.adr_files,
+        numbers.module_lines,
+        numbers.terms,
+    )
 
     with pytest.raises(TourNumbersError, match="two files"):
         render_page(fake_page('<a data-const-link="SPEED OTHER" href="">?</a>'), numbers)

@@ -1,6 +1,7 @@
-"""Writes the code's numbers into the project tour's pages, read at the commit the page's links are pinned to.
+"""Writes the code's numbers, its modules' lengths and the glossary's definitions into the project tour's pages.
 
-Run it after moving a page's pin. tests/docs/test_tour_numbers.py fails while a page differs from what it writes.
+Each is read at the commit the page's links are pinned to. Run it after moving a page's pin, or after dotting a new
+term. tests/docs/test_tour_numbers.py fails while a page differs from what it writes.
 
     .venv\\Scripts\\python tools/tour_numbers.py
 """
@@ -10,7 +11,7 @@ import json
 import re
 import subprocess
 import sys
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,6 +22,7 @@ PINNED_COMMIT = re.compile(re.escape(REPOSITORY_URL) + r"/(?:blob|tree)/(?P<comm
 """A link pinned to a full commit hash, as the link test reads it."""
 
 ADAPTER = "src/crazyflie_behavior/drone/crazyflie/"
+GLOSSARY = "docs/glossary.md"
 
 
 class TourNumbersError(Exception):
@@ -152,6 +154,10 @@ class TourNumbers:
     formulas: Mapping[str, FormulaValue]
     adr_files: Mapping[str, str]
     """Each ADR number, such as `0081`, to its file in docs/decisions/."""
+    module_lines: Mapping[str, int]
+    """Each module the page shows the length of, by its path, to its number of lines."""
+    terms: Mapping[str, str]
+    """Each glossary term to its definition, as plain text."""
 
 
 # --- Reading the code -----------------------------------------------------------------------------------------
@@ -247,6 +253,45 @@ def work_out(spec: FormulaSpec, constants: Mapping[str, CodeConstant]) -> Formul
     return FormulaValue(spec.key, spec.formula, spec.unit, value, worked, uses, description, spec.digits)
 
 
+def count_lines(source: str) -> int:
+    """Lines as GitHub numbers them: a last line without a newline still counts."""
+    return source.count("\n") + (0 if source.endswith("\n") or not source else 1)
+
+
+def plain_text(markdown: str) -> str:
+    """Markdown as a pop-up shows it: a link's text without its target, and no code or emphasis marks."""
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", markdown)
+    text = text.replace("`", "")
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"(?<![\w*])\*([^*]+)\*(?![\w*])", r"\1", text)
+    return " ".join(text.split())
+
+
+_GLOSSARY_SECTION = re.compile(r"^## +(?P<title>.+?) *$")
+_GLOSSARY_TERM = re.compile(r"^\*\*(?P<term>[^*]+)\*\*")
+_TABLE_CELL_BORDER = re.compile(r"(?<!\\)\|")
+DEPRECATED_SECTION = "Deprecated terms"
+"""The glossary's section of replaced terms, which the tour never defines."""
+
+
+def read_glossary(source: str) -> dict[str, str]:
+    """Each term in the glossary's tables to its definition as plain text, leaving out the deprecated terms."""
+    terms: dict[str, str] = {}
+    section = ""
+    for line in source.splitlines():
+        if heading := _GLOSSARY_SECTION.match(line):
+            section = heading.group("title")
+            continue
+        cells = [cell.strip().replace("\\|", "|") for cell in _TABLE_CELL_BORDER.split(line)]
+        if section == DEPRECATED_SECTION or len(cells) < 4 or not (term := _GLOSSARY_TERM.match(cells[1])):
+            continue
+        name = term.group("term")
+        if name in terms:
+            raise TourNumbersError(f"{GLOSSARY} defines {name} twice")
+        terms[name] = plain_text(cells[2])
+    return terms
+
+
 # --- Writing numbers ------------------------------------------------------------------------------------------
 
 
@@ -310,8 +355,9 @@ def adr_url(numbers: TourNumbers, adr: str) -> str:
     return f"{REPOSITORY_URL}/blob/{numbers.commit}/docs/decisions/{numbers.adr_files[adr]}"
 
 
-def numbers_json(numbers: TourNumbers) -> str:
-    """What tour.js reads: every constant and formula, with its text, code, link and description."""
+def numbers_json(numbers: TourNumbers, terms: Iterable[str]) -> str:
+    """What tour.js reads: every constant and formula, with its text, code, link and description, and the
+    definition of each of `terms`."""
     descriptions = [c.description for c in numbers.constants.values()] + [
         f.description for f in numbers.formulas.values()
     ]
@@ -341,6 +387,7 @@ def numbers_json(numbers: TourNumbers) -> str:
             for formula in numbers.formulas.values()
         },
         "adrs": {f"ADR-{adr}": adr_url(numbers, adr) for adr in sorted(cited)},
+        "terms": {term: numbers.terms[term] for term in sorted(terms)},
     }
     return json.dumps(data, indent=1, ensure_ascii=False).replace("</", "<\\/")
 
@@ -355,6 +402,13 @@ _NUMBER_ELEMENT = re.compile(
 _CONSTANT_LINK = re.compile(r'<a(?P<attrs>\s[^>]*?\bdata-const-link="[^"]*"[^>]*)>(?P<text>[^<]*)</a>')
 """A link to one or more constants' lines, in one file."""
 _NUMBERS_SCRIPT = re.compile(r'(<script type="application/json" id="tour-numbers">)(.*?)(</script>)', re.DOTALL)
+_MODULE_LINES = re.compile(r'<span(?P<attrs>\s[^>]*?\bdata-module-lines="(?P<path>[^"]*)"[^>]*)>[^<]*</span>')
+"""A module's length in lines, as a number."""
+_MODULE_BAR = re.compile(r'<i(?P<attrs>\s[^>]*?\bdata-module-bar="(?P<path>[^"]*)"[^>]*)>\s*</i>')
+"""A bar as long as a module, beside the longest module with a bar on the page."""
+_MODULE_PATH = re.compile(r'\bdata-module-(?:lines|bar)="([^"]*)"')
+_DOTTED_TERM = re.compile(r'\bdata-term="([^"]*)"')
+"""A glossary term the page dots, whose pop-up shows its definition."""
 
 
 def pinned_commit(page: str) -> str:
@@ -397,13 +451,55 @@ def _constant_link(match: re.Match[str], numbers: TourNumbers) -> str:
     return f"<a{attrs}>{code_label(constants)}</a>"
 
 
+def page_modules(page: str) -> list[str]:
+    """The paths of the modules whose lengths the page shows."""
+    return sorted(set(_MODULE_PATH.findall(page)))
+
+
+def _module_lines(path: str, numbers: TourNumbers) -> int:
+    if path not in numbers.module_lines:
+        raise TourNumbersError(f"the page shows the length of {path}, which tools/tour_numbers.py didn't count")
+    return numbers.module_lines[path]
+
+
+def _module_bar(match: re.Match[str], numbers: TourNumbers, longest: int) -> str:
+    width = number_text(round(100 * _module_lines(match.group("path"), numbers) / longest, 1))
+    attrs = re.sub(r'\s+style="[^"]*"', "", match.group("attrs"))
+    return f'<i{attrs} style="width:{width}%"></i>'
+
+
+def _write_module_lengths(page: str, numbers: TourNumbers) -> str:
+    page = _MODULE_LINES.sub(
+        lambda match: f"<span{match.group('attrs')}>{number_text(_module_lines(match.group('path'), numbers))}</span>",
+        page,
+    )
+    bars = [_module_lines(match.group("path"), numbers) for match in _MODULE_BAR.finditer(page)]
+    if not bars:
+        return page
+    return _MODULE_BAR.sub(lambda match: _module_bar(match, numbers, max(bars)), page)
+
+
+def dotted_terms(page: str, numbers: TourNumbers) -> set[str]:
+    """The glossary terms the page dots. One the glossary doesn't define at the pinned commit raises."""
+    dotted = set(_DOTTED_TERM.findall(page))
+    undefined = sorted(dotted - set(numbers.terms))
+    if undefined:
+        raise TourNumbersError(
+            f"the page dots {', '.join(undefined)}, which {GLOSSARY} doesn't define at {numbers.commit[:7]}: "
+            "add it to the glossary and move the pin, or remove the dot"
+        )
+    return dotted
+
+
 def render_page(page: str, numbers: TourNumbers) -> str:
-    """The page with every number, every constant link and the tour-numbers script written from `numbers`."""
+    """The page with every number, constant link and module length, and the tour-numbers script, written from
+    `numbers`."""
     if len(_NUMBERS_SCRIPT.findall(page)) != 1:
         raise TourNumbersError('a page needs one <script type="application/json" id="tour-numbers">')
     page = _NUMBER_ELEMENT.sub(lambda match: _number_element(match, numbers), page)
     page = _CONSTANT_LINK.sub(lambda match: _constant_link(match, numbers), page)
-    written = numbers_json(numbers)
+    page = _write_module_lengths(page, numbers)
+    written = numbers_json(numbers, dotted_terms(page, numbers))
     return _NUMBERS_SCRIPT.sub(lambda match: f"{match.group(1)}\n{written}\n{match.group(3)}", page)
 
 
@@ -417,8 +513,8 @@ def _git(*args: str) -> str:
     return result.stdout.decode("utf-8")
 
 
-def load_numbers(commit: str) -> TourNumbers:
-    """Every constant and formula the tour shows, read at `commit`."""
+def load_numbers(commit: str, modules: Iterable[str] = ()) -> TourNumbers:
+    """Every constant, formula and glossary term the tour shows, and the lengths of `modules`, read at `commit`."""
     sources = {path: _git("show", f"{commit}:{path}") for path in sorted({spec.path for spec in CONSTANTS})}
     constants = {spec.name: read_constant(sources[spec.path], spec) for spec in CONSTANTS}
     formulas = {spec.key: work_out(spec, constants) for spec in FORMULAS}
@@ -427,7 +523,9 @@ def load_numbers(commit: str) -> TourNumbers:
         name = line.rsplit("/", 1)[-1]
         if re.fullmatch(r"\d{4}-.*\.md", name):
             adr_files[name[:4]] = name
-    return TourNumbers(commit, constants, formulas, adr_files)
+    module_lines = {path: count_lines(_git("show", f"{commit}:{path}")) for path in modules}
+    terms = read_glossary(_git("show", f"{commit}:{GLOSSARY}"))
+    return TourNumbers(commit, constants, formulas, adr_files, module_lines, terms)
 
 
 def tour_pages() -> list[Path]:
@@ -437,7 +535,7 @@ def tour_pages() -> list[Path]:
 def written_page(path: Path) -> tuple[str, str]:
     """The page as it is, and as this script writes it."""
     page = path.read_text(encoding="utf-8")
-    return page, render_page(page, load_numbers(pinned_commit(page)))
+    return page, render_page(page, load_numbers(pinned_commit(page), page_modules(page)))
 
 
 def main() -> int:

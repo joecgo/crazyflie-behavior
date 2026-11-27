@@ -16,10 +16,13 @@ REPOSITORY_LINK = re.compile(r"https://github\.com/joecgo/crazyflie-behavior/[^\
 """Any link into this repository on GitHub."""
 PINNED_LINK = re.compile(
     r"https://github\.com/joecgo/crazyflie-behavior/(?P<kind>blob|tree)/(?P<commit>[0-9a-f]{40})/"
-    r"(?P<path>[^?#\s\"'<>]+)(?:\?plain=1)?(?:#L(?P<first>[0-9]+)(?:-L(?P<last>[0-9]+))?)?"
+    r"(?P<path>[^?#\s\"'<>]+)(?P<plain>\?plain=1)?"
+    r"(?:#L(?P<first>[0-9]+)(?:-L(?P<last>[0-9]+))?|#(?P<heading>[a-z0-9_-]+))?"
 )
-"""A link pinned to a full commit hash: a file (`blob`, with an optional line range) or a folder (`tree`)."""
+"""A link pinned to a full commit hash: a file (`blob`, with an optional line range or heading) or a folder
+(`tree`)."""
 GIT_OBJECT_KIND = {"blob": "blob", "tree": "tree"}
+MARKDOWN_HEADING = re.compile(r"^#{1,6} +(?P<text>.+?) *#* *$", re.MULTILINE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +100,11 @@ def linked_objects() -> list[tuple[TourLink, re.Match[str], GitObject | None]]:
     return [(link, match, objects[f"{match.group('commit')}:{match.group('path')}"]) for link, match in links]
 
 
+def heading_anchor(text: str) -> str:
+    """GitHub's anchor for a heading: lower case, punctuation dropped, spaces to hyphens."""
+    return re.sub(r"[^\w\- ]", "", text.lower()).replace(" ", "-")
+
+
 def test_the_tour_has_repository_links_to_check() -> None:
     """Guards the scanner: a pattern that matched nothing would pass every other test."""
     assert len(tour_links()) >= 50
@@ -127,5 +135,30 @@ def test_every_line_range_in_the_tour_is_inside_its_file() -> None:
         lines = line_count(found.contents) if found.kind == "blob" else 0
         if not 1 <= first <= last <= lines:
             broken.append(f"{link.source}: lines {first}-{last} of {lines}: {link.url}")
+
+    assert broken == []
+
+
+def test_every_markdown_link_in_the_tour_opens_the_rendered_page() -> None:
+    """Markdown read as code is hard to read, so a link to a heading replaces a line range."""
+    as_code = [
+        f"{link.source}: {link.url}"
+        for link in tour_links()
+        if (match := pinned(link)).group("path").endswith(".md")
+        and (match.group("plain") is not None or match.group("first") is not None)
+    ]
+
+    assert as_code == []
+
+
+def test_every_heading_link_in_the_tour_names_a_heading_in_its_file() -> None:
+    broken: list[str] = []
+    for link, match, found in linked_objects():
+        if match.group("heading") is None or found is None:
+            continue
+        text = found.contents.decode("utf-8")
+        anchors = {heading_anchor(heading.group("text")) for heading in MARKDOWN_HEADING.finditer(text)}
+        if match.group("heading") not in anchors:
+            broken.append(f"{link.source}: no heading #{match.group('heading')}: {link.url}")
 
     assert broken == []

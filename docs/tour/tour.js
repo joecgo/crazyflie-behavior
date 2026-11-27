@@ -3,77 +3,15 @@
 (function () {
   "use strict";
 
-  // Definitions copied from docs/glossary.md at the pinned commit, link markup removed.
-  const TERMS = {
-    "Project tour": "An interactive guide that walks a reader through the project: what's interesting and unique about it, and how it's designed to be easy to understand and change. Each claim links to its evidence in the repository (an ADR, a test, a flight log or a doc).",
-    "Chapter": "One page of the project tour, on one part of the project, such as the Crazyflie adapter.",
-    "Crazyflie adapter": "Adapter that talks to a physical Crazyflie through cflib: the drone/crazyflie/ package, the only code in src/ allowed to import cflib. Inside it, only its adapter, link, log-block and command modules do; a fitness function checks it.",
-    "cflib": "Bitcraze's official Python library for talking to the Crazyflie.",
-    "Crazyradio": "USB radio dongle the PC uses to talk to the Crazyflie.",
-    "Firmware": "Code running on the drone itself: stabilization, estimation, motor control at about 1 kHz.",
-    "Behavior": "Decision-making logic that turns sensed state into commands. Never imports cflib.",
-    "Safety layer": "The layer between behaviors and the drone interface. It runs the safety pre-check on each snapshot, answers command requests at once, and is the only code that sends commands to the drone, apart from the kill switch (ADR-0013) and the forged low battery drone, which only passes them on (ADR-0041): it approves, clamps to the speed envelope, or overrides command requests.",
-    "Safety pre-check": "The safety layer's check of each snapshot at the start of the tick, before behaviors run (missing or stale values, a value that isn't finite, low battery, a crash or tumble the drone reports, too much velocity uncertainty while the drone may be flying, outside the initial climb; a geofence later). If it passes, behaviors run and their requests are judged against it; if it fails, behaviors are skipped and the failsafe takes over.",
-    "Drone interface": "The abstraction behavior code uses to sense and command a drone, with no knowledge of cflib.",
-    "CRTP": "The packet protocol between PC and drone. Everything in cflib is built on it.",
-    "High-level commander": "Firmware feature that plans a smooth trajectory to a goal on the drone itself (takeoff, go_to, land).",
-    "Part": "One of the smaller classes a large class is split into in a refactor, each in its own module and owned by the class it came from. The Crazyflie adapter's parts are an example (LogBlocks, CrazyflieCommands, ADR-0093): connect() builds each one afresh, so none carries state from an earlier link.",
-    "Log block": "A cflib LogConfig: a named group of variables streamed at a fixed period (max 26 bytes per block).",
-    "Telemetry buffer": "Thread-safe store of the latest value of each telemetry variable, written in the background as data arrives (by the Crazyflie adapter, or by the mock or simulator).",
-    "Setpoint stream": "Sending low-level setpoints continuously (≥ every few hundred ms). If they stop, the firmware stops following.",
-    "Link": "An open connection to one drone.",
-    "Initial climb": "The first part of every take-off: a level climb through the bad-flow zone that ends at the final descent height. If the velocity uncertainty there shows flow, a high-level move climbs to the target; without flow, or if the climb hasn't ended within a time limit, the drone lands. Land, the motor stop, arm and buzzer commands go through; the rest are ignored. It can start without flow, in low light; the safety pre-check doesn't check the velocity uncertainty during it.",
-    "May be flying": "An adapter's judgment of whether the drone could be in the air, so that stopping it needs a landing, not a motor stop. Every snapshot carries it, and the safety pre-check checks the velocity uncertainty only while it's true. In the Crazyflie adapter: not flying if our code hasn't started or taken over a flight since our last motor stop was sent. Otherwise flying, unless a drone status that isn't stale says not flying and the take-off grace is over. In the mock adapter, it always matches the mock's drone status, which has no delay.",
-    "Landing phase": "Where a landing is: not landing, the landing approach, or the final descent. The Crazyflie adapter holds it.",
-    "Bad-flow zone": "The heights just above the floor where the Flow deck's flow can't be trusted, so the estimated horizontal speed and position go wrong. It reaches at least 0.1 m in any light (the firmware's flow model), higher in dim light. Take-off and landing cross it level (ADR-0048).",
-    "Fitness function": "A test that enforces a structural rule from an ADR, such as \"only the Crazyflie adapter imports cflib\". It reads the code, for example its imports, instead of running it, and fails continuous integration when the rule is broken. Fitness functions live in tests/architecture/.",
-    "Import scanner": "The fitness functions' reader of a source file's import statements, without running it: the modules each import and from names, relative imports resolved (ADR-0002).",
-    "Import follower": "The fitness functions' reader that follows a file's imports through src/, file by file, to every file importing it may run, imports inside functions and for type checking only included. It shows whether take-off and landing reaches cflib through another module (ADR-0093).",
-    "Comment scanner": "The fitness functions' reader of a source file's comments: it finds each # pyright: or # type: ignore comment, the comments that can change what pyright checks (ADR-0093).",
-    "Telemetry": "Data streamed from the drone to the PC.",
-    "Tick": "One iteration of the behavior update loop.",
-    "Snapshot": "Read-only copy of the telemetry buffer, taken at the start of each tick. Every behavior in that tick sees the same snapshot. Each value carries its arrival time (PC clock) and the drone's timestamp. Its time is read after the copy, so no value in it arrived later than that time.",
-    "Stale value": "A stamped value older than its age limit, so too old to trust. Every check uses one limit, STALE_AFTER in the drone interface, except the battery voltage's BATTERY_STALE_AFTER. A stale value stays in the snapshot until a newer one arrives. The opposite is fresh.",
-    "State block": "The Crazyflie adapter's log block that carries the position estimate, velocity estimate and drone status together (6 floats and a 2-byte bitfield: the full 26 bytes), so all three come from the same moment (ADR-0021).",
-    "Drone status": "Flags describing the drone's state as the drone reports it: armed, flying, crashed, tumbled, can arm, locked. Part of the snapshot. Its \"flying\" lags: it shows a take-off a little late and keeps saying flying for 2 s after the motors stop. \"Locked\" is the Crazyflie's term: the drone refuses to arm until it's power cycled.",
-    "Stamped value": "A telemetry value together with its arrival time (PC clock) and the drone's timestamp (converted to seconds). Every value in a snapshot is stamped, so its age can always be checked.",
-    "Streak": "An unbroken run of the same condition, counted in whatever repeats (ticks, command requests, state packets). It ends the first time the condition doesn't hold. A warning comes once per streak, so a long fault logs once, not every tick.",
-    "Flow deck": "Deck with a downward optical-flow camera and height sensor. Needed to hold position.",
-    "Level setpoint": "A low-level setpoint that holds roll and pitch at 0 and sets only a vertical speed (the firmware's altHold type). The initial climb and the final descent stream them (ADR-0048).",
-    "Touchdown": "The drone resting on the floor, confirmed by the down range, or assumed when the final descent's time limit runs out. Then the motors stop.",
-    "Transcript test": "A test that flies a scripted flight against a fake cflib (a stand-in for cflib's Crazyflie object that records each call the adapter makes instead of sending it to the drone) and compares that list of calls, in order, with a stored one. It fails when a change reorders or alters one of those sends, which the setpoint priority depends on. A send no flight reaches needs its own test.",
-    "Final descent height": "The down range where the final descent starts and the initial climb ends: a fixed height just above the bad-flow zone, the same for every take-off and landing. Take-off targets must be above it.",
-    "Hand-over": "A high-level move taking over from a setpoint stream: a level stream's last setpoint, the move, then the setpoint priority's release. The initial climb ends with one at the final descent height, made only with flow; without flow the drone lands.",
-    "Velocity uncertainty": "How far off the estimator thinks its horizontal velocity estimate may be: its standard deviation in meters per second, the larger of the drone's forward and sideways directions (kalman.varPX, varPY). It grows while the estimator gets no flow and stays small while flow arrives, even wrong flow.",
-    "Landing approach": "The first landing phase: a high-level move straight down at the estimated position, aimed 5 cm below the final descent height. The final descent starts when the down range reaches that height, or at a backup time if it never does. Skipped when a landing is requested during the initial climb: the final descent starts at once. Was called the planned landing.",
-    "Final descent": "The last part of every landing, after the landing approach (none for a landing during the initial climb): a level descent through the bad-flow zone from the final descent height, until the down range confirms touchdown or a time limit says the drone must be on the floor. Then the motors stop. With no usable down range, a slow high-level descent instead. Land, the motor stop, arm and buzzer commands go through; the rest are ignored.",
-    "Touchdown hold": "How long the down range must stay at or below the touchdown threshold before touchdown is confirmed, so one noisy reading can't confirm it. A higher, missing or stale reading starts it over.",
-    "Drift": "Slow, growing error in the state estimate over a flight (flow deck has no absolute reference).",
-    "Setpoint": "A target the firmware's controller tries to reach: a position, a velocity or a hover height.",
-    "Blocking call": "A call that doesn't return until time passes or something happens: a sleep, a wait or a join. A lock held only for a quick read or write doesn't count. A blocking function makes one, or calls a function that does. In the Crazyflie adapter, only connect() and disconnect() may reach one; a fitness function checks it.",
-    "Clock": "The source of time for the tick loop and adapters. A real clock reads the computer's monotonic time; a sim clock only advances when told to, so tests and simulations run faster than real time and repeat exactly. Behaviors and the safety layer don't read the clock: they use the snapshot's time.",
-    "Interrupt signal": "The operating system's request for the program to stop (SIGINT). Ctrl+C in the console sends it, and other tools can too. Python raises it as KeyboardInterrupt on the main thread unless the program handles it. While connecting it stops the program; once connected it makes a stop request.",
-    "Take-off grace": "The short time after a take-off is sent when the Crazyflie adapter counts the drone as flying, because the drone status shows a take-off only after a delay.",
-    "Take over (a flight)": "Connect to a drone that may be flying, without resetting its position estimate, and treat it as flying until it lands. Only the rescue landing program does it.",
-    "Rescue landing": "Landing a drone a program lost. A new program connects, takes over the flight without resetting the position estimate, and lands it with the normal landing.",
-    "Last-resort landing": "The firmware's own land, sent by disconnect() only when our landing code raises with the link up: down to height 0 over a fixed time, then the setpoint priority's release, then only the radio link closes. It reads no telemetry, and the firmware stops the motors when it ends, even above the floor.",
-    "Lost link": "cflib's report that the radio link failed (connection_lost): connect() raises while connecting, and the tick's next snapshot once connected; the run ends with an error and no landing.",
-    "Emergency stop": "Immediately cut all motors. The drone falls.",
-    "Estimate reset": "Restarting the estimator with the drone on the floor: position (0, 0, 0) where it sits, velocity zero, level, and the velocity uncertainty back at its starting value, which looks healthy until flow proves otherwise. Never in flight. The firmware also resets by itself when the estimate passes 100 m or 10 m/s.",
-    "Deck": "Plug-in expansion board on the Crazyflie.",
-    "Thrust base": "The thrust command the firmware's vertical speed controller starts from (posCtlPid.thrustBase); its integral adds the rest, and restarts at zero at every setpoint mode change and on the floor. The Crazyflie adapter sets it near the hover thrust at connect (ADR-0061).",
-    "Bug planting": "Deliberately breaking the code a test guards, to check that the test fails. One small change at a time, always removed afterwards and never committed. A test that still passes has a gap. Done by hand, or, once it's built (backlog #152), by the bug-planting tool (tools/plant_bugs.py), which generates plants from the code's named limits. A form of mutation testing (ADR-0090).",
-    "Setpoint priority": "The firmware follows one source of setpoints at a time, and a setpoint stream outranks the high-level commander. After a stream, the adapter releases the priority so the high-level commander is followed again; until then the drone refuses its setpoints (ADR-0058).",
-  };
-
   const SVG = "http://www.w3.org/2000/svg";
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // The code's numbers at the pinned commit, which tools/tour_numbers.py writes into the page.
+  // The code's numbers and the glossary's definitions at the pinned commit, which
+  // tools/tour_numbers.py writes into the page.
   const NUMBERS = readNumbers();
   function readNumbers() {
     const node = document.getElementById("tour-numbers");
-    return node ? JSON.parse(node.textContent) : { constants: {}, formulas: {}, adrs: {} };
+    return node ? JSON.parse(node.textContent) : { constants: {}, formulas: {}, adrs: {}, terms: {} };
   }
   function constant(name) {
     const found = NUMBERS.constants[name];
@@ -134,8 +72,9 @@
   function popContent(node) {
     const term = node.getAttribute("data-term");
     if (term !== null) {
-      if (!TERMS[term]) return null;
-      return [popTitle(term, false), document.createTextNode(TERMS[term]), popNote("from", ["From the project's glossary"])];
+      const definition = NUMBERS.terms[term];
+      if (!definition) return null;
+      return [popTitle(term, false), document.createTextNode(definition), popNote("from", ["From the project's glossary"])];
     }
     const name = node.getAttribute("data-const");
     const found = name !== null ? NUMBERS.constants[name] : null;
@@ -655,87 +594,6 @@
     render();
   }
 
-  // --- Section 4: the setpoint priority, one send at a time --------------------------------
-  // Each step: the send, what each source is doing, which one the drone follows, and the motors.
-  function batonSequences() {
-    const up = "send_packet(…)  level, +" + text("INITIAL_CLIMB_SPEED");
-    const down = "send_packet(…)  level, −" + text("FINAL_DESCENT_SPEED");
-    const release = "commander.send_notify_setpoint_stop()";
-    const climbing = { send: up, stream: "A level setpoint each tick.", high: "Stopped: a streamed setpoint stops it.", follows: "stream", motors: "running", text: "The initial climb streams one level setpoint each tick, at priority 2." };
-    const lastUp = { send: up + "  the last setpoint", stream: "Its last setpoint.", high: "Stopped.", follows: "stream", motors: "running", text: "The hand-over starts with one more level setpoint." };
-    const descending = { send: down, stream: "A level setpoint each tick.", high: "Stopped.", follows: "stream", motors: "running", text: "The final descent streams one level setpoint each tick." };
-    const stopSetpoint = { send: "commander.send_stop_setpoint()", stream: "The stop setpoint: motors off.", high: "Stopped.", follows: "stream", motors: "off", text: "Touchdown is confirmed. The stop setpoint ends the stream." };
-    const highStop = { send: "high_level_commander.stop()", stream: "Nothing new.", high: "Idle: offers motors-off setpoints, refused at priority 1.", follows: "stream", motors: "off", text: "The high-level stop stops any move, and the motors." };
-    return {
-      handover: [climbing, lastUp,
-        { send: "high_level_commander.go_to(…)", stream: "Still holds priority 2.", high: "Has the move, but its setpoints are refused at priority 1.", follows: "stream", motors: "running", text: "The move is sent while the stream still holds the priority." },
-        { send: release + "  the release", stream: "Released.", high: "Flying the move.", follows: "high", motors: "running", text: "The release lowers the priority to 1, so the drone takes the high-level commander's setpoints: the move." }],
-      "release-first": [climbing, lastUp,
-        { send: release + "  the release, too early", stream: "Released.", high: "Stopped and idle: offers motors-off setpoints, now accepted.", follows: "high", motors: "off, in mid-air", bad: true, text: "Released before the move, the idle high-level commander's motors-off setpoints are accepted. The motors go off in mid-air." },
-        { send: "high_level_commander.go_to(…)", stream: "Released.", high: "Flying the move, too late.", follows: "high", motors: "running again", bad: true, text: "The move ends the motors-off setpoints, but between the two sends the motors were off." }],
-      "motor-stop": [descending, stopSetpoint, highStop,
-        { send: release + "  the release, last", stream: "Released.", high: "Idle: its motors-off setpoints are accepted.", follows: "high", motors: "off", text: "The release lets the idle high-level commander's motors-off setpoints through, so the drone's setpoint never grows old. The drone stops counting as flying 2 s after the motors stop, with no lock." }],
-      "no-release": [descending, stopSetpoint, highStop,
-        { send: "(no release)", stream: "Holds priority 2, and sends nothing.", high: "Idle: its motors-off setpoints are refused.", follows: "stream", motors: "off", bad: true, text: "Nothing renews the setpoint, so it ages. The drone still counts as flying for 2 s after the motors stop, and once its setpoint is 2 s old it locks: it refuses to arm until it's power cycled." }],
-    };
-  }
-
-  function setupBaton() {
-    const root = document.getElementById("baton");
-    if (!root) return;
-    const SEQUENCES = batonSequences();
-    const lanes = {};
-    root.querySelectorAll(".lane").forEach(function (lane) { lanes[lane.getAttribute("data-lane")] = lane; });
-    const motors = document.getElementById("baton-motors");
-    const sends = document.getElementById("baton-sends");
-    const readout = document.getElementById("baton-text");
-    const count = document.getElementById("baton-count");
-    const back = document.getElementById("baton-back");
-    const next = document.getElementById("baton-next");
-    const tabs = document.querySelectorAll("[data-seq]");
-    let key = "handover";
-    let index = 0;
-    function render() {
-      const steps = SEQUENCES[key];
-      const step = steps[index];
-      ["stream", "high"].forEach(function (name) {
-        lanes[name].classList.toggle("on", step.follows === name);
-        lanes[name].querySelector(".lane-state").textContent = step[name];
-      });
-      motors.textContent = "Motors: " + step.motors;
-      motors.className = "motors" + (step.bad ? " bad" : step.motors === "off" ? " off" : "");
-      sends.textContent = "";
-      steps.slice(0, index + 1).forEach(function (s, i) {
-        const line = document.createElement("div");
-        line.textContent = s.send;
-        if (i === index) line.className = s.bad ? "on bad" : "on";
-        sends.appendChild(line);
-      });
-      readout.className = "readout" + (step.bad ? " bad" : "");
-      readout.textContent = "";
-      const lead = document.createElement("b");
-      lead.textContent = step.bad ? "The bug. " : "";
-      readout.append(lead, step.text);
-      count.textContent = "Send " + (index + 1) + " of " + steps.length;
-      back.disabled = index === 0;
-      next.textContent = index === steps.length - 1 ? "Start again" : "Next send";
-      document.querySelectorAll("[data-seq-links]").forEach(function (links) {
-        links.hidden = links.getAttribute("data-seq-links") !== key;
-      });
-    }
-    tabs.forEach(function (tab) {
-      tab.addEventListener("click", function () {
-        key = tab.getAttribute("data-seq");
-        index = 0;
-        tabs.forEach(function (other) { other.setAttribute("aria-pressed", String(other === tab)); });
-        render();
-      });
-    });
-    back.addEventListener("click", function () { if (index > 0) { index--; render(); } });
-    next.addEventListener("click", function () { index = (index + 1) % SEQUENCES[key].length; render(); });
-    render();
-  }
-
   // --- Section 4: the firmware's setpoint watchdog ------------------------------------------
   // The 500 ms and 2000 ms are the firmware's, from the facts register. When the ticks stop and the
   // chart's length are the model's.
@@ -771,7 +629,7 @@
     el("line", { x1: x0, y1: Y(WATCHDOG_WARNING), x2: x1, y2: Y(WATCHDOG_WARNING), style: "stroke:var(--caution);stroke-dasharray:6 4" }, svg);
     el("text", { x: x1 - 4, y: Y(WATCHDOG_WARNING) - 6, "text-anchor": "end", class: "axis-text", style: "fill:var(--caution)" }, svg, "500 ms: warning, levels out");
     el("line", { x1: x0, y1: Y(WATCHDOG_TIMEOUT), x2: x1, y2: Y(WATCHDOG_TIMEOUT), style: "stroke:var(--critical);stroke-dasharray:6 4" }, svg);
-    el("text", { x: x1 - 4, y: Y(WATCHDOG_TIMEOUT) - 6, "text-anchor": "end", class: "axis-text", style: "fill:#ff8a8a" }, svg, "2000 ms: free fall, motors off");
+    el("text", { x: x1 - 4, y: Y(WATCHDOG_TIMEOUT) - 6, "text-anchor": "end", class: "axis-text", style: "fill:#ff8a8a" }, svg, "2000 ms: motors off");
     el("line", { x1: X(TICKS_STOP), y1: yTop, x2: X(TICKS_STOP), y2: yBottom, style: "stroke:var(--ink-3);stroke-dasharray:2 3" }, svg);
     el("text", { x: X(TICKS_STOP) + 6, y: yTop + 10, class: "axis-text" }, svg, "the ticks stop");
     el("line", { x1: x0, y1: yBottom, x2: x1, y2: yBottom, style: "stroke:var(--ink-2)" }, svg);
@@ -784,11 +642,11 @@
     const playButton = document.getElementById("wd-play");
     function describe(t, a) {
       const at = "t = " + fmt(t) + " s · setpoint age " + fmt(a) + " s<br>";
-      if (mode === "high") return at + "<b>A high-level move renews its own setpoint on the drone,</b> so the age stays at zero and the move goes on, ticks or not.";
+      if (mode === "high") return at + "<b>A high-level move renews its own setpoint on the drone,</b> so the age stays at zero and the move goes on, ticks or not. Then the drone holds the move's target.";
       if (t < TICKS_STOP) return at + "<b>A setpoint every tick:</b> the age never passes one tick, " + fmt(TICK) + " s.";
       if (a < WATCHDOG_WARNING) return at + "<b>No new setpoints.</b> The drone still follows the last one.";
       if (a < WATCHDOG_TIMEOUT) return at + "<b>Past 500 ms:</b> the drone warns and levels out.";
-      return at + "<b>Past 2000 ms: free fall.</b> The motors go off, and from there the drone locks until it's power cycled.";
+      return at + "<b>Past 2000 ms: the motors go off.</b> The drone drops, and it refuses to arm again until it's power cycled.";
     }
     function render() {
       const points = [];
@@ -825,6 +683,9 @@
       tab.addEventListener("click", function () {
         mode = tab.getAttribute("data-wd");
         tabs.forEach(function (other) { other.setAttribute("aria-pressed", String(other === tab)); });
+        document.querySelectorAll("[data-wd-for]").forEach(function (panel) {
+          panel.hidden = panel.getAttribute("data-wd-for") !== mode;
+        });
         now = reduceMotion ? WATCHDOG_END : 0;
         render();
         setPlaying(!reduceMotion);
@@ -946,7 +807,6 @@
     setupSelect("#plants .plant", "data-plant", ".plant-card");
     setupTimeline();
     setupFlight();
-    setupBaton();
     setupWatchdog();
     setupMayBeFlying();
     setupStepBars();

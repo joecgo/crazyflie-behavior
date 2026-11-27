@@ -133,6 +133,9 @@ main, .foot-inner {
 
 /* --- Figures ----------------------------------------------------------- */
 .fig { margin: 1.6rem 0; }
+/* An interactive diagram's instructions, above it so they're read first */
+.fig .interact { color: var(--ink-2); font-size: 0.93rem; line-height: 1.5; margin: 0 0 0.6rem; max-width: var(--measure); }
+.fig .interact b { color: var(--accent); font-family: var(--font-display); font-weight: 600; letter-spacing: 0.02em; margin-right: 0.5rem; }
 .fig-frame { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 1rem; overflow-x: auto; }
 .fig figcaption, .caption { color: var(--ink-3); font-size: 0.9rem; line-height: 1.5; margin-top: 0.6rem; max-width: var(--measure); }
 .fig svg { display: block; width: 100%; height: auto; }
@@ -341,23 +344,10 @@ figure.code figcaption { font-size: 0.85rem; color: var(--ink-3); margin-top: 0.
 .btn.tab[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .btn:disabled { opacity: 0.4; cursor: default; }
 
-/* The setpoint priority, as a baton */
-.baton { display: grid; gap: 0.8rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-@media (max-width: 600px) { .baton { grid-template-columns: minmax(0, 1fr); } }
-.lane { position: relative; min-height: 6.4rem; border: 1px solid var(--line-2); border-radius: 10px; background: var(--panel-2); padding: 0.8rem 0.9rem; }
-.lane .label { display: block; padding-right: 5.5rem; }
-.lane .lane-state { margin: 0.5rem 0 0; color: var(--ink-2); }
-.lane .followed { display: none; position: absolute; top: 0.7rem; right: 0.8rem; font: 600 0.68rem/1 var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 0.25rem 0.5rem; }
-.lane.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: #0f2233; }
-.lane.on .followed { display: inline-block; }
-.lane.on .lane-state { color: var(--ink); }
-.baton-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.6rem; margin-top: 0.8rem; }
-.motors { font: 600 0.78rem/1 var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; padding: 0.45rem 0.6rem; border-radius: 4px; border: 1px solid var(--line-2); color: var(--ink); }
-.motors.off { color: var(--ink-3); }
-.motors.bad { color: #ff8a8a; border-color: rgba(208, 59, 59, 0.8); }
-#baton-sends { max-height: none; }
-.sends div.bad { color: #ff8a8a; }
-.readout.bad b { color: #ff8a8a; }
+/* The setpoint watchdog, and what happens next */
+.wd-next { margin-top: 0.8rem; border-top: 1px solid var(--line); padding-top: 0.7rem; max-width: var(--measure); }
+.wd-next .label { display: block; margin-bottom: 0.2rem; }
+.wd-next p { margin: 0; color: var(--ink-2); }
 #watchdog text { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
 
 /* May be flying */
