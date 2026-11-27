@@ -9,8 +9,8 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-26 (Pacific)
-- **Last commit:** the wrap-up records after the tour's launch, on `58b726f`
-  (tour `3aa6c4d`). Uncommitted: nothing.
+- **Last commit:** the records after the tour's round 2 of feedback (the dots
+  joke, no depth buttons, the 2 s drop-down). Uncommitted: nothing.
 
 ## Done last
 
@@ -29,8 +29,9 @@ move the item, renumber "Next three", and update "Last commit" and
 
 - Joe judges the tour's look and feel (preview version 5,
   https://claude.ai/artifact/XWPWS3fCf52696zXq6ZkJp, and the live page).
-  Feedback edits go in `docs/tour/`, by the project-tour skill; the live copy
-  needs copying again (#168).
+  Feedback edits go in `docs/tour/`, by the project-tour skill. Round 2 is in
+  neither: the preview needs republishing (its tool wants the whole live page
+  read first) and the live copy needs copying again (#168).
 - Joe's call: whether the partial chapter counts as "the tour is published"
   for Airworthy.
 - Joe's review of #31. When he's done: fix what he asks on `main`, close
