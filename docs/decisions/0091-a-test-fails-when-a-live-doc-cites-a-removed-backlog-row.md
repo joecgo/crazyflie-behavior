@@ -47,5 +47,5 @@ a pull request (a GitHub link, or "pull request #N").
   request". That's one more convention for whoever writes those docs.
 - Backlog #143 (a test for the Built column's "Yes") reads the same index
   and could share its parsing.
-- Not built: the test (backlog #153). Until it is, the M-213 guard (search
-  for the number before removing a row) still applies.
+- Built 2026-11-27: `tests/docs/test_work_dependencies.py`, which calls such
+  a citation a work dependency.

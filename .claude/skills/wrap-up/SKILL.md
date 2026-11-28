@@ -100,7 +100,8 @@ if one is worth suggesting.
    the work session becomes a backlog row. Add any explain-back
    this work session owes and didn't ask (`CLAUDE.local.md`, "Deferred
    explain-backs"), with its notes. A line saying something is built needs its code and test
-   (working rule 3). Then make its commit, if step 4's list was approved,
+   (working rule 3). Outside "Done last", `#N` means a backlog row, so write
+   "pull request #N" for a pull request. Then make its commit, if step 4's list was approved,
    and ask whether to push. Once the user has answered everything, say in a
    sentence what the first of "Next three" is and why it's next, its model
    and effort, then the line the user pastes to start the next work session,

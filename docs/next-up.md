@@ -10,10 +10,13 @@ move the item, renumber "Next three", and update "Last commit" and
 
 - **Date:** 2026-11-27 (Pacific)
 - **Last commit:** the records after the tour's copy to the portfolio,
-  pushed. Uncommitted: nothing.
+  pushed. Uncommitted: ADR-0091's test and its records.
 
 ## Done last
 
+- **ADR-0091's test built** (2026-11-27, #153):
+  `tests/docs/test_work_dependencies.py`, with *Work dependency* in the
+  glossary. Rows #153 and #157 removed. Not committed.
 - **The tour's publishing built** (2026-11-27, ADR-0096): the visit-count
   line and the skill's copy step. Copied to joecgo.com from `06c4d2d`
   (`joecgo/portfolio` `85be341`), the footer's first-draft line dropped;
@@ -38,18 +41,16 @@ move the item, renumber "Next three", and update "Last commit" and
   https://claude.ai/artifact/XWPWS3fCf52696zXq6ZkJp) is behind: its links name
   the old pin, `5050718`. Republishing it needs a Read of every line of its
   saved copy first (about 55k tokens), so only do it if Joe wants a preview.
-- Joe's review of #31. When he's done: fix what he asks on `main`, close
-  #31 unmerged like #24 to #30, and give `REVIEW.md`'s log its row.
+- Joe's review of pull request #31. When he's done: fix what he asks on
+  `main`, close it unmerged like the earlier review pull requests, and give
+  `REVIEW.md`'s log its row.
 
 ## Next three
 
-1. Joe's review of #31, then its fixes. Opus, high.
-2. #153, the test for citations of removed backlog rows (ADR-0091), which
-   first needs Joe's OK on a glossary term (*Live doc*, or *Live place*).
-   Sonnet, medium.
-3. #165, cutting the transcript tests to two or three. Sonnet, medium.
-
-After those: #158 (needs a test-layout decision, `/decide`).
+1. Joe's review of pull request #31, then its fixes. Opus, high.
+2. #165, cutting the transcript tests to two or three. Sonnet, medium.
+3. #158, one shared cflib fake, which needs a test-layout decision first
+   (`/decide`). Opus, high.
 
 ## Explain-backs waiting
 
@@ -83,14 +84,15 @@ from `drafts/explain-back-notes.md`; don't open it first.
   must the new code run after the link close and never before it, and why
   does a step that fails just before cflib reports the loss still end with
   its own error?
-- **E18.** #162's fake cflib runs a hook before every cflib call, and the
-  test's 71 cases are listed from a connect while pytest collects the
-  test file. Why does that cover a cflib call added to `connect()` later
-  with no new test, why must the listing catch its own error, and why do
-  two of the cases end with the first snapshot raising rather than
-  `connect()`?
-- **E19.** #162's review changed `raise lost_link_error from step_error`
-  to raising the lost link's error inside the `except` block, with no
+- **E18.** The connect cleanup test's fake cflib runs a hook before every
+  cflib call, and the test's 71 cases are listed from a connect while
+  pytest collects the test file. Why does that cover a cflib call added to
+  `connect()` later with no new test, why must the listing catch its own
+  error, and why do two of the cases end with the first snapshot raising
+  rather than `connect()`?
+- **E19.** The review of that cleanup changed
+  `raise lost_link_error from step_error` to raising the lost link's error
+  inside the `except` block, with no
   `from`. What does Python print between the two errors in each case, why
   does the first mislead an operator reading a failed rescue landing, and
   what in the tests fails if someone puts the `from` back?
@@ -99,7 +101,7 @@ from `drafts/explain-back-notes.md`; don't open it first.
   commands now fail every test at once, where with two copies the same
   mistake in `connect()`'s copy failed only one test, and why does
   `connect()` set the unknown-state flag itself rather than the builder?
-- **E21.** #157's last fitness functions check that only four named modules
+- **E21.** The adapter split's last fitness functions check that only four named modules
   import cflib, and that take-off and landing reaches no cflib, even through
   another module. Why does the second rule follow imports when the first
   already fails on a cflib import in take-off and landing, which planted bug
@@ -137,10 +139,16 @@ from `drafts/explain-back-notes.md`; don't open it first.
   continuous integration need the full git history for that, and after the
   pin moves, what kind of wrong link can the test still miss?
 
+- **E29.** The work-dependency test reads the next-up brief but skips its
+  "Done last" section. Why is a deleted row's number wrong in one part and
+  fine in the other, and how could this test pass while checking nothing,
+  and what stops that?
+
 ## Last reviewed
 
-`fdcd31c`, #30, closed 2026-11-23. #31 reads everything after it.
+`fdcd31c`, pull request #30, closed 2026-11-23. Pull request #31 reads
+everything after it.
 
 Review queue: 4 decisions (ADR-0096 and its dot check), 6 findings
 waiting (`docs/review-queue.md`: the comment at `log_blocks.py:287`, M-288,
-and Joe's five #31 questions from the tour feedback, 2026-11-27).
+and Joe's five questions on pull request #31 from the tour feedback, 2026-11-27).

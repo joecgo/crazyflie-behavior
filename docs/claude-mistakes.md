@@ -193,7 +193,7 @@ times so far).
 | M-221 | 2026-11-22 | The next-up brief said 84 planted bugs for the recorder; it was 87 | communication | said-without-checking | working rule 4: a count in a record comes from the whole run, recounted when the record is written |
 | M-220 | 2026-11-22 | New mock test names used terms not in the glossary | communication | vocabulary | working rule 6: check a new name's words against the glossary before using them |
 | M-219 | 2026-11-22 | `TICK_PERIOD`'s docstring promised exactness that depends on `STALE_AFTER` | communication | said-without-checking | a docstring for a value computed from another module's constant states what its claim depends on |
-| M-218 | 2026-11-22 | Backlog #133 removed while #142 still waited on it | process | said-without-checking | before removing a backlog row, search the docs for its number (M-213), and update each row that waits on it |
+| M-218 | 2026-11-22 | Backlog #133 removed while #142 still waited on it | process | said-without-checking | `tests/docs/test_work_dependencies.py` |
 | M-217 | 2026-11-22 | Two mock "too long" tests checked a whole tick past the motor cut | testing | weak-test | a test past a time limit checks 0.01 s past it, and a planted limit plus 0.04 s proves it |
 | M-216 | 2026-11-22 | Two "mid hover" tick-step tests set up mid-climb | testing | weak-test | a test reaches the state its name says by ticking until a condition holds, not by a fixed count of ticks |
 | M-215 | 2026-11-22 | Said the draft filed every PR #29 entry under "I had to point out" | communication | said-without-checking | working rule 2: read the whole document before saying what it says, not a line found by search |
@@ -1489,7 +1489,7 @@ times so far).
 - **What happened:** removing #133 (the boundary tests, done) left #142's "when" as "After the boundary tests (#133)": a trigger that had fired, pointing to a row that no longer exists, and missing from the next-up brief. M-213's guard, from the same day, says to search for a row's number before removing it. Caught by the project review of #133 part 2. #142's trigger now says it's due, and it's second in Next three.
 - **Kind:** process.
 - **Pattern:** said-without-checking.
-- **Guard:** before removing a backlog row, search the docs for its number (M-213), and update each row that waits on it.
+- **Guard:** `tests/docs/test_work_dependencies.py`.
 - **Takeaway:** repeats M-213, so the escalation ladder asks for a mechanism: backlog #144.
 
 ### M-217, 2026-11-22: Two mock "too long" tests checked a whole tick past the motor cut
