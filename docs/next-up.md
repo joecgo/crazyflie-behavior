@@ -9,31 +9,19 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-27 (Pacific)
-- **Last commit:** the records after the tour's copy to the portfolio,
-  pushed. Uncommitted: ADR-0091's test and its records.
+- **Last commit:** the records after ADR-0091's test, pushed.
+  Uncommitted: nothing.
 
 ## Done last
 
-- **ADR-0091's test built** (2026-11-27, #153):
+- **ADR-0091's test built** (2026-11-27):
   `tests/docs/test_work_dependencies.py`, with *Work dependency* in the
-  glossary. Rows #153 and #157 removed. Not committed.
-- **The tour's publishing built** (2026-11-27, ADR-0096): the visit-count
-  line and the skill's copy step. Copied to joecgo.com from `06c4d2d`
-  (`joecgo/portfolio` `85be341`), the footer's first-draft line dropped;
-  the live page matched.
-- **The tour's first chapter accepted** (2026-11-27) and
-  [ADR-0096](decisions/0096-the-project-tour-is-one-html-page-per-chapter-pinned-to-one-commit.md)
-  written: the tour's form, checks and publishing.
-- **The tour linked** (2026-11-27): one line under the README's title, and on
-  the joecgo.com project card as the first link (repository second), with a
-  screenshot of section 5's flight animation (`media/tour-flight.png` in
-  `joecgo/portfolio`). The screenshot is a hand copy, like the tour (#168).
-- **Tour feedback pass, #166 and #167** (`0251d46`, `8625016`, `bd956cc`),
-  pushed, with continuous integration passing. The pin is `0251d46`. The
-  pop-ups and module sizes come from the pinned commit, and
-  `tests/docs/test_tour_dots.py` fails on a missing dot.
-- **Published to joecgo.com/crazyflie-project-tour:** `bd956cc`'s three files,
-  pushed to `joecgo/portfolio` as `1be1e1c`; the live files matched.
+  glossary. Backlog rows 153 and 157 removed.
+- **The tour accepted, linked and published** (2026-11-27,
+  [ADR-0096](decisions/0096-the-project-tour-is-one-html-page-per-chapter-pinned-to-one-commit.md)):
+  the pin is `0251d46`, and joecgo.com/crazyflie-project-tour was copied
+  from `06c4d2d` (`joecgo/portfolio` `85be341`). The tour link's screenshot
+  is a hand copy, like the tour (#168).
 
 ## In progress
 
