@@ -9,14 +9,15 @@ move the item, renumber "Next three", and update "Last commit" and
 "Uncommitted".
 
 - **Date:** 2026-11-27 (Pacific)
-- **Last commit:** the records after ADR-0096 and its build, pushed.
-  Uncommitted: nothing.
+- **Last commit:** the records after the tour's copy to the portfolio,
+  pushed. Uncommitted: nothing.
 
 ## Done last
 
 - **The tour's publishing built** (2026-11-27, ADR-0096): the visit-count
-  line and the skill's copy step. The live copy doesn't have the line yet:
-  copy it with the skill's steps, which ask first.
+  line and the skill's copy step. Copied to joecgo.com from `06c4d2d`
+  (`joecgo/portfolio` `85be341`), the footer's first-draft line dropped;
+  the live page matched.
 - **The tour's first chapter accepted** (2026-11-27) and
   [ADR-0096](decisions/0096-the-project-tour-is-one-html-page-per-chapter-pinned-to-one-commit.md)
   written: the tour's form, checks and publishing.

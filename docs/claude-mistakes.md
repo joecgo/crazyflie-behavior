@@ -75,8 +75,8 @@ entries go at the top of their section without an ID.
 | environment | 4 | 12 |
 | communication | 16 | 92 |
 | testing | 2 | 42 |
-| process | 8 | 48 |
-| **Total** | **47** | **251** |
+| process | 9 | 48 |
+| **Total** | **48** | **251** |
 <!-- end generated -->
 
 <!-- generated: patterns -->
@@ -84,7 +84,7 @@ entries go at the top of their section without an ID.
 |---|---|
 | said-without-checking | 65 |
 | records-ahead-of-code | 40 |
-| how-I-work | 35 |
+| how-I-work | 36 |
 | weak-test | 35 |
 | vocabulary | 28 |
 | safety-judgment | 18 |
@@ -112,6 +112,7 @@ times so far).
 <!-- generated: index -->
 | ID | Date | Title | Kind | Pattern | Guard |
 |---|---|---|---|---|---|
+| M-299 | 2026-11-27 | Work-log hours committed and pushed as ~5, from commit times, when the day was 3 | process | how-I-work | when a work-log figure is above 3 hours, ask Joe for it before committing the row |
 | M-298 | 2026-11-27 | The brief counted two decisions in a review queue that held three | communication | said-without-checking | working rule 4's habit for the brief: count the queue's lines in the file when writing its totals |
 | M-297 | 2026-11-27 | The brief said only the tests and the tour's script had changed since the tour's pin | communication | said-without-checking | the project-tour skill: when the pin moves, run `git diff --name-only` from the old pin to the new one, and check every line link into a changed file |
 | M-296 | 2026-11-27 | Joe's choice on "the link part" stretched to part names on their own, and called his rule | communication | said-without-checking | working rule 7: quote what a choice covered before applying it to a new case, and ask about the new case as its own question |
@@ -415,6 +416,14 @@ times so far).
 ---
 
 ## Mistakes I had to point out
+
+### M-299, 2026-11-27: Work-log hours committed and pushed as ~5, from commit times, when the day was 3
+
+- **What happened:** asked to commit and push, Claude set the day's work-log row to ~5 hours, estimated from commit and usage times with no breaks subtracted, then committed, pushed and only afterwards asked Joe for the right number. A memory note already said to offer a figure well above 2-3 hours for Joe to correct rather than write it in. Joe said about 3.
+- **Kind:** process.
+- **Pattern:** how-I-work.
+- **Guard:** when a work-log figure is above 3 hours, ask Joe for it before committing the row.
+- **Takeaway:** not a code-review takeaway, so no step on the escalation ladder.
 
 ### M-296, 2026-11-27: Joe's choice on "the link part" stretched to part names on their own, and called his rule
 
